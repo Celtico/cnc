@@ -1,5 +1,5 @@
 import type { IconType } from "react-icons"
-import { LuAnchor, LuBolt, LuCircleDashed, LuCircleDot, LuDoorOpen, LuFootprints, LuGripHorizontal, LuLightbulb, LuMagnet, LuMinus, LuPackage, LuPackageOpen, LuPanelBottom, LuRailSymbol, LuSquareDot, LuTable } from "react-icons/lu"
+import { LuAnchor, LuBolt, LuCircleDashed, LuCircleDot, LuDoorOpen, LuFootprints, LuGripHorizontal, LuLightbulb, LuMagnet, LuMinus, LuPackage, LuPackageOpen, LuPanelBottom, LuRailSymbol, LuRefrigerator, LuSquareDot, LuTable } from "react-icons/lu"
 import type { HardwareCategory } from "../../core/model"
 
 /**
@@ -24,5 +24,6 @@ export const HARDWARE_ICONS: Record<HardwareCategory, IconType> = {
   profile: LuMinus,
   light: LuLightbulb,
   wall: LuAnchor,
+  appliance: LuRefrigerator,
   misc: LuPackage,
 }

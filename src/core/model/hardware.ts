@@ -5,6 +5,7 @@ import { repairAtomically } from "./repair"
 import { migratePlacePos, PlacementTargetSchema, PlacePosSchema, RepeatSchema, stepValue } from "./hardwareOps"
 import { KIT_PILOT_PARAMS, kitSummary, type KitPilot } from "./hardwareKit"
 import type { LightKit } from "./lightKit"
+import { applianceSummary } from "./appliance"
 import { HARDWARE_SLOTS, HardwareItemSchema, ModuleHardwareKitSchema, isDamagedImport, isPendingImport, type HardwareItem, type HardwareSlot } from "./hardwareSchema"
 import { migrateModuleHardware } from "./hardwareLibrary"
 
@@ -51,6 +52,7 @@ export function hardwareSummary(item: HardwareItem): string {
     : item.engine === "ledProfile" && item.light ? lightSummary(item.light, p)
     : item.engine === "ledProfile" ? `${n(p.width ?? NaN)} × ${n(p.height ?? NaN)} a ${n(p.setback ?? NaN)} mm del davant`
     : item.engine === "glassFrame" ? `perfil de ${n(p.frame ?? NaN)} mm, vidre de ${n(p.glass ?? NaN)} mm`
+    : item.engine === "appliance" && item.appliance ? applianceSummary(item.appliance)
     : ""
   const gen = item.machining?.length ? `${item.machining.length} ${item.machining.length === 1 ? "mecanitzat" : "mecanitzats"} a mà` : ""
   const pending = isDamagedImport(item) ? "malmès" : isPendingImport(item) && (item.engine !== "model" || gen) ? "sense confirmar" : ""
@@ -98,13 +100,18 @@ function eachHardware(comp: unknown, visit: (item: HardwareItem) => HardwareItem
       }
       if (front !== f) out = { ...out, front }
     }
-    // Accessoris del compartiment amb ferratge propi (barra, tira LED).
-    for (const key of ["rail", "led"] as const) {
+    // Accessoris del compartiment amb ferratge propi (barra, tira LED) i l'electrodomèstic (amb el tirador del seu front).
+    for (const key of ["rail", "led", "appliance"] as const) {
       const acc = z[key]
-      if (!isRecord(acc) || !isRecord(acc.hardware)) continue
-      const parsed = HardwareItemSchema.safeParse(acc.hardware)
-      const next = parsed.success ? visit(parsed.data) : null
-      if (next) out = { ...out, [key]: { ...acc, hardware: next } }
+      if (!isRecord(acc)) continue
+      let next: Record<string, unknown> = acc
+      for (const sub of key === "appliance" ? (["hardware", "handle"] as const) : (["hardware"] as const)) {
+        if (!isRecord(acc[sub])) continue
+        const parsed = HardwareItemSchema.safeParse(acc[sub])
+        const v = parsed.success ? visit(parsed.data) : null
+        if (v) next = { ...next, [sub]: v }
+      }
+      if (next !== acc) out = { ...out, [key]: next }
     }
     const split = z.split
     if (isRecord(split) && Array.isArray(split.children)) {

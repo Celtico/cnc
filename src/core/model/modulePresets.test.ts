@@ -6,7 +6,8 @@ describe("mòduls especials per tipus", () => {
   it("tots construeixen sense avisos de distribució", () => {
     for (const p of MODULE_PRESETS) {
       const { panels, warnings } = buildComposition({ kind: p.kind, modules: [p.make()], references: [] })
-      expect(panels.length, p.name).toBeGreaterThan(2)
+      // El rentaplats va en un mòdul sense res: només el front de moble.
+      expect(panels.length, p.name).toBeGreaterThan(p.id === "k-dishwasher" ? 0 : 2)
       expect(warnings.filter((w) => w.code === "layout"), p.name).toEqual([])
     }
   })

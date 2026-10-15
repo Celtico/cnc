@@ -1,5 +1,6 @@
 import { flatPackDesk, flatPackShelf, flatPackStool } from "./flatPack"
 import { INSPIRED_TEMPLATES } from "./inspiredTemplates"
+import { applianceKitchen } from "./applianceModules"
 import type { FreePart } from "./freePart"
 import { DEFAULT_GRILLE, defaultModule, moduleOrigins3, newId, tableModule, type Composition, type CompositionKind, type Module, type Zone } from "./composition"
 
@@ -52,6 +53,13 @@ const SHOWCASE: Template[] = [
     name: "Cuina amb illa de pedra",
     description: "La cuina moderna (taulell amb pica i vitro, sòcol corregut, alts) i, davant, una illa de calaixos al terra (X pròpia) amb taulell de pedra sense nesting.",
     make: kitchenIsland,
+  },
+  {
+    id: "appliance-kitchen",
+    kind: "cuina",
+    name: "Cuina amb electrodomèstics",
+    description: "Columnes del frigorífic combi i del forn amb microones, rentaplats integrable en un mòdul sense res, placa d'inducció sobre calaixos i grup filtrant al moble de dalt (Bosch): els fronts dels electrodomèstics de roure, muntats com diu el fabricant.",
+    make: applianceKitchen,
   },
   {
     id: "walk-in-wardrobe",

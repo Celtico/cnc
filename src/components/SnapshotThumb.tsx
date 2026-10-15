@@ -6,10 +6,10 @@ import { Box } from "@chakra-ui/react"
  * d'una altra mida): la graella no salta mentre es van fent. Sense fons: les transparents (ambients) deixen veure la
  * targeta.
  */
-export function SnapshotThumb({ src }: { src?: string | null }) {
+export function SnapshotThumb({ src, contain = false }: { src?: string | null; /** Sencera dins del requadre, sobre blanc (la foto d'un producte, p. ex. un electrodomèstic). */ contain?: boolean }) {
   return (
-    <Box aspectRatio="2 / 1" rounded="md" overflow="hidden" bg={src ? undefined : "bg.muted"}>
-      {src && <img src={src} alt="" loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+    <Box aspectRatio="2 / 1" rounded="md" overflow="hidden" bg={src ? (contain ? "white" : undefined) : "bg.muted"}>
+      {src && <img src={src} alt="" loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: contain ? "contain" : "cover", display: "block" }} />}
     </Box>
   )
 }

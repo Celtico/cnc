@@ -3,7 +3,23 @@
 Dades d'instal·lació extretes dels catàlegs de fabricant per fer "ferratges electrodomèstics": un mòdul buit que allotja
 l'aparell, amb el front muntat com diu el fabricant, el mecanitzat que implica i una foto per al render.
 
-Aquest directori només conté **dades**; la integració a l'app es fa en un altre pas.
+Aquest directori conté les **dades**. **A l'app** (v46, 2026-10-15): cada model és un ferratge de Preferències ›
+Ferratges › **Electrodomèstics** (motor `appliance`; `src/core/model/appliances/applianceRows.ts`, generat d'aquest JSON,
+i `applianceCatalog.ts`) i es tria a cada compartiment (Electrodomèstic). Què en fa la construcció:
+[`docs/funcional/model.md`](../funcional/model.md) › Electrodomèstic del compartiment i
+[`docs/funcional/fabricacio.md`](../funcional/fabricacio.md) › Electrodomèstics. Si el JSON canvia, cal tornar a fer
+`applianceRows.ts` (i, si hi ha models nous, una versió de les preferències que els afegeixi).
+
+Què fa servir l'app de cada camp: el nínxol (`niche`, `tallH` dels forns en columna, `wallH`/`wallD` del microones
+penjat, `cabinet` de la campana telescòpica), les alçades i el pes del front, el sòcol, la ventilació (la sortida dels
+frigorífics de columna com a retall; l'entrada, avís), els retalls (placa i grup filtrant), les frontisses de la rentadora
+i la foto. **No** en fa servir: `drawingDims` (cotes sense etiqueta), la taula `dishwasherRaisedGap` (rentaplats en alt)
+ni el pes per alçada de porta de la `weightTable` (només el màxim).
+
+**Hipòtesis de l'app** (per confirmar, paràmetres editables de cada item): les prebroques de la fixació del front a la
+porta de l'aparell (4 per front, Ø2 × 10, a 50 dels costats de l'aparell, 40 de dalt i 60 de baix), la guia lliscant del
+frigorífic de porta lliscant (3 prebroques centrades a 40 del cantell que obre), la segona frontissa de la WKD28490ES (a
+338,6 com la WIW24307ES), el pes del front (tauler de 700 kg/m³) i el sòcol per defecte (100).
 
 ## Fonts
 
@@ -201,14 +217,26 @@ plaques amb extractor: no s'han extret (no són mòdul de moble estàndard).
 
 ## Preguntes obertes (usuari / taller)
 
-1. **Plantilla del rentaplats**: la posició dels cargols i dels tacs del front només surt a la plantilla de paper que ve
-   amb l'aparell. Teniu plantilles de BSH i Teka per mesurar-les i posar-les a l'app?
+Estat a l'app (2026-10-15): les 1, 2 i 6 tenen una hipòtesi a l'app (avís a cada moble); la 3 i la 5, un avís sense
+mecanitzat (entrada d'aire i sòcol de davant de l'aparell); la 4 es resol amb el gruix real de les peces del mòdul; la 7
+i la 8, sense fer (Teka RBF sense nínxol: avís; TimeLight fora).
+
+1. **Plantilla del rentaplats** (i de tots els fronts cargolats a la porta de l'aparell): la posició dels cargols i dels
+   tacs del front només surt a la plantilla de paper que ve amb l'aparell. Teniu plantilles de BSH i Teka per mesurar-les
+   i posar-les a l'app? (Ara: 4 prebroques d'hipòtesi per front.)
 2. **Frigorífic porta lliscant**: quantes frontisses de moble i a quina alçada? (el catàleg no ho diu). Quina frontissa
    feu servir (angle, cassoleta 35)?
 3. **Ventilació**: preferiu reixeta vista al sòcol o sòcol retranquejat? I a dalt, retall al fons posterior o reixeta?
 4. **Valors S i A** (frigorífics): quin gruix de tauler superior i inferior feu servir a les columnes (16 o 19)?
 5. Les cotes de rentaplats **53 / 89 / 100** (BSH) i **110 / 48 / 115** (Teka) no estan etiquetades al catàleg:
    les interpretem com a retranqueig i alçada del sòcol / pas de tubs? Cal confirmar-ho amb el manual d'instal·lació.
-6. Rentadora: quin nínxol feu servir (600 x 820-880?) i quina alçada de front? El catàleg no ho diu.
+6. Rentadora: quin nínxol feu servir (600 x 820-880?) i quina alçada de front? El catàleg no ho diu. I la segona frontissa
+   de la WKD28490ES (el catàleg només dona la primera, a 202)?
 7. Frigorífics Teka: no tenen nínxol publicat. Assumim el mateix que BSH (177,5 x 56 x 55) o es deixen fora?
 8. Es vol incloure la taula TimeLight (alçada màxima del sòcol, Balay p147) o no es fan servir aquests models?
+9. **Sòcol davant dels aparells de terra**: el fa el mòdul de l'aparell (un tauler com el «Sòcol · Davant de les potes»,
+   i a quina retirada: 53 / 100 dels dibuixos BSH?) o el poseu corregut amb els dels mòduls del costat?
+10. **Densitat dels fronts** per comprovar el pes que admet l'aparell: 700 kg/m³ (aglomerat / DM) us va bé, o voleu la de
+    cada material a Preferències?
+11. **Forns**: la fixació (cargols pel marc als laterals del moble) i la ventilació (BSH: obertura ≥ 20 al darrere de
+    dalt en columna) no es mecanitzen: les voleu a l'app?

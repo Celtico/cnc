@@ -133,6 +133,21 @@ const HARDWARE_PARAMS: Record<HardwareEngine, HardwareParamSpec[]> = {
   ],
   wallRail: LINEAR_PARAMS,
   plinthProfile: LINEAR_PARAMS,
+  // Electrodomèstic: el que l'app mecanitza al front de moble (les dades del catàleg no s'editen). Cada item porta els seus.
+  appliance: [
+    { ...P("pilotDiameter", "Prebroca: Ø", 1, 6, 0.5, "Dels cargols de la fixació o de la guia al darrere del front."), optional: true },
+    { ...P("pilotDepth", "Prebroca: fondària", 3, 20, 0.5), optional: true },
+    { ...P("fixInset", "Fixació: dels costats", 10, 200, 1, "Hipòtesi (el catàleg no dona la plantilla): dels costats de l'aparell a les prebroques de la fixació a la seva porta."), optional: true },
+    { ...P("fixTop", "Fixació: de dalt", 10, 300, 1, "Hipòtesi: del cantell de dalt del front a la filera de dalt."), optional: true },
+    { ...P("fixBottom", "Fixació: de baix", 10, 300, 1, "Hipòtesi: del cantell de baix del front a la filera de baix."), optional: true },
+    { ...P("guideEdge", "Guia: del cantell", 10, 200, 1, "Hipòtesi (frigorífic de porta lliscant): del cantell que obre a la guia lliscant."), optional: true },
+    { ...P("guidePitch", "Guia: entre forats", 8, 200, 1, "Hipòtesi: entre les prebroques de la guia."), optional: true },
+    { ...P("cupDiameter", "Cassoleta: Ø", 20, 40, 0.5, "Rentadora: les frontisses de l'aparell (catàleg)."), optional: true },
+    { ...P("cupDepth", "Cassoleta: fondària", 8, 16, 0.5), optional: true },
+    { ...P("cupOffset", "Cassoleta: del cantell", 3, 40, 0.5), optional: true },
+    { ...P("firstHinge", "Primera frontissa", 50, 600, 0.5, "Del cantell de dalt de l'aparell a la primera frontissa."), optional: true },
+    { ...P("hingePitch", "Entre frontisses", 100, 800, 0.1, "De la primera a la segona frontissa."), optional: true },
+  ],
 }
 
 /** Col·locació de la placa d'una frontissa importada (paràmetres de la frontissa, copiats de la placa en aparellar-la). */

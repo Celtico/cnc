@@ -70,6 +70,12 @@ export default defineConfig({
             options: { cacheName: "mobles-textures", expiration: { maxEntries: 120, maxAgeSeconds: 365 * 24 * 3600 }, cacheableResponse: { statuses: [200] } },
           },
           {
+            // Fotos dels electrodomèstics (`appliances/*.webp`, ~0,4 MB en total): la miniatura i la cara vista al 3D.
+            urlPattern: ({ url }) => url.pathname.startsWith("/appliances/"),
+            handler: "CacheFirst",
+            options: { cacheName: "mobles-appliances", expiration: { maxEntries: 60 }, cacheableResponse: { statuses: [200] } },
+          },
+          {
             // Vistes per les finestres del render (`backdrop/*.jpg`, ~0,5 MB cadascuna).
             urlPattern: ({ url }) => url.pathname.startsWith("/backdrop/"),
             handler: "CacheFirst",

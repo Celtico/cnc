@@ -256,6 +256,26 @@ export interface ZoneAccessory {
 }
 const ZoneAccessorySchema = z.preprocess((v) => (v === true ? {} : v === false ? undefined : v), z.object({ hardware: FrontHardwareSchema.optional() }).optional())
 
+/**
+ * **Electrodomèstic** d'un compartiment (v46; per petició de l'usuari, 2026-10-15: «un moble sense res ha de poder portar
+ * una porta, això és per ficar el rentaplats o la nevera»; `core/build/module/appliances.ts`): `hardware` és la còpia
+ * d'un item de la biblioteca (motor `appliance`). Si l'aparell ocupa el compartiment (`fillsNiche`), el compartiment és el
+ * nínxol: no fa el seu Front, prestatges ni accessoris (es conserven). Si porta front de moble (`takesFront`): `front`
+ * (sense = sí; `false` = sense front, l'aparell a la vista), `hinge` (el costat on obre: les frontisses de la rentadora i
+ * del frigorífic de porta lliscant, o el tirador), `plinth` (del terra al cantell de baix del front, als aparells de terra
+ * sense peça a sota; sense, 100) i `handle` (el tirador del front, com als altres fronts).
+ */
+export interface ZoneAppliance {
+  hardware: HardwareItem
+  front?: boolean
+  hinge?: "left" | "right"
+  plinth?: number
+  handle?: FrontHandle
+}
+const ZoneApplianceSchema = repairAtomically(
+  z.object({ hardware: FrontHardwareSchema, front: z.boolean().optional(), hinge: z.enum(["left", "right"]).optional(), plinth: mm.min(0).max(400).optional(), handle: FrontHandleSchema.optional() }),
+)
+
 /** Tipus de front (contingut) d'un compartiment. */
 export const FRONT_KINDS = ["door", "drawers", "flap", "grille", "panel"] as const satisfies readonly Front["kind"][]
 
@@ -274,6 +294,8 @@ export interface Zone {
   rail?: ZoneAccessory
   /** Llum LED: perfil amb tira LED sota el sostre del compartiment i sota cada prestatge (ferratge `ledProfile`; render i llista; no és de CNC). */
   led?: ZoneAccessory
+  /** Electrodomèstic (v46): l'aparell que hi va i, si en porta, el front de moble muntat com diu el fabricant. */
+  appliance?: ZoneAppliance
 }
 
 export const ZoneSchema: z.ZodType<Zone> = z.lazy(() =>
@@ -303,6 +325,7 @@ export const ZoneSchema: z.ZodType<Zone> = z.lazy(() =>
     fronts: z.preprocess(dropMismatchedFronts, z.object({ door: FrontSchema.optional(), drawers: FrontSchema.optional(), flap: FrontSchema.optional(), grille: FrontSchema.optional(), panel: FrontSchema.optional() })).optional(),
     rail: ZoneAccessorySchema,
     led: ZoneAccessorySchema,
+    appliance: ZoneApplianceSchema.optional(),
   }),
 )
 

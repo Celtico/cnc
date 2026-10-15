@@ -1,8 +1,8 @@
-import { NO_EDGES, type HardwareItem, type Hole, type Panel, type PanelRole } from "../model"
+import { NO_EDGES, furnitureHinges, type HardwareItem, type Hole, type Panel, type PanelRole } from "../model"
 import { r, system32Ys, threeAlong } from "./geometry"
 import { planKit } from "./drawerKit"
 import { planLights } from "./lightKit"
-import { applyHardware, cupSpec, dowelSpec, flapSpec, glassFrameSpec, handleSpec, hangerSpec, ledSpec, legSpec, magnetSpec, plateSpec, plinthProfileSpec, railSpec, slideSpec, system32Spec, wallRailSpec, HardwareError } from "./hardware"
+import { applyHardware, resolveOps, cupSpec, dowelSpec, flapSpec, glassFrameSpec, handleSpec, hangerSpec, ledSpec, legSpec, magnetSpec, plateSpec, plinthProfileSpec, railSpec, slideSpec, system32Spec, wallRailSpec, HardwareError } from "./hardware"
 
 /**
  * Peces d'exemple amb el patró de mecanitzats d'un ferratge (Preferències › Ferratges: la targeta i l'editor), fetes amb
@@ -203,6 +203,8 @@ function previewPanels(item: HardwareItem): Panel[] {
       if (item.engine === "wallRail") wallRailSpec(item)
       else plinthProfileSpec(item)
       return []
+    case "appliance":
+      return appliancePreview(item)
     case "drawerKit": {
       // Lateral del moble (x = fondària des del darrere; el front a la dreta) amb les prebroques de la guia més llarga que hi cap.
       const side = sample("side", "Lateral del moble", "side", 560, 200)
@@ -216,6 +218,33 @@ function previewPanels(item: HardwareItem): Panel[] {
       return [side]
     }
   }
+}
+
+/**
+ * Electrodomèstic: el darrere del front de moble (x = alçada des de baix, y = ample), amb el que s'hi mecanitza com al
+ * moble (`AppliancesBuilder`): les prebroques de la fixació a la porta de l'aparell (hipòtesi), la guia lliscant
+ * (hipòtesi) o les cassoletes de les frontisses de l'aparell. Sense front de moble (forn, placa…), cap peça.
+ */
+function appliancePreview(item: HardwareItem): Panel[] {
+  const a = item.appliance
+  if (!a) throw new HardwareError(`«${item.name}»: falten les dades de l'electrodomèstic`)
+  if (!a.door) return []
+  const P = item.params
+  const front = sample("front", "Front de moble (darrere)", "door", 720, Math.max(400, a.size.w - 2))
+  const L = front.length, W = front.width
+  const op = resolveOps(item, "front")[0]
+  if (!op || op.kind !== "drill") throw new HardwareError(`«${item.name}»: «front» no és un forat cec`)
+  const s = { diameter: op.d, depth: op.depth, ...(op.tag ? { tag: op.tag } : {}) }
+  if (a.door === "hinges") {
+    // La rentadora: l'aparell seu a baix i el cantell de dalt del front és el de l'aparell.
+    for (const x of [L - (P.firstHinge ?? 202), L - (P.firstHinge ?? 202) - (P.hingePitch ?? 338.6)]) if (x > 30) front.holes.push(...applyHardware(item, "front", {}, { at: { x: r(x), y: 0 } }).holes)
+  } else if (furnitureHinges(a)) {
+    for (const k of [-1, 0, 1]) front.holes.push(hole(L / 2 + k * (P.guidePitch ?? 32), W - (P.guideEdge ?? 40), s))
+  } else {
+    const half = a.size.w / 2 - (P.fixInset ?? 50)
+    for (const x of [L - (P.fixTop ?? 40), P.fixBottom ?? 60]) for (const y of [W / 2 - half, W / 2 + half]) front.holes.push(hole(x, y, s))
+  }
+  return [front]
 }
 
 /**

@@ -48,6 +48,11 @@
   `PanelMesh proposedTags`: els forats amb aquestes etiquetes, en taronja (els proposats d'un importat sense confirmar al
   muntatge de Preferències › Ferratges); `PanelMesh pins` (suports de prestatge) i `seeThrough` (fusta translúcida a
   0,4 sense escriure la profunditat, al muntatge); `MovingPanel` s'exporta per al mateix muntatge.
+- **Electrodomèstics** (v46): l'aparell és una caixa de la seva mida (`extras`, rol `hardware`, «Acer inox») amb la **foto
+  del catàleg** a la cara vista (`Panel.photo`: `panelMaterials` hi posa la foto estirada, `photoTexture` de `public/` —
+  `appliances/*.webp`, a la memòria del service worker en fer-les servir, `mobles-appliances`— a la cara +z o, a la placa,
+  +y). La mateixa peça al visor, a les miniatures, al render i al GLB/USDZ. Amb front de moble, l'aparell queda darrere
+  (el front del rentaplats s'obre com un abatible, el del frigorífic i la rentadora com una porta: `opening.ts`).
 - **Components dels jocs de calaix** (`extras` amb rol `hardware`, `kitSolidPanels`): peces de caixa normals, **massisses**
   (`panelMaterials`: totes les cares amb l'acabat del material, mai el color del tauler vist als cantells) i pintades pel
   nom del material amb `resolveFinish` (paraula clau si no és a Materials: «Acer fosc» → gris fosc metàl·lic, «Blanc

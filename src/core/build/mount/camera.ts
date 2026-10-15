@@ -25,7 +25,7 @@ export function mountCamera(m: HardwareMount, aspect = 1.6): { target: Vec3; dir
   const len = Math.hypot(d[0], d[1], d[2]) || 1
   const dir: Vec3 = (m.focus?.exact && m.focus.view) || (!m.focus && m.aim?.view) ? (m.focus?.view ?? m.aim!.view!) : [d[0] / len, d[1] / len, d[2] / len]
   const fit = fitCamera(m.region, dir, aspect, MOUNT_FOV)
-  return { target: fit.target, dir, dist: Math.min(MOUNT_CAMERA_DIST.max, Math.max(MOUNT_CAMERA_DIST.min, fit.dist)) }
+  return { target: fit.target, dir, dist: Math.min(m.whole ? Infinity : MOUNT_CAMERA_DIST.max, Math.max(MOUNT_CAMERA_DIST.min, fit.dist)) }
 }
 
 const dot3 = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]

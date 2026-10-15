@@ -1,6 +1,6 @@
 import { itemSeries } from "../../core/import/hettich"
 import { useMemo } from "react"
-import { applySettingsToModule, defaultModule, isPlaceable, machiningParts, type HardwareItem, type Module, type PartKind, type Settings } from "../../core/model"
+import { applianceSeries, applySettingsToModule, defaultModule, isPlaceable, machiningParts, type HardwareItem, type Module, type PartKind, type Settings } from "../../core/model"
 import { fold } from "../projects/galleryGrid"
 
 /**
@@ -14,14 +14,16 @@ export function hardwareMatches(x: HardwareItem, q: string): boolean {
 }
 
 /**
- * Els items d'una categoria per sèrie (`itemSeries`: la carpeta del fabricant, «Sensys», «Classic», «SlideLine 55»),
+ * Els items d'una categoria per sèrie (`itemSeries`: la carpeta del fabricant, «Sensys», «Classic», «SlideLine 55»; als
+ * electrodomèstics, la família, `applianceSeries`),
  * per nom de la sèrie; els que no en tenen (els de l'app, els fitxers solts) van a dalt, sense grup.
  */
 export function seriesGroups(category: string, list: HardwareItem[]): { loose: HardwareItem[]; series: { key: string; label: string; items: HardwareItem[] }[] } {
   const loose: HardwareItem[] = []
   const by = new Map<string, { key: string; label: string; items: HardwareItem[] }>()
   for (const x of list) {
-    const s = itemSeries(x)
+    // Els electrodomèstics, per família (rentaplats 60, frigorífics de columna…).
+    const s = itemSeries(x) ?? applianceSeries(x)
     if (!s) {
       loose.push(x)
       continue

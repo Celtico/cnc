@@ -167,6 +167,7 @@ Les etiquetes i les ajudes de la UI fan servir sempre aquestes paraules (auditor
 | **Acabats de l'escena** | terra i paret de la presentació (moble); als ambients, «Acabats» = terra, parets i sostre. **No hi ha secció «Acabats» al mòdul** (des del 2026-10-08: el que hi havia és a Caixa, Materials i Unió) |
 | **Unió** | la secció del mòdul amb l'espiga de les unions de la caixa (`LuBolt`) |
 | **Com el mòdul** / **Com el cos** / **Com a Preferències** | heretat; **Còpia pròpia**, la còpia d'un ferratge que ja no és a la biblioteca tal qual |
+| **Electrodomèstic** | l'aparell del catàleg del fabricant (ferratge de la categoria «Electrodomèstics», motor `appliance`) que es tria a cada compartiment; el seu front és el **Front de moble** (muntat com diu el fabricant), no el Front del compartiment |
 | **Accessoris** | barra de penjar, tira LED (ferratges del compartiment, a la secció «Prestatges i accessoris»); el marc de vitrina va amb la porta de vidre |
 | **Cap (push)** | el tirador que no hi és: obertura per pressió |
 

@@ -40,6 +40,8 @@ export interface BuildWarning {
     | "drawer-box"
     | "handle"
     | "shelves"
+    // Electrodomèstic (v46): el nínxol, el front de moble, el sòcol, la ventilació i els retalls (amb la font del catàleg).
+    | "appliance"
     // Un ferratge del mòdul o d'un front que no es pot fer servir (paràmetre que falta, fórmula dolenta, tipus que no toca).
     | "hardware"
     // Materials que no lliguen amb Preferències (`materialIssues`, fora del build: el build no llegeix preferències).

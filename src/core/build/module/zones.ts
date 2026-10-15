@@ -1,12 +1,12 @@
 import { type CableHole, NO_EDGES, type EdgeBanding, type Front, type Panel, type PanelRole, type Vec3, type Zone } from "../../model"
 import { X, Y, Z, addFaceHole, dowelJoint, dowelsAlong, neg, placement, r, snap, system32Ys, threeAlong, toLocal } from "../geometry"
 import { layoutZones, type Layout, type ZoneRect } from "../layout"
-import { DrawersBuilder } from "./drawers"
+import { AppliancesBuilder } from "./appliances"
 import { num, edges, near } from "./helpers"
 import type { VerticalRef, HorizontalRef } from "./types"
 
 /** Zones: divisors, prestatges, fileres, fronts de cada zona i passacables. Última capa del constructor. */
-export class Builder extends DrawersBuilder {
+export class Builder extends AppliancesBuilder {
   // --- Zones ------------------------------------------------------------------------
 
   buildZones(): Layout {
@@ -181,6 +181,8 @@ export class Builder extends DrawersBuilder {
     const shelfYs = zone.shelves && zone.shelves.n > 0 ? this.buildShelves(zone, rect, rowYs) : []
     if (zone.rail) this.buildRail(zone, rect)
     if (zone.led) this.buildLed(zone, rect, shelfYs)
+    // Electrodomèstic (v46): el nínxol, l'aparell i el seu front de moble (o, la placa i la campana, el retall).
+    if (zone.appliance) this.buildAppliance(zone, zone.appliance, rect, left, right)
 
     // Front.
     if (!front) return

@@ -15,6 +15,8 @@ import { hardwareThumb, hardwareThumbSig, requestHardwareThumb } from "./hardwar
 export function HardwareThumb({ item, base, materials }: { item: HardwareItem; base?: Module; materials: MaterialPref[] }) {
   // Només 2D (sense STEP encara): la vista frontal del DXF.
   if (item.engine === "model" && item.imported && !item.imported.bbox) return <ViewThumb asset={item.imported.asset} />
+  // Un electrodomèstic: la foto del catàleg (la de la targeta i del selector).
+  if (item.appliance?.image) return <SnapshotThumb contain src={`${import.meta.env.BASE_URL}${item.appliance.image}`} />
   return <ModelThumb item={item} base={base} materials={materials} />
 }
 

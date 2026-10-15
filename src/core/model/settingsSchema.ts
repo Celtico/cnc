@@ -62,8 +62,10 @@ const mm = z.number().finite()
  * v44: la Duomatic 105° per a marc d'alumini estret (`V44_ITEMS`), additiu.
  * v45: els mòduls penjats porten penjadors (el penjador ocult regulable i la regleta de paret, llocs `hanger` i
  * `wallRail`) i els sòcols d'alumini per metres (`V45_ITEMS`), additiu.
+ * v46: els electrodomèstics del catàleg (Bosch, Balay, Siemens i Teka; categoria «Electrodomèstics», motor `appliance`,
+ * `V46_ITEMS`), additiu.
  */
-export const SETTINGS_VERSION = 45
+export const SETTINGS_VERSION = 46
 
 
 // --- Objectes de referència (foto i editor) ------------------------------------------

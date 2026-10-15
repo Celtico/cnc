@@ -3,7 +3,7 @@ import { materialCategory, type MaterialPref, type Panel } from "../../core/mode
 import { ROLE_COLOR } from "./roleColorMap"
 import { isShaped, mitreGeometry, shapedGeometry } from "./cutoutGeometry"
 import { textureOffset, type TextureOffset } from "./textureOffset"
-import { RAW_EDGE_COLOR, TILE_MM, applyFinishFx, tileClone, patternTexture, photoTexture, resolveEdgeFinish, resolveFinish, woodGenOf, woodTexture, type FinishSpec } from "./textures"
+import { RAW_EDGE_COLOR, TILE_MM, applyFinishFx, disposeMaterial, tileClone, patternTexture, photoTexture, resolveEdgeFinish, resolveFinish, woodGenOf, woodTexture, type FinishSpec } from "./textures"
 
 /** Materials i geometria de les peces (visor, GLB/USDZ, miniatures). mm → m. */
 const S = 0.001
@@ -110,7 +110,14 @@ export function panelMaterials(p: Panel, mode: "material" | "role", materials: M
   const edgeX = (banded: boolean, face: string) => (banded ? makeMaterial(edgeFinish, T, W, true, opts, off(face)) : raw(face))
   // +y / −y: cara L × T (u = llargada): la veta va en u.
   const edgeY = (banded: boolean, face: string) => (banded ? makeMaterial(edgeFinish, L, T, false, opts, off(face)) : raw(face))
-  return [edgeX(p.edges.right, "#r"), edgeX(p.edges.left, "#l"), edgeY(p.edges.top, "#t"), edgeY(p.edges.bottom, "#b"), big(""), big("#B")]
+  const out = [edgeX(p.edges.right, "#r"), edgeX(p.edges.left, "#l"), edgeY(p.edges.top, "#t"), edgeY(p.edges.bottom, "#b"), big(""), big("#B")]
+  // Electrodomèstic (v46): la foto a la cara vista (+z, la de davant; +y, la de dalt d'una placa), estirada a la cara.
+  if (p.photo) {
+    const i = p.photo.face === "top" ? 2 : 4
+    disposeMaterial(out[i]!)
+    out[i] = new MeshStandardMaterial({ map: tileClone(photoTexture(p.photo.src)), roughness: 0.45, metalness: 0, ...opts })
+  }
+  return out
 }
 
 /** Materials per a la geometria extruïda (`shapedGeometry`): [0] cares (A/B), [1] cantells amb cantell, [2] sense (talls i parets dels forats). UV en metres. */
@@ -163,5 +170,5 @@ export function visualPanel(p: Panel): Panel {
  * (`holes`: marques dels forats o ferratges, que fan servir les cassoletes).
  */
 export function panelVisualKey(p: Panel, holes: boolean): string {
-  return JSON.stringify([p.id, p.role, p.length, p.width, p.thickness, p.material, p.grain, p.edges, p.outline, p.rawSides, p.cutouts, p.mitres, p.solidCuts, p.grooves, p.push, holes ? p.holes : null, holes ? p.fittings ?? null : null])
+  return JSON.stringify([p.id, p.role, p.length, p.width, p.thickness, p.material, p.grain, p.edges, p.outline, p.rawSides, p.cutouts, p.mitres, p.solidCuts, p.grooves, p.push, p.photo ?? null, holes ? p.holes : null, holes ? p.fittings ?? null : null])
 }

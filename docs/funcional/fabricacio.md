@@ -205,6 +205,38 @@
   fons a les cantonades de dalt per al ganxo; regleta de paret darrere del fons; avís `hanging` si el fons no deixa 16 mm)
   i **sòcol** de la base «Potes» al davant, als laterals i al darrere, de fusta (a tope o a inglet) o d'alumini (ferratge
   per metres). Detall a [`model.md`](model.md) › Carcassa › Penjadors i Base, i › Ferratges per metres.
+- **Electrodomèstics** (v46, `build/module/appliances.ts`, capa `AppliancesBuilder` entre els calaixos i les zones; el model
+  a [`model.md`](model.md) › Electrodomèstic del compartiment; les dades i les fonts a
+  [`docs/electrodomestic/README.md`](../electrodomestic/README.md)). Tots els avisos són `appliance` i diuen la pàgina del
+  catàleg:
+  - **El nínxol**: la llum del compartiment (ample, alt i fons fins al fons o la columna) amb els rangs del catàleg; el forn
+    en columna (mòdul de 1200 o més) amb l'alçada de columna, el microones en un mòdul penjat amb la del moble penjat; la
+    campana telescòpica, el mòdul (ample, fons i alçada interior). Si el fabricant no el publica (rentadores, Teka RBF), un
+    avís ho diu.
+  - **L'aparell** es dibuixa (`extras`, rol `hardware`: ni nesting ni «Elements sense nesting») amb la **foto** a la cara
+    vista (`Panel.photo`: la de davant o, a la placa, la de dalt) i va a la **comanda** (Peces › «Ferratges», LLEGEIX-ME) amb
+    la marca i la referència («electrodomèstic: no es fabrica»).
+  - **El front de moble** és un front com els altres (material dels fronts, cantells, tirador), de la mida que dona el
+    compartiment (`frontTerritory`); als aparells de terra sense peça a sota, de `plinth` cap amunt. Un combi en fa **dos**
+    (el de baix i el de dalt, junta de 4 del catàleg): el de baix tan curt com permet el seu rang perquè el de dalt hi entri;
+    les alçades BSH amb A (la base on seu l'aparell) i S (la peça de sobre). Avisos si l'alçada, el sòcol, el gruix o el
+    **pes estimat** (tauler de 700 kg/m³, hipòtesi) surten del que admet el fabricant. Muntatge **com diu el fabricant**:
+    - porta fixa, porta sobre porta i **rentaplats de porta lliscant**: el front es cargola a la porta de l'aparell, **cap
+      frontissa de moble**; 4 **prebroques** Ø2 × 10 (tag `appliance`) al darrere de cada front, **hipòtesi** (el catàleg no
+      dona la plantilla): a 50 dels costats de l'aparell, a 40 de dalt i a 60 de baix (paràmetres de l'item); l'avís diu que
+      s'han de comprovar amb la plantilla de l'aparell;
+    - **frigorífic de porta lliscant**: frontisses de moble (les del mòdul, amb la filera System 32 i les plaques al lateral
+      del costat, `addCups`) i la **guia lliscant** (3 prebroques centrades a 40 del cantell que obre, **hipòtesi**);
+    - **rentadora**: les **cassoletes** de les frontisses de l'aparell, les del catàleg (Ø35 × 12 a 21 del cantell; la
+      primera a 202 del cantell de dalt de l'aparell, la segona a +338,6), tag `hinge`.
+  - **El que cal mecanitzar al moble** (només el que dona el catàleg): la **sortida d'aire** dels frigorífics de columna
+    (≥ 200 cm²) com a retall a la peça de sobre del compartiment, de lateral a lateral menys 30 i arran del fons (tag `vent`);
+    el **retall de la placa** a la peça de sobre (560 × 490, a 50 del davant; avís si queda a menys de 40 del darrere o el
+    tauler és prim) i el del **grup filtrant** a la base del moble penjat (496 × 264 a 25 del davant, tauler de 16–19), tag
+    `appliance`. Sense la peça (taulell de pedra, mòdul sense tapa), un avís diu el retall i on fer-lo. L'**entrada d'aire**
+    pel sòcol i el **sòcol de davant** de l'aparell de terra no es fan sols: avís (preguntes obertes al taller).
+  - Res d'això toca els mobles d'abans (els electrodomèstics són opcionals): proves d'or idèntiques; la plantilla nova
+    «Cuina amb electrodomèstics» hi entra com un moble més. Tests `build/appliances.test.ts`.
 - **Forats que es trobarien per dins** (`build/holeClash.ts`, `resolveHoleClashes`): System 32 a banda i banda d'un divisor
   → tots dos a (T − 1)/2; si un és d'un ferratge (placa, frontissa: `shortenFitting`), primer s'escurça l'altre, sempre amb
   avís `hole-clash` i mai per sota de 8 mm (si no, no es toca i ho diu); espiga de cantell contra un forat de cara →

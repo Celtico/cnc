@@ -30,7 +30,8 @@ describe("STEP per a TopSolid", () => {
       const step = toStepCad([{ name: "Moble", panels: [...b.panels, ...b.extras] }], { name: t.id })
       for (const s of stepSolids(step.text)) expect(s.badEdges, `${t.id} · ${s.name}`).toBe(0)
     }
-  })
+    // Totes les plantilles de la galeria (la cuina amb electrodomèstics, v46, la va passar de 5 s).
+  }, 20_000)
 
   it("booleà 3D: el tub que travessa el bloc pel cantell és un forat de debò", () => {
     const block: FreePart = { id: "block", name: "Bloc", orient: "front", w: 600, h: 100, thickness: 600, material: "Pedra", nest: false, x: 0, y: 0, z: 0 }

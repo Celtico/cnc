@@ -17,6 +17,8 @@ import {
   frontLimitsHelp,
   splitDirsFor,
   findZone,
+  fillsNiche,
+  isAppliance,
   type Front,
   type ModuleHardware,
   type Zone,
@@ -28,6 +30,7 @@ import { SplitSizes } from "./zone/SplitSizes"
 import { CoveredFront, ZoneFrontSection } from "./zone/FrontSection"
 import { ZoneShelvesSection } from "./zone/ShelvesSection"
 import { FrontFields } from "./zone/FrontFields"
+import { ApplianceSection } from "./zone/ApplianceSection"
 
 /**
  * Accions de la zona seleccionada (van a la capçalera de l'inspector, com a icones):
@@ -140,6 +143,8 @@ export function ZonePanel({
   // Darrere d'un front fix (el seu o, a les dades d'abans, el de tota la zona que el tapa si es fes) no es divideix: les
   // peces no es veurien ni es farien servir.
   const behindFixed = coveredBy ? !!coveredByFixed : zone.front?.kind === "panel"
+  // Un electrodomèstic que ocupa el compartiment (el nínxol): ni Front, ni Prestatges, ni Dividir (es conserven).
+  const niche = !coveredBy && !!zone.appliance && isAppliance(zone.appliance.hardware) && fillsNiche(zone.appliance.hardware.appliance)
   return (
     <Stack gap={0}>
 
@@ -162,16 +167,18 @@ export function ZonePanel({
         </>
       ) : (
         <>
-          {coveredBy ? <CoveredFront id="zone-front" title="Front" coveredBy={coveredBy} /> : <ZoneFrontSection root={root} zone={zone} openRatio={openRatio} drawerHeights={drawerHeights} onChange={onChange} hardware={hardware} noHandles={noHandles} kits={kits} bounds={bounds} afterHinge={system32?.at === "front" ? system32.row : undefined} />}
+          {/* L'electrodomèstic, a dalt de tot: si ocupa el compartiment, mana sobre el contingut (opcions en cascada). */}
+          {!coveredBy && <ApplianceSection root={root} zone={zone} onChange={onChange} hardware={hardware} noHandles={noHandles} bounds={bounds} />}
+          {niche ? null : coveredBy ? <CoveredFront id="zone-front" title="Front" coveredBy={coveredBy} /> : <ZoneFrontSection root={root} zone={zone} openRatio={openRatio} drawerHeights={drawerHeights} onChange={onChange} hardware={hardware} noHandles={noHandles} kits={kits} bounds={bounds} afterHinge={system32?.at === "front" ? system32.row : undefined} />}
 
           {/* Tapat: el seu front (es conserva) no es fa i el compartiment és com obert (`visibleZone`). Sense una peça a
               cada costat (lateral o divisor), cap prestatge: no surt (es conserva i torna amb els laterals). Amb calaixos
               o un front fix (darrere no hi ha res a fer servir), tampoc; ni tapat per un front fix de tota la zona. */}
-          {shelvesBehind && (canHoldShelves(bounds) || canHoldAccessories(bounds)) && <ZoneShelvesSection root={root} zone={zone} onChange={onChange} hardware={hardware} bounds={bounds} system32={system32} />}
+          {!niche && shelvesBehind && (canHoldShelves(bounds) || canHoldAccessories(bounds)) && <ZoneShelvesSection root={root} zone={zone} onChange={onChange} hardware={hardware} bounds={bounds} system32={system32} />}
 
           {/* Només les direccions on el divisor té on unir-se (`splitDirsFor`): el vertical, a sota i a sobre; el
               travesser, als dos costats. Sense cap, o darrere d'un front fix, la secció no surt. */}
-          {splitDirsFor(bounds).length > 0 && !behindFixed && (
+          {splitDirsFor(bounds).length > 0 && !behindFixed && !niche && (
             <FoldItem id="zone-divide" title="Dividir" icon={LuSquareSplitHorizontal} defaultOpen={false}>
               <Text textStyle="xs" color="fg.muted">
                 Parteix aquest compartiment en dos. El contingut es queda al primer.

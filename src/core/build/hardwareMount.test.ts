@@ -111,10 +111,10 @@ describe("ferratge muntat", () => {
       }
       // Els accessoris (barra, perfil LED, marc de vitrina) i els ferratges per metres (regleta, sòcol d'alumini, de només
       // veure: rol `hardware`) no fan cap forat: es miren pel mig del que es veu (`aim`).
-      if (ACCESSORY_ITEMS.includes(item) || item.targets.every((t) => !t.ops.length)) {
+      if (ACCESSORY_ITEMS.includes(item) || item.targets.every((t) => !t.ops.length) || item.engine === "appliance") {
         expect(m.aim, item.engine).toBeDefined()
         // El tirador de vitrina (sense forats) es mira al front del calaix; els accessoris, a la peça d'exemple.
-        expect(m.panels.some((p) => p.role === (item.engine === "barHandle" ? "drawerFront" : item.linear ? "hardware" : "part")), item.engine).toBe(true)
+        expect(m.panels.some((p) => p.role === (item.engine === "barHandle" ? "drawerFront" : item.linear || item.appliance ? "hardware" : "part")), item.engine).toBe(true)
       } else expect(m.focus, item.engine).not.toBeNull()
       const plan = mountPlan(m)!
       expect(plan.rects.length, item.engine).toBeGreaterThan(0)

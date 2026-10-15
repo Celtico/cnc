@@ -1,5 +1,6 @@
-import type { Front, Module, Zone } from "./composition"
-import { visibleModule, walkBuiltZones } from "./composition"
+import type { Front, Module, Zone, ZoneAppliance } from "./composition"
+import { applianceFront, visibleModule, walkBuiltZones } from "./composition"
+import { applianceFronts, furnitureHinges } from "./appliance"
 import { isDrawerKit, moduleSlotItem, type HardwareItem, type HardwareSlot } from "./hardware"
 import { isPushClosing, kitOptionsOf, type HardwareKit } from "./hardwareKit"
 
@@ -52,10 +53,27 @@ export function usedHardwareSlots(module: Module): SlotUse {
     if (z.shelves?.adjustable) add("system32", 1, "prestatges regulables")
     if (z.rail) add("rail", 1, "barres de penjar")
     if (z.led) add("led", 1, "llums")
+    if (z.appliance) applianceSlots(m, z.appliance, add)
     if (!z.front || covered) return
     frontSlots(m, z.front, add)
   })
   return out
+}
+
+/**
+ * El front de moble d'un electrodomèstic: el frigorífic de porta lliscant penja de les frontisses del mòdul (amb la
+ * filera System 32 per a la placa); el tirador, com als altres fronts. La resta es cargola a l'aparell (cap lloc).
+ */
+function applianceSlots(m: Module, a: ZoneAppliance, add: (slot: HardwareSlot, n: number, what: string) => void): void {
+  if (!applianceFront(a)) return
+  const ap = a.hardware.appliance!
+  const n = applianceFronts(ap)
+  if (furnitureHinges(ap)) {
+    add("hinge", n, "frigorífics")
+    add("system32", n, "frigorífics")
+  }
+  if (a.handle === "none" || (!a.handle && m.fronts.handles === "none")) return
+  add("handle", n, "electrodomèstics")
 }
 
 /** Els llocs de ferratge de cada front (el seu o, «Com el mòdul», el del mòdul: tots dos compten). */
@@ -118,6 +136,11 @@ export function frontOptionsUse(module: Module): FrontOptionsUse {
     if (f) {
       use.style = use.outerGap = true
       if ((f.kind === "door" && f.mode === "double") || (f.kind === "drawers" && f.n >= 2) || (!inset && !isRoot)) use.betweenGap = true
+    }
+    // El front de moble d'un electrodomèstic: com un front (estil i folgança front–cos; la junta d'un combi és la del catàleg).
+    if (!covered && z.appliance && applianceFront(z.appliance)) {
+      use.style = use.outerGap = true
+      if (!inset && !isRoot) use.betweenGap = true
     }
     if (z.split) return
     if (z.led) use.shelfSetback = true

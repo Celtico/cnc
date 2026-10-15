@@ -1,6 +1,7 @@
 import { defaultModule, newId, tableModule, type Carcass, type CompositionKind, type Module } from "./composition"
 import { ellipseNodes } from "./polygon"
 import { BUILTIN_TEMPLATES } from "./templates"
+import { dishwasherModule, fridgeColumn, ovenColumn } from "./applianceModules"
 
 /**
  * Mòduls especials de cada tipus de moble, per a «Afegir mòdul». Mides estàndard: baixos
@@ -53,6 +54,10 @@ export const MODULE_PRESETS: ModulePreset[] = [
         },
       }),
   },
+  // Electrodomèstics (v46): el rentaplats en un mòdul sense res i les columnes del frigorífic i del forn amb microones.
+  { id: "k-dishwasher", kind: "cuina", name: "Rentaplats integrable 60", make: dishwasherModule },
+  { id: "k-fridge", kind: "cuina", name: "Nevera integrable 178", make: fridgeColumn },
+  { id: "k-tall-appliances", kind: "cuina", name: "Columna forn + microones", make: ovenColumn },
   { id: "k-pantry", kind: "cuina", name: "Columna rebost 600", make: () => mod("Rebost", kTall(600), { shelves: { n: 5, adjustable: true }, front: door("right") }) },
   { id: "k-wall", kind: "cuina", name: "Alt porta 600", make: () => mod("Alt", kWall(600), { shelves: { n: 1, adjustable: true }, front: door() }) },
   { id: "k-wall-flap", kind: "cuina", name: "Alt abatible 800", make: () => mod("Alt abatible", kWall(800), { shelves: { n: 1, adjustable: true }, front: { kind: "flap", dir: "up" } }) },

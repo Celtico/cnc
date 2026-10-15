@@ -83,7 +83,7 @@ function scrambleHidden(m: Module, r: Rnd): Module {
  */
 function anyBuiltFront(z: Zone, sides: Sides, covered = false, isRoot = true): boolean {
   const built = frontBuilt(z, sides, covered, isRoot)
-  if (built) return true
+  if (built || applianceFrontBuilt(z, covered)) return true
   const n = z.split?.children.length ?? 0
   return !!z.split?.children.some((c, i) => anyBuiltFront(c, childSides(sides, z.split!.dir, i, n), covered, false))
 }
@@ -106,7 +106,7 @@ function anyRetiredShelf(z: Zone, sides: Sides, covered = false, fixedCover = fa
     const n = z.split.children.length
     return z.split.children.some((c, i) => anyRetiredShelf(c, childSides(sides, z.split!.dir, i, n), covered || built, fixedCover || (built && z.front!.kind === "panel"), false))
   }
-  if (fixedCover || z.front?.kind === "drawers" || (z.front?.kind === "panel" && !covered)) return false
+  if (fixedCover || inNiche(z, covered) || z.front?.kind === "drawers" || (z.front?.kind === "panel" && !covered)) return false
   return (z.shelves?.n ?? 0) > 0 || !!z.led
 }
 
@@ -138,7 +138,15 @@ const frontHeld = (sides: Sides): boolean => sides.left && sides.right
  * front fix de tota la zona i els fronts de les divisions de dins no es fan).
  */
 const frontBuilt = (z: Zone, sides: Sides, covered: boolean, isRoot: boolean): boolean =>
-  !!z.front && frontHeld(sides) && !covered && (!z.split || (isRoot && z.front.kind === "door"))
+  !!z.front && frontHeld(sides) && !covered && (!z.split || (isRoot && z.front.kind === "door")) && !inNiche(z, covered)
+
+/**
+ * Electrodomèstic (v46, Electrodomèstic del compartiment): només en un compartiment sense dividir i no tapat. Els que
+ * ocupen el compartiment (tots menys la placa i la campana) en treuen el Front, els Prestatges i els Accessoris.
+ */
+const inNiche = (z: Zone, covered: boolean): boolean => !covered && !z.split && !!z.appliance?.hardware.appliance && !["hob", "hood"].includes(z.appliance.hardware.appliance.kind)
+/** El front de moble de l'electrodomèstic es fa (en porta i no s'ha tret). */
+const applianceFrontBuilt = (z: Zone, covered: boolean): boolean => !covered && !z.split && !!z.appliance?.hardware.appliance?.door && z.appliance.front !== false
 
 /** `fixedCover`: tapat per un front fix de tota la zona que es fa (ni Prestatges ni Accessoris, com el front fix propi). */
 function scrambleZone(z: Zone, r: Rnd, noHandles: boolean, covered: boolean, sides: Sides, fixedCover: boolean, isRoot = false): Zone {
@@ -168,7 +176,7 @@ function scrambleZone(z: Zone, r: Rnd, noHandles: boolean, covered: boolean, sid
     if (r() < 0.6) out.shelves = randomShelves(r)
     if (r() < 0.3) out.rail = {}
     if (r() < 0.3) out.led = {}
-  } else if (((f?.kind === "drawers" || f?.kind === "panel") && !covered) || fixedCover) {
+  } else if (((f?.kind === "drawers" || f?.kind === "panel") && !covered) || fixedCover || inNiche(z, covered)) {
     // Calaixos o front fix (el seu o el de tota la zona que el tapa): les seccions Prestatges i Accessoris no surten.
     if (r() < 0.6) out.shelves = randomShelves(r)
     if (r() < 0.3) out.rail = {}
@@ -182,13 +190,35 @@ function scrambleZone(z: Zone, r: Rnd, noHandles: boolean, covered: boolean, sid
     // Un `false` d'abans (fitxers antics): cap barra.
     if (!z.rail && r() < 0.3) (out as { rail?: unknown }).rail = false
   }
-  if ((!held || (z.split && !isRoot)) && !covered) {
+  if (z.appliance) out.appliance = scrambleAppliance(z.appliance, r, covered || !!z.split, held)
+  if (inNiche(z, covered)) {
+    // L'electrodomèstic ocupa el compartiment: el seu Front no surt (qualsevol front o cap).
+    const any = pick(r, [undefined, ...REMEMBERED])
+    if (any) out.front = structuredClone(any)
+    else delete out.front
+  } else if ((!held || (z.split && !isRoot)) && !covered) {
     // Sense un lateral o divisor a cada costat el front no es fa (el compartiment és com obert): qualsevol front o cap.
     // Tampoc el d'una divisió de dins (només les portes de l'arrel tapen tota la zona).
     const any = pick(r, [undefined, ...REMEMBERED, { kind: "door", mode: "single", hinge: "right", hardware: structuredClone(DEFAULT_MODULE_HARDWARE.dowel) } as Front])
     if (any) out.front = structuredClone(any)
     else delete out.front
   } else if (f) out.front = scrambleFront(f, r, noHandles)
+  return out
+}
+
+/**
+ * Les opcions de l'electrodomèstic que no surten: sense front de moble, el costat, el sòcol i el tirador; el costat, fora
+ * del frigorífic i la rentadora; el sòcol, fora dels aparells de terra en un compartiment sense peça a sota (aquí: amb
+ * un lateral, no és el mòdul sense res). Dividit o tapat, tot (no es fa).
+ */
+function scrambleAppliance(a: NonNullable<Zone["appliance"]>, r: Rnd, gone: boolean, held: boolean): NonNullable<Zone["appliance"]> {
+  const ap = a.hardware.appliance
+  if (gone || !ap) return { ...a, hinge: pick(r, ["left", "right"] as const), plinth: int(r, 0, 300), front: r() < 0.5 }
+  const out = { ...a }
+  const front = !!ap.door && a.front !== false
+  if (!front || !["fridge", "washer"].includes(ap.kind)) out.hinge = pick(r, ["left", "right"] as const)
+  if (!front || ap.mount !== "base" || ["hob", "hood"].includes(ap.kind) || held) out.plinth = int(r, 0, 300)
+  if (!front) out.handle = structuredClone(OTHER_HANDLE)
   return out
 }
 

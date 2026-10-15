@@ -1,7 +1,8 @@
 import { DEFAULT_CABINET } from "./cabinet"
-import { isLegacyHardware, type ModuleHardware } from "./hardware"
+import { isAppliance, isLegacyHardware, type ModuleHardware } from "./hardware"
+import { doorLikeFront, fillsNiche, standsOnFloor, takesFront } from "./appliance"
 import { canHoldFront, canHoldShelves, carcassBounds, childBounds, type ZoneBounds } from "./zoneSupport"
-import { DEFAULT_GRILLE, type Carcass, type Module, type Zone } from "./moduleSchema"
+import { DEFAULT_GRILLE, type Carcass, type Module, type Zone, type ZoneAppliance } from "./moduleSchema"
 
 // --- «Res amagat compta» -------------------------------------------------------------
 
@@ -138,13 +139,36 @@ export function coveringZone(root: Zone, id: string): Zone | undefined {
   return find(root, undefined) ?? undefined
 }
 
-/** El mòdul té algun front que es construeix (porta, calaixos, abatible, reixeta o front fix; els tapats no compten). */
+/**
+ * El mòdul té algun front que es construeix (porta, calaixos, abatible, reixeta o front fix, o el front de moble d'un
+ * electrodomèstic; els tapats no compten).
+ */
 function hasBuiltFronts(root: Zone): boolean {
   let hit = false
   walkBuiltZones(root, (z, { covered }) => {
     if (z.front && !covered) hit = true
+    if (!covered && !z.split && z.appliance && applianceFront(z.appliance)) hit = true
   })
   return hit
+}
+
+/** L'electrodomèstic d'un compartiment porta front de moble (en porta i no s'ha tret). */
+export const applianceFront = (a: ZoneAppliance): boolean => !!a.hardware.appliance && takesFront(a.hardware.appliance) && a.front !== false
+
+/**
+ * L'electrodomèstic tal com es veu: sense front de moble, ni el costat, ni el sòcol, ni el tirador; el costat, només als
+ * que obren com una porta (frigorífic, rentadora); el sòcol, només als de terra sense peça a sota del compartiment.
+ */
+function visibleAppliance(a: ZoneAppliance, bounds: ZoneBounds): ZoneAppliance {
+  const ap = a.hardware.appliance!
+  if (!takesFront(ap)) return { hardware: a.hardware }
+  if (a.front === false) return { hardware: a.hardware, front: false }
+  return {
+    hardware: a.hardware,
+    ...(doorLikeFront(ap) && a.hinge ? { hinge: a.hinge } : {}),
+    ...(standsOnFloor(ap) && !bounds.bottom && a.plinth !== undefined ? { plinth: a.plinth } : {}),
+    ...(a.handle ? { handle: a.handle } : {}),
+  }
 }
 
 /**
@@ -166,6 +190,13 @@ function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: Zon
   // amb portes de dalt a baix). El front fix de tota la zona i qualsevol front d'una divisió de dins ja no es poden
   // triar: no es fan (es conserven) i no tapen els de dins (res amagat compta).
   if (out.front && z.split && !(isRoot && out.front.kind === "door")) delete out.front
+  // Electrodomèstic (v46): només en un compartiment sense dividir i que no tapa cap front de més amunt (l'inspector no
+  // l'ensenya en cap altre). Si ocupa el compartiment (el nínxol), ni Front ni prestatges ni accessoris (es conserven).
+  if (out.appliance && (covered || z.split || !isAppliance(out.appliance.hardware))) delete out.appliance
+  if (out.appliance) {
+    out.appliance = visibleAppliance(out.appliance, bounds)
+    if (fillsNiche(out.appliance.hardware.appliance!)) delete out.front
+  }
   const childCovered = covered || !!out.front
   // Tapat per un front fix de tota la zona (`buildParentFront`; el d'una zona de més amunt que es fa, no el que no
   // s'aguanta): com el front fix propi, darrere no hi ha res a fer servir (per decisió de l'usuari). Les portes, no.
@@ -258,6 +289,12 @@ function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: Zon
     // L'imant triat només compta si hi ha imants (reixeta desmuntable o trapa).
     if (f.mount !== "removable" && !f.hatch) delete grille.hardware
     out.front = grille
+  }
+  // L'electrodomèstic que ocupa el compartiment (el nínxol): ni prestatges ni accessoris (es conserven).
+  if (out.appliance && fillsNiche(out.appliance.hardware.appliance!)) {
+    delete out.shelves
+    delete out.rail
+    delete out.led
   }
   return out
 }

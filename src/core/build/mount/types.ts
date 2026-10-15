@@ -23,6 +23,8 @@ export interface HardwareMount {
    * tapa els tapa des de dalt). La càmera enquadra `region`.
    */
   aim?: { at: Vec3; view?: Vec3 }
+  /** Es mira sencer encara que sigui gran (un electrodomèstic amb el seu front): la càmera s'allunya el que calgui. */
+  whole?: boolean
   /** Ferratge «només 3D» (motor `model`): cap peça ni forat, només el model (o la seva caixa) per veure'l. */
   model?: { asset?: string; bbox?: { min: Vec3; max: Vec3 } }
   /**

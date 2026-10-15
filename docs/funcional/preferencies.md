@@ -62,7 +62,11 @@
   l'usuari: Frontisses › Sensys · Intermat, Tiradors › Classic · Modern, Portes corredisses › SlideLine 55…; `itemSeries`, la
   carpeta del fabricant; `FoldItem` niats `nested` amb el nombre, `mobles:md-open:hardware-series`, munta en obrir; els de
   l'app i els que no en tenen, a dalt de la categoria; la cerca —també pel número i la sèrie— obre les que hi coincideixen;
-  `seriesGroups`), `GalleryCard` amb la **miniatura 3D com
+  `seriesGroups`; als **Electrodomèstics** —v46—, per família: Rentaplats 60 · Frigorífics de columna · Forns 60…,
+  `applianceSeries`; la targeta i el selector hi posen la **foto del catàleg** en lloc del 3D, `SnapshotThumb contain`, i
+  l'editor, la secció «Del catàleg» amb la foto i les dades del fabricant, només lectura, `ApplianceSections`; els
+  paràmetres de «Mides» són el que l'app mecanitza al front: les prebroques d'hipòtesi o les cassoletes de la rentadora),
+  `GalleryCard` amb la **miniatura 3D com
   les de Mobles, Objectes i Ambients** (per decisió de l'usuari: «A Ferratges fes preview 3D com als apartats principals»;
   `SnapshotThumb` 2:1, buida mentre es fa), resum i «★ Per defecte». La miniatura (`settings/hardwareThumbs.ts` →
   `hardwareThumbJob.ts` amb `import()` → `components/viewer/hardwareThumb.ts`, `renderHardwareThumb`): el mateix
@@ -170,7 +174,8 @@
 - **Visor 3D**: qualitat, escena de Presentació (terra i paret: materials de la biblioteca, `PresentationScene.floorMaterial`
   / `wallMaterial`, o les mostres ràpides; terra per defecte «Parquet de roure»), llum i «Cel del render». **Tema**:
   dia/nit/sistema i color principal (`theme/accent.ts` redirigeix les variables CSS de `wood`).
-- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 45 (el penjador ocult regulable i la regleta de paret dels mòduls penjats —llocs `hanger` i
+- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 46 (els 36 electrodomèstics del catàleg —Bosch,
+Balay, Siemens i Teka—, categoria «Electrodomèstics», motor `appliance`, `V46_ITEMS`, additiu); 45 (el penjador ocult regulable i la regleta de paret dels mòduls penjats —llocs `hanger` i
 `wallRail`, «Per defecte als mòduls nous»— i els sòcols d'alumini de 100 i 150, ferratges per metres, `V45_ITEMS`,
 additiu: s'afegeixen per id i els llocs nous apunten als d'inici, `fixHardwareDefaults`); 44 (la Duomatic 105° per a marc estret i els pistons de gas Häfele, `V44_ITEMS`, additiu); 43 (la frontissa Duomatic Premium per a marc d'alumini, `V43_ITEMS`, additiu); 42 (els tiradors de vitrina Häfele, `V42_ITEMS`, additiu); 41 (a les vitrines, la frontissa —la Metallamat A, `V41_ITEMS`— i el tirador es trien com a les portes; els marcs Häfele, només perfil, es refan); 40 (els perfils de LED a «Llums»); 39 (la pota AXILO 78 de mobles, `V39_ITEMS`, additiu); 38 (la pota AXILO 78 amb la placa per dibuixar-la al 3D, refeta si és d'una versió anterior de l'item); 37 (la pota AXILO 78 com la munta el taller, refeta si encara és la de la v34); 36 (el material del que es veu d'un ferratge, `HardwareItem.material`: els marcs Häfele en «Alumini anoditzat plata», material nou `FRAME_MATERIALS`; el de l'app, negre); 35 (catàleg general Häfele, `V35_ITEMS`: marcs d'alumini amb la placa de la Metallamat A, 9 tiradors, 2 suports de prestatge i el perfil Loox d'11 mm per encastar amb la tira LED 3015, additiu); 34 (potes de sòcol Häfele AXILO 78, `V34_ITEMS`, additiu); 33 (el joc de la ranura per defecte a 0,8, `DEFAULT_GROOVE_CLEARANCE`); 32 (joc de l'ample de la ranura del fons, `gaps.grooveClearance` 0, additiu); 31 (jocs de llum Häfele Loox, additiu); 30 (la neteja de la 29 amb la regla sencera); 29 (fora els «només 3D»: tots els inicials del motor `model`, els importats sense `machining` i els inicials DTC que ja no són a la biblioteca); 28 (la resta del catàleg DTC 2026, additiu); 27 (catàleg DTC 2026: jocs i push latch, additiu); 26 (`assistant`: clau de l'API i model,
   additiu; **la clau no surt mai** a l'export, `settingsToJson`, ni al `.moble`, i importar unes preferències no la toca,

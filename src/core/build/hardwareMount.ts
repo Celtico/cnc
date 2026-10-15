@@ -44,12 +44,12 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
   // Un joc de calaix es tria al front dels calaixos (no té lloc al joc del mòdul).
   const front = rc.front?.kind === "drawers" && made.engine === "drawerKit" ? { ...rc.front, hardware: made } : rc.front
   if (made.engine === "plate") hardware.hinge = setConfirmed(pairPlate(hostHinge(base), made), true)
-  else if (made.engine !== "leg" && made.engine !== "drawerKit" && made.engine !== "model" && made.engine !== "plinthProfile") hardware[slotForEngine(made.engine).slot] = made
+  else if (made.engine !== "leg" && made.engine !== "drawerKit" && made.engine !== "model" && made.engine !== "plinthProfile" && made.engine !== "appliance") hardware[slotForEngine(made.engine).slot] = made
   const legBase = rc.base?.kind === "legs" && made.engine === "leg" ? { ...rc.base, hardware: made } : rc.base
   const module: Module = {
     ...base,
     carcass: { ...base.carcass, ...rc.carcass, ...rc.size, sides: { left: true, right: true }, base: legBase ?? { kind: "none" }, top: { kind: "full" }, hollow: undefined, tableTop: undefined, joint: "butt" },
-    root: { id: "mount-root", ...(rc.shelves ? { shelves: rc.shelves } : {}), ...(front ? { front } : {}), ...(rc.rail ? { rail: {} } : {}), ...(rc.led ? { led: {} } : {}) },
+    root: { id: "mount-root", ...(rc.shelves ? { shelves: rc.shelves } : {}), ...(front ? { front } : {}), ...(rc.rail ? { rail: {} } : {}), ...(rc.led ? { led: {} } : {}), ...(rc.appliance ? { appliance: { hardware: made } } : {}) },
     fronts: { ...base.fronts, style: "overlay", handles: "bar" },
     hardware,
     extras: { cableHoles: [] },
@@ -94,7 +94,8 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
   // El forat principal: la primera cassoleta (la de baix) o, si no, el forat del ferratge més a prop del mig de la seva peça.
   let focus: HardwareMount["focus"] = null
   let best = Infinity
-  for (const p of panels) {
+  // Un electrodomèstic es mira sencer (l'aparell i el seu front), pel mig de l'aparell (`aim`, més avall).
+  for (const p of item.engine === "appliance" ? [] : panels) {
     for (const h of mountHoles(p)) {
       // Una placa es mira des de la cassoleta de la seva frontissa (la placa va a la seva alçada).
       if (!focusTag(h) && !(item.engine === "plate" && h.tag === "hinge")) continue
@@ -131,7 +132,7 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
     const first = panels.find(rc.extras)
     // La barra i el perfil LED van sota la tapa: de davant i una mica de sota (des de dalt, la tapa els tapa).
     // La regleta, des de darrere (va entre la paret i el fons); el sòcol d'alumini, de davant i de costat.
-    const view: Vec3 | undefined = item.engine === "rail" || item.engine === "ledProfile" ? unit3([0.45, -0.35, 1]) : item.engine === "wallRail" ? unit3([0.5, 0.35, -1]) : item.engine === "plinthProfile" ? unit3([0.7, 0.25, 1]) : undefined
+    const view: Vec3 | undefined = item.engine === "rail" || item.engine === "ledProfile" ? unit3([0.45, -0.35, 1]) : item.engine === "wallRail" ? unit3([0.5, 0.35, -1]) : item.engine === "plinthProfile" ? unit3([0.7, 0.25, 1]) : item.engine === "appliance" ? unit3([0.45, 0.3, 1]) : undefined
     if (first) aim = { at: toWorld(first, [first.length / 2, first.width / 2, first.thickness / 2]), ...(view ? { view } : {}) }
   }
   // Els avisos del ferratge (el mòdul d'exemple de les potes ja té l'alçada de la pota: no avisa de l'alçada).
@@ -143,6 +144,7 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
     tags,
     focus,
     ...(aim ? { aim } : {}),
+    ...(item.engine === "appliance" ? { whole: true } : {}),
     ...((item.engine === "cup" || item.engine === "plate") && door && side ? { hinge: { doorId: door.id, sideId: side.id } } : {}),
     size: rc.size,
     warnings: build.warnings.filter((w) => relevant.has(w.code)).map((w) => w.message),

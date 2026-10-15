@@ -294,6 +294,31 @@
     catàleg a `build.hardwareKits` (Peces › «Ferratges dels jocs», LLEGEIX-ME de Maestro, fitxa «Joc» de l'inspector).
     Tot o res per calaix (sense NL, sense lateral o sense alçada: només el front i avís `hardware`). Les alçades de les
     fileres de cargols i la posició vertical del joc són **hipòtesis** del catàleg (`hypotheses`, a l'editor del joc).
+- **Electrodomèstic del compartiment** (v46; per petició de l'usuari, 2026-10-15: «un moble sense res ha de poder portar
+  una porta, això és per ficar el rentaplats o la nevera… posa els catàlegs com a ferratges electrodomèstics amb el seu
+  mecanitzat i guarda la foto per fer la simulació i el render»; per decisió de l'usuari, el front es munta **com diu el
+  fabricant**; `Zone.appliance`, `core/model/appliance.ts`, `core/build/module/appliances.ts`, dades a
+  [`docs/electrodomestic/`](../electrodomestic/README.md)): un compartiment sense dividir i no tapat pot allotjar un
+  **electrodomèstic** de la biblioteca (Preferències › Ferratges › **Electrodomèstics**, motor `appliance`, una còpia com
+  tots els ferratges). `ZoneAppliance` = `hardware` (l'aparell) · `front` (sense = sí; `false` = sense front de moble) ·
+  `hinge` (on obre: frigorífic i rentadora) · `plinth` (del terra al cantell de baix del front, als aparells de terra sense
+  peça a sota; sense, 100, `DEFAULT_APPLIANCE_PLINTH`) · `handle` (el tirador del front, com als altres fronts).
+  - **Què ocupa** (`fillsNiche`): rentaplats, frigorífics, rentadores, forns i microones fan del compartiment el **nínxol**:
+    no fa el seu Front, ni prestatges, ni accessoris, ni es divideix (res amagat compta: `visibleZone` els treu i es
+    conserven). La **placa** (va al taulell: el retall a la peça de sobre) i la **campana** (va al moble penjat: el retall a
+    la base) no l'ocupen: el compartiment conserva el seu contingut (els calaixos de sota la placa, la porta del moble).
+  - **El mòdul sense res**: un mòdul sense laterals, sense base («Sense base»), sense tapa i sense fons és el nínxol entre
+    els mòduls del costat (el rentaplats de la cuina). **El front de moble no necessita els quatre costats** (no és un
+    Front del compartiment: es fixa a l'aparell); el frigorífic de porta lliscant, que penja de frontisses de moble, sí que
+    vol un lateral o un divisor al costat de les frontisses (si no, avís i cap cassoleta).
+  - El front de moble compta com un front a Mòdul › Caixa (estil i folgances) i a Materials (el material dels fronts:
+    `hasBuiltFronts`, `frontOptionsUse`); el frigorífic de porta lliscant fa servir la frontissa i la filera System 32 del
+    mòdul i tots el tirador (`usedHardwareSlots`). Com es construeix i es munta: [`fabricacio.md`](fabricacio.md) ›
+    Electrodomèstics. Tests `build/appliances.test.ts`, `build/hiddenState.test.ts`.
+  - Exemples: plantilla **«Cuina amb electrodomèstics»** (columnes del frigorífic combi i del forn amb microones, rentaplats
+    en un mòdul sense res, placa sobre calaixos i grup filtrant al moble de la campana) i, sense UI com la resta,
+    `modulePresets` «Rentaplats integrable 60», «Nevera integrable 178» i «Columna forn + microones»
+    (`core/model/applianceModules.ts`).
 - **Illes** (`Composition.islands`, `IslandSchema`, `core/build/islands.ts`; per decisió de l'usuari, 2026-10-13: «les
   opcions que diuen els professionals»: dues files de mòduls d'esquena cargolades, fronts enrasats, remats als costats):
   **sense UI des del 2026-10-13** (per decisió de l'usuari: «treu l'opció illa, això és més fàcil amb peces lliures»;

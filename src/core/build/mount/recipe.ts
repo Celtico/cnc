@@ -37,6 +37,8 @@ interface Recipe {
   carcass?: Partial<Module["carcass"]>
   front?: Front
   shelves?: { n: number; adjustable: boolean }
+  /** Electrodomèstic: el compartiment l'allotja (`Zone.appliance`) amb l'item. */
+  appliance?: boolean
   /** Accessoris del compartiment (barra, llum): hi són amb l'item. */
   rail?: boolean
   led?: boolean
@@ -100,6 +102,16 @@ export function recipe(item: HardwareItem): Recipe | null {
     case "plinthProfile":
       // Mòdul baix sobre potes amb el sòcol d'alumini al davant i als laterals: la base, el lateral esquerre i el sòcol.
       return { size: { width: 500, height: 300, depth: 450 }, base: { kind: "legs", height: Math.max(20, item.params.height ?? 100), plinth: { setback: 20, left: true, right: true, sideSetback: 0, hardware: item } }, keep: (p) => p.role === "bottom" || isLeftSide(p), extras: (p) => p.id.startsWith("plinth") }
+    case "appliance": {
+      // Electrodomèstic: un mòdul de la mida del nínxol que demana (tauler de 19 a tot el voltant), amb l'aparell, el seu
+      // front de moble i el lateral esquerre.
+      const a = item.appliance
+      const t = 19
+      const w = (a?.niche?.w?.min ?? (a ? a.size.w + 2 : 600)) + 2 * t
+      const h = (a?.niche?.h?.min ?? a?.tallNicheH?.min ?? (a ? a.size.h + 5 : 600)) + 2 * t
+      const d = Math.max(a?.niche?.d?.min ?? 0, a?.size.d ?? 300) + 20
+      return { size: { width: w, height: h, depth: d }, appliance: true, keep: (p) => isLeftSide(p) || p.role === "door" || p.role === "flap" || p.role === "top" || p.role === "bottom", extras: (p) => p.id.startsWith("appliance-") }
+    }
     case "glassFrame":
       // Porta de vidre: el lateral esquerre i el marc amb el vidre.
       return { size: small, front: { kind: "door", mode: "single", hinge: "left", glass: true }, keep: isLeftSide, extras: (p) => /-(left|right|top|bottom|glass)$/.test(p.id) }

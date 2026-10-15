@@ -4,6 +4,7 @@ import { repairAtomically } from "./repair"
 import { MachiningListSchema, StepRuleSchema } from "./hardwareOps"
 import { HardwareKitSchema } from "./hardwareKit"
 import { LightKitSchema } from "./lightKit"
+import { ApplianceSchema } from "./appliance"
 
 /**
  * Biblioteca de ferratges (millores v1, `docs/millores-v1/ferratges.md` §4): cada ferratge és **dades** (`HardwareItem`:
@@ -81,6 +82,7 @@ export const HARDWARE_CATEGORIES = [
   { id: "profile", label: "Perfils i marcs", hint: "Perfils i marcs d'alumini per a portes de vidre (Cadro). Els perfils de LED són a Llums." },
   { id: "light", label: "Llums", hint: "Làmpades LED de 24 V per encastar al prestatge o a la tapa (forat o rebaix, forat del cable) amb l'alimentador, l'interruptor i els cables per connectar-les a la xarxa." },
   { id: "wall", label: "Penjar", hint: "Penjadors dels mòduls penjats, regletes de paret i barres de penjar." },
+  { id: "appliance", label: "Electrodomèstics", hint: "Rentaplats, frigorífics, rentadores, forns, microones, plaques i campanes integrables del catàleg del fabricant: el nínxol que demanen, com es munta el front de moble (es tria a cada compartiment, «Electrodomèstic») i la foto per al 3D i el render." },
   { id: "misc", label: "Altres", hint: "Accessoris, electrònica, passacables, ventilació…" },
 ] as const
 export type HardwareCategory = (typeof HARDWARE_CATEGORIES)[number]["id"]
@@ -95,9 +97,10 @@ const CATEGORY_IDS = HARDWARE_CATEGORIES.map((c) => c.id) as [HardwareCategory, 
  * `base`). `model` («només 3D»): un ferratge importat sense cap regla de mecanitzat (estructures de taula, portes
  * corredisses…): el model i el volum, **mai cap forat** (target `model` buit). `hanger` (penjador de moble alt) i
  * `wallRail` (la regleta de paret on s'enganxa): llocs del mòdul penjat (`Base.hanger`, `Base.rail`). `plinthProfile`
- * (sòcol d'alumini): sense lloc, es tria al sòcol de la base «Potes» (`Base.plinth.hardware`), com la pota.
+ * (sòcol d'alumini): sense lloc, es tria al sòcol de la base «Potes» (`Base.plinth.hardware`), com la pota. `appliance`
+ * (electrodomèstic, v46): sense lloc, es tria a cada compartiment («Electrodomèstic», `Zone.appliance`).
  */
-export const HARDWARE_ENGINES = ["cup", "system32", "dowel", "slide", "flapArm", "magnet", "barHandle", "plate", "leg", "model", "drawerKit", "rail", "ledProfile", "glassFrame", "hanger", "wallRail", "plinthProfile"] as const
+export const HARDWARE_ENGINES = ["cup", "system32", "dowel", "slide", "flapArm", "magnet", "barHandle", "plate", "leg", "model", "drawerKit", "rail", "ledProfile", "glassFrame", "hanger", "wallRail", "plinthProfile", "appliance"] as const
 export type HardwareEngine = (typeof HARDWARE_ENGINES)[number]
 
 /** Mecanitzat en coordenades de la peça, relatiu al punt d'ancoratge (u al llarg, v a través). */
@@ -255,6 +258,12 @@ export const HardwareItemObjectSchema = z.object({
   light: LightKitSchema.optional(),
   /** Ferratge per metres (v45): la regleta de paret, el sòcol d'alumini (`LinearSchema`). */
   linear: LinearSchema.optional(),
+  /**
+   * Electrodomèstic (v46, motor `appliance`, `appliance.ts`): les dades del catàleg del fabricant (nínxol, sistema de
+   * porta, alçades i pes del front, sòcol, ventilació, retalls, foto). Els `params` i els `targets` són el que l'app
+   * mecanitza al front de moble (`appliances/applianceCatalog.ts`).
+   */
+  appliance: ApplianceSchema.optional(),
 })
 export type HardwareItem = z.infer<typeof HardwareItemObjectSchema>
 

@@ -202,6 +202,11 @@ export const PanelSchema = z.object({
   mitres: z.array(EdgeSideSchema).optional(),
   /** Front sense tirador (obertura per pressió, `fronts.handles = "none"`): ni forats ni barra al 3D. */
   push: z.boolean().optional(),
+  /**
+   * Foto d'un electrodomèstic (només als de rol `hardware`, v46): la imatge (camí a `public/`) a la cara de davant (+z
+   * local) o de dalt (+y local, una placa), estirada a la mida de la cara. Per al 3D, el render i el GLB; no es fabrica.
+   */
+  photo: z.object({ src: z.string(), face: z.enum(["front", "top"]) }).optional(),
   /** Número de mòdul (1..n) dins de la composició, per a les refs del taller. */
   module: z.number().int().positive().optional(),
   /**

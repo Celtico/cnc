@@ -17,7 +17,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   «Elements sense nesting» per a `build.extras` (sense els components dels jocs, rol `hardware`), **«Ferratges»** (per
   decisió de l'usuari, 2026-10-14: «han de ser peces reals»; `ModuleBuild.fittingOrders` → `build.fittingOrders`,
   `Builder.order`, `core/build/fittingOrders.ts` `fittingGroups`: per mòdul, les frontisses que es col·loquen —també
-  les de vitrina i d'abatible de vidre—, els tiradors, el joc de pistons de gas, un per abatible, i les potes, amb el
+  les de vitrina i d'abatible de vidre—, els tiradors, el joc de pistons de gas, un per abatible, les potes i els
+  **electrodomèstics** (v46: un per compartiment, amb la marca i la referència, «electrodomèstic: no es fabrica»), amb el
   número d'article; també al LLEGEIX-ME de Maestro) i **«Ferratges dels
   jocs»** (`build.hardwareKits`, `kitGroups`: la comanda dels calaixos de doble paret amb els números del catàleg i la
   fusta per calaix).
@@ -120,7 +121,13 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     anterior amb repetició, mirall, gir o fórmula surten com a **«Avançat»** (només lectura) amb «Simplificar».
     El Front de cada compartiment és al compartiment; les portes de tot el mòdul (Interior dividit), a **Portes**.
   - Compartiment (`ZonePanel`): accions com a icones a la capçalera (Pare · Duplicar · Eliminar; a l'«Interior», l'arrel,
-    cap: no es duplica, no es retalla ni s'elimina, i ⌘D, ⌘X i Suprimir avisen sense tocar el porta-retalls) i Front ·
+    cap: no es duplica, no es retalla ni s'elimina, i ⌘D, ⌘X i Suprimir avisen sense tocar el porta-retalls) i
+    **Electrodomèstic** (`LuRefrigerator`, `zone/ApplianceSection.tsx`, v46; a dalt de tot, plegat si no n'hi ha: «Aparell»
+    amb el `HardwarePick` dels Electrodomèstics —«Cap» o un de la biblioteca, amb la foto; l'ajuda diu les dades del
+    catàleg— i, en cascada, «Front» (interruptor «Front de moble», si l'aparell en porta; l'ajuda diu com es munta), «Obre»
+    Esquerra · Dreta (frigorífic i rentadora), «Sòcol» (aparells de terra sense peça a sota) i «Tirador»; si l'aparell ocupa el
+    compartiment —tots menys la placa i la campana— no surten el Front, els Prestatges ni Dividir, i l'arbre diu
+    «Rentaplats», «Frigorífic»…; vegeu Model › Zones › Electrodomèstic) · Front ·
     **Prestatges i accessoris** (`LuRows3`, una sola secció per decisió de l'usuari, 2026-10-13; insígnia «3 · Barra · LED»:
     primer els prestatges —Quantitat · Regulables · Filera System 32 si li toca, vegeu Mòdul · A ras · Gruixuts— i a sota
     els accessoris —Penjar (Barra de penjar) i Llum (Tira LED), interruptor + `HardwarePick` «Com el mòdul»—) · Dividir (Prestatges, Accessoris, Dividir i els tipus
