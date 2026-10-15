@@ -76,11 +76,11 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
             <HangerFields module={module} base={c.base} onChange={(base) => set({ base })} />
           </>
         ) : rule?.support === false ? null : (
-          <FixedRow optionId="module.carcass.support" label="Suport" text={supportText(support, vc.base)} help="El de tots els mòduls de terra: es canvia al Moble › Sòcol i potes." />
+          <FixedRow optionId="module.carcass.support" label="Suport" text={supportText(support, vc.base)} help="El mateix per a tots els mòduls de terra. La pota, l'alçada i el sòcol es trien al Moble (clica el nom del moble a dalt de l'arbre) › Sòcol i potes." />
         )}
         {/* La Base, sota el Suport (en depèn): amb potes hi és sempre (s'hi cargolen). */}
         {rule?.bottom !== undefined ? null : vc.base.kind === "legs" ? (
-          <FixedRow optionId="module.carcass.bottom" label="Base" text="Sencera" help="Les potes es cargolen a la cara de sota de la base: amb potes, la base hi és sempre." />
+          <FixedRow optionId="module.carcass.bottom" label="Base" text="Sencera" help="Amb potes, la base (la peça de baix de la caixa) no es pot treure: les potes s'hi cargolen per sota." />
         ) : (
           <FormRow optionId="module.carcass.bottom" label="Base" help={support && support.kind !== "floor" ? "Sense base, el mòdul no pot anar sobre potes: va directe a terra." : undefined}>
             <IconChoice
@@ -372,7 +372,10 @@ const prefHint = (value: number, pref: number): string => (value === pref ? "Com
 /** Una part de la caixa que no es tria aquí (penjat, potes, l'electrodomèstic): el que és, i el perquè a l'ajuda. */
 /** El suport d'un mòdul de terra en una línia: el del moble (o directe a terra, si no té base). */
 function supportText(s: FloorSupport | undefined, base: Base): string {
-  if (base.kind === "legs") return s?.kind === "plinth" ? `Sòcol del tram, sobre potes de ${base.height} mm` : `Potes vistes de ${base.height} mm`
+  if (base.kind === "legs") {
+    const leg = base.hardware ? `«${base.hardware.name}»` : "genèriques"
+    return s?.kind === "plinth" ? `Sòcol del tram, sobre potes ${leg} de ${base.height} mm` : `Potes vistes ${leg} de ${base.height} mm`
+  }
   if (s && s.kind !== "floor") return "Directe a terra (sense base, no pot anar sobre potes)"
   return "Directe a terra"
 }
