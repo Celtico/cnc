@@ -100,8 +100,9 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
 - **Mòbil sense títols repetits**: les pàgines d'inici porten el seu títol gran (com iOS) i no hi ha barra de dalt; només n'hi
   ha quan cal tornar enrere. **Un sol «‹ Tornar» a la vista** («‹ nom del moble», «‹ Preferències», «‹ Màquines CNC»;
   `useSessionString` es manté igual entre components amb la mateixa clau; `DETAIL_KEYS`). Diàlegs i calaixos a pantalla
-  completa respecten la zona segura (`env(safe-area-inset-top)`), també el botó de tancar; el Render (i l'editor de
-  materials, la Vista CAM), els quatre costats i el botó a `calc(env(…) + 8px)`, també a l'ordinador i a l'iPad.
+  completa respecten la zona segura (`env(safe-area-inset-top)`), també el botó de tancar; l'editor de
+  materials i la Vista CAM, els quatre costats i el botó a `calc(env(…) + 8px)`, també a l'ordinador i a l'iPad; el Render
+  (panell flotant, maximitzat al mòbil), els quatre costats amb `&[data-maximized]` (`RenderFrame.tsx`).
 
 #### Mides d'iOS a les pantalles tàctils
 - `src/theme/layout.css`, `@media (pointer: coarse)` (CSS sense capa: guanya a les de Chakra): es canvien les variables dels

@@ -1,8 +1,11 @@
-import { CloseButton, Dialog, Portal } from "@chakra-ui/react"
+import { Flex } from "@chakra-ui/react"
 import { useRef, useState } from "react"
 import type { BackdropKind, Panorama } from "./backdrops"
 import { DEFAULT_LOOK, type Job, type Look, type RenderSource, type SceneGetter } from "./renderConfig"
+import { RenderFrame } from "./RenderFrame"
 import { RenderOptionsPanel } from "./RenderOptionsPanel"
+import { renderProgressText, usePublishRenderStatus } from "./renderStore"
+import { WIDE } from "./renderLayout"
 import { RenderViewport } from "./RenderViewport"
 import { useBackdropLoader } from "./useBackdropLoader"
 import { useAutoRestart, useElapsedClock, useRenderEngine } from "./useRenderEngine"
@@ -19,8 +22,10 @@ export type { SceneGetter } from "./renderConfig"
  * en PNG. **Comença aturat**: no es calcula res fins que no es prem «Començar».
  * Opcions: motor, qualitat i llum tornen a començar el càlcul; les d'imatge (exposició,
  * contrast, saturació, fons) només retoquen el to, a l'instant.
+ * És un panell flotant (`RenderFrame`): es pot continuar treballant mentre calcula; publica com va (`usePublishRenderStatus`)
+ * per a l'indicador del menú i per preguntar abans de fer-ne un d'un altre document.
  */
-export function RenderDialog({ open, onClose, getScene, name, saveKey }: { open: boolean; onClose: () => void; getScene: SceneGetter; name: string; /** Desa la configuració per a aquest document (`renderPrefs.ts`). */ saveKey?: string }) {
+export function RenderDialog({ open, onClose, shown, getScene, name, saveKey }: { open: boolean; onClose: () => void; /** Puja cada cop que es demana veure'l (`renderStore.ts`). */ shown: number; getScene: SceneGetter; name: string; /** Desa la configuració per a aquest document (`renderPrefs.ts`). */ saveKey?: string }) {
   const [notice, setNotice] = useState<string | null>(null)
   const settings = useRenderSettings(setNotice)
   const { opts, limit, look } = settings
@@ -52,36 +57,29 @@ export function RenderDialog({ open, onClose, getScene, name, saveKey }: { open:
 
   const { begun, preparing, passes, elapsed, engineLabel } = engine
   const j = job.current
+  const [minimized, setMinimized] = useState(false)
+  // Desat en PNG: la feina i les passades del moment (si en calcula més o torna a començar, ja no ho és).
+  const [saved, setSaved] = useState<{ job: Job | null; passes: number } | null>(null)
+  const markSaved = () => setSaved({ job: j, passes })
+  const unsaved = passes > 0 && !(saved && saved.job === j && saved.passes >= passes)
   const status = !begun
     ? "Aturat: prem «Començar» per calcular la imatge."
     : preparing
       ? "Preparant la GPU…"
-      : `${passes}${limit ? ` / ${limit}` : ""} ${passes === 1 ? "passada" : "passades"} · ${elapsed} s${elapsed && passes ? ` (${(passes / elapsed).toFixed(passes / elapsed < 10 ? 1 : 0)}/s)` : ""} · ${j ? `${j.w} × ${j.h} px` : "—"} · ${engineLabel}`
+      : `${renderProgressText({ passes, limit, elapsed })}${elapsed && passes ? ` (${(passes / elapsed).toFixed(passes / elapsed < 10 ? 1 : 0)}/s)` : ""} · ${j ? `${j.w} × ${j.h} px` : "—"} · ${engineLabel}`
+
+  const progress = begun && !preparing ? renderProgressText({ passes, limit, elapsed }) : ""
+  usePublishRenderStatus({ saveKey: saveKey ?? "", name, begun, running: engine.running, passes, limit, elapsed, unsaved, minimized })
 
   return (
-    <Dialog.Root open={open} onOpenChange={(e) => !e.open && onClose()} size="full" placement="center">
-      <Portal>
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          {/* A tota la finestra (alçada i amplada), també a l'ordinador; sempre dins de la zona segura (iPad i iPhone de costat). */}
-          <Dialog.Content w="100vw" maxW="100vw" h="100dvh" maxH="100dvh" rounded="none" display="flex" flexDirection="column" overflow="hidden" pt="env(safe-area-inset-top, 0px)" pb="env(safe-area-inset-bottom, 0px)" ps="env(safe-area-inset-left, 0px)" pe="env(safe-area-inset-right, 0px)">
-            <Dialog.Header>
-              <Dialog.Title>Render</Dialog.Title>
-            </Dialog.Header>
-            {/* Al mòbil: la imatge a dalt (més de mitja pantalla) i les opcions a sota, tot amb desplaçament. */}
-            <Dialog.Body flex={1} display="flex" flexDirection={{ base: "column", md: "row" }} gap={4} minH={0} overflowY={{ base: "auto", md: "hidden" }} px={{ base: 3, md: 6 }}>
-              <RenderViewport canvas={output.canvas} engine={engine} background={look.background} preview={preview} notice={notice} status={status} name={name} />
+    <RenderFrame open={open} onClose={onClose} shown={shown} name={name} progress={progress} onMinimizedChange={setMinimized}>
+      {/* Estret (el mòbil o el panell petit): la imatge a dalt i les opcions a sota, tot amb desplaçament; ample, de costat. */}
+      <Flex direction="column" gap={4} minH={0} css={{ [WIDE]: { flexDirection: "row", height: "100%" } }}>
+        <RenderViewport canvas={output.canvas} engine={engine} background={look.background} preview={preview} notice={notice} status={status} name={name} onSaved={markSaved} />
 
-              {/* 3 px a l'esquerra: el desplaçament de la columna no talla la vora ni l'anell de focus dels controls. */}
-              <RenderOptionsPanel settings={settings} engine={engine} viewKind={viewKind} pano={pano} setPano={setPano} setNotice={setNotice} setLook={setLook} denoiser={output.denoiser} scheduleDenoise={output.scheduleDenoise} onReset={reset} />
-            </Dialog.Body>
-            {/* Dins de la zona segura (per sota de la barra d'estat i lluny de la cantonada), a totes les mides. */}
-            <Dialog.CloseTrigger asChild top="calc(env(safe-area-inset-top, 0px) + 8px)" insetEnd="calc(env(safe-area-inset-right, 0px) + 8px)">
-              <CloseButton size="sm" aria-label="Tancar" />
-            </Dialog.CloseTrigger>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Portal>
-    </Dialog.Root>
+        {/* 3 px a l'esquerra: el desplaçament de la columna no talla la vora ni l'anell de focus dels controls. */}
+        <RenderOptionsPanel settings={settings} engine={engine} viewKind={viewKind} pano={pano} setPano={setPano} setNotice={setNotice} setLook={setLook} denoiser={output.denoiser} scheduleDenoise={output.scheduleDenoise} onReset={reset} />
+      </Flex>
+    </RenderFrame>
   )
 }

@@ -1,4 +1,4 @@
-import { HStack, Text } from "@chakra-ui/react"
+import { HStack, Stack, Text } from "@chakra-ui/react"
 import type { IconType } from "react-icons"
 import { Tooltip } from "../components/ui/tooltip"
 
@@ -6,6 +6,7 @@ import { Tooltip } from "../components/ui/tooltip"
 export function NavItem({
   icon: Icon,
   label,
+  detail,
   collapsed,
   active,
   disabled,
@@ -13,13 +14,15 @@ export function NavItem({
 }: {
   icon: IconType
   label: string
+  /** Segona línia, petita (p. ex. el progrés del render); plegada, va al tooltip. */
+  detail?: string
   collapsed: boolean
   active: boolean
   disabled: boolean
   onClick: () => void
 }) {
   return (
-    <Tooltip content={label} disabled={!collapsed} positioning={{ placement: "right" }}>
+    <Tooltip content={detail ? `${label} · ${detail}` : label} disabled={!collapsed} positioning={{ placement: "right" }}>
       <HStack
         asChild
         px={3}
@@ -39,7 +42,19 @@ export function NavItem({
           aria-label={collapsed ? label : undefined}
         >
           <Icon />
-          {!collapsed && <Text>{label}</Text>}
+          {!collapsed &&
+            (detail ? (
+              <Stack gap={0} minW={0} align="start" textAlign="start">
+                <Text truncate maxW="full">
+                  {label}
+                </Text>
+                <Text fontSize="2xs" color="fg.muted" fontWeight="normal" fontVariantNumeric="tabular-nums" truncate maxW="full">
+                  {detail}
+                </Text>
+              </Stack>
+            ) : (
+              <Text>{label}</Text>
+            ))}
         </button>
       </HStack>
     </Tooltip>

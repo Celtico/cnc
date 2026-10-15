@@ -3,10 +3,11 @@ import type { RefObject } from "react"
 import { LuDownload, LuPause, LuPlay, LuRotateCcw } from "react-icons/lu"
 import { Tooltip } from "../../ui/tooltip"
 import type { Background } from "./renderConfig"
+import { WIDE } from "./renderLayout"
 import type { RenderEngineState } from "./useRenderEngine"
 
 /** La imatge del Render (o, abans de «Començar», la del visor de fons), els avisos, l'estat i els botons. */
-export function RenderViewport({ canvas, engine, background, preview, notice, status, name }: { canvas: RefObject<HTMLCanvasElement | null>; engine: RenderEngineState; background: Background; preview: string | null; notice: string | null; status: string; name: string }) {
+export function RenderViewport({ canvas, engine, background, preview, notice, status, name, onSaved }: { canvas: RefObject<HTMLCanvasElement | null>; engine: RenderEngineState; background: Background; preview: string | null; notice: string | null; status: string; name: string; /** S'ha desat el PNG (per no preguntar en fer-ne un altre, `renderStore.ts`). */ onSaved: () => void }) {
   const { begun, running, preparing, passes, error, begin, toggle, startOver } = engine
 
   const save = () => {
@@ -18,13 +19,15 @@ export function RenderViewport({ canvas, engine, background, preview, notice, st
       a.click()
       setTimeout(() => URL.revokeObjectURL(a.href), 1000)
     }, "image/png")
+    onSaved()
   }
 
   return (
-    <Stack flex={{ base: "none", md: 1 }} minH={0} minW={0} gap={3}>
+    <Stack flex="none" minH={0} minW={0} gap={3} css={{ [WIDE]: { flex: 1 } }}>
       <Box
-        flex={{ md: 1 }}
-        h={{ base: "55vh", md: "auto" }}
+        // Estret: més de mitja pantalla, sense passar de l'amplada (al mòbil, una foto vertical hi cap); ample, tot el que queda.
+        h="min(55vh, 100cqw)"
+        css={{ [WIDE]: { flex: 1, height: "auto" } }}
         minH="200px"
         display="flex"
         alignItems="center"

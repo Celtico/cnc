@@ -7,6 +7,7 @@ import { BACKDROPS, saveBackdropPhoto, type BackdropKind, type Panorama } from "
 import type { EngineKind } from "./engine"
 import { Range, Sec, Toggle } from "./RenderControls"
 import { FOCALS, FORMATS, LOW_MEMORY_MAX, MOODS, RESOLUTIONS, resolutionAllowed, type Background, type Format, type Look, type Mood, type Resolution } from "./renderConfig"
+import { WIDE } from "./renderLayout"
 import type { RenderOpts, RenderRoom } from "./sceneData"
 import { SKIES, type SkyId } from "./skies"
 import type { ToneCurve } from "./tonemap"
@@ -265,7 +266,7 @@ function ImageSection({ look, setLook, denoiser, scheduleDenoise }: { look: Look
 /** La columna d'opcions del Render: Qualitat · Càmera · Escena · Llums · Imatge, i «Restablir». */
 export function RenderOptionsPanel({ settings, engine, viewKind, pano, setPano, setNotice, setLook, denoiser, scheduleDenoise, onReset }: { settings: RenderSettings; engine: RenderEngineState; viewKind: NonNullable<RenderOpts["view"]>; pano: Pano; setPano: (p: Pano) => void; setNotice: (n: string | null) => void; setLook: (patch: Partial<Look>) => void; denoiser: "oidn" | "atrous"; scheduleDenoise: (force?: boolean) => void; onReset: () => void }) {
   return (
-    <Stack w={{ base: "full", md: "300px" }} flexShrink={0} gap={1} overflowY={{ base: "visible", md: "auto" }} ps="3px" pe={1} pb={{ base: 4, md: 0 }}>
+    <Stack w="full" flexShrink={0} gap={1} ps="3px" pe={1} pb={4} css={{ [WIDE]: { width: "300px", overflowY: "auto", paddingBottom: 0 } }}>
       <QualitySection settings={settings} engine={engine} />
       <CameraSection settings={settings} />
       <SceneSection settings={settings} viewKind={viewKind} pano={pano} setPano={setPano} setNotice={setNotice} />

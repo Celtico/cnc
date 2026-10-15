@@ -103,13 +103,32 @@
     `renderPrefs.ts`, `localStorage` `mobles:render:<clau>`): opcions, imatge, ambient de llum, resolució, límit, escena,
     format i cel (no un .hdr propi). En obrir-lo mana sobre la de l'escena (`renderPreset`) i la de defecte; `mergeSaved`
     només agafa els valors del mateix tipus. No es desa en obrir (`skipSave`). El motor ja es desava (`mobles:render-engine`).
-  - **Comença aturat**: obrir el diàleg mostra la imatge del visor (`SceneGetter.snapshot`) i «Començar»; després, les
+  - **Comença aturat**: obrir el panell mostra la imatge del visor (`SceneGetter.snapshot`) i «Començar»; després, les
     opcions de qualitat, motor, escena i llum tornen a començar; aturar/continuar, límit de passades, passades per segon.
-    **Tancar-lo no el perd** (per decisió de l'usuari, 2026-10-14): un render començat continua calculant amb el diàleg tancat
+    **Tancar-lo no el perd** (per decisió de l'usuari, 2026-10-14): un render començat continua calculant amb el panell tancat
     (l'escena és la de quan es va començar: es pot seguir treballant) i, en tornar-lo a obrir, hi és, amb «De nou» (torna a llegir l'escena: el moble pot haver canviat); **el Render és de tota l'app** (per decisió
     de l'usuari, «si canvio d'apartat, que no s'aturi»; `renderStore.ts` `openRender`, `RenderHost.tsx` a `App`, un
     `RenderDialog` per document, `key` = `saveKey`): canviar d'apartat no l'atura i, en tornar al mateix moble o ambient i
-    obrir el Render, hi és; des d'un altre document se'n fa un de nou.
+    obrir el Render, hi és.
+  - **Panell flotant** (per decisió de l'usuari, 2026-10-15: «el render podria anar amb el FloatingPanel» de Chakra;
+    `RenderFrame.tsx`, `useFloatingPanel` + `FloatingPanel.RootProvider`): no és modal, es pot continuar treballant mentre
+    calcula. A l'ordinador s'obre gran i al mig, es mou per la barra de títol («Render · nom» i el progrés), s'estira per
+    les vores i les cantonades, es **minimitza** (només la barra, amb el progrés; el render continua), es maximitza (o doble
+    clic a la barra) i es restaura; Esc o ✕ el tanquen (el render continua). Al **mòbil** (`base`), sempre maximitzat a tota
+    la pantalla dins de la zona segura, sense moure'l ni minimitzar-lo: ✕ i es torna a obrir amb la píndola. Per sobre de
+    les barres de l'app (`zIndex` `banner`) i per sota dels diàlegs i calaixos. La imatge i les opcions van de costat quan
+    el **panell** fa ≥ 720 px d'ample (container query `render`, `renderLayout.ts`), no segons la finestra.
+  - **Indicador del render en marxa** (per decisió de l'usuari: «l'app ho ha de mostrar en algun lloc»;
+    `app/RenderStatusNav.tsx`): mentre hi ha un render començat (calculant, aturat o acabat), el menú lateral porta
+    «Render · nom» amb l'estat i el progrés (`Calculant · 12 / 256 passades · 34 s`; plegat, al tooltip), marcat si el panell
+    es veu; al mòbil, una píndola sobre la barra de baix quan el panell és tancat. Tocar-los torna a mostrar el panell
+    (restaurat si era minimitzat). El panell publica com va amb `usePublishRenderStatus` (un magatzem a part, perquè no
+    redibuixi tota l'app cada segon).
+  - **Render d'un altre document** (moble o ambient; `saveKey` diferent): si el d'ara **calcula** o té una **imatge sense
+    desar** (passades que no s'han desat en PNG: «Desar PNG» la marca desada fins que en calculi més o torni a començar), es
+    pregunta (`RenderConflictDialog`): «Continuar el que corre» (el mostra), «Aturar-lo i començar el nou» (el d'abans es
+    perd: el panell es desmunta i el motor s'allibera) o «Cancel·lar». Si està aturat i desat, o sense començar, es fa el nou
+    sense preguntar. Des del mateix document, només es mostra. Tests a `renderStore.test.ts`.
   - `extractScene` passa l'escena a triangles + materials + textures; tots dos motors fan servir el **mateix BVH** (`bvh.ts`,
     SAH per calaixos, 8 paraules per node), llums (`lights.ts`) i constants (`shading.ts`). Contracte (`engine.ts`): sumes RGBA
     + AOV (albedo i normal) i nombre de mostres; el diàleg divideix, filtra el soroll, fa el to i desa el PNG.

@@ -13,6 +13,7 @@ import { usePersistentFlag } from "./lib/usePersistentFlag"
 import { usePersistentNumber } from "./lib/usePersistentNumber"
 import { AppContent } from "./app/AppContent"
 import { MobileNav } from "./app/MobileNav"
+import { RenderStatusChip } from "./app/RenderStatusNav"
 import { ProjectMenu } from "./app/ProjectMenu"
 import { MobileProjectTabs, ProjectTabs } from "./app/ProjectTabs"
 import { SettingsBackBar } from "./app/SettingsBackBar"
@@ -141,6 +142,7 @@ export function App() {
       </Splitter.Panel>
       </PanelSplit>
 
+      <RenderStatusChip />
       <MobileNav section={nav.section} assistantOpen={assistant.open} onSection={nav.goSection} onAssistant={assistant.toggle} />
 
       {renderHost.req && (

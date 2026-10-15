@@ -3,6 +3,7 @@ import { LuPanelLeftClose, LuPanelLeftOpen } from "react-icons/lu"
 import { Tooltip } from "../components/ui/tooltip"
 import { ASSISTANT_ENTRY, GLOBAL_NAV, SETTINGS_ENTRY, type Section } from "./nav"
 import { NavItem } from "./NavItem"
+import { RenderStatusNavItem } from "./RenderStatusNav"
 
 /** Barra lateral (escriptori), plegable a només icones */
 export function SideNav({
@@ -76,8 +77,9 @@ export function SideNav({
           <NavItem icon={ASSISTANT_ENTRY.icon} label={ASSISTANT_ENTRY.label} collapsed={collapsed} active={assistantOpen} disabled={false} onClick={onAssistant} />
         </Box>
       </Stack>
-      {/* Preferències, a baix de tot (com a les apps d'escriptori). */}
+      {/* Preferències, a baix de tot (com a les apps d'escriptori); a sobre, el Render que calcula (o s'ha aturat) si n'hi ha. */}
       <Stack gap={1} mt="auto" pt={2} borderTopWidth="1px" align={collapsed ? "center" : "stretch"}>
+        <RenderStatusNavItem collapsed={collapsed} />
         <NavItem icon={SETTINGS_ENTRY.icon} label={SETTINGS_ENTRY.label} collapsed={collapsed} active={settingsActive} disabled={false} onClick={onSettings} />
       </Stack>
     </Stack>
