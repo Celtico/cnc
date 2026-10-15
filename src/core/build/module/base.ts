@@ -44,6 +44,8 @@ export class BuilderBase {
   readonly hardwareKits: KitOrder[] = []
   readonly lightKits: LightOrder[] = []
   readonly fittingOrders: KitOrderLine[] = []
+  /** El sòcol per defecte dels electrodomèstics de terra (sense, `DEFAULT_APPLIANCE_PLINTH`): el de les potes del moble. */
+  appliancePlinth: number | undefined = undefined
   /** Entrades d'aire pel sòcol dels electrodomèstics: el sòcol és del tram (`tramPlinth.ts`), que hi fa el retall. */
   readonly ventInlets: VentInlet[] = []
   /** Ferratges per metres (la regleta dels penjadors, el sòcol d'alumini): els trossos per a la comanda (`buildLinearOrders`). */

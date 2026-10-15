@@ -160,7 +160,7 @@ export abstract class AppliancesBuilder extends DrawersBuilder {
   protected buildApplianceFront(zone: Zone, za: ZoneAppliance, a: Appliance, rect: ZoneRect, n: number, name: string, src: string, warn: (m: string) => void, note: (m: string) => void, below?: HorizontalRef, above?: HorizontalRef, left?: VerticalRef, right?: VerticalRef): void {
     const ter = this.frontTerritory(rect, left, right)
     const floor = standsOnFloor(a) && !below
-    const plinth = za.plinth ?? DEFAULT_APPLIANCE_PLINTH
+    const plinth = za.plinth ?? this.appliancePlinth ?? DEFAULT_APPLIANCE_PLINTH
     const y0 = floor ? r(rect.y0 + plinth) : ter.y0
     if (floor && a.plinth && !inRange(plinth, a.plinth)) warn(`${name}: sòcol de ${num(plinth)} mm i el fabricant el demana de ${rangeText(a.plinth)} (${src}).`)
     // L'estàndard: el sòcol de la cuina passa corregut per davant de l'aparell (el dels mòduls del costat, tallat a mida).

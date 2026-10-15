@@ -88,7 +88,7 @@ export function ApplianceSection(props: ApplianceProps) {
  * el tirador. Sense `picker`, només les opcions: el mòdul Electrodomèstic tria l'aparell a Tipus i les opcions surten a la
  * Caixa (per decisió de l'usuari, 2026-10-15).
  */
-export function ApplianceFields({ root, zone, onChange, hardware, noHandles, bounds, module = false, picker = false }: ApplianceProps & { picker?: boolean }) {
+export function ApplianceFields({ root, zone, onChange, hardware, noHandles, bounds, module = false, picker = false, supportHeight }: ApplianceProps & { picker?: boolean; /** L'alçada de les potes del moble (sòcol o potes vistes): el sòcol per defecte de l'aparell de terra. */ supportHeight?: number }) {
   const { settings } = useSettings()
   const za = zone.appliance
   const a = za && isAppliance(za.hardware) ? za.hardware.appliance : undefined
@@ -157,11 +157,11 @@ export function ApplianceFields({ root, zone, onChange, hardware, noHandles, bou
           <NumRow
             optionId={module ? "module.appliance.plinth" : "zone.appliance.plinth"}
             label="Sòcol"
-            value={za!.plinth ?? DEFAULT_APPLIANCE_PLINTH}
+            value={za!.plinth ?? supportHeight ?? DEFAULT_APPLIANCE_PLINTH}
             min={0}
             max={400}
             step={1}
-            help={`Del terra al cantell de baix del front${a.plinth ? ` (el fabricant: ${rangeText(a.plinth)})` : ""}. El sòcol de davant no el fa aquest mòdul: és el del tram (Moble › Sòcol i potes).`}
+            help={`Del terra al cantell de baix del front${a.plinth ? ` (el fabricant: ${rangeText(a.plinth)})` : ""}.${supportHeight !== undefined ? ` Per defecte, l'alçada de les potes del moble (${supportHeight} mm): el front comença on comencen els del costat i el sòcol del tram passa per davant.` : ""}`}
             onChange={(plinth) => Number.isFinite(plinth) && set({ ...za!, plinth })}
           />
         )}

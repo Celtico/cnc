@@ -63,6 +63,7 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
             bounds={zoneBounds(vm, module.root.id) ?? carcassBounds(module.carcass)}
             hardware={module.hardware}
             noHandles={module.fronts.handles === "none"}
+            supportHeight={support && support.kind !== "floor" ? support.height : undefined}
             onChange={(root) => onChange({ ...module, root })}
           />
         )}

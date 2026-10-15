@@ -127,6 +127,15 @@ describe("els mobles d'abans passen al suport del moble", () => {
     expect(ps.reduce((n, p) => n + p.length, 0)).toBe(3000)
   })
 
+  it("el sòcol del rentaplats (del terra al front), per defecte, és l'alçada de les potes del moble", () => {
+    const dw = { ...dishwasherModule(), id: "dw" }
+    const za = dw.root.appliance!
+    const own = { ...dw, root: { ...dw.root, appliance: { hardware: za.hardware } } }
+    const front = (h: number) => buildComposition(comp([box("a", 600), own], plinth({}, { height: h }))).panels.find((p) => p.id.startsWith("dw:") && p.role === "flap")!
+    // El front comença a dalt de les potes: 20 més de potes, 20 menys de front.
+    expect(front(100).length - front(120).length).toBeCloseTo(20)
+  })
+
   it("un mòdul sense base no pot anar sobre potes: va directe a terra", () => {
     const open = box("o", 600)
     const c = withSupport(comp([box("a", 600), { ...open, carcass: { ...open.carcass, noBottom: true } }], plinth()))

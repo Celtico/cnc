@@ -75,7 +75,7 @@ export function applianceFrontFields(at: "module" | "zone"): OptionNode[] {
       choices: [{ value: "left", label: "Esquerra" }, { value: "right", label: "Dreta" }],
       issue: issueSide,
     }),
-    field(id("plinth"), "Sòcol", { code: UI.appliance, control: "number", showIf: "Amb front de moble, aparell de terra i sense peça a sota", range: { min: 0, max: 400, step: 1, suffix: "mm" }, default: 100 }),
+    field(id("plinth"), "Sòcol", { code: UI.appliance, control: "number", showIf: "Amb front de moble, aparell de terra i sense peça a sota", range: { min: 0, max: 400, step: 1, suffix: "mm" }, defaultText: "L'alçada de les potes del moble (sense potes, 100)" }),
     field(id("handle"), "Tirador", { code: UI.appliance, control: "hardware", showIf: "Amb front de moble", defaultText: AS_MODULE }),
   ]
 }

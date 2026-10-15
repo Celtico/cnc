@@ -140,7 +140,9 @@ export function buildComposition(input: Composition): CompositionBuild {
     }
     return out
   }
-  const builds = onlyParts ? [] : comp.modules.map((m, i) => buildModule(m, { ...(isTurned(m) ? {} : { rearLimits: columnRearLimits(m, comp.references, places[i]!) }), keepOut: keepOut(m, i) }))
+  // El sòcol per defecte dels electrodomèstics de terra: l'alçada de les potes del moble (el sòcol del tram passa per davant).
+  const appliancePlinth = comp.support && comp.support.kind !== "floor" ? comp.support.height : undefined
+  const builds = onlyParts ? [] : comp.modules.map((m, i) => buildModule(m, { ...(isTurned(m) ? {} : { rearLimits: columnRearLimits(m, comp.references, places[i]!) }), keepOut: keepOut(m, i), ...(appliancePlinth !== undefined ? { appliancePlinth } : {}) }))
   // Illes: el mòdul de darrere es gira 180° i es posa enganxat al darrere del de davant (mateixa X, a `gap` mm), sigui
   // quina sigui la seva posició pròpia.
   const islands = onlyParts ? [] : activeIslands(comp)
