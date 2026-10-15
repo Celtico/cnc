@@ -6,7 +6,7 @@ const PALETTE = ["blue", "orange", "green", "purple", "pink", "teal", "red", "cy
 const toolColor = (i: number) => `var(--chakra-colors-${PALETTE[i % PALETTE.length]}-solid)`
 export const token = (name: string) => `var(--chakra-colors-${name.replace(/\./g, "-")})`
 
-interface CamSheetView {
+export interface CamSheetView {
   preview: XcsPreview
   tools: (CamToolInfo & { color: string })[]
   colorOf: Map<string, string>
