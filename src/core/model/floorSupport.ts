@@ -199,8 +199,10 @@ export function withSupport(comp: Composition): Composition {
   const floorKey = baseKey({ kind: "none" })
   const modules = comp.modules.map((m) => {
     const b = m.carcass.base
-    // Un mòdul sense base (un cobreradiador) no pot anar sobre potes (s'hi cargolen): va directe a terra.
-    const own = base.kind === "legs" && (b.kind === "open" || (b.kind !== "legs" && !!m.carcass.noBottom)) ? floorKey : key
+    // Un mòdul sense base (un cobreradiador) no pot anar sobre potes (s'hi cargolen): va directe a terra. L'electrodomèstic
+    // de terra (rentaplats, rentadora, frigorífic sota taulell) també: va sobre les seves potes, de terra fins al taulell.
+    const toFloor = b.kind === "open" || (b.kind !== "legs" && !!m.carcass.noBottom) || moduleApplianceCarcass(m)?.rule.support === false
+    const own = base.kind === "legs" && toFloor ? floorKey : key
     if (b.kind === "wall" || baseKey(b) === own) return m
     changed = true
     // El sòcol de caixa d'abans (laterals fins a terra, la base aixecada) comptava dins de l'alçada del mòdul: amb potes,

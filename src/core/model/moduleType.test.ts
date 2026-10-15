@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { buildComposition } from "../build/buildComposition"
-import { applianceById, defaultModule, emptyModule, isApplianceModule, moduleType, setModuleAppliance, setModuleType, type Module } from "."
+import { applianceById, defaultModule, emptyModule, isApplianceModule, moduleType, setModuleAppliance, setModuleType, withMobleMaterials, type Module } from "."
 
 const base = (h = 770): Module => defaultModule("m", "M", { width: 600, height: h, depth: 560 })
 
@@ -51,7 +51,19 @@ describe("tipus del mòdul", () => {
     const e = emptyModule("m", "M")
     const dw = setModuleAppliance({ ...e, carcass: { ...e.carcass, base: { kind: "legs", height: 100 } } }, applianceById("appliance-bosch-smh6ycx02e"), 0)
     expect(dw.carcass.height).toBe(820)
+    // Tornar a triar l'aparell (o un altre) no l'aixeca cada vegada.
+    expect(setModuleAppliance(dw, applianceById("appliance-bosch-smh6ycx02e"), 0).carcass.height).toBe(820)
     const b = buildComposition({ modules: [dw], references: [], support: { kind: "plinth", height: 100, plinth: { setback: 24 } } })
     expect(b.warnings.filter((w) => w.code === "appliance")).toEqual([])
+    // Va directe a terra (no sobre les potes del moble: si no, s'aixecaria).
+    expect(b.modules[0]!.y).toBe(0)
+  })
+
+  it("un mòdul nou pren els materials del moble (el darrer de terra)", () => {
+    const old = base()
+    const dark = { ...old, carcass: { ...old.carcass, material: "MDF lacat antracita", frontMaterial: "Roure", thickness: 19 } }
+    const n = withMobleMaterials(emptyModule("n", "N"), [dark])
+    expect([n.carcass.material, n.carcass.frontMaterial]).toEqual(["MDF lacat antracita", "Roure"])
+    expect(withMobleMaterials(emptyModule("n", "N"), [])).toEqual(emptyModule("n", "N"))
   })
 })
