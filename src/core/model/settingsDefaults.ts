@@ -278,4 +278,5 @@ export const DEFAULT_SETTINGS: Settings = {
   machines: [],
   machiningRules: defaultMachineRules(),
   assistant: { model: DEFAULT_ASSISTANT_MODEL },
+  optionPrefs: {},
 }

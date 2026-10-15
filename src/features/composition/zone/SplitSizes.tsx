@@ -25,6 +25,7 @@ export function SplitSizes({ root, zone, onChange, onSelect, childSizes }: { roo
         return (
           <FormRow
             key={row.id}
+            optionId="zone.split.sizes"
             label={
               onSelect ? (
                 <Button variant="plain" size="sm" h="auto" p={0} minW={0} fontWeight="normal" color="fg.muted" textAlign="start" whiteSpace="normal" _hover={{ color: "fg", textDecoration: "underline" }} title={`${row.name} · seleccionar el compartiment`} onClick={() => onSelect(row.id)}>

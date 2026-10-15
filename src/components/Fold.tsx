@@ -4,6 +4,7 @@ import type { IconType } from "react-icons"
 import { LuChevronRight } from "react-icons/lu"
 import { readSessionFlag, readSessionList, writeSessionFlag } from "./sessionState"
 import { FoldContext, STATIC_VARIANTS, sectionKey, type FoldGroupState, type FoldVariant } from "./foldContext"
+import { useOptionHidden } from "../features/settings/SettingsContext"
 
 /**
  * L'acordió de tota l'app (sobre `Accordion` de Chakra): un sol component per a les seccions dels inspectors, el
@@ -105,12 +106,16 @@ interface FoldItemProps {
   variant?: FoldVariant
   /** Sol: `sm` per a les subseccions (dins d'una altra secció). */
   size?: "sm" | "md"
+  /** A l'Editor, l'id de la secció al registre de les opcions en cascada: si l'usuari l'ha amagada, no surt. */
+  optionId?: string
   children?: ReactNode
 }
 
 /** Un element plegable: dins d'un `FoldGroup` fa servir el seu acordió; sol, en fa un de propi (independent). */
-export function FoldItem(props: FoldItemProps) {
+export function FoldItem({ optionId, ...props }: FoldItemProps) {
   const group = useContext(FoldContext)
+  const hidden = useOptionHidden(optionId)
+  if (hidden) return null
   if (!group) return <SoloFold {...props} />
   return <FoldItemBody {...props} group={group} />
 }

@@ -35,7 +35,7 @@ export function DrawerHeights({ front, real, onChange }: { front: Extract<Front,
         const size = front.heights[i] ?? "auto"
         const label = `Alçada ${i + 1}`
         return (
-          <FormRow key={i} label={label}>
+          <FormRow key={i} optionId="zone.front.drawers.height" label={label}>
             {i === front.n - 1 ? (
               <Text fontSize="sm" color="fg.muted">
                 {mm !== undefined ? `${fmtMm(mm)} mm` : "—"} (el que sobra)
@@ -89,7 +89,7 @@ export function DrawerSlides({ front, kits, onChange }: { front: Extract<Front, 
         const label = `Guia del calaix ${i + 1}`
         const made = built?.[i]
         return (
-          <FormRow key={i} label={label} help={`${own ? hardwareSummary(own) : `La mateixa que el calaix ${i}.`}${made ? ` Es fa amb ${made.kit}.` : ""}`}>
+          <FormRow key={i} optionId="zone.front.drawers.slides" label={label} help={`${own ? hardwareSummary(own) : `La mateixa que el calaix ${i}.`}${made ? ` Es fa amb ${made.kit}.` : ""}`}>
             <HardwareSelect label={label} items={items} current={own} emptyLabel={`Com el calaix ${i}`} onPick={(h) => set(i, h)} />
           </FormRow>
         )
@@ -112,24 +112,24 @@ export function KitFields({ front, kit, kits, onChange }: { front: Extract<Front
   // Van plegades a «Opcions de la guia de calaix» (`FrontFields`).
   return (
     <>
-      <FormRow label="Tancament" help="Com tanca el calaix: suau (amortit), push-open (sense tirador, amb barra de sincronització) o les dues coses. Canvia els números d'article i si cal la barra.">
+      <FormRow optionId="zone.front.drawers.kit.closing" label="Tancament" help="Com tanca el calaix: suau (amortit), push-open (sense tirador, amb barra de sincronització) o les dues coses. Canvia els números d'article i si cal la barra.">
         <ChoiceChips label="Tancament" value={o.closing} options={kit.kit.options.closing.map((c) => ({ id: c, label: KIT_CLOSINGS.find((x) => x.id === c)!.short }))} onChange={(closing) => setKit({ closing })} />
       </FormRow>
-      <FormRow label="Darrere" help="De fusta (peça B del tauler del cos, amb els suports de darrere) o metàl·lic del fabricant (per amplada del moble; el fons és 2 mm més llarg).">
+      <FormRow optionId="zone.front.drawers.kit.back" label="Darrere" help="De fusta (peça B del tauler del cos, amb els suports de darrere) o metàl·lic del fabricant (per amplada del moble; el fons és 2 mm més llarg).">
         <ChoiceChips label="Darrere" value={o.back} options={kit.kit.options.back.map((b) => ({ id: b, label: KIT_BACKS.find((x) => x.id === b)!.short }))} onChange={(back) => setKit({ back })} />
       </FormRow>
       {finishes.length > 1 && o.finish && (
-        <FormRow label="Acabat" help="Color dels laterals de doble paret (només canvia el 3D; els números d'article són els mateixos).">
+        <FormRow optionId="zone.front.drawers.kit.finish" label="Acabat" help="Color dels laterals de doble paret (només canvia el 3D; els números d'article són els mateixos).">
           <ChoiceChips label="Acabat" value={o.finish} options={finishes.map((f) => ({ id: f, label: KIT_FINISHES.find((x) => x.id === f)!.short }))} onChange={(finish) => setKit({ finish })} />
         </FormRow>
       )}
-      <FormRow label="Fons del calaix" help={`El joc demana un fons del calaix de ${TB} mm (catàleg): el gruix no es tria. El material, a Materials › «Fons del calaix» (sense, el del fons del mòdul adaptat al gruix, o el del cos si fa ${TB} mm).`}>
+      <FormRow optionId="zone.front.drawers.kit.bottom" label="Fons del calaix" help={`El joc demana un fons del calaix de ${TB} mm (catàleg): el gruix no es tria. El material, a Materials › «Fons del calaix» (sense, el del fons del mòdul adaptat al gruix, o el del cos si fa ${TB} mm).`}>
         <Text fontSize="sm" pt="6px" data-testid="kit-bottom">
           {TB} mm · el joc demana {TB} mm
         </Text>
       </FormRow>
       {first ? (
-        <FormRow label="Joc" help={`${first.kit}: la llargada nominal més gran que hi cap darrere del front (LT = NL + 3). Sense laterals de fusta: el fons i el darrere surten de les fórmules del catàleg. Els components i els números són a Peces › «Ferratges dels jocs».`}>
+        <FormRow optionId="zone.front.drawers.kit.info" label="Joc" help={`${first.kit}: la llargada nominal més gran que hi cap darrere del front (LT = NL + 3). Sense laterals de fusta: el fons i el darrere surten de les fórmules del catàleg. Els components i els números són a Peces › «Ferratges dels jocs».`}>
           <Stack gap={0.5} pt="6px" fontSize="sm" data-testid="kit-info">
             <Text fontWeight="medium">NL {first.nl} · {kits!.length} {kits!.length === 1 ? "calaix" : "calaixos"}</Text>
             {first.lines.slice(0, 4).map((l) => (

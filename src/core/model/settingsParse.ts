@@ -1,3 +1,4 @@
+import { parseOptionPrefs } from "./options/optionCascade"
 import { z } from "zod"
 import { migrateImportedNames } from "./makers/hettichNames"
 import { DEFAULT_HARDWARE_DEFAULTS, DEFAULT_HARDWARE_KITS, DEFAULT_HARDWARE_LIBRARY, DEFAULT_LEGACY_HARDWARE, HardwareDefaultsSchema, HardwareItemSchema, LegacyHardwareSchema, V27_ITEMS, V28_ITEMS, V31_ITEMS, V34_ITEMS, V35_ITEMS, V39_ITEMS, V41_ITEMS, V42_ITEMS, V43_ITEMS, V44_ITEMS, V45_ITEMS, V46_ITEMS, fixHardwareDefaults, kitPilotFromLibrary, libraryFromLegacy, setKitPilot, type HardwareItem } from "./hardware"
@@ -138,6 +139,8 @@ export function parseSettings(raw: unknown): SettingsParse {
     machiningRules,
     // v26: additiu (sense, sense clau i el model per defecte); un model que ja no hi és torna al per defecte.
     assistant: section("assistant", AssistantPrefSchema, DEFAULT_SETTINGS.assistant, "Assistent IA"),
+    // v48: additiu (sense, cap opció amagada); una entrada dolenta només treu aquella.
+    optionPrefs: parseOptionPrefs(obj.optionPrefs, problems),
   }
   return { settings, problems, migrated: migrated || problems.length > 0, renames: v12.renames }
 }

@@ -10,9 +10,10 @@ import { HardwarePick } from "../HardwarePick"
 /** «Prestatges i accessoris» d'un compartiment sense dividir: quantitat, regulació, a ras, gruix i els accessoris. */
 export function ZoneShelvesSection({ root, zone, onChange, hardware, bounds, system32 }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; hardware: ModuleHardware; bounds: ZoneBounds; system32?: { at: "shelves" | "front"; row: ReactNode } }) {
   return (
-    <FoldItem id="zone-shelves" title="Prestatges i accessoris" badge={shelvesBadge(zone)} icon={LuRows3}>
+    <FoldItem optionId="zone.shelves" id="zone-shelves" title="Prestatges i accessoris" badge={shelvesBadge(zone)} icon={LuRows3}>
       {canHoldShelves(bounds) && <>
       <NumRow
+        optionId="zone.shelves.count"
         label="Quantitat"
         suffix="u"
         value={zone.shelves?.n ?? 0}
@@ -22,7 +23,7 @@ export function ZoneShelvesSection({ root, zone, onChange, hardware, bounds, sys
         onChange={(n) => onChange(setShelves(root, zone.id, n > 0 || zone.shelves ? { ...zone.shelves, n: Math.max(0, n), adjustable: zone.shelves?.adjustable ?? true } : null))}
       />
       {/* Sense cap prestatge, l'interruptor mostra el valor que fa servir la construcció (sense `shelves`: no regulables). */}
-      <FormRow label="Regulació" help={(zone.shelves?.adjustable ?? false) ? "Forats System 32 als laterals per moure'ls." : undefined}>
+      <FormRow optionId="zone.shelves.adjustable" label="Regulació" help={(zone.shelves?.adjustable ?? false) ? "Forats System 32 als laterals per moure'ls." : undefined}>
         <Switch.Root size="sm" pt="6px" checked={zone.shelves?.adjustable ?? false} onCheckedChange={(e) => onChange(setShelves(root, zone.id, { ...zone.shelves, n: zone.shelves?.n ?? 0, adjustable: e.checked }))}>
           <Switch.HiddenInput />
           <Switch.Control />
@@ -34,7 +35,7 @@ export function ZoneShelvesSection({ root, zone, onChange, hardware, bounds, sys
       {/* Sense prestatges, «a ras» i el gruix no compten (la construcció tampoc els llegeix): no surten. */}
       {(zone.shelves?.n ?? 0) > 0 && <>
       {/* A ras del davant (a sang): el cantell del prestatge enrasat amb el de la caixa. */}
-      <FormRow label="Davant">
+      <FormRow optionId="zone.shelves.flush" label="Davant">
         <Switch.Root size="sm" pt="6px" checked={!!zone.shelves?.flush} onCheckedChange={(e) => onChange(setShelves(root, zone.id, { n: zone.shelves?.n ?? 0, adjustable: zone.shelves?.adjustable ?? true, ...(zone.shelves?.thickness ? { thickness: zone.shelves.thickness } : {}), ...(e.checked ? { flush: true } : {}) }))}>
           <Switch.HiddenInput />
           <Switch.Control />
@@ -42,7 +43,7 @@ export function ZoneShelvesSection({ root, zone, onChange, hardware, bounds, sys
         </Switch.Root>
       </FormRow>
       {/* Prestatges gruixuts (buits): queden més bé a la vista, sense porta. */}
-      <FormRow label="Gruix">
+      <FormRow optionId="zone.shelves.thick" label="Gruix">
         <Switch.Root
           size="sm"
           pt="6px"
@@ -56,6 +57,7 @@ export function ZoneShelvesSection({ root, zone, onChange, hardware, bounds, sys
       </FormRow>
       {zone.shelves?.thickness && (
         <NumRow
+          optionId="zone.shelves.thickness"
           label="Gruix aparent"
           value={zone.shelves.thickness}
           min={20}
@@ -97,14 +99,14 @@ function AccessoryRows({ root, zone, hardware, onChange }: { root: Zone; zone: Z
     }))
   const row = (key: "rail" | "led", slot: "rail" | "led", label: string, help: string) => (
     <>
-      <FormRow label={label} help={zone[key] ? help : undefined}>
+      <FormRow optionId={key === "rail" ? "zone.shelves.rail" : "zone.shelves.led"} label={label} help={zone[key] ? help : undefined}>
         <Switch.Root size="sm" pt="6px" checked={!!zone[key]} onCheckedChange={(e) => setAcc(key, e.checked ? {} : undefined)}>
           <Switch.HiddenInput />
           <Switch.Control />
           <Switch.Label fontSize="sm">{slotOf(slot).label}</Switch.Label>
         </Switch.Root>
       </FormRow>
-      {zone[key] && <HardwarePick slot={slot} label="Ferratge" current={zone[key]!.hardware ?? moduleSlotItem(hardware, slot)} inherited={moduleSlotItem(hardware, slot)} onPick={(item) => setAcc(key, item ? { hardware: item } : {})} />}
+      {zone[key] && <HardwarePick optionId={key === "rail" ? "zone.shelves.railHardware" : "zone.shelves.ledHardware"} slot={slot} label="Ferratge" current={zone[key]!.hardware ?? moduleSlotItem(hardware, slot)} inherited={moduleSlotItem(hardware, slot)} onPick={(item) => setAcc(key, item ? { hardware: item } : {})} />}
     </>
   )
   return (

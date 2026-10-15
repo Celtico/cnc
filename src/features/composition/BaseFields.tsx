@@ -41,8 +41,8 @@ export function PlinthFields({ base, onChange }: { base: LegsBase; onChange: (b:
   }
   return (
     <>
-      <HardwarePick engine="plinthProfile" label="Tipus de sòcol" current={p.hardware} emptyLabel="Fusta (el tauler del cos)" help={p.hardware ? undefined : "Fusta: un tauler del gruix i material del cos (peça de CNC). Un sòcol d'alumini (Preferències › Ferratges › Potes i sòcols) es talla a mida i es clipa a les potes: surt a Peces › «Ferratges per metres»."} onPick={pick} />
-      <FormRow label="Costats" help="On va el sòcol: sempre al davant i, a les illes o als extrems vistos, també als laterals i al darrere.">
+      <HardwarePick optionId="module.carcass.legPlinthType" engine="plinthProfile" label="Tipus de sòcol" current={p.hardware} emptyLabel="Fusta (el tauler del cos)" help={p.hardware ? undefined : "Fusta: un tauler del gruix i material del cos (peça de CNC). Un sòcol d'alumini (Preferències › Ferratges › Potes i sòcols) es talla a mida i es clipa a les potes: surt a Peces › «Ferratges per metres»."} onPick={pick} />
+      <FormRow optionId="module.carcass.legPlinthSides" label="Costats" help="On va el sòcol: sempre al davant i, a les illes o als extrems vistos, també als laterals i al darrere.">
         <ChoiceChips
           label="Costats del sòcol"
           options={SIDES_OPTIONS}
@@ -55,9 +55,9 @@ export function PlinthFields({ base, onChange }: { base: LegsBase; onChange: (b:
       </FormRow>
       {choice !== "front" && (
         <>
-          <NumRow label="Retirada dels costats" help="De la cara del lateral (o del darrere) del mòdul a la cara de fora del sòcol." value={p.sideSetback ?? p.setback} min={0} max={200} step={1} onChange={(v) => v >= 0 && v <= 200 && set({ sideSetback: v })} />
+          <NumRow optionId="module.carcass.legPlinthSideSetback" label="Retirada dels costats" help="De la cara del lateral (o del darrere) del mòdul a la cara de fora del sòcol." value={p.sideSetback ?? p.setback} min={0} max={200} step={1} onChange={(v) => v >= 0 && v <= 200 && set({ sideSetback: v })} />
           {!p.hardware && (
-            <FormRow label="Cantonades" help="A tope: el davant (i el darrere) passen per davant dels laterals, amb cantell a l'extrem. A inglet: tots de fora a fora, tallats a 45°.">
+            <FormRow optionId="module.carcass.legPlinthCorners" label="Cantonades" help="A tope: el davant (i el darrere) passen per davant dels laterals, amb cantell a l'extrem. A inglet: tots de fora a fora, tallats a 45°.">
               <ChoiceChips label="Cantonades del sòcol" options={[{ id: "butt", label: "A tope" }, { id: "mitre", label: "A inglet" }]} value={p.corners ?? "butt"} onChange={(corners) => set({ corners })} />
             </FormRow>
           )}
@@ -82,6 +82,7 @@ export function HangerFields({ module, base, onChange }: { module: Module; base:
   return (
     <>
       <HardwarePick
+        optionId="module.carcass.hanger"
         slot="hanger"
         label="Penjadors"
         current={base.hanger === "none" ? undefined : base.hanger}
@@ -91,6 +92,7 @@ export function HangerFields({ module, base, onChange }: { module: Module; base:
       />
       {base.hanger !== "none" && (
         <HardwarePick
+          optionId="module.carcass.wallRail"
           slot="wallRail"
           label="Regleta"
           current={base.rail === "none" ? undefined : base.rail}

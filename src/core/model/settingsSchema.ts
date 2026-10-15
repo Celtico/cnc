@@ -1,3 +1,4 @@
+import { OptionPrefsSchema } from "./options/optionCascade"
 import { z } from "zod"
 import { HardwareDefaultsSchema, HardwareItemSchema } from "./hardware"
 import { KitPilotSchema } from "./hardwareKit"
@@ -66,8 +67,10 @@ const mm = z.number().finite()
  * `V46_ITEMS`), additiu.
  * v47: el cos dels electrodomèstics té material (`HardwareItem.material`, per defecte `applianceBodyMaterial`): el vidre
  * negre dels forns, microones i plaques, «Electrodomèstic negre» (`APPLIANCE_MATERIALS`), additiu.
+ * v48: opcions en cascada (`optionPrefs`: amagar una opció de l'Editor i el seu valor per defecte als elements nous,
+ * `core/model/options/`), additiu; sense, cap d'amagada i els per defecte del codi. Una entrada dolenta només es treu.
  */
-export const SETTINGS_VERSION = 47
+export const SETTINGS_VERSION = 48
 
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
@@ -407,5 +410,10 @@ export const SettingsSchema = z.object({
   machiningRules: MachineRulesSchema,
   /** Assistent IA (v26): clau de l'API i model. La clau no s'exporta (`settingsToJson`). */
   assistant: AssistantPrefSchema,
+  /**
+   * Opcions en cascada (v48): per id del registre (`OPTION_CASCADE`), si s'amaga a l'Editor i el valor per defecte dels
+   * mòduls, compartiments i peces nous. Els mobles fets no canvien.
+   */
+  optionPrefs: OptionPrefsSchema,
 })
 export type Settings = z.infer<typeof SettingsSchema>

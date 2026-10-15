@@ -81,9 +81,10 @@ export function ApplianceSection({ root, zone, onChange, hardware, noHandles, bo
     set(h ? { ...rest, handle: h } : rest)
   }
   return (
-    <FoldItem id={module ? "mod-appliance" : "zone-appliance"} title="Electrodomèstic" icon={LuRefrigerator} badge={a ? APPLIANCE_LABELS[a.kind] : undefined} defaultOpen={!!za}>
+    <FoldItem optionId={module ? "module.appliance" : "zone.appliance"} id={module ? "mod-appliance" : "zone-appliance"} title="Electrodomèstic" icon={LuRefrigerator} badge={a ? APPLIANCE_LABELS[a.kind] : undefined} defaultOpen={!!za}>
       <Stack gap={3}>
         <HardwarePick
+          optionId={module ? "module.appliance.hardware" : "zone.appliance.hardware"}
           engine="appliance"
           label="Aparell"
           current={za?.hardware}
@@ -97,7 +98,7 @@ export function ApplianceSection({ root, zone, onChange, hardware, noHandles, bo
           </Text>
         )}
         {a && takesFront(a) && (
-          <FormRow label="Front" help={front ? mountHelp(a) : `Sense front de moble: l'aparell queda a la vista (${a.door ? DOOR_LABELS[a.door] : ""}).`}>
+          <FormRow optionId={module ? "module.appliance.front" : "zone.appliance.front"} label="Front" help={front ? mountHelp(a) : `Sense front de moble: l'aparell queda a la vista (${a.door ? DOOR_LABELS[a.door] : ""}).`}>
             <Switch.Root size="sm" pt="6px" checked={front} onCheckedChange={(e) => set({ ...za!, front: e.checked ? undefined : false })}>
               <Switch.HiddenInput />
               <Switch.Control />
@@ -106,7 +107,7 @@ export function ApplianceSection({ root, zone, onChange, hardware, noHandles, bo
           </FormRow>
         )}
         {a && front && (
-          <FormRow label="Material del front" help="El tauler del front de moble (el panell que tapa l'aparell): es talla, es canteja i va al nesting com qualsevol front, amb el gruix de tots els fronts. Sense triar-ne cap, el dels fronts del mòdul (Mòdul › Materials)." maxW="280px">
+          <FormRow optionId={module ? "module.appliance.panelMaterial" : "zone.appliance.panelMaterial"} label="Material del front" help="El tauler del front de moble (el panell que tapa l'aparell): es talla, es canteja i va al nesting com qualsevol front, amb el gruix de tots els fronts. Sense triar-ne cap, el dels fronts del mòdul (Mòdul › Materials)." maxW="280px">
             <MaterialSelect label="Material del front" hideLabel materials={boardChoices(settings.materials)} value={za!.panelMaterial ?? ""} emptyLabel="Com els fronts" onChange={(v) => {
               const { panelMaterial: _p, ...rest } = za!
               set(v ? { ...rest, panelMaterial: v } : rest)
@@ -114,7 +115,7 @@ export function ApplianceSection({ root, zone, onChange, hardware, noHandles, bo
           </FormRow>
         )}
         {a && front && doorLikeFront(a) && (
-          <FormRow label="Obre" help={furnitureHinges(a) ? "Les frontisses de moble van al lateral o al divisor d'aquest costat." : a.door === "hinges" ? "Les frontisses de l'aparell s'hi posen a l'esquerra o a la dreta." : "El costat de les frontisses de l'aparell (el tirador, a l'altre)."}>
+          <FormRow optionId={module ? "module.appliance.hingeSide" : "zone.appliance.hingeSide"} label="Obre" help={furnitureHinges(a) ? "Les frontisses de moble van al lateral o al divisor d'aquest costat." : a.door === "hinges" ? "Les frontisses de l'aparell s'hi posen a l'esquerra o a la dreta." : "El costat de les frontisses de l'aparell (el tirador, a l'altre)."}>
             <ChoiceChips
               label="Obre"
               value={za!.hinge ?? "left"}
@@ -128,6 +129,7 @@ export function ApplianceSection({ root, zone, onChange, hardware, noHandles, bo
         )}
         {a && front && standsOnFloor(a) && !bounds.bottom && (
           <NumRow
+            optionId={module ? "module.appliance.plinth" : "zone.appliance.plinth"}
             label="Sòcol"
             value={za!.plinth ?? DEFAULT_APPLIANCE_PLINTH}
             min={0}
@@ -139,6 +141,7 @@ export function ApplianceSection({ root, zone, onChange, hardware, noHandles, bo
         )}
         {a && front && (
           <HardwarePick
+            optionId={module ? "module.appliance.handle" : "zone.appliance.handle"}
             slot="handle"
             label="Tirador"
             current={za!.handle && za!.handle !== "none" ? za!.handle : push ? undefined : moduleSlotItem(hardware, "handle")}

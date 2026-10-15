@@ -1,5 +1,5 @@
 import { Stack, Text } from "@chakra-ui/react"
-import { LuFactory, LuLampFloor, LuLayoutGrid, LuMessageSquare, LuPalette, LuRoute, LuRuler, LuScan, LuScanEye, LuSunMoon, LuTag, LuWrench } from "react-icons/lu"
+import { LuFactory, LuLampFloor, LuLayoutGrid, LuListTree, LuMessageSquare, LuPalette, LuRoute, LuRuler, LuScan, LuScanEye, LuSunMoon, LuTag, LuWrench } from "react-icons/lu"
 import { setKitPilot, defaultMachine, type Composition, type Settings } from "../../core/model"
 import { SettingsGroup } from "../../components/SettingsGroup"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
@@ -12,6 +12,7 @@ import { DeleteMaterialDialog } from "./DeleteMaterialDialog"
 import { DeleteHardwareDialog } from "./DeleteHardwareDialog"
 import { HardwareList } from "./HardwarePane"
 import { AssistantPane } from "./AssistantPane"
+import { OptionCascadePane } from "./OptionCascadePane"
 import { AccentField, ThemeField } from "./screen/AppearanceFields"
 import { BoardsFields } from "./screen/BoardsFields"
 import { GapsFields } from "./screen/GapsFields"
@@ -85,6 +86,16 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
 
           <Pane id="gaps" title="Folgances per defecte" icon={LuRuler} desc="Separacions (folgances) dels fronts i de les peces de dins, retranqueig dels prestatges i ranura del fons, per als mòduls nous." onReset={() => setReset({ key: "gaps", label: "Folgances per defecte" })}>
             <GapsFields gaps={draft.gaps} onChange={(gaps) => set("gaps", gaps)} />
+          </Pane>
+
+          <Pane
+            id="options"
+            title="Opcions en cascada"
+            icon={LuListTree}
+            desc="Totes les opcions de l'Editor en arbre: amagar les que no fas servir i el valor per defecte dels elements nous."
+            onReset={() => setReset({ key: "optionPrefs", label: "Opcions en cascada", note: "Totes les opcions tornen a sortir i els per defecte tornen als inicials. Els mobles fets no canvien." })}
+          >
+            <OptionCascadePane prefs={draft.optionPrefs} onChange={(optionPrefs) => set("optionPrefs", optionPrefs)} />
           </Pane>
 
           <Pane id="label" title="Etiquetes" icon={LuTag} desc="Mida de l'etiqueta de les peces." onReset={() => setReset({ key: "label", label: "Etiquetes" })}>

@@ -94,9 +94,9 @@ export function NumberField({ label, value, onChange, min, max, step = 1, suffix
 }
 
 /** Fila de formulari (`FormRow`) amb un camp numèric: mm, si no es diu una altra unitat. */
-export function NumRow({ label, help, maxW = "180px", ...p }: { label: ReactNode; help?: ReactNode; maxW?: string } & Omit<NumberFieldProps, "label" | "help">) {
+export function NumRow({ label, help, maxW = "180px", optionId, ...p }: { label: ReactNode; help?: ReactNode; maxW?: string; /** L'id de la fila a les opcions en cascada (`FormRow`). */ optionId?: string } & Omit<NumberFieldProps, "label" | "help">) {
   return (
-    <FormRow label={label} help={help} maxW={maxW}>
+    <FormRow label={label} help={help} maxW={maxW} optionId={optionId}>
       <NumberField label="" ariaLabel={typeof label === "string" ? label : undefined} {...p} />
     </FormRow>
   )

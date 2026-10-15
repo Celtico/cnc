@@ -10,6 +10,7 @@ import { DETAIL_KEYS } from "./detailKeys"
 /** Categories dels apartats de Preferències. */
 const SETTINGS_GROUPS: { label: string; ids: string[] }[] = [
   { label: "Fabricació", ids: ["machines", "rules", "hardware", "gaps", "materials", "boards", "label"] },
+  { label: "Editor", ids: ["options"] },
   { label: "Foto i visor 3D", ids: ["references", "viewer3d"] },
   { label: "App", ids: ["display", "theme", "assistant"] },
 ]

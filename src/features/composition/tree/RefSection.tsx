@@ -1,6 +1,6 @@
 import { Box, Menu, Text } from "@chakra-ui/react"
 import { LuCopy, LuPlus, LuScan, LuTrash2 } from "react-icons/lu"
-import { insertRefCopy } from "../../../core/model"
+import { applyRefOptionDefaults, insertRefCopy } from "../../../core/model"
 import { TreeRow, TreeRowMenu, TreeSection } from "../../../components/TreeRow"
 import { useSettings } from "../../settings/SettingsContext"
 import { refFromPreset } from "../addElements"
@@ -35,7 +35,7 @@ export function RefSection({ tree, isObject, onAddBlank }: { tree: TreeCtx; isOb
                     key={p.id}
                     value={`preset-${p.id}`}
                     onClick={() => {
-                      const r = refFromPreset(comp, p)
+                      const r = applyRefOptionDefaults(refFromPreset(comp, p), settings.optionPrefs)
                       onChange({ ...comp, references: [...comp.references, r] })
                       onSelect({ kind: "ref", id: r.id })
                     }}

@@ -1,0 +1,125 @@
+import { materialsNodes } from "./moduleOptions"
+import { STRUCTURAL, UI, field, group, section } from "./optionTypes"
+
+/** L'arbre de l'esquerra de l'Editor: on s'afegeixen els elements (no són opcions; per orientar-se). */
+export const STRUCTURE = group("structure", "Estructura", { icon: "structure", code: UI.tree, note: "L'arbre de l'Editor: cada «+» afegeix un element i en seleccionar-lo surt el seu inspector." }, [
+  group("structure.modules", "Mòduls", { icon: "module", code: UI.tree, note: "+ Mòdul nou (600 × 100 × 560, directe a terra, sense laterals, tapa ni fons; amb els per defecte d'aquí). Dues files: A terra i Penjats a la paret; grups." }),
+  group("structure.parts", "Peces lliures", { icon: "part", code: UI.tree, note: "+ Peça lliure nova (amb els per defecte d'aquí); grups." }),
+  group("structure.refs", "Objectes de referència", { icon: "ref", code: UI.tree, note: "+ Objecte (una caixa o un de Preferències › Objectes de referència)." }),
+  group("structure.models", "Models 3D", { icon: "items", code: UI.tree, note: "+ Pujar un model 3D (decoratiu)." }),
+])
+
+const JOINERY_ISSUE = "Mateixa decisió (joc, fresa, pestanya i dogbones de TOTES les peces, `comp.joinery`) que Moble › Encaixos: és una dada del moble editada des de la peça. I glossari: la primera fila es diu «Joc» quan és una folgança (el text de sota diu «Folgança x mm»)."
+
+export const MOBLE = group("moble", "Moble", { icon: "moble", code: UI.inspector, showIf: "Res seleccionat (el moble sencer), fora de la pestanya Foto" }, [
+  section("moble.summary", "Resum", { icon: "summary", code: UI.inspector, note: "Mòduls i mides, peces, forats, objectes i models 3D." }),
+  section("moble.joinery", "Encaixos", { icon: "joinery", code: UI.inspector, showIf: "Alguna peça lliure fa encaixos" }, [
+    field("moble.joinery.clearance", "Joc", { code: UI.part, control: "number", default: 0.2 }),
+    field("moble.joinery.tool", "Diàmetre fresa (Ø)", { code: UI.part, control: "number", default: 6 }),
+    field("moble.joinery.tabWidth", "Pestanya", { code: UI.part, control: "number", default: 50 }),
+    field("moble.joinery.dogbones", "Dogbones", { code: UI.part, control: "switch", default: true, choices: [{ value: "on", label: "A les cantonades interiors" }] }),
+  ]),
+  section("moble.scene", "Acabats de l'escena", { icon: "scene", code: UI.inspector }, [
+    field("moble.scene.floor", "Terra", { code: UI.sections, control: "material", defaultText: "Com a Preferències › Visor 3D" }),
+    field("moble.scene.wall", "Paret", { code: UI.sections, control: "material", defaultText: "Com a Preferències › Visor 3D" }),
+  ]),
+  materialsNodes("moble"),
+])
+
+export const PART = group("part", "Peça lliure", { icon: "part", code: UI.inspector, showIf: "Una peça lliure seleccionada" }, [
+  section("part.effect", "Efecte", {
+    icon: "effect",
+    code: UI.part,
+    control: "choice",
+    default: "part",
+    defaultEditable: true,
+    choices: [{ value: "part", label: "Peça" }, { value: "cut", label: "Talla", hides: ["part.material", "part.cnc", "part.joints"] }],
+  }),
+  section("part.orient", "Orientació", {
+    icon: "orient",
+    code: UI.part,
+    control: "choice",
+    default: "front",
+    defaultEditable: true,
+    choices: [{ value: "front", label: "De cara" }, { value: "side", label: "De costat" }, { value: "flat", label: "Estirada" }],
+  }),
+  section("part.size", "Mides", {
+    icon: "dims",
+    code: UI.part,
+    control: "number",
+    defaultText: "600 × 400 × el gruix del tauler",
+    hideable: false,
+    why: STRUCTURAL,
+    issue: "El control del gruix (xips del tauler o lliure) i el text «No és de CNC…» depenen de l'interruptor «CNC», que és en una secció de MÉS AVALL.",
+  }),
+  section("part.material", "Material", { icon: "materials", code: UI.part, control: "material", showIf: "No talla", defaultText: "El de l'última peça (o del primer mòdul)" }, [
+    field("part.material.grain", "Veta", {
+      code: UI.part,
+      control: "choice",
+      showIf: "De CNC",
+      default: "u",
+      defaultEditable: true,
+      choices: [{ value: "u", label: "Al llarg de l'ample" }, { value: "v", label: "Al llarg de l'alt" }, { value: "none", label: "Sense veta" }],
+      issue: "Depèn de «CNC» (secció de més avall): una opció que depèn d'una de sota.",
+    }),
+  ]),
+  section("part.shape", "Forma", { icon: "shape", code: UI.part, control: "buttons", defaultText: "Rectangle", choices: [{ value: "rect", label: "Rectangle" }, { value: "custom", label: "Forma a mida…" }] }),
+  section("part.cnc", "CNC", {
+    icon: "cnc",
+    code: UI.part,
+    control: "switch",
+    showIf: "No talla",
+    default: true,
+    choices: [{ value: "on", label: "Es talla a la CNC (va al nesting)", reveals: ["part.cnc.edge", "part.material.grain", "part.joints"] }],
+    note: "Un material que no és de CNC (ferro, pedra, vidre) la treu del nesting.",
+  }, [
+    field("part.cnc.edge", "Cantell", { code: UI.part, control: "switch", showIf: "De CNC", default: false, defaultEditable: true, choices: [{ value: "on", label: "Als quatre costats" }] }),
+  ]),
+  section("part.joints", "Encaixos", {
+    icon: "joinery",
+    code: UI.part,
+    control: "switch",
+    showIf: "De CNC i el moble no és un Objecte",
+    default: false,
+    choices: [{ value: "on", label: "Amb les altres peces", reveals: ["part.joinery"] }],
+  }),
+  section("part.group", "Grup", { icon: "group", code: UI.part, control: "choice", defaultText: "Sense grup" }),
+  section("part.attach", "Enganxada", { icon: "attach", code: UI.part, control: "choice", showIf: "Moble amb mòduls", defaultText: "Res" }),
+  section("part.position", "Posició", { icon: "position", code: UI.part, control: "number", hideable: false, why: STRUCTURAL }),
+  section("part.joinery", "Encaixos (tot el moble)", { icon: "joinery", code: UI.part, showIf: "De CNC i amb Encaixos", note: "Les mateixes files que Moble › Encaixos (mateixos ids: amagar-les allà les amaga aquí).", issue: JOINERY_ISSUE }),
+  section("part.hardware", "Ferratges", { icon: "hardware", code: UI.inspector, showIf: "La peça ja porta ferratges col·locats a mà (no se n'afegeixen)" }),
+])
+
+export const REF = group("ref", "Objecte de referència", { icon: "ref", code: UI.inspector, showIf: "Un objecte de referència seleccionat" }, [
+  section("ref.effect", "Efecte", {
+    icon: "effect",
+    code: UI.ref,
+    control: "choice",
+    default: "obstacle",
+    defaultEditable: true,
+    choices: [{ value: "obstacle", label: "Obstacle" }, { value: "cut", label: "Talla", reveals: ["ref.orient"], hides: ["ref.material"] }],
+  }),
+  section("ref.shape", "Forma", {
+    icon: "shape",
+    code: UI.ref,
+    control: "choice",
+    default: "box",
+    choices: [{ value: "box", label: "Caixa" }, { value: "cylinder", label: "Cilindre", reveals: ["ref.orient"] }, { value: "profile", label: "Perfil", reveals: ["ref.orient"] }],
+  }),
+  section("ref.orient", "Orientació", { icon: "orient", code: UI.ref, control: "choice", showIf: "Forma ≠ Caixa, o Talla", default: "z", choices: [{ value: "z", label: "Cap a la paret" }, { value: "y", label: "Vertical" }, { value: "x", label: "De costat" }] }),
+  section("ref.size", "Mides", { icon: "dims", code: UI.ref, control: "number", defaultText: "600 × 600 × 100", hideable: false, why: STRUCTURAL }),
+  section("ref.material", "Material", { icon: "materials", code: UI.ref, control: "material", showIf: "No talla", defaultText: "Cap (fantasma)" }),
+  section("ref.attach", "Enganxada", { icon: "attach", code: UI.ref, control: "buttons", defaultText: "Res", choices: [{ value: "floor", label: "Al terra" }, { value: "wall", label: "A la paret" }] }),
+  section("ref.position", "Posició", { icon: "position", code: UI.ref, control: "number", hideable: false, why: STRUCTURAL }, [
+    field("ref.position.makeRoom", "Entre els mòduls", { code: UI.ref, control: "buttons", showIf: "Trepitja els mòduls d'una fila", choices: [{ value: "room", label: "Fer-li lloc" }] }),
+  ]),
+])
+
+export const MULTI = group("multi", "Selecció múltiple o grup", { icon: "multi", code: UI.inspector, showIf: "Diversos elements seleccionats, o un grup" }, [
+  section("multi.position", "Posició", { icon: "position", code: UI.multi, control: "number", hideable: false, why: STRUCTURAL }),
+  section("multi.align", "Alineació", { icon: "align", code: UI.multi, control: "buttons" }),
+  section("multi.material", "Material", { icon: "materials", code: UI.multi, control: "material" }),
+  section("multi.size", "Mides", { icon: "dims", code: UI.multi, control: "number", showIf: "Tots del mateix tipus (peces o models)", hideable: false, why: STRUCTURAL }),
+  section("multi.group", "Grup", { icon: "group", code: UI.multi, control: "choice" }),
+  section("multi.items", "Triats", { icon: "group", code: UI.multi, note: "La llista, Duplicar i Eliminar.", hideable: false, why: "No es pot amagar: és on es veu què hi ha triat i es duplica o s'elimina." }),
+])

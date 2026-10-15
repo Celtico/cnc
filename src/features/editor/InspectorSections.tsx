@@ -27,6 +27,7 @@ export function ModulePositionFields({ comp, module, moduleX, updateModule }: { 
           fila, l'ordre és el de l'arbre (d'esquerra a dreta) i cada mòdul va al costat
           de l'anterior de la seva fila. */}
       <FormRow
+        optionId="module.position.mount"
         label="Fila"
         help={
           mountOf(module) === "hung"
@@ -52,6 +53,7 @@ export function ModulePositionFields({ comp, module, moduleX, updateModule }: { 
       </FormRow>
       {module.carcass.base.kind === "wall" && (
         <NumRow
+          optionId="module.position.height"
           label="Alçada del terra"
           value={module.carcass.base.height}
           min={0}
@@ -63,6 +65,7 @@ export function ModulePositionFields({ comp, module, moduleX, updateModule }: { 
       )}
       {mountOf(module) === "floor" && (
         <NumRow
+          optionId="module.position.wallGap"
           label="Separació de la paret"
           value={module.wallGap ?? 0}
           min={0}
@@ -74,7 +77,7 @@ export function ModulePositionFields({ comp, module, moduleX, updateModule }: { 
       )}
       {/* Girat 180° (una illa amb dos mòduls d'esquena, calaixos pels dos costats): només lliure al terra. */}
       {mountOf(module) === "floor" && (
-        <FormRow label="Girat" help={module.turned ? "Els fronts miren enrere: posa'l d'esquena amb un altre mòdul per fer una illa amb calaixos pels dos costats." : undefined}>
+        <FormRow optionId="module.position.turned" label="Girat" help={module.turned ? "Els fronts miren enrere: posa'l d'esquena amb un altre mòdul per fer una illa amb calaixos pels dos costats." : undefined}>
           <Switch.Root size="sm" pt="6px" checked={!!module.turned} onCheckedChange={(e) => updateModule(e.checked ? { ...module, turned: true } : (({ turned: _t, ...rest }) => rest)(module))}>
             <Switch.HiddenInput />
             <Switch.Control />
@@ -84,6 +87,7 @@ export function ModulePositionFields({ comp, module, moduleX, updateModule }: { 
       )}
       {freeX(module) ? (
         <NumRow
+          optionId="module.position.x"
           label="De costat (X)"
           value={module.x!}
           min={-20000}
@@ -94,6 +98,7 @@ export function ModulePositionFields({ comp, module, moduleX, updateModule }: { 
         />
       ) : (
       <NumRow
+          optionId="module.position.gap"
           label={rowIndex > 0 ? "Separació amb l'anterior" : "Separació des de l'inici"}
           value={module.gapBefore}
           min={0}
@@ -141,7 +146,7 @@ export function ModuleSections({ module, updateModule }: { module: Module; updat
           }}
         />
       )}
-      <FoldItem id="mod-structure" title="Caixa" icon={LuFrame} badge={rows.style ? (module.fronts.style === "inset" ? "Encastats" : "Recobrents") : undefined}>
+      <FoldItem optionId="module.carcass" id="mod-structure" title="Caixa" icon={LuFrame} badge={rows.style ? (module.fronts.style === "inset" ? "Encastats" : "Recobrents") : undefined}>
         <CarcassForm module={module} onChange={updateModule} section="structure" rows={rows} />
       </FoldItem>
       {/* Portes de dalt a baix de tot el mòdul (armari), només amb l'Interior dividit: sense dividir, el Front és el
@@ -162,12 +167,12 @@ export function ModuleSections({ module, updateModule }: { module: Module; updat
         />
       )}
       {rows.dowel && (
-        <FoldItem id="mod-joint" title="Unió" icon={LuBolt}>
+        <FoldItem optionId="module.joint" id="mod-joint" title="Unió" icon={LuBolt}>
           <JointForm module={module} onChange={updateModule} />
         </FoldItem>
       )}
-      <FoldItem id="mod-materials" title="Materials" icon={LuPalette}>
-        <MaterialsForm carcass={module.carcass} hasDrawers={hasDrawers(visibleModule(module).root)} hasFronts={rows.frontMaterial} onPatch={(patch) => updateModule({ ...module, carcass: { ...module.carcass, ...patch } })} />
+      <FoldItem optionId="module.materials" id="mod-materials" title="Materials" icon={LuPalette}>
+        <MaterialsForm scope="module" carcass={module.carcass} hasDrawers={hasDrawers(visibleModule(module).root)} hasFronts={rows.frontMaterial} onPatch={(patch) => updateModule({ ...module, carcass: { ...module.carcass, ...patch } })} />
       </FoldItem>
     </>
   )
@@ -211,7 +216,7 @@ export function SceneFinishFields({ comp, setComp, materials }: { comp: Composit
   return (
     <Stack gap={0}>
       {(["floor", "wall"] as const).map((k) => (
-        <FormRow key={k} label={k === "floor" ? "Terra" : "Paret"} help={k === "wall" ? "Es veuen en mode Presentació i a la miniatura de la targeta." : undefined} maxW="280px">
+        <FormRow key={k} optionId={k === "floor" ? "moble.scene.floor" : "moble.scene.wall"} label={k === "floor" ? "Terra" : "Paret"} help={k === "wall" ? "Es veuen en mode Presentació i a la miniatura de la targeta." : undefined} maxW="280px">
           <MaterialSelect
             label={k === "floor" ? "Terra" : "Paret"}
             materials={materials}

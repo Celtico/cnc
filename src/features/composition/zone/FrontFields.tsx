@@ -52,6 +52,7 @@ export function FrontFields({ front, openRatio, drawerHeights, onChange, hardwar
   // «Tirador»: el del mòdul («Com el mòdul»), un altre de la biblioteca (un d'importat i confirmat fa els
   // forats a la seva distància) o «Cap (push)». Als calaixos amb joc, el tancament del joc mana (`kitClosingFor`).
   const handlePick = (f: Extract<Front, { kind: "door" | "drawers" | "flap" }>, kit?: HardwareItem & { kit: NonNullable<HardwareItem["kit"]> }) => {
+    const handleId = f.kind === "door" ? "zone.front.door.handle" : f.kind === "drawers" ? "zone.front.drawers.handle" : "zone.front.flap.handle"
     const kitOpts = kit && f.kind === "drawers" ? kitOptionsOf(kit.kit, f.kit) : undefined
     const kitPush = !!kitOpts && isPushClosing(kitOpts.closing)
     const push = kitPush || f.handle === "none" || (!f.handle && noHandles)
@@ -65,6 +66,7 @@ export function FrontFields({ front, openRatio, drawerHeights, onChange, hardwar
     const help = kitPush ? "La guia de calaix ja porta el sistema push (push-open): no cal cap Tip-On, ni tirador ni forats. Per posar-hi un tirador, canvia el Tancament a les Opcions de la guia de calaix." : inheritedNone ? "El mòdul és push: cap forat; tria'n un aquí si aquest front n'ha de portar." : "Obertura per pressió: cap forat. Cal el ferratge push (Tip-On) a aquest front."
     return (
       <HardwarePick
+        optionId={handleId}
         slot="handle"
         label="Tirador"
         glass={(f.kind === "door" || f.kind === "flap") && !!f.glass}
@@ -81,7 +83,7 @@ export function FrontFields({ front, openRatio, drawerHeights, onChange, hardwar
       // Un camp per fila: dos grups de botons no hi caben de costat a l'inspector.
       return (
         <Stack gap={3}>
-          {!noMode && <FormRow label="Portes">
+          {!noMode && <FormRow optionId="zone.front.door.mode" label="Portes">
             <ChoiceChips
               label="Portes"
               value={front.mode}
@@ -94,7 +96,7 @@ export function FrontFields({ front, openRatio, drawerHeights, onChange, hardwar
             />
           </FormRow>}
           {front.mode === "single" && (
-            <FormRow label="Frontisses">
+            <FormRow optionId="zone.front.door.hingeSide" label="Frontisses">
               {/* Pastilles: «Esquerra» amb icona no cap en mig control segmentat. */}
               <ChoiceChips
                 label="Frontisses"
@@ -108,7 +110,7 @@ export function FrontFields({ front, openRatio, drawerHeights, onChange, hardwar
               />
             </FormRow>
           )}
-          <FormRow label="Vitrina" help={front.glass ? "Marc de perfil d'alumini (el triat a «Marc») i vidre; la frontissa i el tirador es trien a sota. No és de CNC: surt a Peces, a «Elements sense nesting», amb les mides per demanar-ho." : undefined}>
+          <FormRow optionId="zone.front.door.glass" label="Vitrina" help={front.glass ? "Marc de perfil d'alumini (el triat a «Marc») i vidre; la frontissa i el tirador es trien a sota. No és de CNC: surt a Peces, a «Elements sense nesting», amb les mides per demanar-ho." : undefined}>
             <Switch.Root size="sm" pt="6px" checked={!!front.glass} onCheckedChange={(e) => onChange({ ...front, glass: e.checked || undefined })}>
               <Switch.HiddenInput />
               <Switch.Control />
@@ -117,8 +119,8 @@ export function FrontFields({ front, openRatio, drawerHeights, onChange, hardwar
           </FormRow>
           {/* La de vidre porta el marc d'alumini (ferratge `glassFrame`); la frontissa i el tirador es trien igual que a les
               de fusta (per decisió de l'usuari): al perfil no es mecanitza res, la placa de la frontissa sí, al lateral. */}
-          {front.glass && <HardwarePick slot="glassFrame" label="Marc" current={front.frame ?? moduleSlotItem(hardware, "glassFrame")} inherited={moduleSlotItem(hardware, "glassFrame")} onPick={(h) => onChange(h ? { ...front, frame: h } : (({ frame: _f, ...rest }) => rest)(front))} />}
-          <HardwarePick slot="hinge" glass={!!front.glass} current={front.hardware ?? (front.glass ? undefined : hardware.hinge)} inherited={hardware.hinge} help={front.glass ? "A la porta de vidre, les frontisses per a marc d'alumini (Metallamat A, Duomatic): es claven al perfil i només es mecanitzen els forats de la placa al lateral." : undefined} onPick={(h) => onChange(withHardware(front, h))} />
+          {front.glass && <HardwarePick optionId="zone.front.door.frame" slot="glassFrame" label="Marc" current={front.frame ?? moduleSlotItem(hardware, "glassFrame")} inherited={moduleSlotItem(hardware, "glassFrame")} onPick={(h) => onChange(h ? { ...front, frame: h } : (({ frame: _f, ...rest }) => rest)(front))} />}
+          <HardwarePick optionId="zone.front.door.hinge" slot="hinge" glass={!!front.glass} current={front.hardware ?? (front.glass ? undefined : hardware.hinge)} inherited={hardware.hinge} help={front.glass ? "A la porta de vidre, les frontisses per a marc d'alumini (Metallamat A, Duomatic): es claven al perfil i només es mecanitzen els forats de la placa al lateral." : undefined} onPick={(h) => onChange(withHardware(front, h))} />
           {!front.glass && afterHinge}
           {handlePick(front)}
         </Stack>
@@ -126,7 +128,7 @@ export function FrontFields({ front, openRatio, drawerHeights, onChange, hardwar
     case "drawers":
       return (
         <Stack gap={3}>
-          <NumRow label="Calaixos" help={isDrawerKit(front.hardware ?? hardware.slide) ? "Calaixos del joc de doble paret (sense laterals de fusta), amb la llargada nominal més gran que hi cap." : "Caixa de fusta amb la guia de la llargada més gran que hi cap."} suffix="u" value={front.n} min={1} max={10} step={1} onChange={(n) => {
+          <NumRow optionId="zone.front.drawers.count" label="Calaixos" help={isDrawerKit(front.hardware ?? hardware.slide) ? "Calaixos del joc de doble paret (sense laterals de fusta), amb la llargada nominal més gran que hi cap." : "Caixa de fusta amb la guia de la llargada més gran que hi cap."} suffix="u" value={front.n} min={1} max={10} step={1} onChange={(n) => {
             if (!Number.isFinite(n)) return
             const k = Math.max(1, Math.min(10, Math.round(n)))
             // L'última sempre és el que sobra («auto»), com a la Divisió.
@@ -135,11 +137,11 @@ export function FrontFields({ front, openRatio, drawerHeights, onChange, hardwar
           {/* Cada tria amb les seves opcions plegades a sota (per decisió de l'usuari, 2026-10-13: «cada un té les seves
               opcions, no les ajuntis»): Calaixos › alçades, Guia › joc, Tirador › posició. */}
           {front.n > 1 && (
-            <FoldItem id="zone-drawer-heights" title="Alçada dels calaixos" icon={LuSettings2} size="sm" badge={front.heights.slice(0, front.n - 1).some((h) => h !== "auto") ? "Alçades a mida" : "Alçades iguals"}>
+            <FoldItem optionId="zone.front.drawers.heights" id="zone-drawer-heights" title="Alçada dels calaixos" icon={LuSettings2} size="sm" badge={front.heights.slice(0, front.n - 1).some((h) => h !== "auto") ? "Alçades a mida" : "Alçades iguals"}>
               <DrawerHeights front={front} real={drawerHeights} onChange={onChange} />
             </FoldItem>
           )}
-          <HardwarePick slot="slide" label={perDrawerSlides(front, front.hardware ?? hardware.slide) ? "Guia del calaix 1" : undefined} current={front.hardware ?? hardware.slide} inherited={hardware.slide} onPick={(h) => onChange(withHardware(front, h))} />
+          <HardwarePick optionId="zone.front.drawers.slide" slot="slide" label={perDrawerSlides(front, front.hardware ?? hardware.slide) ? "Guia del calaix 1" : undefined} current={front.hardware ?? hardware.slide} inherited={hardware.slide} onPick={(h) => onChange(withHardware(front, h))} />
           {/* Amb un joc de calaix, la guia de cada un dels altres calaixos (els de sobre segueixen el de sota). */}
           {perDrawerSlides(front, front.hardware ?? hardware.slide) && <DrawerSlides front={front} kits={kits} onChange={onChange} />}
           {/* Un joc de calaix, triat aquí o com a guia del mòdul: les opcions del joc. */}
@@ -151,14 +153,14 @@ export function FrontFields({ front, openRatio, drawerHeights, onChange, hardwar
             return (
               <>
                 {kit && (
-                  <FoldItem id="zone-kit" title="Opcions de la guia de calaix" icon={LuSettings2} size="sm" badge={KIT_CLOSINGS.find((x) => x.id === kitOptionsOf(kit.kit, front.kit).closing)?.short}>
+                  <FoldItem optionId="zone.front.drawers.kit" id="zone-kit" title="Opcions de la guia de calaix" icon={LuSettings2} size="sm" badge={KIT_CLOSINGS.find((x) => x.id === kitOptionsOf(kit.kit, front.kit).closing)?.short}>
                     <KitFields front={front} kit={kit} kits={kits} onChange={onChange} />
                   </FoldItem>
                 )}
                 {handlePick(front, kit)}
                 {hasHandle && (
-                  <FoldItem id="zone-handle" title="Opcions del tirador" icon={LuSettings2} size="sm" badge={front.handleTop !== undefined ? `A dalt · ${front.handleTop} mm` : "Centrat"}>
-                    <FormRow label="Posició del tirador">
+                  <FoldItem optionId="zone.front.drawers.handleOptions" id="zone-handle" title="Opcions del tirador" icon={LuSettings2} size="sm" badge={front.handleTop !== undefined ? `A dalt · ${front.handleTop} mm` : "Centrat"}>
+                    <FormRow optionId="zone.front.drawers.handlePosition" label="Posició del tirador">
                       <ChoiceChips
                         label="Posició del tirador"
                         value={front.handleTop !== undefined ? "top" : "center"}
@@ -170,7 +172,7 @@ export function FrontFields({ front, openRatio, drawerHeights, onChange, hardwar
                       />
                     </FormRow>
                     {front.handleTop !== undefined && (
-                      <NumRow label="Des de dalt" value={front.handleTop} min={0} max={1000} step={5} onChange={(handleTop) => Number.isFinite(handleTop) && onChange({ ...front, handleTop })} help="Del cantell de dalt del front a l'eix del tirador. Com a molt, el mig del front." />
+                      <NumRow optionId="zone.front.drawers.handleTop" label="Des de dalt" value={front.handleTop} min={0} max={1000} step={5} onChange={(handleTop) => Number.isFinite(handleTop) && onChange({ ...front, handleTop })} help="Del cantell de dalt del front a l'eix del tirador. Com a molt, el mig del front." />
                     )}
                   </FoldItem>
                 )}
@@ -182,7 +184,7 @@ export function FrontFields({ front, openRatio, drawerHeights, onChange, hardwar
     case "flap":
       return (
         <Stack gap={3}>
-          <FormRow label="Obre cap a">
+          <FormRow optionId="zone.front.flap.dir" label="Obre cap a">
             <ChoiceChips
               label="Obre cap a"
               value={front.dir}
@@ -193,15 +195,15 @@ export function FrontFields({ front, openRatio, drawerHeights, onChange, hardwar
               onChange={(dir) => onChange({ ...front, dir })}
             />
           </FormRow>
-          <FormRow label="Vitrina" help={front.glass ? "Marc de perfil d'alumini i vidre, com la porta de vidre; el braç i el tirador es trien a sota. No és de CNC: surt a Peces, a «Elements sense nesting»." : undefined}>
+          <FormRow optionId="zone.front.flap.glass" label="Vitrina" help={front.glass ? "Marc de perfil d'alumini i vidre, com la porta de vidre; el braç i el tirador es trien a sota. No és de CNC: surt a Peces, a «Elements sense nesting»." : undefined}>
             <Switch.Root size="sm" pt="6px" checked={!!front.glass} onCheckedChange={(e) => onChange({ ...front, glass: e.checked || undefined })}>
               <Switch.HiddenInput />
               <Switch.Control />
               <Switch.Label fontSize="sm">Abatible de vidre amb marc</Switch.Label>
             </Switch.Root>
           </FormRow>
-          {front.glass && <HardwarePick slot="glassFrame" label="Marc" current={front.frame ?? moduleSlotItem(hardware, "glassFrame")} inherited={moduleSlotItem(hardware, "glassFrame")} onPick={(h) => onChange(h ? { ...front, frame: h } : (({ frame: _f, ...rest }) => rest)(front))} />}
-          <HardwarePick slot="flap" current={front.hardware ?? hardware.flap} inherited={hardware.flap} help={front.glass ? "A l'abatible de vidre, el braç es fixa al perfil amb l'adaptador (Häfele 563.25.960): cap forat al tauler." : undefined} onPick={(h) => onChange(withHardware(front, h))} />
+          {front.glass && <HardwarePick optionId="zone.front.flap.frame" slot="glassFrame" label="Marc" current={front.frame ?? moduleSlotItem(hardware, "glassFrame")} inherited={moduleSlotItem(hardware, "glassFrame")} onPick={(h) => onChange(h ? { ...front, frame: h } : (({ frame: _f, ...rest }) => rest)(front))} />}
+          <HardwarePick optionId="zone.front.flap.arm" slot="flap" current={front.hardware ?? hardware.flap} inherited={hardware.flap} help={front.glass ? "A l'abatible de vidre, el braç es fixa al perfil amb l'adaptador (Häfele 563.25.960): cap forat al tauler." : undefined} onPick={(h) => onChange(withHardware(front, h))} />
           {handlePick(front)}
           {/* Només la distància al cantell que obre (el tirador va centrat de costat a costat). Push: no surt. */}
           {!front.glass && !(front.handle === "none" || (!front.handle && noHandles)) && (() => {
@@ -215,8 +217,9 @@ export function FrontFields({ front, openRatio, drawerHeights, onChange, hardwar
             })()
             const value = front.handleInset ?? own ?? 0
             return (
-              <FoldItem id="zone-flap-handle" title="Opcions del tirador" icon={LuSettings2} size="sm" badge={`${fmtMm(value)} mm del cantell`}>
+              <FoldItem optionId="zone.front.flap.handleOptions" id="zone-flap-handle" title="Opcions del tirador" icon={LuSettings2} size="sm" badge={`${fmtMm(value)} mm del cantell`}>
                 <NumRow
+                  optionId="zone.front.flap.handleInset"
                   label="Des del cantell"
                   value={value}
                   min={0}
@@ -236,7 +239,7 @@ export function FrontFields({ front, openRatio, drawerHeights, onChange, hardwar
       return (
         <Stack gap={3}>
           {/* Una fila per camp: el panell és estret i les opcions són llargues. */}
-          <FormRow label="Patró">
+          <FormRow optionId="zone.front.grille.pattern" label="Patró">
             <IconChoice
               hideLabel
               label="Patró"
@@ -249,7 +252,7 @@ export function FrontFields({ front, openRatio, drawerHeights, onChange, hardwar
               onChange={(kind) => setP({ kind })}
             />
           </FormRow>
-          <FormRow label="Muntatge">
+          <FormRow optionId="zone.front.grille.mount" label="Muntatge">
             {/* Pastilles: «Frontisses» amb icona no cap en mig control segmentat. */}
             <ChoiceChips
               label="Muntatge"
@@ -266,22 +269,22 @@ export function FrontFields({ front, openRatio, drawerHeights, onChange, hardwar
           {front.mount !== "removable" && afterHinge}
           {p.kind === "holes" ? (
             <>
-              <NumRow label="Diàmetre forat" value={p.holeDiameter} min={3} max={60} step={1} onChange={(holeDiameter) => setP({ holeDiameter })} />
-              <NumRow label="Pas" value={p.holePitch} min={4} max={120} step={1} onChange={(holePitch) => setP({ holePitch })} />
+              <NumRow optionId="zone.front.grille.holes" label="Diàmetre forat" value={p.holeDiameter} min={3} max={60} step={1} onChange={(holeDiameter) => setP({ holeDiameter })} />
+              <NumRow optionId="zone.front.grille.holes" label="Pas" value={p.holePitch} min={4} max={120} step={1} onChange={(holePitch) => setP({ holePitch })} />
             </>
           ) : (
             <>
-              <NumRow label="Ranura" value={p.slotWidth} min={3} max={60} step={1} onChange={(slotWidth) => setP({ slotWidth })} />
-              <NumRow label="Separació" value={p.slotGap} min={3} max={100} step={1} onChange={(slotGap) => setP({ slotGap })} />
+              <NumRow optionId="zone.front.grille.slots" label="Ranura" value={p.slotWidth} min={3} max={60} step={1} onChange={(slotWidth) => setP({ slotWidth })} />
+              <NumRow optionId="zone.front.grille.slots" label="Separació" value={p.slotGap} min={3} max={100} step={1} onChange={(slotGap) => setP({ slotGap })} />
             </>
           )}
-          <NumRow label="Marge" value={p.margin} min={10} max={200} step={5} onChange={(margin) => setP({ margin })} />
+          <NumRow optionId="zone.front.grille.margin" label="Marge" value={p.margin} min={10} max={200} step={5} onChange={(margin) => setP({ margin })} />
           {openRatio !== undefined && (
             <Text fontSize="sm" color={openRatio < 0.4 ? "fg.error" : "fg.muted"}>
               Àrea oberta: {Math.round(openRatio * 100)} % {openRatio < 0.4 ? "(per sota del 40 % recomanat)" : ""}
             </Text>
           )}
-          <FormRow label="Trapa">
+          <FormRow optionId="zone.front.grille.hatch" label="Trapa">
             <Switch.Root
               size="sm"
               pt="6px"
@@ -295,15 +298,15 @@ export function FrontFields({ front, openRatio, drawerHeights, onChange, hardwar
           </FormRow>
           {front.hatch && (
             <>
-              <NumRow label="Trapa X" value={front.hatch.x} min={0} max={3000} step={10} onChange={(x) => onChange({ ...front, hatch: { ...front.hatch!, x } })} />
-              <NumRow label="Trapa Y" value={front.hatch.y} min={0} max={3000} step={10} onChange={(y) => onChange({ ...front, hatch: { ...front.hatch!, y } })} />
-              <NumRow label="Ample" value={front.hatch.w} min={50} max={600} step={10} onChange={(w) => onChange({ ...front, hatch: { ...front.hatch!, w } })} />
-              <NumRow label="Alt" value={front.hatch.h} min={50} max={600} step={10} onChange={(h) => onChange({ ...front, hatch: { ...front.hatch!, h } })} />
+              <NumRow optionId="zone.front.grille.hatchSize" label="Trapa X" value={front.hatch.x} min={0} max={3000} step={10} onChange={(x) => onChange({ ...front, hatch: { ...front.hatch!, x } })} />
+              <NumRow optionId="zone.front.grille.hatchSize" label="Trapa Y" value={front.hatch.y} min={0} max={3000} step={10} onChange={(y) => onChange({ ...front, hatch: { ...front.hatch!, y } })} />
+              <NumRow optionId="zone.front.grille.hatchSize" label="Ample" value={front.hatch.w} min={50} max={600} step={10} onChange={(w) => onChange({ ...front, hatch: { ...front.hatch!, w } })} />
+              <NumRow optionId="zone.front.grille.hatchSize" label="Alt" value={front.hatch.h} min={50} max={600} step={10} onChange={(h) => onChange({ ...front, hatch: { ...front.hatch!, h } })} />
             </>
           )}
           {/* Després de Muntatge i Trapa (en depèn: opcions en cascada). */}
           {/* L'imant (reixeta desmuntable i trapa): el del mòdul o un altre de la biblioteca. */}
-          {(front.mount === "removable" || front.hatch) && <HardwarePick slot="magnet" current={front.hardware ?? hardware.magnet} inherited={hardware.magnet} onPick={(h) => onChange(h ? { ...front, hardware: h } : (({ hardware: _h, ...rest }) => rest)(front))} />}
+          {(front.mount === "removable" || front.hatch) && <HardwarePick optionId="zone.front.grille.magnet" slot="magnet" current={front.hardware ?? hardware.magnet} inherited={hardware.magnet} onPick={(h) => onChange(h ? { ...front, hardware: h } : (({ hardware: _h, ...rest }) => rest)(front))} />}
         </Stack>
       )
     }

@@ -206,6 +206,9 @@ Les etiquetes i les ajudes de la UI fan servir sempre aquestes paraules (auditor
     Mòdul › Electrodomèstic i no al seu Interior; el d'un mòdul dividit, al compartiment). Els **per defecte** del mòdul (tirador i ferratges)
     no surten: es trien a cada compartiment («Com el mòdul» = l'heretat). Res del que la construcció no llegeix no surt, i
     al revés (`usedHardwareSlots`, `moduleRows`; res amagat compta).
+  - **Opció nova a un inspector → al registre** de les opcions en cascada (`core/model/options/`, `optionId` a la fila; ho
+    comprova `src/optionCascade.test.ts`): així surt a Preferències › Opcions en cascada, es pot amagar i triar-ne el per
+    defecte ([convencions](docs/convencions.md)).
   - Quan aparegui un cas nou, s'afegeix aquí.
 - Abans de codi nou al `core/`, escriu o actualitza els tests (Vitest). Canvis de fabricació: proves d'or (vegeu més amunt).
 - Canvis petits i verificables. Després de cada canvi ha de passar `pnpm check` (typecheck, lint amb 0 avisos, codi mort,

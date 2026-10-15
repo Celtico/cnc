@@ -12,7 +12,8 @@
   bé), Etiquetes —, **Foto i visor 3D** — Objectes de referència, Visor 3D — i **App** — Visualització, Tema, **Assistent
   IA** (`settings/AssistantPane.tsx`, `LuMessageSquare`: la clau de l'API de Claude —camp de contrasenya; després només
   se'n veuen els 4 últims caràcters, `maskKey`—, «Provar la clau» (`models.retrieve`, sense tokens) i el model amb
-  `ChoiceChips`: Sonnet 5.5 per defecte, Opus 5.5; l'explicació del cost i de la connexió) —. A la dreta la
+  `ChoiceChips`: Sonnet 5.5 per defecte, Opus 5.5; l'explicació del cost i de la connexió) — i **Editor** — Opcions en
+  cascada (vegeu més avall) —. A la dreta la
   pàgina triada (icona, títol, explicació i «Restaurar valors inicials»): **una sola columna de 760 px** (`FoldGrid` = pila)
   de **grups sempre oberts** (`components/SettingsGroup`: targeta amb capçalera, res no es plega). Al mòbil, navegació en
   profunditat: apartats › pàgina › element, amb «‹ Tornar»; l'apartat i l'element es recorden durant la sessió
@@ -176,13 +177,51 @@
     davant (placa o System 32); als altres, el forat fins als cantells, la fondària i, si n'hi ha dos, la distància). Els
     textos de l'SVG van amb `style={{ fontSize }}` (l'atribut `font-size` el tapa el CSS global). Tests
     `build/hardwareMount.test.ts`.
+- **Opcions en cascada** (per decisió de l'usuari, 2026-10-15: «el dibuix en cascada» de totes les opcions de l'Editor;
+  `settings/OptionCascadePane.tsx`, `LuListTree`, apartat **Editor**): tota la cascada d'opcions dels inspectors (Estructura,
+  Moble, Mòdul › Posició · Mides · Electrodomèstic · Caixa · Portes · Unió · Materials, Compartiment › Electrodomèstic ·
+  Front › Porta · Calaixos · Abatible · Reixeta · Prestatges i accessoris · Filera System 32 · Dividir · Divisió, Peça lliure,
+  Objecte de referència i Selecció múltiple) en un **arbre** (`TreeView` de Chakra amb les línies de cada branca, `size="sm"`,
+  les icones de les seccions de l'inspector, `settings/optionIcons.ts`; obertes d'entrada Moble, Mòdul i Compartiment, es
+  recorda a la sessió `mobles:option-cascade-open`). **Una dada, una font**: l'arbre surt del **registre**
+  `core/model/options/` (`OPTION_CASCADE`: id estable, nom, tipus, control, tries amb el que **fan aparèixer** (ull) o
+  **desaparèixer** (ull tatxat), quan surt —`showIf`—, el valor d'un element nou, `hideable`, `defaultEditable`, el fitxer
+  de la UI i la possible incoherència de l'auditoria); cada fila i secció dels inspectors en porta l'id (`optionId`) i el test
+  `src/optionCascade.test.ts` falla si en falta un o si un id del registre no és a la UI. A cada opció (`OptionNodeView`):
+  el nom, «Surt quan: …» (**només es llegeix**: la condició també decideix la fabricació, res amagat compta; només la
+  canvia el codi), les tries (la inicial, plena), **«Amagar»** si es pot (`hideable`) i el **«Per defecte als nous»** si es
+  pot triar (`defaultEditable`; el mateix control que l'inspector: `ChoiceChips`, `Switch` o `NumberField`, i «Inicial (…)»
+  per tornar-hi); si no, el per defecte en text (p. ex. «Com el mòdul», «Preferències › Folgances per defecte»: **un sol
+  lloc per decisió**, els materials i les folgances es trien a les seves pàgines). Les que no es poden amagar porten
+  «Fixa» (el perquè al tooltip). Les **possibles incoherències** de l'auditoria del 2026-10-15 surten amb «Possible
+  incoherència» i el text (no s'han corregit: l'usuari les revisarà amb l'arbre). Una **cerca** (`SearchBar`, sense accents)
+  filtra: les que coincideixen amb tot el que tenen a sota i les de sobre, tot obert. A dalt, quantes n'hi ha d'amagades i
+  de per defecte propis; «Restaurar valors inicials» les torna totes.
+  - **Amagar** (`optionPrefs[id].hidden`; `useOptionHidden`, a `SettingsContext`, el fan servir `FormRow`, `NumRow`,
+    `FoldItem` i `HardwarePick`): la fila o la secció no surt, ni les de sota (`hiddenBy`: una de sobre amagada amaga les
+    seves); les amagades es veuen grises amb «Amagada» (o «Amagada amb «…»»). Els mobles fets **no canvien** (conserven el
+    seu valor i es fabriquen igual); els nous fan servir el per defecte. **No es poden amagar** (`why`): les Mides i la
+    Posició (del mòdul, de la peça, de l'objecte i de la selecció), la Tapa i els Laterals (sense, no hi hauria on aguantar
+    prestatges ni fronts), el Front i el Contingut del compartiment, la Divisió i les seves mides, el nombre de Calaixos, la
+    Caixa sencera i els Triats de la selecció. Les opcions de la porta són les mateixes a Compartiment › Front i a Mòdul ›
+    Portes (mateix id: amagar-ne una l'amaga als dos llocs); les files de Moble › Encaixos també surten a la peça.
+  - **Per defecte** (`optionPrefs[id].default`, validat contra el registre, `optionDefault`/`userOptionDefault`; un valor
+    del codi o invàlid no compta): el mòdul del «+» (`applyModuleOptionDefaults` després d'`applySettingsToModule`, a
+    `EditorScreen`; no a les taules ni als mòduls de l'assistent): mides, Suport (amb l'alçada i el retranqueig del sòcol o
+    l'alçada de les potes, també en triar-lo a la Caixa: `baseWithDefaults`), Base, Fons, Tapa, Tauler de taula, Laterals,
+    Parets, Cantonades, Estil dels fronts i el seu Interior; els compartiments nous en blanc d'una divisió o d'«Afegir zona»
+    (`withNewZoneDefaults`: Contingut, Quantitat, Regulació, Davant, Penjar, Llum); el front que es posa per primer cop
+    (`switchFront(…, frontWithDefaults)`: Portes Una · Dues, Frontisses, Vitrina, nombre de Calaixos, Obre cap a, Patró i
+    Muntatge de la reixeta; el front recordat del compartiment no es toca); la peça lliure nova (Orientació, Efecte, Veta,
+    Cantell) i l'objecte nou (Efecte). Sense cap preferència, res no canvia (proves d'or idèntiques).
 - **Objectes de referència inicials** (`BUILTIN_REFERENCES`): genèrics (A4, rajoles, portes, **una sola tele** de 55″,
   radiador, endoll; per decisió de l'usuari, no una llista de teles). Les teles antigues es treuen (`RETIRED_REFERENCES`,
   `isRetired`, també les còpies «TV Sony KD-55XD8505…»).
 - **Visor 3D**: qualitat, escena de Presentació (terra i paret: materials de la biblioteca, `PresentationScene.floorMaterial`
   / `wallMaterial`, o les mostres ràpides; terra per defecte «Parquet de roure»), llum i «Cel del render». **Tema**:
   dia/nit/sistema i color principal (`theme/accent.ts` redirigeix les variables CSS de `wood`).
-- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 47 (el material del cos dels electrodomèstics:
+- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 48 (opcions en cascada, `optionPrefs`, additiu:
+sense, cap d'amagada; una entrada dolenta només treu aquella, `parseOptionPrefs`); 47 (el material del cos dels electrodomèstics:
 «Electrodomèstic negre», el vidre negre dels forns, microones i plaques, `APPLIANCE_MATERIALS`, additiu; els items del
 catàleg passen a la `version` 3, amb el cos de la família —`applianceBodyMaterial`— en lloc de «Acer inox» a tots: la
 biblioteca es refà sola com a cada versió d'item i les còpies dels mobles desats, només pel cos, `upgradeApplianceBodies` a

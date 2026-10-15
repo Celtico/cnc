@@ -30,8 +30,9 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
   const attached = o.onFloor && o.onWall ? "Terra i paret" : o.onFloor ? "Al terra" : o.onWall ? "A la paret" : "Res"
   return (
     <Stack gap={0}>
-      <FoldItem id="ref-effect" title="Efecte" icon={o.effect === "cut" ? LuScissors : LuShield} badge={o.effect === "cut" ? "Talla" : "Obstacle"}>
+      <FoldItem optionId="ref.effect" id="ref-effect" title="Efecte" icon={o.effect === "cut" ? LuScissors : LuShield} badge={o.effect === "cut" ? "Talla" : "Obstacle"}>
         <FormRow
+          optionId="ref.effect"
           label="Efecte"
           help={
             o.effect === "cut"
@@ -50,8 +51,8 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
           />
         </FormRow>
       </FoldItem>
-      <FoldItem id="ref-shape" title="Forma" icon={shapeOpt.icon} badge={shapeOpt.name}>
-        <FormRow label="Forma">
+      <FoldItem optionId="ref.shape" id="ref-shape" title="Forma" icon={shapeOpt.icon} badge={shapeOpt.name}>
+        <FormRow optionId="ref.shape" label="Forma">
           {/* Pastilles que salten de línia: tres opcions amb icona no hi caben en un segmentat. */}
           <Stack gap={2}>
             <ChoiceChips
@@ -75,27 +76,27 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
         </FormRow>
       </FoldItem>
       {oriented && (
-        <FoldItem id="ref-orient" title="Orientació" icon={axisOpt.icon} badge={axisOpt.label}>
+        <FoldItem optionId="ref.orient" id="ref-orient" title="Orientació" icon={axisOpt.icon} badge={axisOpt.label}>
           {o.shape === "profile" ? (
-            <FormRow label="Direcció">
+            <FormRow optionId="ref.orient" label="Direcció">
               <IconChoice label="Direcció" hideLabel value={axis} options={AXIS_OPTIONS} onChange={(a) => update(profileAxisPatch(o, a))} />
             </FormRow>
           ) : o.shape === "cylinder" ? (
-            <FormRow label="Direcció">
+            <FormRow optionId="ref.orient" label="Direcció">
               <IconChoice label="Direcció" hideLabel value={axis} options={AXIS_OPTIONS} onChange={(a) => update(cylinderPatch(o, a))} />
             </FormRow>
           ) : (
-            <FormRow label="Direcció del tall">
+            <FormRow optionId="ref.orient" label="Direcció del tall">
               <IconChoice label="Direcció del tall" hideLabel value={axis} options={AXIS_OPTIONS} onChange={(a) => update({ axis: a === "z" ? undefined : a })} />
             </FormRow>
           )}
         </FoldItem>
       )}
-      <FoldItem id="ref-size" title="Mides" icon={LuMoveDiagonal}>
+      <FoldItem optionId="ref.size" id="ref-size" title="Mides" icon={LuMoveDiagonal}>
         {o.shape === "profile" ? (
           <>
-            <NumRow label="Llarg" value={sectionOf(o).length} min={1} max={20000} step={10} onChange={(length) => update(sizePatch(o, { length }))} />
-            <FormRow label="Secció">
+            <NumRow optionId="ref.size" label="Llarg" value={sectionOf(o).length} min={1} max={20000} step={10} onChange={(length) => update(sizePatch(o, { length }))} />
+            <FormRow optionId="ref.size" label="Secció">
               <Text fontSize="sm" color="fg.muted" pt={1.5}>
                 {Math.round(sectionOf(o).su)} × {Math.round(sectionOf(o).sv)} · {o.profile?.length ?? 0} punts
               </Text>
@@ -103,20 +104,20 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
           </>
         ) : o.shape === "cylinder" ? (
           <>
-            <NumRow label="Diàmetre (Ø)" value={cylinderDims(o).diameter} min={1} max={20000} step={5} onChange={(diameter) => update(cylinderPatch(o, o.axis ?? "z", { diameter }))} />
-            <NumRow label="Llarg" value={cylinderDims(o).length} min={1} max={20000} step={10} onChange={(length) => update(cylinderPatch(o, o.axis ?? "z", { length }))} />
+            <NumRow optionId="ref.size" label="Diàmetre (Ø)" value={cylinderDims(o).diameter} min={1} max={20000} step={5} onChange={(diameter) => update(cylinderPatch(o, o.axis ?? "z", { diameter }))} />
+            <NumRow optionId="ref.size" label="Llarg" value={cylinderDims(o).length} min={1} max={20000} step={10} onChange={(length) => update(cylinderPatch(o, o.axis ?? "z", { length }))} />
           </>
         ) : (
           <>
-            <NumRow label="Ample" value={o.w} min={1} max={20000} step={10} onChange={(w) => update({ w })} />
-            <NumRow label="Alt" value={o.h} min={1} max={20000} step={10} onChange={(h) => update({ h })} />
-            <NumRow label="Fondària" value={o.d} min={1} max={20000} step={10} onChange={(d) => update({ d })} />
+            <NumRow optionId="ref.size" label="Ample" value={o.w} min={1} max={20000} step={10} onChange={(w) => update({ w })} />
+            <NumRow optionId="ref.size" label="Alt" value={o.h} min={1} max={20000} step={10} onChange={(h) => update({ h })} />
+            <NumRow optionId="ref.size" label="Fondària" value={o.d} min={1} max={20000} step={10} onChange={(d) => update({ d })} />
           </>
         )}
       </FoldItem>
       {o.effect !== "cut" && (
-        <FoldItem id="ref-material" title="Material" icon={LuPalette} badge={o.material ?? "Fantasma"} badgePalette={o.material ? "wood" : "gray"}>
-          <FormRow label="Material" help={o.material ? "Es veu sòlid amb aquest material i surt a la Presentació i al render." : "Sense material, és un fantasma translúcid (només per comprovar que tot hi cap; no surt al render)."} maxW="280px">
+        <FoldItem optionId="ref.material" id="ref-material" title="Material" icon={LuPalette} badge={o.material ?? "Fantasma"} badgePalette={o.material ? "wood" : "gray"}>
+          <FormRow optionId="ref.material" label="Material" help={o.material ? "Es veu sòlid amb aquest material i surt a la Presentació i al render." : "Sense material, és un fantasma translúcid (només per comprovar que tot hi cap; no surt al render)."} maxW="280px">
             <MaterialSelect label="Material" materials={settings.materials} value={o.material ?? ""} emptyLabel="Cap (fantasma)" hideLabel onChange={(v) => update({ material: v || undefined })} />
           </FormRow>
         </FoldItem>
@@ -133,9 +134,9 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
           }}
         />
       )}
-      <FoldItem id="ref-attach" title="Enganxada" icon={LuLink} badge={attached} badgePalette={o.onFloor || o.onWall ? "wood" : "gray"}>
+      <FoldItem optionId="ref.attach" id="ref-attach" title="Enganxada" icon={LuLink} badge={attached} badgePalette={o.onFloor || o.onWall ? "wood" : "gray"}>
         {/* Enganxar-lo: interruptors discrets (es poden activar tots dos). */}
-        <FormRow label="Enganxat">
+        <FormRow optionId="ref.attach" label="Enganxat">
           <HStack {...segGroup}>
             <Button {...segItem(!!o.onFloor)} px={2} aria-pressed={!!o.onFloor} title="Sempre a terra (Y = 0): al 3D només es mou pel terra" onClick={() => update({ onFloor: o.onFloor ? undefined : true })}>
               <LuArrowDownToLine /> Al terra
@@ -155,18 +156,18 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
                 : "Al 3D, arrossega'l: s'enganxa a les vores dels mòduls i dels altres objectes (Alt: lliure; Maj: pel terra)."}
         </Text>
       </FoldItem>
-      <FoldItem id="ref-position" title="Posició" icon={LuMove}>
+      <FoldItem optionId="ref.position" id="ref-position" title="Posició" icon={LuMove}>
         {/* Cada direcció amb la seva icona i un nom, no només la lletra de l'eix. */}
-        <NumRow label={<AxisLabel icon={LuMoveHorizontal} name="De costat" axis="X" hint="Des de l'esquerra del moble" />} ariaLabel="De costat (X)" value={o.x} min={-30000} max={30000} step={10} onChange={(x) => update({ x })} />
-        <NumRow label={<AxisLabel icon={LuMoveVertical} name="Alçada" axis="Y" hint="Des del terra" />} ariaLabel="Alçada (Y)" value={o.y} min={-30000} max={30000} step={10} disabled={!!o.onFloor} onChange={(y) => update({ y })} />
-        <NumRow label={<AxisLabel icon={LuMoveDiagonal2} name="Fondària" axis="Z" hint="Des de la paret cap endavant" />} ariaLabel="Fondària (Z)" value={o.z} min={-30000} max={30000} step={10} disabled={!!o.onWall} onChange={(z) => update({ z })} />
+        <NumRow optionId="ref.position" label={<AxisLabel icon={LuMoveHorizontal} name="De costat" axis="X" hint="Des de l'esquerra del moble" />} ariaLabel="De costat (X)" value={o.x} min={-30000} max={30000} step={10} onChange={(x) => update({ x })} />
+        <NumRow optionId="ref.position" label={<AxisLabel icon={LuMoveVertical} name="Alçada" axis="Y" hint="Des del terra" />} ariaLabel="Alçada (Y)" value={o.y} min={-30000} max={30000} step={10} disabled={!!o.onFloor} onChange={(y) => update({ y })} />
+        <NumRow optionId="ref.position" label={<AxisLabel icon={LuMoveDiagonal2} name="Fondària" axis="Z" hint="Des de la paret cap endavant" />} ariaLabel="Fondària (Z)" value={o.z} min={-30000} max={30000} step={10} disabled={!!o.onWall} onChange={(z) => update({ z })} />
         <Text fontSize="xs" color="fg.muted">
           De costat (X) des de l'esquerra del moble · Alçada (Y) des del terra · Fondària (Z) des de la paret cap endavant.
           {o.onFloor || o.onWall ? " El que és enganxat (Enganxada) no es pot canviar aquí." : ""} Fletxes: 1 mm (Maj: 10 mm); Re Pàg / Av Pàg: fondària.
         </Text>
         {/* Sobre els mòduls d'una fila (un rentaplats entre dos baixos): fer-li lloc entre ells. */}
         {refBlocksRow(comp, id) && (
-          <FormRow label="Entre els mòduls" help="Trepitja els mòduls. «Fer-li lloc» el posa entre el mòdul de l'esquerra i el de la dreta (els que tenen el centre a cada costat del seu) i desplaça els de la dreta el que calgui perquè hi càpiga; si ja hi ha prou forat, només s'hi encabeix l'objecte.">
+          <FormRow optionId="ref.position.makeRoom" label="Entre els mòduls" help="Trepitja els mòduls. «Fer-li lloc» el posa entre el mòdul de l'esquerra i el de la dreta (els que tenen el centre a cada costat del seu) i desplaça els de la dreta el que calgui perquè hi càpiga; si ja hi ha prou forat, només s'hi encabeix l'objecte.">
             <Button size="xs" variant="outline" onClick={() => onChange(makeRoomForRef(comp, id))}>
               <LuMoveHorizontal /> Fer-li lloc
             </Button>

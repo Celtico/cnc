@@ -1,7 +1,7 @@
 import { Stack } from "@chakra-ui/react"
 import { useRef, useState } from "react"
 import { LuBox } from "react-icons/lu"
-import { compositionKind, partsOnlyKind, newId, newModelObject, type Composition, type MultiItem, type Module } from "../../core/model"
+import { applyPartOptionDefaults, applyRefOptionDefaults, compositionKind, optionDefault, partsOnlyKind, newId, newModelObject, type Composition, type MultiItem, type Module, type PartOrient } from "../../core/model"
 import { NameDialog } from "../../components/NameDialog"
 import { defaultElementName, freePartFor, refFor, type AddKind } from "./addElements"
 import { useSettings } from "../settings/SettingsContext"
@@ -109,11 +109,13 @@ export function StructureTree({
             setAdding(null)
             if (kind === "module") addModule(newModule(newId("m"), n))
             else if (kind === "part") {
-              const p = freePartFor(comp, settings, "front", partCenter, n)
+              // Amb els per defecte de Preferències › Opcions en cascada (orientació, efecte, veta i cantell).
+              const orient = (optionDefault(settings.optionPrefs, "part.orient") ?? "front") as PartOrient
+              const p = applyPartOptionDefaults(freePartFor(comp, settings, orient, partCenter, n), settings.optionPrefs)
               onChange({ ...comp, parts: [...(comp.parts ?? []), p] })
               onSelect({ kind: "part", id: p.id })
             } else {
-              const r = refFor({ name: n, w: 600, h: 600, d: 100 })
+              const r = applyRefOptionDefaults(refFor({ name: n, w: 600, h: 600, d: 100 }), settings.optionPrefs)
               onChange({ ...comp, references: [...comp.references, r] })
               onSelect({ kind: "ref", id: r.id })
             }

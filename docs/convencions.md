@@ -69,6 +69,16 @@ src/
   react-three-fiber modifica objectes de three a propòsit.
 - Un `.tsx` només exporta components (Fast Refresh); constants i hooks en un `.ts` a part.
 
+## Opcions en cascada ✅
+- Cada fila i secció dels inspectors de l'Editor (moble, mòdul, compartiment, peça lliure, objecte de referència i
+  selecció múltiple) és al **registre** `core/model/options/` (id estable, nom, quan surt, tries, per defecte, si es pot
+  amagar) i en porta l'id: `optionId` a `FormRow`, `NumRow`, `FoldItem`, `HardwarePick` i `FixedRow`. **Una opció nova a
+  un inspector s'afegeix al registre** (amb `hideable` i `defaultEditable` decidits i, si no es pot amagar, el `why`); el
+  test `src/optionCascade.test.ts` falla si una fila no porta id, si un id no és al registre o si una opció del registre
+  no és al fitxer del seu `code`. Preferències › Opcions en cascada en surt sola.
+- Una opció que s'amaga no surt (`useOptionHidden`); un valor per defecte de l'usuari només va als elements nous
+  (`core/model/options/optionDefaults.ts`): els mobles fets no canvien.
+
 ## Fabricació
 - Tot el que surt cap al taller (peces, forats, STEP, CSV, DXF, .xcs) ha de sortir igual si no es vol canviar: proves d'or
   (`src/core/build/__golden__`). Un canvi volgut: `UPDATE_GOLDEN=1 pnpm test` i es revisa el diff.

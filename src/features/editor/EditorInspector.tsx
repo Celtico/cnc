@@ -101,7 +101,7 @@ export function EditorInspector({
         <Box ref={setPhotoControls} />
       ) : selection.kind === "moble" ? (
         <Stack gap={0}>
-          <FoldItem id="moble-summary" title="Resum" icon={LuBox}>
+          <FoldItem optionId="moble.summary" id="moble-summary" title="Resum" icon={LuBox}>
             <Text fontSize="sm" color="fg.muted">
               {empty ? (partsOnlyKind(kind) ? "Buit: afegeix-hi peces amb el + de «Peces lliures»." : "Buit: comença amb el + de «Mòduls» (o de «Peces lliures»).") : `${comp.modules.length} ${comp.modules.length === 1 ? "mòdul" : "mòduls"} · ${size.width} × ${size.height} × ${size.depth} mm`}
             </Text>
@@ -130,16 +130,17 @@ export function EditorInspector({
           {/* Sense «Illes» (per decisió de l'usuari, 2026-10-13: «treu l'opció illa, això és més fàcil amb peces lliures»).
               Treure ≠ esborrar: les illes que ja hi són es conserven i es fabriquen igual. */}
           {(comp.parts ?? []).some((p) => partJoinery(comp, p)) && (
-            <FoldItem id="moble-joinery" title="Encaixos" icon={LuPuzzle} badge={build?.joints.length || undefined}>
+            <FoldItem optionId="moble.joinery" id="moble-joinery" title="Encaixos" icon={LuPuzzle} badge={build?.joints.length || undefined}>
               <PartJoineryForm comp={comp} onChange={setComp} />
             </FoldItem>
           )}
           {/* Com els Acabats dels ambients: terra i paret de l'escena on es presenta (per defecte, les de Preferències). */}
-          <FoldItem id="moble-scene" title="Acabats de l'escena" icon={LuLampFloor} badge={comp.scene?.floor || comp.scene?.wall ? "Propis" : undefined}>
+          <FoldItem optionId="moble.scene" id="moble-scene" title="Acabats de l'escena" icon={LuLampFloor} badge={comp.scene?.floor || comp.scene?.wall ? "Propis" : undefined}>
             <SceneFinishFields comp={comp} setComp={setComp} materials={settings.materials} />
           </FoldItem>
-          {!partsOnlyKind(kind) && comp.modules[0] && <FoldItem id="moble-materials" title="Materials de tot el moble" icon={LuPalette}>
+          {!partsOnlyKind(kind) && comp.modules[0] && <FoldItem optionId="moble.materials" id="moble-materials" title="Materials de tot el moble" icon={LuPalette}>
             <MaterialsForm
+              scope="moble"
               carcass={comp.modules[0].carcass}
               hasBack={comp.modules.some((m) => m.carcass.back !== "none")}
               hasDrawers={comp.modules.some((m) => hasDrawers(visibleModule(m).root))}
@@ -205,7 +206,7 @@ export function EditorInspector({
           <PartInspector comp={comp} id={selection.id} joints={build?.joints ?? []} onChange={setComp} />
           {/* Ferratges col·locats a mà que ja porta la peça (ja no se n'afegeixen: treure ≠ esborrar). */}
           {(!partsOnlyKind(kind) || kind === "lliure") && scopePlacements(comp, { kind: "part", partId: selection.id }).length > 0 ? (
-            <FoldItem id="part-hardware" title="Ferratges" icon={LuWrench} badge={scopePlacements(comp, { kind: "part", partId: selection.id }).length || undefined}>
+            <FoldItem optionId="part.hardware" id="part-hardware" title="Ferratges" icon={LuWrench} badge={scopePlacements(comp, { kind: "part", partId: selection.id }).length || undefined}>
               <HardwarePlacements comp={comp} scope={{ kind: "part", partId: selection.id }} panels={panels} warnings={warnings} actions={hardwareActions} />
             </FoldItem>
           ) : null}
@@ -222,17 +223,17 @@ export function EditorInspector({
         <Stack gap={0}>
             {islandBack ? (
               // El de darrere d'una illa es col·loca sol (girat i enganxat al de davant): la seva posició no compta.
-              <FoldItem id="mod-position" title="Posició" icon={LuMove} badge="Illa · darrere">
+              <FoldItem optionId="module.position" id="mod-position" title="Posició" icon={LuMove} badge="Illa · darrere">
                 <Text fontSize="sm" color="fg.muted">
                   És el mòdul de darrere de l'illa amb «{comp.modules.find((m) => m.id === islandBack.front)?.name}»: es gira 180° i es col·loca sol, enganxat al seu darrere. Es canvia al moble, a «Illes».
                 </Text>
               </FoldItem>
             ) : (
-            <FoldItem id="mod-position" title="Posició" icon={LuMove} badge={module.carcass.base.kind === "wall" ? `Penjat a ${module.carcass.base.height}` : mountOf(module) === "floor" ? `Lliure al terra · ${module.wallGap ?? 0} de la paret` : "Arrambat a la paret"}>
+            <FoldItem optionId="module.position" id="mod-position" title="Posició" icon={LuMove} badge={module.carcass.base.kind === "wall" ? `Penjat a ${module.carcass.base.height}` : mountOf(module) === "floor" ? `Lliure al terra · ${module.wallGap ?? 0} de la paret` : "Arrambat a la paret"}>
               <ModulePositionFields comp={comp} module={module} moduleX={build?.modules[moduleIndex]?.x} updateModule={updateModule} />
             </FoldItem>
             )}
-          <FoldItem id="mod-dims" title="Mides" icon={LuMoveDiagonal} badge={`${module.carcass.width} × ${module.carcass.height}`}>
+          <FoldItem optionId="module.dims" id="mod-dims" title="Mides" icon={LuMoveDiagonal} badge={`${module.carcass.width} × ${module.carcass.height}`}>
             <CarcassForm module={module} onChange={updateModule} section="dims" />
           </FoldItem>
           <ModuleSections module={module} updateModule={updateModule} />

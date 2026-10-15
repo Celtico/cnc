@@ -13,7 +13,7 @@ import { useSettings } from "../settings/SettingsContext"
  * triada. Sense `slot`, el tipus es dona amb `engine` (la pota: cap lloc al mòdul) i `emptyLabel` és l'opció sense
  * ferratge («Genèriques»). `none`: una opció més sense ferratge («Cap (push)» al tirador).
  */
-export function HardwarePick({ slot, engine, current, inherited, onPick, label, help, emptyLabel, none, glass }: { /** Front de vidre (true) o de fusta (false): frontisses i tiradors, només els compatibles (`isFrameHardware`). */ glass?: boolean; slot?: HardwareSlot; engine?: HardwareEngine; current?: HardwareItem; inherited?: HardwareItem; onPick: (item: HardwareItem | undefined) => void; label?: string; /** Ajuda pròpia (si no, el resum de l'item). */ help?: string; emptyLabel?: string; none?: HardwareNoneOption }) {
+export function HardwarePick({ slot, engine, current, inherited, onPick, label, help, emptyLabel, none, glass, optionId }: { /** L'id de la fila a les opcions en cascada (`FormRow`). */ optionId?: string; /** Front de vidre (true) o de fusta (false): frontisses i tiradors, només els compatibles (`isFrameHardware`). */ glass?: boolean; slot?: HardwareSlot; engine?: HardwareEngine; current?: HardwareItem; inherited?: HardwareItem; onPick: (item: HardwareItem | undefined) => void; label?: string; /** Ajuda pròpia (si no, el resum de l'item). */ help?: string; emptyLabel?: string; none?: HardwareNoneOption }) {
   const { settings } = useSettings()
   const s = slot ? slotOf(slot) : undefined
   const eng = engine ?? s!.engine
@@ -24,7 +24,7 @@ export function HardwarePick({ slot, engine, current, inherited, onPick, label, 
   const shown = current ?? inherited
   const summary = help ?? (none?.selected ? none.help ?? "" : shown ? `${hardwareSummary(shown)}${inherited && (!current || current === inherited) ? ` · ${INHERITED_LABEL}` : ""}` : "")
   return (
-    <FormRow label={name} help={summary || undefined}>
+    <FormRow label={name} help={summary || undefined} optionId={optionId}>
       {/* A «Guia» també els jocs paramètrics de calaix de doble paret (es trien en lloc de la guia). */}
       <HardwareSelect label={name} items={settings.hardwareLibrary.filter((x) => (x.engine === eng || (slot === "slide" && x.engine === "drawerKit")) && fits(x))} current={current} inherited={inherited} emptyLabel={emptyLabel} none={none} onPick={onPick} />
     </FormRow>
@@ -37,5 +37,5 @@ export function HardwarePick({ slot, engine, current, inherited, onPick, label, 
  * el mòdul: l'ajuda ho diu.
  */
 export function System32Pick({ current, what, onPick }: { current: HardwareItem; /** Qui la fa servir (`usedHardwareSlots`). */ what: string; onPick: (item: HardwareItem) => void }) {
-  return <HardwarePick slot="system32" label="Filera System 32" current={current} help={`La de tot el mòdul: la fan servir ${what} de tots els compartiments. ${hardwareSummary(current)}.`} onPick={(next) => next && onPick(next)} />
+  return <HardwarePick optionId="zone.system32" slot="system32" label="Filera System 32" current={current} help={`La de tot el mòdul: la fan servir ${what} de tots els compartiments. ${hardwareSummary(current)}.`} onPick={(next) => next && onPick(next)} />
 }
