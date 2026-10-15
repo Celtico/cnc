@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
 import { DEFAULT_SETTINGS, parseSettings } from ".."
 import { OPTION_NODES } from "./optionCascade"
+import { DRAFT_ICONS, guessIcon } from "./draftIcons"
 import {
-  DRAFT_ICONS,
   draftIcon,
   addDraftNode,
   appCascade,
@@ -181,18 +181,27 @@ describe("esborrany: plegar i disposició", () => {
 })
 
 describe("esborrany: icones", () => {
-  it("cada node de la llavor en porta una de coneguda; les seccions, la de l'inspector", () => {
+  it("cada node de l'app en té una de coneguda: la de la secció de l'inspector, la que fa pensar el nom o la del control", () => {
     const app = appCascade()
-    for (const n of app.nodes) expect(DRAFT_ICONS).toContain(n.icon)
-    expect(app.nodes.find((n) => n.id === "module.carcass")?.icon).toBe("carcass")
-    expect(app.nodes.find((n) => n.kind === "choice")?.icon).toBe("choice")
+    for (const n of app.nodes) expect(DRAFT_ICONS).toContain(draftIcon(n))
+    const byId = (id: string) => draftIcon(app.nodes.find((n) => n.id === id)!)
+    expect(byId("module.carcass")).toBe("carcass")
+    expect(byId("zone.front.drawers")).toBe("drawers")
+    expect(byId("zone.front.flap.handleOptions")).toBe("handle")
   })
-  it("un node desat sense icona (o amb una de desconeguda) agafa la de l'app i, si no, la del tipus; no és diferència", () => {
-    expect(draftIcon({ id: "module.carcass", kind: "section", label: "Caixa" })).toBe("carcass")
-    expect(draftIcon({ id: "nou", kind: "option", label: "Nova", icon: "???" })).toBe("option")
+  it("un node nou o reanomenat agafa la que fa pensar el nom; la triada mana; no és diferència", () => {
+    expect(draftIcon({ id: "nou", kind: "section", label: "Interior" })).toBe("interior")
+    expect(draftIcon({ id: "nou", kind: "option", label: "Cosa estranya", icon: "???" })).toBe("option")
+    expect(draftIcon({ id: "module.carcass", kind: "section", label: "Sòcol" })).toBe("plinth")
     const app = appCascade()
     const edited = { ...app, nodes: app.nodes.map((n) => (n.id === "module.carcass" ? { ...n, icon: "cnc" } : n)) }
     expect(draftIcon(edited.nodes.find((n) => n.id === "module.carcass")!)).toBe("cnc")
     expect(diffDraft(edited).count).toBe(0)
+  })
+  it("pel nom, sense accents ni majúscules", () => {
+    expect(guessIcon("Alçada dels calaixos")).toBe("height")
+    expect(guessIcon("Opcions de la guia de calaix")).toBe("hardware")
+    expect(guessIcon("Frigorífic")).toBe("fridge")
+    expect(guessIcon("Tipus")).toBeUndefined()
   })
 })
