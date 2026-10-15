@@ -13,8 +13,8 @@ export function RenderConflictDialog({ pending }: { /** Nom del document del ren
     <Dialog.Root role="alertdialog" open={pending !== null} onOpenChange={(e) => !e.open && cancel()} placement="center">
       <Portal>
         {/* Per sobre de la finestra del Render (que és per sobre de tot). */}
-        <Dialog.Backdrop style={{ zIndex: "calc(var(--chakra-z-indices-tooltip) - 5)" }} />
-        <Dialog.Positioner style={{ zIndex: "calc(var(--chakra-z-indices-tooltip) - 5)" }}>
+        <Dialog.Backdrop style={{ zIndex: "calc(var(--chakra-z-index-tooltip) - 5)" }} />
+        <Dialog.Positioner style={{ zIndex: "calc(var(--chakra-z-index-tooltip) - 5)" }}>
           <Dialog.Content mx={4}>
             <Dialog.Header>
               <Dialog.Title>Ja hi ha un render</Dialog.Title>

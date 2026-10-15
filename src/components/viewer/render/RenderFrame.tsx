@@ -56,10 +56,9 @@ export function RenderFrame({ open, onClose, shown, name, progress, onMinimizedC
   return (
     <FloatingPanel.RootProvider value={panel} lazyMount unmountOnExit>
       <Portal>
-        {/* Per sobre de les barres de l'app i per sota dels diàlegs, menús i avisos (el de la recepta, `popover`, els tapava). */}
         {/* Per sobre de tot (diàlegs, calaixos, avisos), per decisió de l'usuari (2026-10-15); només els tooltips, que són
-            seus, hi queden per sobre. */}
-        <FloatingPanel.Positioner style={{ zIndex: "calc(var(--chakra-z-indices-tooltip) - 10)" }}>
+            seus, hi queden per sobre. Compte: la variable és `--chakra-z-index-*` (amb `indices` no existeix i queda «auto»). */}
+        <FloatingPanel.Positioner style={{ zIndex: "calc(var(--chakra-z-index-tooltip) - 10)" }}>
           <FloatingPanel.Content
             borderWidth="1px"
             // Al mòbil (maximitzat), dins de la zona segura: per sota de la barra d'estat i lluny de la cantonada.
