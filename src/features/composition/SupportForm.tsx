@@ -3,7 +3,7 @@ import { LuArrowDownToLine, LuFootprints, LuPanelBottom } from "react-icons/lu"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { IconChoice } from "../../components/IconChoice"
 import { NumRow } from "../../components/NumRow"
-import { boardChoices, defaultPlinthSetback, floorTrams, materialByName, setSupport, setTramSides, tramSides, type Composition, type FloorSupport, type FloorTram, type HardwareItem, type TramSides } from "../../core/model"
+import { boardChoices, defaultPlinthSetback, floorTrams, materialByName, setSupport, setTramSides, tramSides, type Composition, type FloorSupport, type FloorTram, type HardwareItem, type Module, type TramSides } from "../../core/model"
 import { MaterialSelect } from "../settings/MaterialSelect"
 import { useSettings } from "../settings/SettingsContext"
 import { HardwarePick } from "./HardwarePick"
@@ -40,25 +40,7 @@ export function SupportForm({ comp, setComp }: { comp: Composition; setComp: (f:
   const anySides = s.kind === "plinth" && trams.some((t) => sidesOf(tramSides(s, t, comp)) !== "front")
   return (
     <Stack gap={4}>
-      <FormRow optionId="moble.support.kind" label="Suport" help="El de tots els mòduls de terra (els penjats no en tenen)." >
-        <IconChoice
-          hideLabel
-          label="Suport"
-          value={s.kind}
-          options={[
-            { value: "floor", label: "Directe a terra", icon: LuArrowDownToLine, hint: "Directe a terra, sense potes ni sòcol" },
-            { value: "plinth", label: "Sòcol", icon: LuPanelBottom, hint: "Sobre potes, amb un sòcol continu al davant de cada tram" },
-            { value: "legs", label: "Potes vistes", icon: LuFootprints, hint: "Sobre potes, sense sòcol (com un moble de saló)" },
-          ]}
-          onChange={(kind) => set(kind === "plinth" && s.kind !== "plinth" ? { kind, plinth: { ...s.plinth, setback: defaultPlinthSetback(s, first) } } : { kind })}
-        />
-      </FormRow>
-      {s.kind !== "floor" && (
-        <>
-          <NumRow optionId="moble.support.height" label="Alçada" help="De terra a la base dels mòduls: l'alçada de les potes (i del sòcol)." value={s.height} min={20} max={400} step={5} onChange={(height) => height >= 20 && height <= 400 && set({ height })} />
-          <LegPick support={s} onChange={set} />
-        </>
-      )}
+      <SupportBasics support={s} onChange={set} first={first} help="El de tots els mòduls de terra (els penjats no en tenen)." ids={{ kind: "moble.support.kind", height: "moble.support.height", leg: "moble.support.leg", legInset: "moble.support.legInset" }} />
       {s.kind === "plinth" && (
         <>
           <NumRow optionId="moble.support.setback" label="Retirada" help="De la cara dels fronts a la cara de davant del sòcol." value={s.plinth.setback} min={0} max={200} step={1} onChange={(setback) => setback >= 0 && setback <= 200 && setPlinth({ setback })} />
@@ -111,6 +93,40 @@ export function SupportForm({ comp, setComp }: { comp: Composition; setComp: (f:
   )
 }
 
+/** Els ids de les opcions en cascada de {@link SupportBasics}: al Moble (`moble.support.*`) o a la Caixa del mòdul. */
+interface SupportIds { kind: string; height: string; leg: string; legInset: string }
+
+/**
+ * Suport, alçada i pota: el mateix per a tots els mòduls de terra. Al Moble › Sòcol i potes i, per decisió de l'usuari
+ * (2026-10-16: «les opcions que no són possibles no han de sortir, però sí les que ho són, com les potes»), també a la
+ * Caixa de cada mòdul de terra: el canvi és el del moble.
+ */
+export function SupportBasics({ support: s, onChange: set, first, help, ids }: { support: FloorSupport; onChange: (patch: Partial<FloorSupport>) => void; first?: Module; help: string; ids: SupportIds }) {
+  return (
+    <>
+      <FormRow optionId={ids.kind} label="Suport" help={help}>
+        <IconChoice
+          hideLabel
+          label="Suport"
+          value={s.kind}
+          options={[
+            { value: "floor", label: "Directe a terra", icon: LuArrowDownToLine, hint: "Directe a terra, sense potes ni sòcol" },
+            { value: "plinth", label: "Sòcol", icon: LuPanelBottom, hint: "Sobre potes, amb un sòcol continu al davant de cada tram" },
+            { value: "legs", label: "Potes vistes", icon: LuFootprints, hint: "Sobre potes, sense sòcol (com un moble de saló)" },
+          ]}
+          onChange={(kind) => set(kind === "plinth" && s.kind !== "plinth" ? { kind, plinth: { ...s.plinth, setback: defaultPlinthSetback(s, first) } } : { kind })}
+        />
+      </FormRow>
+      {s.kind !== "floor" && (
+        <>
+          <NumRow optionId={ids.height} label="Alçada" help="De terra a la base dels mòduls: l'alçada de les potes (i del sòcol)." value={s.height} min={20} max={400} step={5} onChange={(height) => height >= 20 && height <= 400 && set({ height })} />
+          <LegPick support={s} onChange={set} ids={ids} />
+        </>
+      )}
+    </>
+  )
+}
+
 /** On porta sòcol cada tram: sempre al davant i, als extrems vistos o a l'illa, també als costats i al darrere. */
 function Trams({ comp, support, trams, onChange }: { comp: Composition; support: FloorSupport; trams: FloorTram[]; onChange: (t: FloorTram, sides: TramSides) => void }) {
   if (!trams.length) return null
@@ -138,7 +154,7 @@ function Trams({ comp, support, trams, onChange }: { comp: Composition; support:
  * Ferratges, una **còpia**): un cop confirmada, els forats de la placa a la cara de sota de la base de cada mòdul. Amb una
  * distància pròpia al davant (la AXILO 78), es pot canviar: deixa lloc al sòcol.
  */
-function LegPick({ support, onChange }: { support: FloorSupport; onChange: (patch: Partial<FloorSupport>) => void }) {
+function LegPick({ support, onChange, ids }: { support: FloorSupport; onChange: (patch: Partial<FloorSupport>) => void; ids: SupportIds }) {
   const { settings } = useSettings()
   const cur = support.leg
   if (!settings.hardwareLibrary.some((x) => x.engine === "leg") && !cur) return null
@@ -149,10 +165,10 @@ function LegPick({ support, onChange }: { support: FloorSupport; onChange: (patc
   const front = cur?.engine === "leg" && "insetFront" in cur.params ? cur.params.insetFront : undefined
   return (
     <>
-      <HardwarePick optionId="moble.support.leg" engine="leg" label="Pota" current={cur} emptyLabel="Genèriques" help={cur ? undefined : "Genèriques: només es veuen al 3D (cap forat). Les potes importades (Preferències › Ferratges) fan els forats de la placa a la cara de sota de la base."} onPick={pick} />
+      <HardwarePick optionId={ids.leg} engine="leg" label="Pota" current={cur} emptyLabel="Genèriques" help={cur ? undefined : "Genèriques: només es veuen al 3D (cap forat). Les potes importades (Preferències › Ferratges) fan els forats de la placa a la cara de sota de la base."} onPick={pick} />
       {cur && front !== undefined && (
         <NumRow
-          optionId="moble.support.legInset"
+          optionId={ids.legInset}
           label="Potes al davant"
           help="Del cantell de davant de la base a l'eix de les potes del davant: deixa lloc al sòcol. Només en aquest moble (el de tots, a Preferències › Ferratges)."
           value={Number(front)}

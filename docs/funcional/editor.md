@@ -90,9 +90,12 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
       directe a terra, sense base, sense tapa i sense fons. Ho demana l'aparell»; les files fixes no surten) i les opcions
       del front de moble (`ApplianceFields`: Front, Material del front, Obre, Sòcol, Tirador); al nínxol de terra, els
       laterals són «Laterals de remat» (una peça sola, sense Parets ni Estil dels fronts: `ApplianceCarcass.niche`).
-      **Suport**: un text (el del moble, Moble › Sòcol i potes; penjat: «Penjat a la paret, a … mm del terra», es canvia
-      a Tipus) i, sota, **Base** (Sencera · Sense base, com la Tapa i el Fons; per decisió de l'usuari, 2026-10-15; amb
-      potes, el text «Sencera»: s'hi cargolen; sense base, el mòdul va directe a terra). La resta, com sempre:
+      **Suport**, **Alçada** i **Pota** (els del moble, `SupportBasics`: canviar-los aquí els canvia a tots els mòduls de
+      terra; per decisió de l'usuari, 2026-10-16: «les opcions que no són possibles no han de sortir, però sí les que ho
+      són, com les potes»; la retirada, el sòcol i els trams, al Moble › Sòcol i potes; sense base, el text «Directe a
+      terra»; penjat: «Penjat a la paret, a … mm del terra», es canvia a Tipus) i, sota, **Base** (Sencera · Sense base;
+      amb potes no surt: s'hi cargolen). **Llum a sota**: penjat o amb potes vistes (amb sòcol quedaria amagada: no surt
+      i no es fa). La resta, com sempre:
       penjat, «Penjadors» i «Regleta» amb «Com el mòdul» i «Cap» (`BaseFields.tsx`)—, fons i, just a sota, **Ranura del fons** (en ranura) o **Retirada
       del fons** (encastat), tapa, laterals, parets, cantonades i, al final, el que és de tots els fronts del mòdul:
       **Estil dels fronts** (Recobrents / Encastats) i Folgança front–cos si hi ha algun front que es fa (un front fix

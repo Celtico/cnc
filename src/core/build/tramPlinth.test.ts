@@ -150,4 +150,12 @@ describe("els mobles d'abans passen al suport del moble", () => {
     expect(c.support!.trams?.[t.id]).toEqual({ back: true, left: true, right: true })
     expect(c.support!.plinth.corners).toBe("mitre")
   })
+
+  it("la llum a sota d'un mòdul de terra: amb potes vistes es fa; amb sòcol no (quedaria amagada)", () => {
+    const m = box("a", 600)
+    const lit: Module = { ...m, carcass: { ...m.carcass, base: { kind: "legs", height: 100 }, underLight: {} } }
+    const lights = (kind: FloorSupport["kind"]) => buildComposition(comp([lit], plinth({}, { kind }))).extras.filter((p) => p.id.includes("under")).length
+    expect(lights("legs")).toBeGreaterThan(0)
+    expect(lights("plinth")).toBe(0)
+  })
 })

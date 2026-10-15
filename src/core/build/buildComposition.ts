@@ -142,7 +142,10 @@ export function buildComposition(input: Composition): CompositionBuild {
   }
   // El sòcol per defecte dels electrodomèstics de terra: l'alçada de les potes del moble (el sòcol del tram passa per davant).
   const appliancePlinth = comp.support && comp.support.kind !== "floor" ? comp.support.height : undefined
-  const builds = onlyParts ? [] : comp.modules.map((m, i) => buildModule(m, { ...(isTurned(m) ? {} : { rearLimits: columnRearLimits(m, comp.references, places[i]!) }), keepOut: keepOut(m, i), ...(appliancePlinth !== undefined ? { appliancePlinth } : {}) }))
+  // Amb sòcol, la llum a sota dels mòduls de terra quedaria amagada darrere del sòcol: no es fa (es guarda, per si es
+  // canvia a potes vistes).
+  const lit = (m: Module): Module => (comp.support?.kind === "plinth" && m.carcass.base.kind === "legs" && m.carcass.underLight ? { ...m, carcass: (({ underLight: _u, ...c }) => c)(m.carcass) } : m)
+  const builds = onlyParts ? [] : comp.modules.map(lit).map((m, i) => buildModule(m, { ...(isTurned(m) ? {} : { rearLimits: columnRearLimits(m, comp.references, places[i]!) }), keepOut: keepOut(m, i), ...(appliancePlinth !== undefined ? { appliancePlinth } : {}) }))
   // Illes: el mòdul de darrere es gira 180° i es posa enganxat al darrere del de davant (mateixa X, a `gap` mm), sigui
   // quina sigui la seva posició pròpia.
   const islands = onlyParts ? [] : activeIslands(comp)
