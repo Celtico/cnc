@@ -26,7 +26,7 @@ import { doubleWallKit, frontYsCentred, nl2 } from "./dtcDoubleWall"
 const NLS = [250, 270, 300, 350, 400, 450, 500, 550, 600, 650]
 
 /** Columnes de cargols de la guia (z des del cantell de davant; tercer forat a 37). Llegides del dibuix (no a escala). */
-export function hbScrews(nl: number): KitVariant["screws"] {
+function hbScrews(nl: number): KitVariant["screws"] {
   const rear = nl <= 270 ? [133] : nl <= 350 ? [165] : nl <= 400 ? [229] : nl <= 550 ? [261] : [261, 389]
   return { both: [37, ...rear], top: [] }
 }
@@ -102,10 +102,10 @@ function hbKit(sp: SeriesSpec): HardwareKit {
 }
 
 export const DTC_DRAGON_PRO_HB01 = hbKit({ s: "1", code: "M", boxSideHeight: 95, backHeight: 84, bracketSeries: 1, metalBack: "TB0134", frontHoleOffsets: [-16, 16], backScrewYs: [20, 52], pages: "341–342" })
-export const DTC_DRAGON_PRO_HB02 = hbKit({ s: "2", code: "B", boxSideHeight: 127, backHeight: 116, bracketSeries: 2, metalBack: "TB0234", frontHoleOffsets: [-32, 0, 32], backScrewYs: [30, 62, 94], pages: "361–362" })
-export const DTC_DRAGON_PRO_HB03 = hbKit({ s: "3", code: "D", boxSideHeight: 178, backHeight: 167, bracketSeries: 3, metalBack: "TB0334", frontHoleOffsets: [-80, -48, 48, 80], backScrewYs: [32, 64, 96, 128], pages: "365–366" })
+const DTC_DRAGON_PRO_HB02 = hbKit({ s: "2", code: "B", boxSideHeight: 127, backHeight: 116, bracketSeries: 2, metalBack: "TB0234", frontHoleOffsets: [-32, 0, 32], backScrewYs: [30, 62, 94], pages: "361–362" })
+const DTC_DRAGON_PRO_HB03 = hbKit({ s: "3", code: "D", boxSideHeight: 178, backHeight: 167, bracketSeries: 3, metalBack: "TB0334", frontHoleOffsets: [-80, -48, 48, 80], backScrewYs: [32, 64, 96, 128], pages: "365–366" })
 export const DTC_DRAGON_PRO_HB0C = hbKit({ s: "C", code: "C", boxSideHeight: 209, backHeight: 198, bracketSeries: 3, frontHoleOffsets: [-80, -48, 48, 80], backScrewYs: [32, 64, 96, 160, 176], pages: "369–370" })
-export const DTC_DRAGON_PRO_HB04 = hbKit({ s: "4", code: "F", boxSideHeight: 238, backHeight: 228, bracketSeries: 3, extraBracket: "HE14017", frontHoleOffsets: [-96, -64, -32, 64, 96], backScrewYs: [32, 64, 160, 192], pages: "373–374" })
+const DTC_DRAGON_PRO_HB04 = hbKit({ s: "4", code: "F", boxSideHeight: 238, backHeight: 228, bracketSeries: 3, extraBracket: "HE14017", frontHoleOffsets: [-96, -64, -32, 64, 96], backScrewYs: [32, 64, 160, 192], pages: "373–374" })
 
 export const DTC_DRAGON_PRO_KITS: { id: string; name: string; kit: HardwareKit }[] = [
   { id: "kit-dtc-hb01", name: "DTC DRAGON-PRO HB01 M (95)", kit: DTC_DRAGON_PRO_HB01 },

@@ -1,7 +1,7 @@
 import { meshToFrame, type LocalFrame } from "../../core/import/proposal"
 
 /**
- * STEP → GLB per veure un ferratge importat: OpenCascade fa la malla (`occtWorker.ts`, a demanda) i aquí es passa al
+ * STEP → GLB per veure un ferratge importat (importació adormida: les malles ja hi són): aquí es passen al
  * **marc del ferratge** (`LocalFrame`: u, v, n; el de la proposta de mecanitzats) en metres, amb un material de metall, i
  * s'exporta a `.glb` (`GLTFExporter`). Així el visor el posa a la cassoleta o a la placa sense saber res del fitxer.
  */
@@ -11,44 +11,6 @@ export interface StepMesh {
   /** Normals de les cares (OpenCascade): arestes vives, com el CAD. */
   normal?: Float32Array
   index: Uint32Array
-}
-
-let worker: Worker | null = null
-let seq = 0
-const waiting = new Map<number, { ok: (m: StepMesh[]) => void; ko: (e: Error) => void }>()
-
-/** Malles del STEP (o de l'IGES, `format`) en mm, a les coordenades del fitxer. */
-export function stepMeshes(bytes: Uint8Array, format: "step" | "iges" = "step"): Promise<StepMesh[]> {
-  if (!worker) {
-    worker = new Worker(new URL("./occtWorker.ts", import.meta.url), { type: "module" })
-    worker.onmessage = (e: MessageEvent<{ id: number; meshes?: StepMesh[]; error?: string }>) => {
-      const w = waiting.get(e.data.id)
-      if (!w) return
-      waiting.delete(e.data.id)
-      if (e.data.meshes) w.ok(e.data.meshes)
-      else w.ko(new Error(e.data.error ?? "Error d'OpenCascade"))
-    }
-    worker.onerror = (e) => {
-      for (const w of waiting.values()) w.ko(new Error(e.message || "No s'ha pogut carregar OpenCascade."))
-      waiting.clear()
-      worker?.terminate()
-      worker = null
-    }
-  }
-  const id = ++seq
-  const copy = bytes.slice()
-  return new Promise((ok, ko) => {
-    waiting.set(id, { ok, ko })
-    worker!.postMessage({ id, bytes: copy, format }, [copy.buffer])
-  })
-}
-
-/** Allibera el worker (i el WASM) quan s'acaba d'importar. */
-export function releaseStepWorker(): void {
-  worker?.terminate()
-  worker = null
-  for (const w of waiting.values()) w.ko(new Error("cancel·lat"))
-  waiting.clear()
 }
 
 /**

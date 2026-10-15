@@ -65,7 +65,7 @@ export type ImportFailure =
   | "no-model"
   | "broken"
 
-export interface ModelImportError extends Error {
+interface ModelImportError extends Error {
   reason: ImportFailure
   /** Els fitxers del conjunt (per oferir les textures a Materials encara que no hi hagi model). */
   textures?: Map<string, Blob>

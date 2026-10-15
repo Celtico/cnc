@@ -33,9 +33,9 @@ export interface SetOptions {
   group?: string
 }
 
-export const DEFAULT_LIMIT = 100
+const DEFAULT_LIMIT = 100
 /** Finestra d'ajuntar per grup quan l'historial no ajunta per temps. */
-export const GROUP_MS = 500
+const GROUP_MS = 500
 
 export function initHistory<T>(value: T): History<T> {
   return { past: [], present: value, committed: value, future: [], at: 0 }

@@ -37,7 +37,7 @@ function cabinetToThreeCamera(cam: Camera, o: SceneOptions): Matrix4 {
   return lin
 }
 
-export interface PhotoRenderProps {
+interface PhotoRenderProps {
   panels: Panel[]
   camera: Camera
   scene: SceneOptions

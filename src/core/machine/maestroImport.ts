@@ -11,7 +11,7 @@ import { applyPgmx, mergeReimport, pgmxSummary, readPgmx, type PgmxInfo } from "
  * El tipus de cada fitxer es mira pel contingut (element arrel de l'XML o zip), no només per l'extensió.
  */
 
-export type MaestroFileKind = "tlgx" | "atrx" | "cfgx" | "header" | "pgmx" | "other"
+type MaestroFileKind = "tlgx" | "atrx" | "cfgx" | "header" | "pgmx" | "other"
 
 export interface ImportFile {
   /** Camí relatiu (`webkitRelativePath` o el del drag & drop) o el nom del fitxer solt. */
@@ -51,7 +51,7 @@ export function detectMaestroFile(path: string, bytes: Uint8Array): MaestroFileK
 const groupOf = (p: string) => (/^([^/\\]+)[/\\]/.exec(p)?.[1] ?? "")
 const stem = (p: string) => (p.split(/[/\\]/).pop() ?? p).replace(/(\.pgmx|\.xml|\.zip)+$/i, "")
 
-export interface MaestroPlan {
+interface MaestroPlan {
   group: string
   context: { tlgx?: string; atrx?: string; cfgx?: string; header?: string; serial?: string }
   pgmx: string[]
@@ -90,7 +90,7 @@ export function planMaestroImport(files: { path: string; kind: MaestroFileKind; 
 }
 
 /** Màquina sense .tlgx (carpeta .pgmx desplegada): eines de l'equipament (.atrx), sense mides (no automàtiques). */
-export async function machineFromAtrx(files: { atrx?: string; cfgx?: Uint8Array; serial?: string }, id: string, name?: string): Promise<{ machine: Machine; problems: string[] }> {
+async function machineFromAtrx(files: { atrx?: string; cfgx?: Uint8Array; serial?: string }, id: string, name?: string): Promise<{ machine: Machine; problems: string[] }> {
   const problems: string[] = []
   let tools: MachineTool[] = []
   let version = ""
@@ -156,7 +156,7 @@ export async function machineFromAtrx(files: { atrx?: string; cfgx?: Uint8Array;
  * Afegeix a una màquina feta sense .tlgx les eines del .pgmx: si el nom coincideix amb un codi de l'.atrx
  * hi posa l'ID; si no, una eina nova amb el nom del projecte (sense mides).
  */
-export function addPgmxTools(m: Machine, info: PgmxInfo): Machine {
+function addPgmxTools(m: Machine, info: PgmxInfo): Machine {
   const tools = [...m.tools]
   for (const p of info.tools) {
     if (tools.some((t) => t.id === p.id)) continue

@@ -108,11 +108,11 @@ function hkKit(sp: SeriesSpec): HardwareKit {
 }
 
 export const DTC_PURE_PRO_HK11 = hkKit({ s: 1, code: "M", boxSideHeight: 90, backHeight: 64, frontYs: [23, 39], backScrewYs: [21, 53], pages: "407–408" })
-export const DTC_PURE_PRO_HK12 = hkKit({ s: 2, code: "K", boxSideHeight: 128, backHeight: 102, frontYs: [23, 55, 87], backScrewYs: [21, 53, 85], pages: "411–412" })
-export const DTC_PURE_PRO_HK13 = hkKit({ s: 3, code: "C", boxSideHeight: 167, backHeight: 137, frontYs: [23, 55, 87, 119], backScrewYs: [21, 53, 85, 117], pages: "413–414" })
+const DTC_PURE_PRO_HK12 = hkKit({ s: 2, code: "K", boxSideHeight: 128, backHeight: 102, frontYs: [23, 55, 87], backScrewYs: [21, 53, 85], pages: "411–412" })
+const DTC_PURE_PRO_HK13 = hkKit({ s: 3, code: "C", boxSideHeight: 167, backHeight: 137, frontYs: [23, 55, 87, 119], backScrewYs: [21, 53, 85, 117], pages: "413–414" })
 
 export const DTC_PURE_PRO_HQ11 = hkKit({ s: 1, glass: true, code: "M", boxSideHeight: 90, backHeight: 64, frontYs: [23, 39], backScrewYs: [21, 53], pages: "395–396" })
-export const DTC_PURE_PRO_HQ13 = hkKit({ s: 3, glass: true, code: "C", boxSideHeight: 167, backHeight: 137, frontYs: [23, 55, 87, 119], backScrewYs: [21, 53, 85, 117], pages: "399–400" })
+const DTC_PURE_PRO_HQ13 = hkKit({ s: 3, glass: true, code: "C", boxSideHeight: 167, backHeight: 137, frontYs: [23, 55, 87, 119], backScrewYs: [21, 53, 85, 117], pages: "399–400" })
 
 export const DTC_PURE_PRO_KITS: { id: string; name: string; kit: HardwareKit }[] = [
   { id: "kit-dtc-hk11", name: "DTC PURE-PRO HK11 M (90)", kit: DTC_PURE_PRO_HK11 },

@@ -3,7 +3,7 @@ import { frontMaterialOf } from "./buildModule"
 import { placement, X, Y, Z } from "./geometry"
 
 /** Gruix per defecte dels panells de remat (el tauler habitual del taller). */
-export const ISLAND_END_THICKNESS = 19
+const ISLAND_END_THICKNESS = 19
 
 /**
  * Illes que es fan (`Composition.islands`): els dos mòduls hi són, són diferents i tots dos «Lliure al terra»; cada mòdul

@@ -21,14 +21,14 @@ import { asciiFold } from "./text"
  * peça. Els visors el mostren en 3D i les capes continuen dient diàmetre i profunditat.
  */
 
-export const LAYER_CONTOUR = "CONTOUR"
-export const LAYER_LABEL = "LABEL"
+const LAYER_CONTOUR = "CONTOUR"
+const LAYER_LABEL = "LABEL"
 /** Talls passants (ranures de reixeta, passacables, trapes): separats del contorn. */
-export const LAYER_CUT_THROUGH = "CUT_THROUGH"
+const LAYER_CUT_THROUGH = "CUT_THROUGH"
 /** Cantells a tallar a 45° (unió a inglet): una línia sobre el cantell. */
-export const LAYER_MITRE = "MITRE_45"
+const LAYER_MITRE = "MITRE_45"
 
-export interface DxfOptions {
+interface DxfOptions {
   /** Separació entre peces en mm. */
   gap?: number
   /** Amplada màxima d'una fila abans de saltar a la següent. */
@@ -64,7 +64,7 @@ export function holeLayer(h: Hole): string {
   return `DRILL_${suffix}`
 }
 
-export function grooveLayer(g: Groove): string {
+function grooveLayer(g: Groove): string {
   const width = Math.min(g.w, g.h)
   const prefix = g.face === "B" ? "GROOVE_B" : "GROOVE"
   return `${prefix}_W${num(width)}_P${num(g.depth)}`
@@ -344,7 +344,7 @@ export function panelToDxf(panel: Panel, options: Omit<DxfOptions, "gap" | "maxR
 
 // --- Lector mínim per a tests i validació --------------------------------------
 
-export interface DxfEntity {
+interface DxfEntity {
   type: string
   layer: string | null
   values: Record<number, string[]>

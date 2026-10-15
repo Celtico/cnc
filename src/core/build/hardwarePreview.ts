@@ -250,8 +250,3 @@ export function featureCrop(p: Panel, aspect = 1.5): { x: number; y: number; w: 
   return { x: r(x0), y: r(y0), w: r(w), h: r(h) }
 }
 
-/** Forats que fa a la peça d'exemple (per a la targeta). */
-export function previewHoleCount(item: HardwareItem): number {
-  return hardwarePreview(item).panels.reduce((n, p) => n + p.holes.length + (p.cutouts?.length ?? 0), 0)
-}
-

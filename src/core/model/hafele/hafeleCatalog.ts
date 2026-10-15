@@ -15,7 +15,7 @@ const SRC = (page: string) => `Catàleg general Häfele, p. FF ${page}`
 const HINGES_BY_HEIGHT: StepRule = { steps: [{ upTo: 900, n: 2 }, { upTo: 1600, n: 3 }, { upTo: 2100, n: 4 }], else: 5 }
 
 /** Els perfils de les referències de la biblioteca (.902 / .922) són de plata anoditzat (el «color inox», .002, també es ven). */
-export const FRAME_MATERIAL = "Alumini anoditzat plata"
+const FRAME_MATERIAL = "Alumini anoditzat plata"
 
 /** Marc d'alumini per a portes i abatibles de vidre: només el perfil (la frontissa i el tirador es trien a part). */
 const glassFrame = (id: string, name: string, ref: string, frame: number, glass: number, page: string, notes: string[]): HardwareItem => ({
@@ -279,7 +279,7 @@ const support = (id: string, name: string, ref: string, page: string, note: stri
   builtin: true,
 })
 
-export const HAFELE_SUPPORTS: HardwareItem[] = [
+const HAFELE_SUPPORTS: HardwareItem[] = [
   support("shelf-hafele-282-24-717", "Suport de prestatge Häfele Ixconnect de zamac (piu Ø5)", "282.24.717", "3.103", "Zamac niquelat plata, dues llengüetes en tascó, 9,4 kg per suport (DIN EN 16337); amb el recolzament de plàstic, 282.24.733."),
   support("shelf-hafele-282-04-712", "Suport de prestatge Häfele Ixconnect d'acer amb llengüeta (piu Ø5)", "282.04.712", "3.104", "Acer niquelat amb llengüeta de fixació contra el lliscament; sense llengüeta, 282.04.711 (niquelat) / 282.04.515 (llautonat)."),
 ]

@@ -42,7 +42,7 @@ export function cameraSignature(raw: unknown): string | undefined {
 }
 
 /** Camps de miniatura desats amb el document (`Project`, `AmbientRow`). */
-export interface ThumbStamp {
+interface ThumbStamp {
   thumb?: string
   /** L'`updatedAt` que retrata. */
   thumbAt?: number

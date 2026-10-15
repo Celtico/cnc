@@ -3,7 +3,7 @@ import type { RenderEnv, RenderOpts, RenderScene } from "./sceneData"
 /** Color del sol (lineal) amb intensitat 1. */
 const SUN = [2.3, 2.15, 1.95] as const
 
-export interface LightSetup {
+interface LightSetup {
   sunDir: [number, number, number]
   sunCol: [number, number, number]
   /** Cosinus del radi aparent del sol (con on es mostreja). */

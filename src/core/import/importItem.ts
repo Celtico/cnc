@@ -25,7 +25,7 @@ export function relV(op: MachiningOp): number {
   }
 }
 
-export interface ImportedExtras {
+interface ImportedExtras {
   id: string
   asset?: string
   points?: [number, number, number][]
@@ -53,7 +53,7 @@ function source(art: HettichArticle, p: HardwareProposal, targets: HardwareTarge
 
 const r3 = (x: number) => Math.round(x * 1000) / 1000 || 0
 /** El marc arrodonit (0,001 mm), sense zeros negatius: el que es desa a l'item. */
-export const cleanFrame = (f: LocalFrame): LocalFrame => ({ origin: f.origin.map(r3) as LocalFrame["origin"], u: f.u.map(r3) as LocalFrame["u"], v: f.v.map(r3) as LocalFrame["v"], n: f.n.map(r3) as LocalFrame["n"] })
+const cleanFrame = (f: LocalFrame): LocalFrame => ({ origin: f.origin.map(r3) as LocalFrame["origin"], u: f.u.map(r3) as LocalFrame["u"], v: f.v.map(r3) as LocalFrame["v"], n: f.n.map(r3) as LocalFrame["n"] })
 
 /** Frontissa importada: parteix de la frontissa per defecte (quantitat per alçada, extrems, separació, `cupOffset`). */
 export function hingeItem(p: HardwareProposal, art: HettichArticle, base: HardwareItem, x: ImportedExtras): HardwareItem {
@@ -304,10 +304,10 @@ export function syncPairedPlates(library: readonly HardwareItem[]): HardwareItem
 }
 
 /** Paràmetres d'una frontissa importada que canvien els forats revisats (Ø i fondària de la cassoleta, on va la placa). */
-export const IMPORTED_HOLE_PARAMS: readonly string[] = ["cupDiameter", "cupDepth", "plateSetback", "plateOffset"]
+const IMPORTED_HOLE_PARAMS: readonly string[] = ["cupDiameter", "cupDepth", "plateSetback", "plateOffset"]
 
 /** Els paràmetres que canvien els forats revisats, per motor: la cassoleta i la placa, el Ø del tirador, on van les potes. */
-export const IMPORTED_HOLE_PARAMS_BY_ENGINE: Partial<Record<HardwareItem["engine"], readonly string[]>> = {
+const IMPORTED_HOLE_PARAMS_BY_ENGINE: Partial<Record<HardwareItem["engine"], readonly string[]>> = {
   cup: IMPORTED_HOLE_PARAMS,
   barHandle: ["diameter"],
   leg: ["inset"],
@@ -399,7 +399,7 @@ export function confirmProblem(item: HardwareItem, library: readonly HardwareIte
   return null
 }
 
-export { isPendingImport }
+
 
 /**
  * La proposta d'un article segons què és (`HettichArticle.kind`): frontissa, placa, tirador o pota; si no s'hi troba el

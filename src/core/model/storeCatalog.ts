@@ -10,11 +10,11 @@ import type { Template } from "./templates"
  * No hi ha sofàs, butaques, cadires ni miralls: no són mobles de tauler.
  */
 
-export interface StoreType {
+interface StoreType {
   name: string
   items: Template[]
 }
-export interface StoreCategory {
+interface StoreCategory {
   id: string
   name: string
   types: StoreType[]

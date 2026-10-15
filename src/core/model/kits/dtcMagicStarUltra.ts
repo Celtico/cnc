@@ -100,9 +100,9 @@ function hdKit(sp: SeriesSpec): HardwareKit {
 }
 
 export const DTC_MAGIC_STAR_HD11 = hdKit({ s: 1, code: "M", boxSideHeight: 88, backHeight: 58, bracketSeries: 1, frontHoleOffsets: [-16, 16], backScrewYs: [14, 46], pages: "273–274" })
-export const DTC_MAGIC_STAR_HD12 = hdKit({ s: 2, code: "K", boxSideHeight: 126, backHeight: 96, bracketSeries: 2, frontHoleOffsets: [-32, 0, 32], backScrewYs: [14, 46, 78], pages: "285–286" })
-export const DTC_MAGIC_STAR_HD13 = hdKit({ s: 3, code: "C", boxSideHeight: 174, backHeight: 144, bracketSeries: 3, frontHoleOffsets: [-80, -48, 48, 80], backScrewYs: [15, 47, 111, 127], pages: "297–298" })
-export const DTC_MAGIC_STAR_HD14 = hdKit({ s: 4, code: "F", boxSideHeight: 238, backHeight: 208, bracketSeries: 3, extraBracket: "HE14017", frontHoleOffsets: [-112, -80, -48, -16, 80, 112], backScrewYs: [15, 47, 143, 175], pages: "309–310" })
+const DTC_MAGIC_STAR_HD12 = hdKit({ s: 2, code: "K", boxSideHeight: 126, backHeight: 96, bracketSeries: 2, frontHoleOffsets: [-32, 0, 32], backScrewYs: [14, 46, 78], pages: "285–286" })
+const DTC_MAGIC_STAR_HD13 = hdKit({ s: 3, code: "C", boxSideHeight: 174, backHeight: 144, bracketSeries: 3, frontHoleOffsets: [-80, -48, 48, 80], backScrewYs: [15, 47, 111, 127], pages: "297–298" })
+const DTC_MAGIC_STAR_HD14 = hdKit({ s: 4, code: "F", boxSideHeight: 238, backHeight: 208, bracketSeries: 3, extraBracket: "HE14017", frontHoleOffsets: [-112, -80, -48, -16, 80, 112], backScrewYs: [15, 47, 143, 175], pages: "309–310" })
 
 export const DTC_MAGIC_STAR_KITS: { id: string; name: string; kit: HardwareKit }[] = [
   { id: "kit-dtc-hd11", name: "DTC MAGIC-STAR ULTRA HD11 M (88)", kit: DTC_MAGIC_STAR_HD11 },

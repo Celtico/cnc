@@ -11,7 +11,7 @@ export interface RunWarning {
  * només els de la fila (no els apilats ni els penjats, ni les illes —«Al terra» amb X pròpia— si n'hi ha d'altres).
  * Null si algun dels dos no hi és.
  */
-export function runModules(comp: Composition, from: string, to: string): { modules: Module[]; indices: number[] } | null {
+function runModules(comp: Composition, from: string, to: string): { modules: Module[]; indices: number[] } | null {
   let a = comp.modules.findIndex((m) => m.id === from)
   let b = comp.modules.findIndex((m) => m.id === to)
   if (a < 0 || b < 0) return null

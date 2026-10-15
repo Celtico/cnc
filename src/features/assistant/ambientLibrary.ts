@@ -28,12 +28,12 @@ function entryOf(p: Project): LibraryEntry {
   return { id: p.id, name: p.name, ...s, ...(p.folder ? { folder: p.folder } : {}) }
 }
 
-export async function readLibrary(): Promise<LibraryEntry[]> {
+async function readLibrary(): Promise<LibraryEntry[]> {
   const list = await db.projects.orderBy("updatedAt").reverse().filter((p) => !p.draft).toArray()
   return list.map(entryOf)
 }
 
-export async function createFromTemplate(ref: string, settings: Pick<Settings, "gaps">): Promise<LibraryEntry> {
+async function createFromTemplate(ref: string, settings: Pick<Settings, "gaps">): Promise<LibraryEntry> {
   const t = resolveTemplateRef(ref)
   if (!t) throw new Error(`No hi ha cap plantilla «${ref}».`)
   // Com les galeries: els objectes tal qual; els mobles amb la folgança de les peces de dins de Preferències.
@@ -46,7 +46,7 @@ export async function createFromTemplate(ref: string, settings: Pick<Settings, "
 }
 
 /** Context de les eines dels ambients amb les preferències d'ara. */
-export function ambientToolContext(settings: Settings): AmbientToolContext {
+function ambientToolContext(settings: Settings): AmbientToolContext {
   return { settings, library: readLibrary, createFromTemplate: (ref) => createFromTemplate(ref, settings) }
 }
 

@@ -18,14 +18,14 @@ import { child, childrenOf, descendants, numOf, parseXml, textOf, type XmlNode }
  *  - `Settings/XilogHeaderParameters.xml`: capçalera per defecte (ExecutionFields, TableOptions…).
  */
 
-export interface AtrxHead {
+interface AtrxHead {
   number: number
   /** «router» = capçal d'un mandrí (electromandrí); «boring» = perforadora de mandrins fixos. */
   kind: "router" | "boring"
   tools: { code: string; spindle?: number; horizontal?: boolean }[]
 }
 
-export interface Atrx {
+interface Atrx {
   /** «2.00.004» (Major.Minor.Build com el mostra Maestro). */
   version: string
   heads: AtrxHead[]
@@ -154,7 +154,7 @@ export function applyAtrx(tools: MachineTool[], atrx: Atrx): MachineTool[] {
 }
 
 /** XML de la configuració (dins del .cfgx): descripció, àrees i, si la descripció la diu, la mida del camp. */
-export function parseCfgxXml(text: string): CfgxInfo {
+function parseCfgxXml(text: string): CfgxInfo {
   // Només calen uns quants valors: es busquen al text (l'XML sencer fa 600 kB).
   const general = /i:type="\w+:GeneralData"[\s\S]*?<Description>([^<]*)<\/Description>/.exec(text)
   const description = general?.[1]?.trim() ?? ""
@@ -207,7 +207,7 @@ export function parseHeaderParams(text: string): HeaderParams {
 }
 
 /** Fitxers del context (pel nom, sense importar la carpeta). */
-export interface ContextFiles {
+interface ContextFiles {
   tlgx?: string
   atrx?: string
   cfgx?: Uint8Array

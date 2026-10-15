@@ -101,7 +101,7 @@ const trLegacy = (dir: string): string => {
   return dir.replace(/_/g, " ")
 }
 
-export interface Classified {
+interface Classified {
   category: HardwareCategory
   tags: string[]
   kind: ImportKind

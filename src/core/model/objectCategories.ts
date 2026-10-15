@@ -14,7 +14,7 @@ export const OBJECT_CATEGORIES = [
   { id: "blocs", label: "Blocs" },
 ] as const
 
-export type ObjectCategory = (typeof OBJECT_CATEGORIES)[number]["id"]
+type ObjectCategory = (typeof OBJECT_CATEGORIES)[number]["id"]
 
 const BY_ID: Record<string, ObjectCategory> = {
   // Blocs d'abans (`BLOCK_PRESETS`) i els primers objectes.

@@ -1,8 +1,7 @@
 import { useMemo } from "react"
-import { forgetModel } from "../../components/viewer/models3d"
 import { MODEL_ASSETS } from "../../core/model"
 import { useLiveQuery } from "../../db/useLiveQuery"
-import { deleteUserModel, listUserModels, type UserModel } from "../../db/userModels"
+import { listUserModels, type UserModel } from "../../db/userModels"
 
 /** Un model que es pot triar: els de l'app (`MODEL_ASSETS`) i els pujats per l'usuari (`user`). Mida real en mm. */
 export interface ModelChoice {
@@ -29,11 +28,6 @@ export function useModelAssets(): { assets: ModelChoice[]; userModels: ModelChoi
 }
 
 export const modelChoiceOf = (m: UserModel): ModelChoice => ({ id: m.id, name: m.name, size: m.size, user: true, bytes: m.blob.size })
-
-export async function removeUserModel(id: string): Promise<void> {
-  await deleteUserModel(id)
-  forgetModel(id)
-}
 
 export function formatBytes(n: number): string {
   return n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1).replace(".", ",")} MB` : `${Math.max(1, Math.round(n / 1024))} kB`

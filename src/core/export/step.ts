@@ -26,14 +26,14 @@ const pc = ((pcNs as unknown as { default?: typeof pcNs }).default ?? pcNs) as t
  * exactament dues cares en sentit oposat), de manera que el `CLOSED_SHELL` és tancat.
  */
 
-export interface StepOptions {
+interface StepOptions {
   /** Nom del moble (FILE_NAME i PRODUCT arrel). */
   name: string
   /** Data ISO per a la capçalera. Per defecte, ara. */
   date?: string
 }
 
-export interface StepResult {
+interface StepResult {
   text: string
   /** Mecanitzats que no s'han pogut modelar (se solapen amb un altre o surten de la peça). */
   warnings: string[]
@@ -65,9 +65,9 @@ function rotate(v: V3, k: V3, angle: number): V3 {
 // --- Marc del taller ------------------------------------------------------------
 
 /** Direcció del nostre 3D (Y amunt, Z cap al davant) → eixos del taller (Z amunt, Y fondària). */
-export const toTallerDir = (v: V3): V3 => [v[0], -v[2], v[1]]
+const toTallerDir = (v: V3): V3 => [v[0], -v[2], v[1]]
 
-export interface TallerFrame {
+interface TallerFrame {
   origin: V3
   xAxis: V3
   yAxis: V3
@@ -77,7 +77,7 @@ export interface TallerFrame {
 }
 
 /** Transformació local de la peça → coordenades del taller (rotació + translació). */
-export function tallerFrame(p: Panel): TallerFrame {
+function tallerFrame(p: Panel): TallerFrame {
   const { origin, xAxis, yAxis, zAxis } = p.placement
   const o = toTallerDir(origin)
   const ax = toTallerDir(xAxis)
@@ -520,7 +520,7 @@ function outlineSolid(p: Panel, cad = false): PanelSolid {
  * Fondària màxima d'un forat cec de cara: el taller descarta els cilindres amb fondària
  * ≥ gruix − 0,5 (els pren per radis de cantonada), així que en deixem 1 mm.
  */
-export const FACE_HOLE_FLOOR = 1
+const FACE_HOLE_FLOOR = 1
 
 /** Fondària d'un forat cec de cara al STEP, amb avís si s'ha d'escurçar. */
 function blindDepth(p: Panel, h: Hole, warnings: string[]): number {
@@ -1082,7 +1082,7 @@ export interface StepCadGroup {
   panels: Panel[]
 }
 
-export interface StepCadOptions extends StepOptions {
+interface StepCadOptions extends StepOptions {
   /** Color RGB (0–1) de cada peça: el del seu material. */
   color?: (p: Panel) => [number, number, number]
 }

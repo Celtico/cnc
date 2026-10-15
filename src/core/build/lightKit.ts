@@ -16,7 +16,7 @@ import type { KitOrderLine } from "./drawerKit"
  *   compra és la més curta que hi arriba (si cap no hi arriba, la més llarga i avís). Potència proporcional a la tira.
  */
 
-export interface LightParams {
+interface LightParams {
   /** Del cantell de davant de la peça al centre de la làmpada (o al davant de la ranura de la barra). */
   setback: number
   /** Cada quants mm una làmpada. */
@@ -25,7 +25,7 @@ export interface LightParams {
   depth: number
 }
 
-export interface LightPlan {
+interface LightPlan {
   /** Centres de les làmpades al llarg del compartiment, des de l'inici de la llum (`span.length` = la llum). */
   xs: number[]
   /** Centre en fondària des del cantell de davant (o el mig de la ranura). */

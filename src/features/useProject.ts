@@ -16,10 +16,10 @@ export function useProjects(): Project[] | undefined {
 }
 
 /** Projecte amb `params` i `nesting` sempre complets (defectes aplicats). */
-export type LoadedProject = Project & { nesting: NestOptions }
+type LoadedProject = Project & { nesting: NestOptions }
 
 /** Opcions de nesting per a un projecte que encara no en té: de les preferències. */
-export function nestOptionsFromSettings(s: Settings): NestOptions {
+function nestOptionsFromSettings(s: Settings): NestOptions {
   const general = s.boards.sheets.find((x) => x.material === "") ?? s.boards.sheets[0]!
   const byMaterial: Record<string, { w: number; h: number }> = {}
   for (const x of s.boards.sheets) if (x.material) byMaterial[x.material] = { w: x.w, h: x.h }

@@ -106,7 +106,7 @@ export type MachineRules = z.infer<typeof MachineRulesSchema>
 export type CutMode = NonNullable<MachineRules["cutMode"]>
 
 /** Pell dels forats i ranures cecs per defecte (el que es feia sempre): els de gruix − 0,5 o més fondos, a gruix − 1. */
-export const DEFAULT_BLIND: NonNullable<MachineRules["blind"]> = { minSkin: 1, threshold: 0.5 }
+const DEFAULT_BLIND: NonNullable<MachineRules["blind"]> = { minSkin: 1, threshold: 0.5 }
 
 /** Pell mínima i llindar dels forats cecs de les regles (amb els valors per defecte). */
 export const blindRule = (r: Pick<MachineRules, "blind">): NonNullable<MachineRules["blind"]> => ({ ...DEFAULT_BLIND, ...r.blind })
@@ -304,7 +304,7 @@ export type Machine = z.infer<typeof MachineSchema>
 /** Capçalera per defecte: la del .pgmx real del taller (Proyecto1, Maestro 2.0.5 rev 1005). */
 export const DEFAULT_HEADER: Machine["header"] = { executionFields: "AD", repetitions: 1, tableOptions: 10, mechanicalOptions: 16973824, continuousCycle: false }
 
-export type MachineNesting = NonNullable<Machine["nesting"]>
+type MachineNesting = NonNullable<Machine["nesting"]>
 
 /** Opcions de nesting per defecte: marge 10, separació Ø + 2 (la del taller: 14 mm amb la fresa de 12, 16 amb la de 14), martiri 0,3 mm, peces petites al final. */
 export const DEFAULT_MACHINE_NESTING: MachineNesting = { edgeTrim: 10, spacingExtra: 2, overcut: 0.3, smallParts: "last" }
@@ -312,14 +312,14 @@ export const DEFAULT_MACHINE_NESTING: MachineNesting = { edgeTrim: 10, spacingEx
 /** Opcions de nesting de la màquina (amb els valors per defecte). */
 export const machineNesting = (m: Pick<Machine, "nesting">): MachineNesting => ({ ...DEFAULT_MACHINE_NESTING, ...m.nesting })
 
-export type NestProgram = NonNullable<MachineNesting["program"]>
+type NestProgram = NonNullable<MachineNesting["program"]>
 
 /**
  * Capçalera dels programes per tauler per defecte: la del programa de nesting real del taller (TopSolid → Maestro, el
  * va mecanitzar aquesta màquina): `MechanicalOptions` 16777216 (el .pgmx d'una peça diu 16973824),
  * `SetWorkpieceSetupPosition(0, -20, 0, 0)`, la macro `Pload`, campana baixa a la posició 1 i `SetWorkPieceFallPrevention(true)`.
  */
-export const DEFAULT_NEST_PROGRAM: NestProgram = { mechanicalOptions: 16777216, setupPosition: { x: 0, y: -20, z: 0, rot: 0 }, loadMacro: true, pneumaticHood: 1, fallPrevention: true }
+const DEFAULT_NEST_PROGRAM: NestProgram = { mechanicalOptions: 16777216, setupPosition: { x: 0, y: -20, z: 0, rot: 0 }, loadMacro: true, pneumaticHood: 1, fallPrevention: true }
 
 /** Capçalera dels programes per tauler de la màquina (amb els valors per defecte). */
 export const nestProgram = (m: Pick<Machine, "nesting">): NestProgram => ({ ...DEFAULT_NEST_PROGRAM, ...m.nesting?.program })

@@ -142,7 +142,7 @@ export const vignette = (r2: number, k: number) => {
   return 1 / (f * f)
 }
 
-export interface BloomBuffer {
+interface BloomBuffer {
   w: number
   h: number
   /** RGB lineal (amb l'exposició) del que passa del llindar, borrós. */

@@ -107,7 +107,7 @@ const ROLE_FILL: Record<PanelRole, string> = {
   hardware: "#9aa0a6",
 }
 
-export type Tool = "none" | "origin" | "distance" | "rect" | "floor" | "depth"
+type Tool = "none" | "origin" | "distance" | "rect" | "floor" | "depth"
 
 export function PhotoScreen({
   projectId,

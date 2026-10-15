@@ -260,5 +260,5 @@ export const HAFELE_LOOX_PROFILES: HardwareItem[] = [
 ]
 
 /** Els sistemes elèctrics que coneix l'app, pel fabricant del joc de llum. */
-export const LIGHT_SYSTEMS: readonly LightSystem[] = [HAFELE_LOOX_SYSTEM]
+const LIGHT_SYSTEMS: readonly LightSystem[] = [HAFELE_LOOX_SYSTEM]
 export const lightSystemOf = (maker: string): LightSystem | undefined => LIGHT_SYSTEMS.find((s) => s.maker === maker)

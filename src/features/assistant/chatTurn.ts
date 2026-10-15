@@ -13,14 +13,14 @@ import type { AssistantToolSet } from "../../core/assistant/toolset"
 /** El que el torn necessita del client de l'API (`client.messages.stream`). */
 export type StreamClient = Pick<Anthropic, "messages">
 
-export interface TurnCallbacks {
+interface TurnCallbacks {
   /** Text nou de l'assistent (delta). `round` comença a 0 i puja a cada volta després d'unes eines. */
   onText: (delta: string, round: number) => void
   /** Una eina feta: nom, si ha anat bé i una línia per a la UI. */
   onTool: (t: { name: string; ok: boolean; note: string }) => void
 }
 
-export interface TurnOptions<D> extends TurnCallbacks {
+interface TurnOptions<D> extends TurnCallbacks {
   client: StreamClient
   model: string
   /** Historial de l'API (es modifica: s'hi afegeixen les respostes i els resultats de les eines). */
@@ -41,14 +41,14 @@ export interface TurnOptions<D> extends TurnCallbacks {
   refresh?: () => Promise<AssistantToolSet<D>>
 }
 
-export interface TurnResult {
+interface TurnResult {
   /** Per què ha acabat. */
   stop: "end" | "max_tokens" | "rounds" | "refusal" | "aborted"
   /** Eines executades (bé o malament). */
   tools: number
 }
 
-export const MAX_TOKENS = 16000
+const MAX_TOKENS = 16000
 
 export async function runTurn<D>(o: TurnOptions<D>): Promise<TurnResult> {
   let toolset = o.toolset

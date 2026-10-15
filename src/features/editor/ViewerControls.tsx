@@ -8,7 +8,7 @@ import { VIEWS, VIEW_LABELS, type ViewName } from "../../components/viewer/viewN
  * Vistes Davant · Darrere · Esquerra · Dreta · Dalt: botons de text (sense estat triat) que col·loquen la càmera
  * d'aquell costat i enquadren, com «Enquadrar». Un sol lloc per triar-les: Opcions de vista.
  */
-export function CameraViews({ onView }: { onView: (v: ViewName) => void }) {
+function CameraViews({ onView }: { onView: (v: ViewName) => void }) {
   return (
     <HStack {...segGroup} role="group" aria-label="Vistes">
       {VIEWS.map((v) => (

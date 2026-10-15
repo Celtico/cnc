@@ -7,7 +7,7 @@ import { BUILTIN_TEMPLATES } from "./templates"
  * de cuina 770 sobre potes de 100 (+ taulell = 900) × 560; alts 720 × 330 penjats a 1450;
  * columnes de 2100; armari de 2400 × 600 amb sòcol.
  */
-export interface ModulePreset {
+interface ModulePreset {
   id: string
   kind: CompositionKind
   name: string
@@ -24,7 +24,7 @@ const door = (hinge: "left" | "right" = "left") => ({ kind: "door" as const, mod
 const doors = { kind: "door" as const, mode: "double" as const, hinge: "left" as const }
 
 /** Taula oval: laterals de panell a sota i tauler oval per sobre amb voladís. */
-export function ovalTable(name = "Taula oval"): Module {
+function ovalTable(name = "Taula oval"): Module {
   return tableModule(newId("m"), name, { width: 1400, height: 750, depth: 700, thickness: 30, joint: "butt", tableTop: { overhang: 200, shape: ellipseNodes(1800, 1100) } })
 }
 

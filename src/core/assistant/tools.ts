@@ -53,7 +53,7 @@ const zoneRef = z.string().min(1).describe("Id del compartiment (de get_moble). 
 const sizeOrAuto = z.union([mm.positive(), z.literal("auto")])
 
 /** Entrades de cada eina. Els límits de mida són els de l'esquema del model (`CarcassSchema`). */
-export const TOOL_INPUTS = {
+const TOOL_INPUTS = {
   get_moble: z.object({}).describe("Resum del moble obert: mòduls, mides, caixa, compartiments amb ids i llums, fronts, avisos de fusteria i els materials i jocs de calaix que es poden triar."),
   add_module: z
     .object({
@@ -149,7 +149,7 @@ export const TOOL_INPUTS = {
     .describe("Materials i gruixos (noms exactes de Preferències: board_materials i back_materials de get_moble)."),
 } as const
 
-export type ToolName = keyof typeof TOOL_INPUTS
+type ToolName = keyof typeof TOOL_INPUTS
 export const TOOL_NAMES = Object.keys(TOOL_INPUTS) as ToolName[]
 
 /** Definicions per a l'API (`tools`): nom, descripció i `input_schema` (JSON Schema de l'esquema zod). */
@@ -157,7 +157,7 @@ export function assistantTools(): (ToolDef & { name: ToolName })[] {
   return toolDefs(TOOL_INPUTS) as (ToolDef & { name: ToolName })[]
 }
 
-export interface ToolContext {
+interface ToolContext {
   settings: Pick<Settings, "materials" | "hardwareLibrary" | "hardwareDefaults" | "defaults" | "gaps">
 }
 
@@ -467,7 +467,7 @@ function setFrontTool(comp: Composition, i: In<"set_front">, ctx: ToolContext): 
  * Resultat d'una eina per al model: el que ha fet, el resum del moble (amb el catàleg a `get_moble`) i els **avisos de
  * fusteria nous** (comparats amb els d'abans del canvi), perquè es corregeixi.
  */
-export interface ToolPayload {
+interface ToolPayload {
   done?: Record<string, unknown>
   new_warnings?: WarningSummary[]
   moble: MobleSummary
@@ -485,7 +485,7 @@ export function toolResultPayload(name: string, before: Composition, outcome: Ex
 }
 
 /** Què ha fet una eina del moble, en una frase curta (UI del xat). */
-export function describeMobleTool(name: string, result: Record<string, unknown>): string {
+function describeMobleTool(name: string, result: Record<string, unknown>): string {
   switch (name) {
     case "get_moble":
       return "Ha mirat el moble"

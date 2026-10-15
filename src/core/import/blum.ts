@@ -14,7 +14,7 @@ import type { PartKind } from "../model/hardwareOps"
 
 export const BLUM = "Blum"
 
-export interface BlumFileInfo {
+interface BlumFileInfo {
   /** Número d'article de Blum (`71T453T`, `48N0510.02`, `ZSI.500BI1S`). */
   article: string
   /** Id del document (8 xifres). */
@@ -48,7 +48,7 @@ export function isBlumProductName(dir: string): boolean {
 }
 
 /** «Placa soporte … (1)» → «Placa soporte …» (els ZIP repetits del navegador; `_` pels `/` del nom). */
-export const cleanProduct = (dir: string): string => dir.normalize("NFC").replace(/\.zip$/i, "").replace(/\s*\(\d+\)\s*$/, "").replace(/\s+/g, " ").trim()
+const cleanProduct = (dir: string): string => dir.normalize("NFC").replace(/\.zip$/i, "").replace(/\s*\(\d+\)\s*$/, "").replace(/\s+/g, " ").trim()
 
 /** El nom del producte d'un camí (la carpeta més propera que en sembla un), o `undefined`. */
 export function blumProduct(path: string): string | undefined {
@@ -57,7 +57,7 @@ export function blumProduct(path: string): string | undefined {
   return undefined
 }
 
-export interface BlumClass {
+interface BlumClass {
   category: HardwareCategory
   /** Nom en català («Frontissa», «Placa», «Elevable», «Guia», «Accessori»). */
   noun: string

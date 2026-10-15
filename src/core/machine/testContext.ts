@@ -6,7 +6,7 @@
 const fsMod = "node:fs"
 const { readFileSync } = (await import(/* @vite-ignore */ fsMod)) as { readFileSync: (p: string) => Uint8Array }
 
-export const CTX_DIR = "docs/maestro/AA10008021.machinecontext"
+const CTX_DIR = "docs/maestro/AA10008021.machinecontext"
 export const CTX_FILES = ["Tlgx/def.tlgx", "Atrx/def.atrx", "Cfgx/AA10008021.cfgx", "Settings/XilogHeaderParameters.xml"] as const
 
 export const bytes = (p: string): Uint8Array => new Uint8Array(readFileSync(`${CTX_DIR}/${p}`))

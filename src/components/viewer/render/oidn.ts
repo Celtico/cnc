@@ -8,7 +8,7 @@ import type { UNet } from "oidn-web"
  * À-Trous de sempre (`denoise.ts`). Fa servir el seu propi dispositiu de WebGPU (no comparteix el
  * del path tracer: si un es perd, l'altre continua).
  */
-export const OIDN_WEIGHTS = "oidn/rt_hdr_alb_nrm.tza"
+const OIDN_WEIGHTS = "oidn/rt_hdr_alb_nrm.tza"
 const CACHE = "mobles-oidn"
 
 let ready: Promise<UNet | null> | null = null

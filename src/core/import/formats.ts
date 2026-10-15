@@ -6,7 +6,7 @@ import type { HettichFileKind } from "./hettich"
  * no poden divergir (abans el selector del Mac deixava el `.dae` en gris). Els que es llisten però no es llegeixen
  * (DWG, SAT, MAX, CAM d'altres màquines) també hi són: entren al diàleg amb la nota de per què no. Pur.
  */
-export interface ImportFormat {
+interface ImportFormat {
   /** Extensions en minúscula, amb el punt. */
   ext: readonly string[]
   /**
@@ -56,6 +56,3 @@ export const IMPORT_ACCEPT: string = [...new Set(IMPORT_FORMATS.flatMap((f) => [
 
 /** Els tipus que donen el 3D d'un article (per ordre de preferència: STEP, IGES, 3DS, Collada, glTF). */
 export const MODEL_3D_KINDS = ["step", "iges", "3ds", "dae", "glb"] as const satisfies readonly HettichFileKind[]
-
-/** Les extensions que l'importador llegeix o llista, per a l'explicació de la zona d'importar («.zip, .step/.stp, …»). */
-export const importFormatsText = (): string => IMPORT_FORMATS.map((f) => f.ext.join("/")).join(", ")

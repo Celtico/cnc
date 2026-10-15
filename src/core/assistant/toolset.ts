@@ -52,7 +52,7 @@ export function parseToolInput(inputs: ToolInputs, name: string, raw: unknown): 
 }
 
 /** Error d'una regla dins d'una eina (es converteix en `{ ok: false }`). */
-export class ToolError extends Error {}
+class ToolError extends Error {}
 export function fail(msg: string): never {
   throw new ToolError(msg)
 }

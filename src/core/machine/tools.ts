@@ -11,7 +11,7 @@ import { isPlaceholderTool, type Machine, type MachineTool } from "../model/mach
  *  - Discs: fondària ≤ la útil; el més prim.
  */
 
-export const DIAMETER_TOL = 0.1
+const DIAMETER_TOL = 0.1
 const EPS = 1e-6
 
 export const usableTool = (t: MachineTool): boolean => t.auto && t.mounted && !isPlaceholderTool(t)

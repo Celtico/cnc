@@ -1182,9 +1182,9 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             </Text>
           ) : null}
           {/* Sense «Taulell i sòcol» (per decisió de l'usuari, 2026-10-13: «que no aparegui»). Treure ≠ esborrar: les peces
-              corregudes que ja hi són (`comp.runs`) es conserven i es fabriquen igual; `RunsForm` es queda sense ús. */}
+              corregudes que ja hi són (`comp.runs`) es conserven i es fabriquen igual. */}
           {/* Sense «Illes» (per decisió de l'usuari, 2026-10-13: «treu l'opció illa, això és més fàcil amb peces lliures»).
-              Treure ≠ esborrar: les illes que ja hi són es conserven i es fabriquen igual; `IslandsForm` es queda sense ús. */}
+              Treure ≠ esborrar: les illes que ja hi són es conserven i es fabriquen igual. */}
           {(comp.parts ?? []).some((p) => partJoinery(comp, p)) && (
             <FoldItem id="moble-joinery" title="Encaixos" icon={LuPuzzle} badge={build?.joints.length || undefined}>
               <PartJoineryForm comp={comp} onChange={setComp} />

@@ -167,10 +167,10 @@ export function photoCamera(cam: RenderCamera, o: Pick<RenderOpts, "straight" | 
 const MAX_TEX = 512
 
 /** Color de la llum de les làmpades (bombeta càlida, ~2700 K, lineal i de luminància 1). */
-export const LAMP_COLOR: [number, number, number] = [1.32, 0.95, 0.62]
+const LAMP_COLOR: [number, number, number] = [1.32, 0.95, 0.62]
 
 /** Translucidesa per defecte de les fulles retallades dels models 3D (alfa). */
-export const LEAF_TRANSLUCENCY = 0.4
+const LEAF_TRANSLUCENCY = 0.4
 
 /** sRGB (byte) → lineal. */
 const LIN = new Float32Array(256)

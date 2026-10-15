@@ -1,7 +1,7 @@
 import type { Composition, CompositionKind } from "../../core/model"
 
 /** Tipus que es poden triar a «Nou moble» (els punts de partida; no hi ha selector de tipus després). */
-export type NewMobleKind = Extract<CompositionKind, "moble" | "cuina" | "armari" | "taula">
+type NewMobleKind = Extract<CompositionKind, "moble" | "cuina" | "armari" | "taula">
 
 /** Nom per defecte d'un moble nou de cada tipus. */
 export const NEW_MOBLE_NAMES: Record<NewMobleKind, string> = { moble: "Moble nou", cuina: "Cuina nova", armari: "Armari nou", taula: "Taula nova" }

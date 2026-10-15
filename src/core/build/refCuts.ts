@@ -31,7 +31,7 @@ export function refTouchesBox(o: RefObject, b: Box, tol = 0.5): boolean {
   return polygonTouchesRect(sec.poly, b.min[u]!, b.min[v]!, b.max[u]!, b.max[v]!, tol)
 }
 
-export interface RefCutProblem {
+interface RefCutProblem {
   refId: string
   panel: Panel
   message: string

@@ -41,7 +41,7 @@ export const TOPSOLID_CSV_HEADER = [
   "SEGUNDO_NOMBRE_DE_FICHERO_DE_MECANIZADO",
 ] as const
 
-export interface TopsolidCsvOptions {
+interface TopsolidCsvOptions {
   /** Nom del projecte (RUTA_DEL_MODELO). */
   project: string
   /** Mida de l'etiqueta per triar PosX/PosY. */
@@ -50,7 +50,7 @@ export interface TopsolidCsvOptions {
   edgeText?: string
 }
 
-export interface CsvPieceRow {
+interface CsvPieceRow {
   panelId: string
   board: string
   ref: string
@@ -61,7 +61,7 @@ export interface CsvPieceRow {
   labelFits: boolean
 }
 
-export interface TopsolidCsvResult {
+interface TopsolidCsvResult {
   text: string
   rows: CsvPieceRow[]
   /** Peces que no cabien a cap tauler i s'han posat en un tauler a mida. */
@@ -76,7 +76,7 @@ const int = (v: number): string => String(Math.round(v))
  * calguin i punt (`18.6`, com la resta de números del CSV). Abans s'arrodonia i un tauler de 18,6
  * i un de 19 sortien amb el mateix nom.
  */
-export const thick = (v: number): string => String(Math.round(v * 100) / 100)
+const thick = (v: number): string => String(Math.round(v * 100) / 100)
 
 /** Nom de tauler del taller: `Melamina_blanca_19#01`. */
 export function boardName(material: string, thickness: number, n: number): string {

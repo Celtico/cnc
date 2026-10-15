@@ -39,7 +39,7 @@ import { edgeAt, r, toLocal } from "./geometry"
  * d'un grup de l'item que no té peça triada no es fan (els grups «mirall» només si es trien expressament).
  */
 
-export interface PlacementWarning {
+interface PlacementWarning {
   code: "hardware"
   message: string
   panelId?: string
@@ -73,7 +73,7 @@ function axisOf(v: Vec3): WorldAxis {
 }
 
 /** El marc d'una peça per al generador: eixos P i Q del moble al seu pla, la caixa i el pas al sistema local. */
-export interface PartFrame {
+interface PartFrame {
   panel: Panel
   n: WorldAxis
   p: WorldAxis
@@ -108,7 +108,7 @@ export function partFrame(panel: Panel): PartFrame {
 }
 
 /** Els mecanitzats que fa una operació a la peça (coordenades locals), o per què no hi cap. */
-export interface OpResult {
+interface OpResult {
   holes: Hole[]
   grooves: Groove[]
   cutouts: Cutout[]
@@ -224,7 +224,7 @@ export function applyGenOp(op: GenOp, f: PartFrame, refP: number, refQ: number):
 }
 
 /** On és la peça d'un objectiu a la llista de peces del moble: id de la peça al moble. */
-export function targetPanelId(t: PlacementTarget): string | null {
+function targetPanelId(t: PlacementTarget): string | null {
   if (t.freePart) return `part:${t.freePart}`
   if (t.module && t.panel) return `${t.module}:${t.panel}`
   return null
@@ -239,7 +239,7 @@ export function frameSpan(f: PartFrame, k: "p" | "q"): [number, number] {
 }
 
 /** Variables de les fórmules d'una posició: L, A, G (llarg, ample i gruix de la peça) i M (la mida al llarg de l'eix). */
-export function placeVars(panel: Panel, along: number): Record<string, number> {
+function placeVars(panel: Panel, along: number): Record<string, number> {
   return { L: panel.length, A: panel.width, G: panel.thickness, M: along }
 }
 
@@ -289,13 +289,13 @@ export function mirrorOpP(op: GenOp): GenOp {
 }
 
 /** L'id de la peça de l'altre costat (esquerra ↔ dreta) d'un mòdul, o `null`. */
-export function otherSideId(id: string): string | null {
+function otherSideId(id: string): string | null {
   if (/left/.test(id)) return id.replace(/left/g, "right")
   if (/right/.test(id)) return id.replace(/right/g, "left")
   return null
 }
 
-export interface PlacementResult {
+interface PlacementResult {
   warnings: PlacementWarning[]
   /** Quants ferratges col·locats s'han fet sencers. */
   applied: number

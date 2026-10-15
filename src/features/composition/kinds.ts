@@ -12,6 +12,3 @@ export const KINDS: { value: CompositionKind; label: string; icon: IconType; hin
   { value: "lliure", label: "Peces lliures", icon: LuPuzzle, hint: "Només peces lliures, sense mòduls" },
   { value: "objecte", label: "Objecte", icon: LuSofa, hint: "Objecte per als ambients (sofà, làmpada, planta…): peces amb forma, booleanes i textures; no es fabrica" },
 ]
-
-/** Els punts de partida de «Nou moble» (el tipus es tria en crear-lo; no hi ha selector després). */
-export const NEW_MOBLE_KINDS = KINDS.filter((k) => k.value === "moble" || k.value === "cuina" || k.value === "armari" || k.value === "taula")

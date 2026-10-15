@@ -10,7 +10,7 @@
 export const POLYHAVEN_API = "https://api.polyhaven.com"
 
 /** Resolució màxima que es baixa (les textures es redueixen a 1024 px igualment). */
-export const MAX_FETCH_RES = "2k"
+const MAX_FETCH_RES = "2k"
 
 export interface PolyHavenRef {
   id: string

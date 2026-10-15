@@ -53,7 +53,7 @@ export async function readPgmx(bytes: Uint8Array): Promise<PgmxInfo> {
   return parsePgmxXml(new TextDecoder().decode(bytes))
 }
 
-export interface PgmxApplied {
+interface PgmxApplied {
   machine: Machine
   /** Eines de la màquina que han canviat de nom (codi, nom d'abans, nom del .pgmx). */
   renamed: { code: string; from: string; to: string }[]

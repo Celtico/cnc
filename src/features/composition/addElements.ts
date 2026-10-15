@@ -3,7 +3,7 @@ import { boardChoices, compositionKind, materialCategory, materialByName, newFre
 /** Què es pot afegir des de l'arbre (un + per a cada tipus). */
 export type AddKind = "module" | "part" | "ref"
 
-export const ADD_KINDS: { id: AddKind; label: string; noun: string }[] = [
+const ADD_KINDS: { id: AddKind; label: string; noun: string }[] = [
   { id: "module", label: "Mòdul", noun: "Mòdul" },
   { id: "part", label: "Peça", noun: "Peça" },
   { id: "ref", label: "Objecte", noun: "Objecte" },

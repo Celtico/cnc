@@ -96,9 +96,9 @@ export const OBJECT_TOOL_INPUTS = {
   duplicate_group: z.object({ group: z.string().min(1) }).describe("Duplica un grup sencer al costat (X), amb un nom de grup nou."),
 } as const
 
-export type ObjectToolName = keyof typeof OBJECT_TOOL_INPUTS
+type ObjectToolName = keyof typeof OBJECT_TOOL_INPUTS
 
-export interface ObjectToolContext {
+interface ObjectToolContext {
   settings: Pick<Settings, "materials">
   /**
    * Peces lliures d'un **moble** (es fabriquen): van al nesting si el material és de CNC (com en triar-lo a la UI). Sense,
@@ -296,7 +296,7 @@ function withoutGroup(p: FreePart): FreePart {
 
 // --- Resum -------------------------------------------------------------------------------------
 
-export interface ObjectPartSummary {
+interface ObjectPartSummary {
   id: string
   name: string
   orient: PartOrient
@@ -315,7 +315,7 @@ export interface ObjectPartSummary {
   cut?: true
 }
 
-export interface ObjectSummary {
+interface ObjectSummary {
   /** Mida de tot l'objecte (caixa de les peces i els models): amplada X × alçada Y × fondària Z. */
   size: { w: number; h: number; d: number } | null
   parts: ObjectPartSummary[]
@@ -323,7 +323,7 @@ export interface ObjectSummary {
   models?: { id: string; name: string; x: number; y: number; z: number; w: number; h: number; d: number }[]
 }
 
-export function summarizeObject(comp: Composition): ObjectSummary {
+function summarizeObject(comp: Composition): ObjectSummary {
   const ps = parts(comp)
   const boxes = [...ps.map(partBox), ...(comp.models ?? []).map((m) => ({ min: [m.x, m.y, m.z], max: [m.x + m.w, m.y + m.h, m.z + m.d] }))]
   const all = boxes.length ? { min: [0, 1, 2].map((a) => Math.min(...boxes.map((b) => b.min[a]!))), max: [0, 1, 2].map((a) => Math.max(...boxes.map((b) => b.max[a]!))) } : null
@@ -355,12 +355,12 @@ export function summarizeObject(comp: Composition): ObjectSummary {
 }
 
 /** Materials que es poden triar per a les peces d'un objecte (noms, per categoria). */
-export function objectMaterials(settings: Pick<Settings, "materials">): { simulation: string[]; boards: string[] } {
+function objectMaterials(settings: Pick<Settings, "materials">): { simulation: string[]; boards: string[] } {
   const list = partChoices(settings.materials)
   return { simulation: list.filter((m) => materialCategory(m) === "sim").map((m) => m.name), boards: list.filter((m) => materialCategory(m) === "board").map((m) => m.name) }
 }
 
-export interface ObjectPayload {
+interface ObjectPayload {
   done?: Record<string, unknown>
   object: ObjectSummary
   materials?: ReturnType<typeof objectMaterials>
@@ -371,7 +371,7 @@ export function objectPayload(name: string, outcome: { doc: Composition; result:
   return name === "get_object" ? { object, materials: objectMaterials(ctx.settings) } : { done: outcome.result, object }
 }
 
-export function describeObjectTool(name: string, result: Record<string, unknown>): string {
+function describeObjectTool(name: string, result: Record<string, unknown>): string {
   switch (name) {
     case "get_object":
       return "Ha mirat l'objecte"

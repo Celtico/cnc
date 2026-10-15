@@ -27,7 +27,7 @@ export const DTC_METAL_BACK_WIDTHS = [300, 325, 350, 375, 400, 450, 500, 600, 70
 /** NL en dos dígits (270 → «27», 300 → «30»), com als números d'article de DTC. */
 export const nl2 = (nl: number) => String(nl / 10).padStart(2, "0")
 
-export interface DoubleWallSpec {
+interface DoubleWallSpec {
   maker: string
   series: string
   heightClass: HardwareKit["heightClass"]

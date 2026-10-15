@@ -1,13 +1,11 @@
 import type { HardwareView } from "../core/import/views"
 import { db, type HardwareAsset } from "./db"
 
-export type { HardwareAsset }
+
 
 /** Prefix dels ids dels models de ferratges importats (els llegeix `loadModel`, com els `user-…`). */
-export const HARDWARE_ASSET_PREFIX = "hwa-"
+const HARDWARE_ASSET_PREFIX = "hwa-"
 export const isHardwareAssetSrc = (src: string): boolean => src.startsWith(HARDWARE_ASSET_PREFIX)
-
-export const newHardwareAssetId = () => `${HARDWARE_ASSET_PREFIX}${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}`
 
 export async function putHardwareAsset(a: HardwareAsset): Promise<void> {
   await db.hardwareAssets.put(a)

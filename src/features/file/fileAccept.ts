@@ -1,5 +1,5 @@
 /** iPhone/iPad (inclosos els iPad que es presenten com a Mac). */
-export function isIOS(): boolean {
+function isIOS(): boolean {
   if (typeof navigator === "undefined") return false
   return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
 }

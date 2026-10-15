@@ -102,7 +102,7 @@ type Arg = { s: string } | { v: string }
  * Una polilínia que acaba on comença (≤ 1e-3) és tancada encara que no porti `ClosePolyline`: els contorns fets només
  * d'arcs (taules rodones i ovals) s'escriuen així. Només per a `CreateContour`/`CreateContourPocket`.
  */
-export function closedLoop(p: CamPath): CamPath {
+function closedLoop(p: CamPath): CamPath {
   if (p.closed || p.kind !== "polyline" || !p.segs.length) return p
   const last = p.segs[p.segs.length - 1]!.to
   return dist(last, p.start) <= 1e-3 ? { ...p, closed: true } : p

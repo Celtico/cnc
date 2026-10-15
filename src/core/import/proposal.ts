@@ -11,7 +11,7 @@ import { add, cross, dot, mul, norm, sub, type StepCylinder, type StepFeatures, 
  * si no s'hi fica (forats de l'ala per a cargols), la de la categoria. Pur.
  */
 
-export const STANDARD_DRILLS = [35, 26, 20, 15, 10, 8, 5, 4, 3, 2.5] as const
+const STANDARD_DRILLS = [35, 26, 20, 15, 10, 8, 5, 4, 3, 2.5] as const
 
 /** La broca habitual més propera (per sota de 2,5 mm o molt lluny de totes, el mateix valor a la desena). */
 export function snapDrill(d: number): number {
@@ -70,7 +70,7 @@ export interface HardwareProposal {
 /** Fondàries per defecte quan el fitxer no les diu (cargols d'ala: no entren a la peça al model). */
 export const DEFAULT_DEPTHS = { cup: 13, screw: 10, plateScrew: 12, dowel: 11 } as const
 
-export const toLocal = (f: LocalFrame, p: V3): V3 => {
+const toLocal = (f: LocalFrame, p: V3): V3 => {
   const d = sub(p, f.origin)
   return [dot(d, f.u), dot(d, f.v), dot(d, f.n)]
 }
@@ -419,13 +419,13 @@ export function proposePlate(f: StepFeatures): HardwareProposal | { error: strin
 const fmt = (x: number) => String(Math.round(x * 100) / 100).replace(".", ",")
 
 /** Distància entre forats d'un tirador: a la de catàleg més propera (múltiples de 32: 64, 96, 128, 160…) si és a ≤ 0,5 mm. */
-export function snapHandleDistance(d: number): number {
+function snapHandleDistance(d: number): number {
   const k = Math.round(d / 32) * 32
   return k > 0 && Math.abs(k - d) <= 0.5 ? k : Math.round(d * 10) / 10
 }
 
 /** Forat passant del front per a un cargol de tirador de Ø `screw`: el Ø del tirador de l'app (5) si hi passa, si no 1 mm més ample. */
-export function handleThroughDiameter(screw: number, base = 5): number {
+function handleThroughDiameter(screw: number, base = 5): number {
   return screw + 0.5 <= base ? base : Math.ceil(screw + 1)
 }
 

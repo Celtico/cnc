@@ -12,7 +12,7 @@ export type RenderQuality = "fast" | "presentation"
 
 export const QUALITY_LABELS: Record<RenderQuality, string> = { fast: "Ràpida", presentation: "Presentació" }
 
-export interface QualitySpec {
+interface QualitySpec {
   dpr: [number, number]
   shadows: boolean
   shadowMap: number

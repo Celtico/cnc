@@ -95,7 +95,7 @@ export interface KitPlan {
   warnings: string[]
 }
 
-export interface KitInput {
+interface KitInput {
   /** Llum interior del compartiment (X). */
   LW: number
   /** Fondària disponible darrere de la cara de darrere del front. */
@@ -195,7 +195,7 @@ const familyKey = (kit: HardwareKit): string => `${kit.maker}|${kit.series.repla
  * Tots els jocs de la mateixa sèrie que `item`, del més alt al més baix: els del catàleg de l'app (`DEFAULT_HARDWARE_KITS`)
  * amb els `params` de l'item (la prebroca) i, a la seva classe d'alçada, el mateix item. Per triar el joc de cada calaix.
  */
-export function kitSeries(item: HardwareItem): HardwareItem[] {
+function kitSeries(item: HardwareItem): HardwareItem[] {
   if (!isDrawerKit(item)) return []
   const key = familyKey(item.kit)
   const code = item.kit.heightClass.code

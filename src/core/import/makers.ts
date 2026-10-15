@@ -10,7 +10,7 @@ import { groupHettich, hettichCandidate, hettichFileKind, type HettichArticle, t
  * `maker`) i la resta (proposta, 3D, mecanitzats, ampliar el que ja hi és amb `merge.ts`) és comuna. Pur.
  */
 
-export type Maker = "Hettich" | "Blum"
+type Maker = "Hettich" | "Blum"
 
 /** De quin fabricant és un fitxer: Blum pel nom (`<article>_<8 xifres>[_R|_L].<ext>`) o per la carpeta d'un producte de Blum. */
 export function detectMaker(path: string): Maker {
@@ -37,7 +37,7 @@ export function importCandidate(path: string): boolean {
 }
 
 /** Les fonts d'un article («STEP · PGM · DAE»), per al diàleg. */
-export const FILE_SOURCE: Partial<Record<HettichFileKind, string>> = {
+const FILE_SOURCE: Partial<Record<HettichFileKind, string>> = {
   step: "STEP",
   iges: "IGES",
   "3ds": "3DS",
@@ -69,7 +69,7 @@ export const has3d = (files: readonly { kind: HettichFileKind }[]) => files.some
  * item (el primer, dreta si n'hi ha; l'altre es diu a les notes); dues mans amb articles diferents (`48N0510.02_…_R` i
  * `48N0510.03_…_L`) són dos items, cadascun amb la seva mà al nom.
  */
-export function groupBlum(files: HettichFile[]): HettichArticle[] {
+function groupBlum(files: HettichFile[]): HettichArticle[] {
   const by = new Map<string, HettichArticle>()
   for (const f of files) {
     const info = blumFileInfo(f.path)
@@ -123,7 +123,7 @@ export function groupBlum(files: HettichFile[]): HettichArticle[] {
   }).sort((a, b) => a.article.localeCompare(b.article))
 }
 
-export interface GroupedImport {
+interface GroupedImport {
   articles: HettichArticle[]
   /** Fitxers que no s'adjunten a cap article (manuals, «Overview»…): es diuen al diàleg «sense article». */
   loose: string[]

@@ -129,7 +129,7 @@ export function nestingRouter(m: Machine, depth: number): MachineTool | undefine
  * Fresa del contorn d'un tauler de gruix `T`: la de la regla de perfilar del gruix (si la màquina la té) o la de nesting
  * (`nestingRouter`), que travessi fins a `T + overcut`. És la mateixa que fa servir `toMaestroNestXcs` per a cada tauler.
  */
-export const boardRouter = (rp: RulePicker, m: Machine, T: number, overcut: number): MachineTool | undefined => rp.profileTool(T, Infinity, T + overcut) ?? nestingRouter(m, T + overcut)
+const boardRouter = (rp: RulePicker, m: Machine, T: number, overcut: number): MachineTool | undefined => rp.profileTool(T, Infinity, T + overcut) ?? nestingRouter(m, T + overcut)
 
 /**
  * Opcions del nesting per a la CNC: les del moble (taulers, veta) amb la separació = Ø de la fresa de nesting
@@ -165,16 +165,16 @@ export function cncNestOptions(panels: Panel[], m: Machine, base: NestOptions): 
 /** Un forat de cara més gros que això sense broca del Ø es fa de caixera rodona amb la fresa (làmpades encastades). */
 const BIG_HOLE = 20
 
-export type NestStage = "drill" | "groove" | "inner" | "outer"
+type NestStage = "drill" | "groove" | "inner" | "outer"
 const STAGES: NestStage[] = ["drill", "groove", "inner", "outer"]
 
 /** Un mecanitzat del programa del tauler: punts en coordenades del tauler. */
-export interface NestOp extends XcsOp {
+interface NestOp extends XcsOp {
   ref: string
   stage: NestStage
 }
 
-export interface NestPart {
+interface NestPart {
   ref: string
   panelId: string
   label: string
@@ -192,7 +192,7 @@ export interface NestPart {
   area: number
 }
 
-export interface NestSheetXcs {
+interface NestSheetXcs {
   file: string
   /** Nom de la peça de treball (el tauler) al programa: el mateix que el tauler del CSV, `Melamina_blanca_19#01`. */
   workpiece: string
@@ -209,7 +209,7 @@ export interface NestSheetXcs {
   text: string
 }
 
-export interface NestPanelInfo {
+interface NestPanelInfo {
   ref: string
   label: string
   /** Tauler on va (sense: no hi cap). */
@@ -218,7 +218,7 @@ export interface NestPanelInfo {
   postProcesses: XcsPostProcess[]
 }
 
-export interface XcsNestExport {
+interface XcsNestExport {
   files: { name: string; text: string }[]
   /** Codificació dels .xcs (la de la màquina): `xcsZip` la fa servir. */
   encoding: NonNullable<Machine["xcsEncoding"]>
@@ -326,7 +326,7 @@ const EPS = 0.01
  * Forat de cara amb els paràmetres opcionals com el programa real del taller (manual Table 28 p36): descàrregues 0,
  * velocitats −1 (les de l'eina), tipus de forat `"P"` (pla), alçada del con 0 i cota de seguretat 2.
  */
-export const drillLine = (name: string, x: number, y: number, depth: number, diameter: number, tool: string): string =>
+const drillLine = (name: string, x: number, y: number, depth: number, diameter: number, tool: string): string =>
   `CreateDrill(${cs(name)}, ${num(x)}, ${num(y)}, ${num(depth)}, ${num(diameter)}, "", TypeOfProcess.Drilling, ${tool}, ${HEAD}, 0, -1, -1, "P", 0, 2);`
 
 /**
@@ -340,7 +340,7 @@ export const loadMacroLine = (args?: string): string =>
 export const LOAD_MACRO = loadMacroLine()
 
 /** Comentari d'eina com el del programa real (`//BROCA PLANA FO-FPL-8`, `//FRESA PLANA 12mm diamant nesting`), en ASCII. */
-export const toolComment = (t: { kind: "BROCA" | "FRESA"; name: string }): string => `//${t.kind} PLANA ${comment(t.name).slice(3)}`
+const toolComment = (t: { kind: "BROCA" | "FRESA"; name: string }): string => `//${t.kind} PLANA ${comment(t.name).slice(3)}`
 
 /** Programes per tauler d'un nesting fet amb `cncNestOptions`. */
 export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, opts: { project: string; date?: Date; /** Jocs de calaix (comanda) per al LLEGEIX-ME. */ kits?: readonly (KitOrder & { module?: number })[]; /** Llums amb joc (làmpades i sistema elèctric) per al LLEGEIX-ME. */ lights?: readonly (LightOrder & { module?: number })[]; /** Ferratges col·locats (comanda) per al LLEGEIX-ME. */ fittings?: readonly (KitOrderLine & { module?: number })[] }): XcsNestExport {

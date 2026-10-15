@@ -70,7 +70,7 @@ const mm = z.number().finite()
 export const SETTINGS_VERSION = 44
 
 /** Joc de l'ample de la ranura del fons per defecte (v33; per decisió de l'usuari, 2026-10-14: «per defecte 0,8»). */
-export const DEFAULT_GROOVE_CLEARANCE = 0.8
+const DEFAULT_GROOVE_CLEARANCE = 0.8
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 
@@ -322,14 +322,14 @@ export function withCategory(m: MaterialPref, category: MaterialCategory): Mater
 
 // --- Taulers i nesting ---------------------------------------------------------------
 
-export const SheetPrefSchema = z.object({
+const SheetPrefSchema = z.object({
   /** Material al qual s'aplica; buit = tots els altres. */
   material: z.string(),
   w: mm.min(300).max(6000),
   h: mm.min(300).max(6000),
 })
 
-export const BoardsPrefSchema = z.object({
+const BoardsPrefSchema = z.object({
   sheets: z.array(SheetPrefSchema).min(1),
   kerf: mm.min(0).max(30),
   margin: mm.min(0).max(100),
@@ -356,9 +356,9 @@ export const GapsPrefSchema = z.object({
   innerClearance: mm.min(0).max(3),
 })
 
-export const LabelPrefSchema = z.object({ w: mm.min(10).max(300), h: mm.min(10).max(300) })
+const LabelPrefSchema = z.object({ w: mm.min(10).max(300), h: mm.min(10).max(300) })
 
-export const DisplayPrefSchema = z.object({ unit: z.enum(["mm", "cm"]) })
+const DisplayPrefSchema = z.object({ unit: z.enum(["mm", "cm"]) })
 
 /**
  * Models de l'assistent IA (docs/xat-ia.md, comprovats a la documentació de l'API el 2026-10-09): Sonnet per defecte
@@ -368,8 +368,8 @@ export const ASSISTANT_MODELS = [
   { id: "claude-sonnet-5-5", label: "Sonnet 5.5", price: "2 $ / 10 $", hint: "ràpid i més barat" },
   { id: "claude-opus-5-5", label: "Opus 5.5", price: "4 $ / 20 $", hint: "el més capaç, el doble de car" },
 ] as const
-export type AssistantModel = (typeof ASSISTANT_MODELS)[number]["id"]
-export const DEFAULT_ASSISTANT_MODEL: AssistantModel = "claude-sonnet-5-5"
+type AssistantModel = (typeof ASSISTANT_MODELS)[number]["id"]
+const DEFAULT_ASSISTANT_MODEL: AssistantModel = "claude-sonnet-5-5"
 
 /**
  * Assistent IA (v26): la clau de l'API de Claude de l'usuari (el navegador crida l'API directament; només es desa en
@@ -455,7 +455,7 @@ export const NON_CNC_MATERIALS: MaterialPref[] = [
 ]
 
 /** Lacats brillants (vernís): com els mobles de catàleg de lacat negre. Afegits a la v15. */
-export const GLOSS_MATERIALS: MaterialPref[] = [
+const GLOSS_MATERIALS: MaterialPref[] = [
   { id: "mdf-lacquer-gloss-black", name: "Lacat negre brillant", thicknesses: [16, 19, 22], hasGrain: false, finish: { kind: "lacquer", color: "#161616", roughness: 0.3 }, edge: "Lacat (sense cantell)", category: "board", coat: 1 },
   { id: "mdf-lacquer-gloss-white", name: "Lacat blanc brillant", thicknesses: [16, 19, 22], hasGrain: false, finish: { kind: "lacquer", color: "#efede8", roughness: 0.3 }, edge: "Lacat (sense cantell)", category: "board", coat: 1 },
 ]
@@ -465,7 +465,7 @@ export const GLOSS_MATERIALS: MaterialPref[] = [
  * (arcs de «catedral») queda com a «Roure» / «Noguera»; el vidre ambre i la ceràmica sorra de la decoració, i els marbres blanc i negre polits.
  * Afegits a la v16.
  */
-export const RIFT_MATERIALS: MaterialPref[] = [
+const RIFT_MATERIALS: MaterialPref[] = [
   { id: "oak-rift", name: "Roure de fil", thicknesses: [16, 19, 30], hasGrain: true, finish: { kind: "wood", species: "oak", gen: { base: "#cfae7f", dark: "#a8865a", lines: 64, wobble: 0.02, bands: 34, contrast: 0.35, figure: 0, pores: 2600, grain: 10, tileMm: 600, seed: 111 } }, edge: "Xapa de roure", category: "board" },
   { id: "walnut-rift", name: "Noguera de fil", thicknesses: [16, 19, 30], hasGrain: true, finish: { kind: "wood", species: "walnut", gen: { base: "#6a4a31", dark: "#43291a", lines: 56, wobble: 0.02, bands: 30, contrast: 0.4, figure: 0, pores: 1600, grain: 10, tileMm: 600, seed: 212 } }, edge: "Xapa de noguera", category: "board" },
   // Per a la decoració (ampolles, gerros).
@@ -495,7 +495,7 @@ const OLD_LAWN_FINISH: MaterialPref["finish"] = { kind: "fabric", color: "#5b733
  * Revestiment de paret de roure de fil (veta recta, sense les flames de la xapa de foto), com les parets de fusta de les
  * fotos de catàleg, i la gespa de fora. Afegits a la v17.
  */
-export const CLADDING_MATERIALS: MaterialPref[] = [
+const CLADDING_MATERIALS: MaterialPref[] = [
   // Fora de les habitacions amb arbres davant de les finestres (terra de fora, `Ambient3D`). Foto de gespa (v18).
   { id: "sim-lawn", name: "Gespa", thicknesses: [10], hasGrain: false, finish: LAWN_FINISH, edge: "", cnc: false, category: "sim" },
   { id: "sim-oak-cladding-rift", name: "Revestiment de roure de fil", thicknesses: [10], hasGrain: true, finish: { kind: "wood", species: "oak", gen: { base: "#b48e62", dark: "#8c6a44", lines: 60, wobble: 0.025, bands: 30, contrast: 0.4, figure: 0, pores: 2400, grain: 10, tileMm: 1200, seed: 131 } }, edge: "", cnc: false, category: "sim" },
@@ -504,12 +504,12 @@ export const CLADDING_MATERIALS: MaterialPref[] = [
 export const LAMPSHADE_GLOW = 2.2
 
 /** Alumini dels marcs de vitrina Häfele (plata anoditzat, el de les referències .902 / .922). Afegit a la v36. */
-export const FRAME_MATERIALS: MaterialPref[] = [
+const FRAME_MATERIALS: MaterialPref[] = [
   { id: "sim-frame-silver", name: "Alumini anoditzat plata", thicknesses: [10], hasGrain: false, finish: { kind: "metal", color: "#c9ccd0" }, edge: "", cnc: false, category: "sim" },
 ]
 
 /** Llum LED dels mobles (`Zone.led`): fa llum al render (càlida). Afegit a la v14. */
-export const LED_MATERIALS: MaterialPref[] = [
+const LED_MATERIALS: MaterialPref[] = [
   { id: "led-strip", name: "Tira LED", thicknesses: [8], hasGrain: false, finish: { kind: "color", color: "#ffe2b8", roughness: 0.4 }, edge: "", cnc: false, category: "sim", glow: 60 },
 ]
 
@@ -612,7 +612,7 @@ export const TEMPLATE_MATERIALS: MaterialPref[] = [
  * «Melamina 19» i «DM 10» (v9, els de `DEFAULT_CABINET`) eren iguals que «Melamina blanca» i «DM (fons)»: la v12 els
  * treu (`mergeDuplicateMaterials`) si no s'han tocat i les plantilles ja fan servir els de sempre.
  */
-export const RETIRED_TEMPLATE_MATERIALS: MaterialPref[] = [
+const RETIRED_TEMPLATE_MATERIALS: MaterialPref[] = [
   { id: "mel-19", name: "Melamina 19", thicknesses: [16, 19], hasGrain: false, finish: { kind: "color", color: "#f2f0eb" }, edge: "PVC blanc 1 mm" },
   { id: "dm-10", name: "DM 10", thicknesses: [10], hasGrain: false, finish: { kind: "color", color: "#c9b79a" }, edge: "", forBacks: true },
 ]
@@ -641,7 +641,7 @@ export const BUILTIN_MATERIALS: MaterialPref[] = upgradeToPhoto([
 ])
 
 /** Folgança inicial de les peces de dins (mm): divisors i prestatges fixos d'un mòdul dividit. */
-export const DEFAULT_INNER_CLEARANCE = 1
+const DEFAULT_INNER_CLEARANCE = 1
 
 export const DEFAULT_SETTINGS: Settings = {
   version: SETTINGS_VERSION,
@@ -677,7 +677,7 @@ export const DEFAULT_SETTINGS: Settings = {
 
 // --- Migració i importació ------------------------------------------------------------
 
-export interface SettingsParse {
+interface SettingsParse {
   settings: Settings
   /** Problemes trobats (en català). Buit si tot era vàlid. */
   problems: string[]
@@ -912,7 +912,7 @@ const withoutId = ({ id: _id, ...rest }: MaterialPref) => rest
  * ambients desats els segueixin. Idempotent.
  */
 /** Gruixos que fan servir les plantilles del catàleg (v13): s'afegeixen als materials inicials que no els tenien. */
-export const CATALOG_THICKNESSES: Record<string, number[]> = { "mel-white": [30], "mel-grey": [30], "mel-oak": [30], oak: [40], ash: [16, 30] }
+const CATALOG_THICKNESSES: Record<string, number[]> = { "mel-white": [30], "mel-grey": [30], "mel-oak": [30], oak: [40], ash: [16, 30] }
 export function addCatalogThicknesses(list: MaterialPref[]): MaterialPref[] {
   return list.map((m) => {
     const add = (CATALOG_THICKNESSES[m.id] ?? []).filter((t) => !m.thicknesses.includes(t))
@@ -920,7 +920,7 @@ export function addCatalogThicknesses(list: MaterialPref[]): MaterialPref[] {
   })
 }
 
-export function mergeDuplicateMaterials(list: MaterialPref[]): { materials: MaterialPref[]; renames: [string, string][] } {
+function mergeDuplicateMaterials(list: MaterialPref[]): { materials: MaterialPref[]; renames: [string, string][] } {
   let out = list
   const renames: [string, string][] = []
   const has = (name: string) => out.some((m) => m.name === name)
@@ -948,7 +948,7 @@ export function mergeDuplicateMaterials(list: MaterialPref[]): { materials: Mate
  * Noms repetits (`materialNameKey`: majúscules i espais a part) en unes preferències desades: el segon es diu «X 2»
  * (el tercer «X 3»…). Les dades es conserven; els mobles continuen apuntant al primer.
  */
-export function dedupeMaterialNames(list: MaterialPref[]): { materials: MaterialPref[]; problems: string[] } {
+function dedupeMaterialNames(list: MaterialPref[]): { materials: MaterialPref[]; problems: string[] } {
   const keys = new Set<string>()
   const problems: string[] = []
   const all = new Set(list.map((m) => materialNameKey(m.name)))

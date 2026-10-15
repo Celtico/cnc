@@ -14,7 +14,7 @@ import type { Board, Join, Piece, Role, Side, Solid, UnifiedData } from "./unifi
  * (`piece.tab` ha d'existir a `boards`).
  */
 
-export interface UnifiedOptions {
+interface UnifiedOptions {
   /** Nom del moble (camp `mueble`). */
   name: string
   /** Índex del mòdul dins del moble, per a la ref `A.<mòdul>.<tipus>.<n>`. */
@@ -26,14 +26,14 @@ export interface UnifiedOptions {
 }
 
 /** Posició d'una peça al tauler: `x`/`y` és el centre de la peça, `angle` en graus. */
-export interface PiecePosition {
+interface PiecePosition {
   tab: number
   x: number
   y: number
   angle: number
 }
 
-export const DEFAULT_SHEET: { w: number; h: number } = { w: 2800, h: 2070 }
+const DEFAULT_SHEET: { w: number; h: number } = { w: 2800, h: 2070 }
 
 const ROLE_3D: Record<PanelRole, Role> = {
   side: "lateral",
@@ -227,7 +227,7 @@ interface BoardLayout {
 }
 
 /** Sense nesting: un tauler virtual per cada parella material/gruix, peces a la cantonada. */
-export function virtualLayout(panels: Panel[], sheet = DEFAULT_SHEET): BoardLayout {
+function virtualLayout(panels: Panel[], sheet = DEFAULT_SHEET): BoardLayout {
   const boards: Board[] = []
   const tabOf = new Map<string, number>()
   for (const p of panels) {
@@ -258,7 +258,7 @@ export function virtualLayout(panels: Panel[], sheet = DEFAULT_SHEET): BoardLayo
  * Amb nesting: els taulers reals. Les peces que no han cabut van a un tauler extra
  * "(sense col·locar)" prou gran perquè el JSON continuï sent vàlid.
  */
-export function nestedLayout(panels: Panel[], nesting: Nesting): BoardLayout {
+function nestedLayout(panels: Panel[], nesting: Nesting): BoardLayout {
   const boards: Board[] = nesting.boards.map((b) => ({
     tab: b.tab,
     name: `${b.material} ${b.w}x${b.h} #${String(b.tab).padStart(2, "0")}`,

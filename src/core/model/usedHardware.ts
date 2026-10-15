@@ -87,7 +87,7 @@ function frontSlots(m: Module, f: Front, add: (slot: HardwareSlot, n: number, wh
 }
 
 /** Quines opcions de tots els fronts del mòdul (Mòdul › Caixa) llegeix la construcció. */
-export interface FrontOptionsUse {
+interface FrontOptionsUse {
   /** Recobrents / Encastats i la folgança front–cos: hi ha algun front que es fa (també un front fix o una reixeta). */
   style: boolean
   outerGap: boolean
@@ -186,7 +186,7 @@ export function moduleRows(module: Module): ModuleRows {
 }
 
 /** On surt la «Filera System 32» del mòdul a l'inspector del compartiment (`system32RowPlace`). */
-export interface System32RowPlace {
+interface System32RowPlace {
   /** «Prestatges i accessoris» (al costat de «Regulables») o «Front» (després de la «Frontissa»). */
   at: "shelves" | "front"
   /** Els compartiments que l'ensenyen (cada un a la seva pantalla: mai dos llocs a la mateixa). */

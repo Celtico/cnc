@@ -35,9 +35,6 @@ importers:
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      occt-import-js:
-        specifier: ^0.0.23
-        version: 0.0.23
       oidn-web:
         specifier: ^0.4.0
         version: 0.4.0
@@ -81,6 +78,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^6.1.1
         version: 6.1.1(vite@8.3.1(@types/node@24.19.0)(terser@5.51.2))
+      occt-import-js:
+        specifier: 0.0.23
+        version: 0.0.23
       oxlint:
         specifier: ^1.81.0
         version: 1.85.0

@@ -46,7 +46,7 @@ function ops(kind: Kind): MachiningOp[] {
 
 const KIND_LABEL: Record<Kind, string> = { two: "dos forats a 32 (filera System 32)", four: "quatre forats: dos a la filera i dos a 11 del davant", inline: "en línia: a 20 i 52 del davant" }
 
-export function dtcPlate(sp: PlateSpec): HardwareItem {
+function dtcPlate(sp: PlateSpec): HardwareItem {
   const hs = Object.entries(sp.byH)
   return {
     id: sp.id,

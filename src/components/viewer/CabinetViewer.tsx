@@ -17,7 +17,7 @@ import { usePixelScale, type Axis } from "./pixelScale"
 import { CircleGeometry, NeutralToneMapping, DoubleSide, Group, InstancedMesh, Matrix4, MeshBasicMaterial, Object3D, Plane, Vector3, type Material } from "three"
 import { fixedSolids, shelfPins, type HwSolid } from "../../core/build/hardwareSolids"
 import { type ViewName } from "./viewNames"
-export type { ViewName } from "./viewNames"
+
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
 import { flatten, modelFootprint, partSize, partsBox, type CameraPose, type FreePart, type Hole, type MaterialPref, type ModelObject, type Panel, type RefObject } from "../../core/model"
@@ -63,7 +63,7 @@ export interface ViewerModule {
   legs?: { height: number; depth: number; inset?: number; fitted?: boolean; points?: [number, number][] }
 }
 
-export interface CabinetViewerProps {
+interface CabinetViewerProps {
   /** Acabats propis de l'escena de Presentació (`Composition.scene`): terra i paret. */
   sceneFinish?: { floor?: string; wall?: string }
   panels: Panel[]
@@ -78,7 +78,6 @@ export interface CabinetViewerProps {
   selectedModuleId?: string | null
   /** Clic a una peça d'un mòdul; `at` = punt tocat en mm de la composició. */
   onSelectModule?: (id: string, at?: [number, number, number]) => void
-  onAddModule?: (side: "left" | "right") => void
   /** Objectes fantasma (translúcids). */
   ghosts?: RefObject[]
   /** Costat des d'on enquadra la càmera (perspectiva) quan canvia `fitKey`: null = el 3/4 d'«Enquadrar». */
@@ -155,7 +154,6 @@ export function CabinetViewer({
   modules,
   selectedModuleId,
   onSelectModule,
-  onAddModule,
   ghosts,
   viewDir = null,
   opening = 0,
@@ -548,14 +546,6 @@ export function CabinetViewer({
               if (dx || dy || dz) onMoveModule(selected.id, dx, dy, all, dz)
             }}
           />
-        )}
-        {selected && onAddModule && q.guides && (
-          <>
-            {/* A l'aresta de davant de cada costat, a mitja alçada, i apartats uns píxels cap a fora a la pantalla: la nansa
-                ↔ (a dalt al mig) no els tapa ni en un mòdul baix i fondo. */}
-            <AddButton x={selected.x} y={selected.y + selected.height / 2} z={(selected.z ?? 0) + selected.depth} side="left" onClick={() => onAddModule("left")} />
-            <AddButton x={selected.x + selected.width} y={selected.y + selected.height / 2} z={(selected.z ?? 0) + selected.depth} side="right" onClick={() => onAddModule("right")} />
-          </>
         )}
       </group>
 
@@ -1241,54 +1231,6 @@ function ZoneHighlight({ box: b }: { box: { x0: number; x1: number; y0: number; 
 
 /** Elements d'edició (botons +, nanses, gizmo): la imatge del visor per al render no els porta (`SceneAccess`). */
 const EDITOR_ONLY = { editorOnly: true }
-
-/** Botó + d'afegir un mòdul al costat: (x, y, z) és l'aresta del mòdul; el botó va 1,7 radis cap a fora a la pantalla. */
-function AddButton({ x, y, z, side, onClick }: { x: number; y: number; z: number; side: "left" | "right"; onClick: () => void }) {
-  // Botó 3D (no Html): mida constant a la pantalla, sempre per sobre del moble.
-  const scaler = useRef<Group>(null)
-  const [hover, setHover] = useState(false)
-  const cursor = useViewerCursor()
-  usePixelScale(scaler, 15)
-  const white = <meshBasicMaterial color="white" depthTest={false} depthWrite={false} transparent />
-  return (
-    <group position={[x * S, y * S, z * S]} userData={EDITOR_ONLY}>
-      <Billboard>
-        <group ref={scaler}>
-          <group position={[side === "left" ? -1.7 : 1.7, 0, 0]}>
-          <mesh
-            renderOrder={20}
-            onPointerOver={(e) => {
-              e.stopPropagation()
-              setHover(true)
-              cursor.hover("pointer")
-            }}
-            onPointerOut={() => {
-              setHover(false)
-              cursor.hover(null)
-            }}
-            onClick={(e) => {
-              e.stopPropagation()
-              onClick()
-            }}
-            name={side === "left" ? "Afegir mòdul a l'esquerra" : "Afegir mòdul a la dreta"}
-          >
-            <circleGeometry args={[1, 40]} />
-            <meshBasicMaterial color={hover ? "#98602c" : "#b57a37"} depthTest={false} depthWrite={false} transparent />
-          </mesh>
-          <mesh position={[0, 0, 0.01]} renderOrder={21}>
-            <planeGeometry args={[1, 0.14]} />
-            {white}
-          </mesh>
-          <mesh position={[0, 0, 0.01]} renderOrder={21}>
-            <planeGeometry args={[0.14, 1]} />
-            {white}
-          </mesh>
-          </group>
-        </group>
-      </Billboard>
-    </group>
-  )
-}
 
 /**
  * Nansa per moure el mòdul seleccionat (o, amb Maj, tot el moble) arrossegant-la: al llarg de

@@ -31,7 +31,7 @@ const RANK: Record<ModelFormat, number> = { glb: 0, gltf: 1, fbx: 2, blend: 3, u
 /** Fitxers que no compten (metadades del Finder, ocults). */
 export const isJunkPath = (path: string): boolean => /(^|\/)(__MACOSX\/|\.)/.test(path)
 
-export interface MainModel {
+interface MainModel {
   path: string
   format: ModelFormat
 }

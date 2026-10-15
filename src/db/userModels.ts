@@ -5,7 +5,7 @@ import { db, type UserModel } from "./db"
 export type { UserModel }
 
 /** Prefix dels ids dels models de l'usuari (`ModelObject.src`). */
-export const USER_MODEL_PREFIX = "user-"
+const USER_MODEL_PREFIX = "user-"
 export const isUserModelSrc = (src: string): boolean => src.startsWith(USER_MODEL_PREFIX)
 
 /** A partir d'aquí (bytes) s'avisa que pot anar feixuc a l'iPhone (no es bloqueja). */
@@ -14,7 +14,7 @@ export const HEAVY_MODEL_BYTES = 15 * 1024 * 1024
 let loader: GLTFLoader | null = null
 
 /** Mida (mm, w · h · d) d'un `.glb`: el glTF va en metres. Llença un error en català si no es pot llegir. */
-export async function measureGlb(buffer: ArrayBuffer): Promise<[number, number, number]> {
+async function measureGlb(buffer: ArrayBuffer): Promise<[number, number, number]> {
   // Capçalera binària del glTF: «glTF» als 4 primers bytes.
   const head = new Uint8Array(buffer, 0, Math.min(4, buffer.byteLength))
   if (String.fromCharCode(...head) !== "glTF") throw new Error("No és un fitxer .glb (glTF binari). Exporta'l com a .glb, amb les textures a dins.")
@@ -36,15 +36,6 @@ export async function measureGlb(buffer: ArrayBuffer): Promise<[number, number, 
 }
 
 const randomId = () => `${USER_MODEL_PREFIX}${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}`
-
-/**
- * Importa un `.glb`: el valida, l'optimitza per al mòbil (`optimizeGlb`: triangles, textures 1K; si falla, l'original),
- * en mesura la caixa i el desa. Errors en català (`Error.message`). `report` diu què s'ha reduït.
- */
-export async function addUserModel(file: File): Promise<{ model: UserModel; report: OptimizeReport }> {
-  if (!/\.glb$/i.test(file.name)) throw new Error("Només es poden pujar fitxers .glb (glTF binari).")
-  return addUserModelBuffer(await file.arrayBuffer(), file.name.replace(/\.glb$/i, ""))
-}
 
 /** El mateix amb el `.glb` ja llegit (o fet a partir d'un `.gltf`, un `.fbx` o un zip de Poly Haven, `modelImport.ts`). */
 export async function addUserModelBuffer(original: ArrayBuffer, name: string): Promise<{ model: UserModel; report: OptimizeReport }> {
@@ -86,8 +77,4 @@ export function listUserModels(): Promise<UserModel[]> {
 
 export function getUserModel(id: string): Promise<UserModel | undefined> {
   return db.models.get(id)
-}
-
-export async function deleteUserModel(id: string): Promise<void> {
-  await db.models.delete(id)
 }

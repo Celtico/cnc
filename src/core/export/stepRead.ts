@@ -4,7 +4,7 @@
  * (cada aresta la fan servir exactament dues cares, en sentits oposats).
  */
 
-export interface StepEntity {
+interface StepEntity {
   id: number
   type: string
   args: string
@@ -31,7 +31,7 @@ export function readStepEntities(text: string): Map<number, StepEntity> {
   return out
 }
 
-export interface StepSolidInfo {
+interface StepSolidInfo {
   id: number
   name: string
   min: [number, number, number]

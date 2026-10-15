@@ -84,9 +84,9 @@ function hlKit(sp: SeriesSpec): HardwareKit {
   })
 }
 
-export const DTC_PURE_BOX_HL11 = hlKit({ s: 1, boxSideHeight: 84, backHeight: 59, frontYs: [28, 60], backScrewYs: [16, 48], pages: "431–432" })
+const DTC_PURE_BOX_HL11 = hlKit({ s: 1, boxSideHeight: 84, backHeight: 59, frontYs: [28, 60], backScrewYs: [16, 48], pages: "431–432" })
 export const DTC_PURE_BOX_HL12 = hlKit({ s: 2, boxSideHeight: 122, backHeight: 97, frontYs: [28, 60, 92], backScrewYs: [16, 48, 80], pages: "433–434" })
-export const DTC_PURE_BOX_HL13 = hlKit({ s: 3, boxSideHeight: 159, backHeight: 132, frontYs: [28, 60, 92, 124], backScrewYs: [16, 48, 80, 112], pages: "435–436" })
+const DTC_PURE_BOX_HL13 = hlKit({ s: 3, boxSideHeight: 159, backHeight: 132, frontYs: [28, 60, 92, 124], backScrewYs: [16, 48, 80, 112], pages: "435–436" })
 
 export const DTC_PURE_BOX_KITS: { id: string; name: string; kit: HardwareKit }[] = [
   { id: "kit-dtc-hl11", name: "DTC PURE-BOX HL11 (84)", kit: DTC_PURE_BOX_HL11 },

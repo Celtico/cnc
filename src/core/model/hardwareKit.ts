@@ -37,7 +37,7 @@ export const KIT_BACKS = [
   { id: "wood", label: "Darrere de fusta", short: "Fusta" },
   { id: "metal", label: "Darrere metàl·lic", short: "Metàl·lic" },
 ] as const
-export type KitBack = (typeof KIT_BACKS)[number]["id"]
+type KitBack = (typeof KIT_BACKS)[number]["id"]
 const BACK_IDS = KIT_BACKS.map((b) => b.id) as [KitBack, ...KitBack[]]
 
 /**
@@ -133,7 +133,7 @@ export const KitComponentSchema = z.object({
 export type KitComponent = z.infer<typeof KitComponentSchema>
 
 /** Peça de fusta que demana el joc (el fons A, el darrere B): mides per fórmula. */
-export const KitWoodPartSchema = z.object({
+const KitWoodPartSchema = z.object({
   key: z.enum(["bottom", "back"]),
   name: z.string().min(1),
   /** Amplada (de costat, X) i fondària (Z) o alçada (Y) segons la peça. */
@@ -146,7 +146,6 @@ export const KitWoodPartSchema = z.object({
   /** Nota del catàleg (tolerància, «+1 / −0»). */
   note: z.string().optional(),
 })
-export type KitWoodPart = z.infer<typeof KitWoodPartSchema>
 
 /** Nivell de recomanació del catàleg: − no · ○ recomanat · ● molt recomanat. */
 export const KitLevelSchema = z.union([z.literal(0), z.literal(1), z.literal(2)])
@@ -228,7 +227,7 @@ export function setKitPilotRule(rule: KitPilot | null): void {
 export const kitPilotRule = (): KitPilot | null => PILOT_RULE
 
 /** Variables de les fórmules d'un joc. */
-export interface KitVars {
+interface KitVars {
   LW: number
   NL: number
   KB: number

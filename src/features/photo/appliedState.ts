@@ -1,13 +1,13 @@
 import { measureValues, planeModel, type MeasureState } from "../../core/photo/measure"
 import type { AppliedMeasure, PhotoCalibration } from "../../db/db"
 
-export interface AppliedInfo {
+interface AppliedInfo {
   label: string
   state: MeasureState
 }
 
 /** Estat actual de cada mesura aplicada al moble (relativa, estimada o real). */
-export function appliedMeasures(cal: PhotoCalibration | undefined): AppliedInfo[] {
+function appliedMeasures(cal: PhotoCalibration | undefined): AppliedInfo[] {
   if (!cal?.applied?.length || !cal.measures?.length) return []
   const model = planeModel({ points: cal.points, refW: cal.ref.w, refH: cal.ref.h, aspect: cal.refAspect ?? null })
   const values = model ? measureValues(model, cal.measures, cal.ref.w) : []

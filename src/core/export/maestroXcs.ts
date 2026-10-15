@@ -65,7 +65,7 @@ export interface XcsOp {
   ramp?: boolean
 }
 
-export interface XcsProgram {
+interface XcsProgram {
   file: string
   face: "A" | "B"
   text: string
@@ -80,7 +80,7 @@ export interface XcsPostProcess {
   station: string
 }
 
-export interface XcsPanelResult {
+interface XcsPanelResult {
   ref: string
   programs: XcsProgram[]
   ops: XcsOp[]
@@ -121,7 +121,7 @@ export const comment = (s: string) =>
   `// ${asciiFold(s.replace(/→/g, "->").replace(/·/g, "-").replace(/°/g, " graus").replace(/[«»]/g, '"')).replace(/[^\x20-\x7e]/g, "?")}`
 
 /** Cara del cantell: 4 = esquerra (x = 0), 2 = dreta (x = L), 3 = baix (y = 0, «Front»), 1 = dalt (y = A, «Back»). */
-export const EDGE_PLANE: Record<EdgeSide, XcsPlane> = { left: "Left", right: "Right", bottom: "Front", top: "Back" }
+const EDGE_PLANE: Record<EdgeSide, XcsPlane> = { left: "Left", right: "Right", bottom: "Front", top: "Back" }
 
 /**
  * Punt d'un forat de cantell al pla estàndard del cantell, vist des de fora (origen a baix a
@@ -479,7 +479,7 @@ export const grooveStrategy = (depth: number, maxPass: number): string[] =>
   passDepths(depth, maxPass).length > 1 ? [`CreateBidirectionalMillingStrategy(true, ${num(maxPass)}, 0);`] : []
 
 /** Una passada de perfilar: fondària i sobrant al costat (`overMaterial`, Table 36 p53). */
-export interface ContourPass {
+interface ContourPass {
   depth: number
   xy: number
 }
@@ -871,7 +871,7 @@ export function panelXcs(p: Panel, ref: string, m: Machine, rules?: RulePicker):
 }
 
 /** On es fa cada post-procés (per a la ruta). */
-export const STATION: Record<ProcessKind, string> = {
+const STATION: Record<ProcessKind, string> = {
   secondFace: "CNC cara B",
   mitre: "serra (inglets)",
   edge: "cantejadora",
@@ -910,7 +910,7 @@ export function postProcessesOf(p: Panel, ref: string, hasB: boolean, edgeHolesD
   return out
 }
 
-export interface XcsExport {
+interface XcsExport {
   files: { name: string; text: string }[]
   /** Codificació dels .xcs (la de la màquina): `xcsZip` la fa servir. */
   encoding: NonNullable<Machine["xcsEncoding"]>

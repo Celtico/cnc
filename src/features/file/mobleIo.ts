@@ -110,7 +110,7 @@ export async function saveProjectAsFile(project: Project, settings: Settings, in
   return { filename, bytes: blob.size, how }
 }
 
-export type OpenResult = { ok: true; projectId: number; name: string; warnings: string[] } | { ok: false; error: string }
+type OpenResult = { ok: true; projectId: number; name: string; warnings: string[] } | { ok: false; error: string }
 
 /**
  * Torna a crear els models 3D de l'usuari d'un fitxer amb el mateix id (si ja hi són, es fan servir els que hi ha). Torna
@@ -160,22 +160,6 @@ export async function addMissingReferences(missing: readonly RefPreset[], settin
   if (!missing.length) return undefined
   await saveSettings({ ...settings, references: [...missing.map((r) => ({ ...r, id: newId("ref") })), ...settings.references] })
   return `${missing.length === 1 ? "S'ha afegit una referència" : `S'han afegit ${missing.length} referències`} a les preferències: ${missing.map((r) => r.name).join(", ")}.`
-}
-
-/**
- * Obre un `.moble`: sempre crea un moble nou (mai en sobreescriu cap), amb la foto si
- * n'hi ha, i afegeix a les preferències les referències que faltin. El fitxer no porta preferències: el moble s'adapta
- * a les de qui l'obre (forats, ferratges, aspecte dels materials, màquina; en silenci). Només s'avisa dels materials
- * que no hi són (`missingMaterials`).
- */
-export async function openMobleFile(text: string, settings: Settings, saveSettings: (s: Settings) => Promise<void>): Promise<OpenResult> {
-  let raw: unknown
-  try {
-    raw = JSON.parse(text)
-  } catch {
-    return { ok: false, error: "Aquest fitxer no és un moble (no és un JSON vàlid)." }
-  }
-  return openMobleData(raw, settings, saveSettings)
 }
 
 /** `openMobleFile` amb el JSON ja llegit (`openAnyFile`). */

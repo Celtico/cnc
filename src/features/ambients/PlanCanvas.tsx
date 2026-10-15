@@ -18,7 +18,7 @@ const C = {
   gridMajor: "var(--chakra-colors-border-emphasized)",
 }
 
-export interface PlanShow {
+interface PlanShow {
   grid: boolean
   dims: boolean
   labels: boolean

@@ -199,7 +199,7 @@ const isRefKey = (k: string) => k === "material" || k === "material2" || k === "
  * Aplica `fn` a cada nom de material d'una dada (composició, ambient, paràmetres antics): claus `material`,
  * `material2`, `frame`, `…Material` i `scene.floor` / `scene.wall`. Torna el mateix objecte si no canvia res.
  */
-export function mapMaterialRefs<T>(value: T, fn: (name: string) => string): T {
+function mapMaterialRefs<T>(value: T, fn: (name: string) => string): T {
   const walk = (v: unknown, scene: boolean): unknown => {
     if (Array.isArray(v)) {
       let changed = false

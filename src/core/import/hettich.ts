@@ -2,7 +2,7 @@ import { HARDWARE_CATEGORIES, type HardwareCategory } from "../model"
 import { classifyHettich, cleanFolders, FAMILY_DIRS, hettichLabel, tr, type ImportKind } from "./hettichNames"
 import { importFormatOf } from "./formats"
 
-export { classifyHettich, cleanFolders, hettichLabel, hettichSeries, itemSeries, migrateImportedNames, type Classified, type ImportKind } from "./hettichNames"
+export { classifyHettich, cleanFolders,  hettichSeries, itemSeries,   type ImportKind } from "./hettichNames"
 
 /**
  * Descàrregues CAD de Hettich (`hettich.com › Hettich CAD › Descàrregues CAD`): un ZIP per família i format
@@ -118,7 +118,7 @@ export const VIEW_KINDS: readonly HettichFileKind[] = ["front", "side", "top"]
 export const isRefKind = (k: HettichFileKind) => k === "ref" || k === "pdf"
 
 /** Què se'n farà (la nota de cada fila del diàleg d'importar), abans de llegir el STEP. */
-export function importPlan(kind: ImportKind, why?: string): string {
+function importPlan(kind: ImportKind, why?: string): string {
   switch (kind) {
     case "hinge":
       return "Frontissa · cassoleta i forats del STEP"
@@ -227,7 +227,7 @@ export function groupHettich(files: HettichFile[], known?: ReadonlyMap<string, r
 }
 
 /** Com a molt a quants articles s'adjunta un PDF d'una sèrie (`groupHettich`). */
-export const MAX_SERIES_DOCS = 12
+const MAX_SERIES_DOCS = 12
 
 /** Els articles d'una sèrie que nomena un camí (`Planungshilfen_Sensys/…pdf` → els de Sensys). */
 function seriesMatches(path: string, articles: HettichArticle[]): HettichArticle[] {

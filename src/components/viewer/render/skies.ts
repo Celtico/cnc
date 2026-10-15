@@ -15,7 +15,7 @@ export const SKIES: { id: SkyId; label: string; help: string; url?: string }[] =
   { id: "interior", label: "Interior", help: "Interior real (Relax Inn, Poly Haven): reflexos i llum suau per als mobles.", url: "hdr/interior-1k.hdr" },
 ]
 
-export type SkyContext = "moble" | "ambient"
+type SkyContext = "moble" | "ambient"
 const DEFAULT: Record<SkyContext, SkyId> = { moble: "interior", ambient: "clouds" }
 const key = (c: SkyContext) => `mobles:render-sky-${c}`
 const EVENT = "mobles:render-sky-change"

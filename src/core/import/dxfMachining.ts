@@ -19,7 +19,7 @@ import { readDxf, type DxfDrawing, type P2 } from "./dxf"
  * no és d'aquestes formes no es llegeixen: es diu a les notes.
  */
 
-export interface DxfMachining {
+interface DxfMachining {
   ops: GenOp[]
   notes: string[]
 }

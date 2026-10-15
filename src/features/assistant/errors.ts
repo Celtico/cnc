@@ -26,7 +26,7 @@ export const OFFLINE_ERROR: AssistantError = {
 }
 
 /** Les classes d'error del SDK carregat (el codi minificat no conserva els noms de les classes). */
-export interface SdkErrorClasses {
+interface SdkErrorClasses {
   APIUserAbortError: abstract new (...args: never[]) => unknown
   APIConnectionError: abstract new (...args: never[]) => unknown
 }

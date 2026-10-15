@@ -24,7 +24,7 @@ import type { EdgeRef, GenOp, PartKind } from "../model"
  *   es compten a `unknown` i surten a les notes («entra'ls a mà»).
  */
 
-export interface XilogRecord {
+interface XilogRecord {
   /** Nom del registre (`H`, `XBO`, `XG0`…). */
   name: string
   /** Paràmetres `CLAU=valor` (les claus distingeixen majúscules: `X` ≠ `x`). */
@@ -32,7 +32,7 @@ export interface XilogRecord {
   text: string
 }
 
-export interface XilogHole {
+interface XilogHole {
   x: number
   y: number
   /** Fondària (mm, positiva). */
@@ -43,7 +43,7 @@ export interface XilogHole {
   through: boolean
 }
 
-export interface XilogProgram {
+interface XilogProgram {
   /** «Xilog3-9.0» si el fitxer ho diu. */
   version?: string
   header: { dx: number; dy: number; dz: number; bx: number; by: number } | null

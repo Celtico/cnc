@@ -5,7 +5,7 @@ import { ChoiceChips } from "./FormRow"
 import { SearchBar } from "./SearchBar"
 import { SectionLabel } from "./SectionLabel"
 
-export interface MasterItem {
+interface MasterItem {
   id: string
   title: ReactNode
   subtitle?: ReactNode
@@ -14,7 +14,7 @@ export interface MasterItem {
   badge?: ReactNode
   dimmed?: boolean
 }
-export interface MasterGroup {
+interface MasterGroup {
   id: string
   label: string
   hint?: string

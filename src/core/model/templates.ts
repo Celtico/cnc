@@ -198,7 +198,7 @@ export const TV_LIVING_ROOM: Template = {
     },
   }
 
-export function tvModule(): Module {
+function tvModule(): Module {
   const m = defaultModule(newId("m"), "Moble TV", {
     width: 1850,
     height: 480,
@@ -221,7 +221,7 @@ export function tvModule(): Module {
   }
 }
 
-export function radiatorModule(): Module {
+function radiatorModule(): Module {
   const m = defaultModule(newId("m"), "Cobreradiador", {
     width: 790,
     height: 1390,

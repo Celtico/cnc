@@ -9,7 +9,7 @@
 const CACHE = "mobles-thumbs-v1"
 
 /** FNV-1a de 32 bits en hexadecimal: prou per distingir versions d'una mateixa plantilla. */
-export function fingerprint(s: string): string {
+function fingerprint(s: string): string {
   let h = 0x811c9dc5
   for (let i = 0; i < s.length; i++) {
     h ^= s.charCodeAt(i)

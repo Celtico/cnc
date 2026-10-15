@@ -2789,7 +2789,7 @@ class Builder {
  * `x0` a `x1`, i fins a `z` (des del darrere, ja amb el fons nou que s'hi posa davant). Els calaixos d'aquell tram es
  * fan més curts (guia i caixa, o la NL del joc) perquè hi càpiguen.
  */
-export interface RearLimit {
+interface RearLimit {
   x0: number
   x1: number
   z: number
@@ -2897,7 +2897,7 @@ function addHandle(p: Panel, cx: number, cy: number, along: "x" | "y", item: Har
  * mateixa mida al taller (no 253,34 i 253,33, dues peces diferents a la llista) i amb els mateixos mecanitzats. El que
  * sobra (menys de 0,5 mm per calaix) queda al joc de dalt de la pila: no es nota.
  */
-export function snapAutoHeights(heights: number[], sizes: (number | "auto")[]): number[] {
+function snapAutoHeights(heights: number[], sizes: (number | "auto")[]): number[] {
   if (sizes.filter((x) => x === "auto").length < 2) return heights
   return heights.map((h, i) => (sizes[i] === "auto" ? Math.floor(h * 2 + 1e-6) / 2 : h))
 }

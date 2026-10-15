@@ -4,7 +4,7 @@ import { createContext, useContext } from "react"
  * Unitat de les mides a la pantalla (mm o cm). Internament tot és en mm: els camps
  * numèrics converteixen en mostrar i en escriure.
  */
-export type Unit = "mm" | "cm"
+type Unit = "mm" | "cm"
 
 export const UnitContext = createContext<Unit>("mm")
 

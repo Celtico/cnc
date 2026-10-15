@@ -17,7 +17,7 @@ export interface LabelSize {
 /** Avery L7165. */
 export const DEFAULT_LABEL: LabelSize = { w: 99, h: 68 }
 
-export interface LabelOptions {
+interface LabelOptions {
   label?: LabelSize
   /** Separació mínima entre l'etiqueta i qualsevol mecanitzat o cantell laminat. */
   clearance?: number
@@ -26,7 +26,7 @@ export interface LabelOptions {
 }
 
 /** Zones a evitar, en coordenades locals de la peça. */
-export function keepOutRects(p: Panel, clearance: number): Rect2[] {
+function keepOutRects(p: Panel, clearance: number): Rect2[] {
   const out: Rect2[] = []
   for (const h of p.holes) {
     if (h.face === "edge") continue

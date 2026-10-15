@@ -3,7 +3,7 @@ import type { ReactNode } from "react"
 import { LuBookOpen } from "react-icons/lu"
 import { FoldGroup, FoldItem } from "../../components/Fold"
 
-export interface CatalogCategory {
+interface CatalogCategory {
   id: string
   label: string
   count: number

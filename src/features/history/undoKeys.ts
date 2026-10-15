@@ -1,5 +1,5 @@
 /** El mínim del DOM que fa servir `undoKeyAction` (així es prova sense navegador). */
-export interface KeyTarget {
+interface KeyTarget {
   tagName?: string
   inputMode?: string
   isContentEditable?: boolean

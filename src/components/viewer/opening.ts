@@ -9,7 +9,7 @@ import type { Panel, RefObject, Vec3 } from "../../core/model"
  * dels seus forats; la llargada de guia, del lateral de la caixa.
  */
 
-export const MAX_DOOR_ANGLE = (95 * Math.PI) / 180
+const MAX_DOOR_ANGLE = (95 * Math.PI) / 180
 
 export type Motion =
   | { kind: "hinge"; pivot: Vec3; axis: "x" | "y"; sign: 1 | -1; maxAngle: number }
@@ -126,7 +126,7 @@ export function movingGroups(panels: Panel[]): MovingGroup[] {
   return groups
 }
 
-export interface Transform {
+interface Transform {
   /** Rotació (rad) al voltant de l'eix, aplicada respecte al pivot. */
   pivot: Vec3
   rotation: Vec3
@@ -183,7 +183,7 @@ function overlap(a: { min: Vec3; max: Vec3 }, b: { min: Vec3; max: Vec3 }, tol: 
   return true
 }
 
-export interface OpeningCollision {
+interface OpeningCollision {
   groupId: string
   message: string
 }

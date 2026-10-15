@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } fro
 import { commitHistory, initHistory, pushHistory, redoHistory, undoHistory, type History, type HistoryOptions, type SetOptions } from "./history"
 import { undoKeyAction } from "./undoKeys"
 
-export interface UseHistory<T> {
+interface UseHistory<T> {
   /** El valor actual (amb els canvis en viu). */
   value: T
   /** Canvi nou (valor o funció de l'actual); `{ commit: false }` en viu, `{ group }` per ajuntar-ne de seguits. */

@@ -7,7 +7,7 @@
 /** Mapa d'un joc: color (difús/albedo), relleu (normal) o brillantor (rugositat). */
 export type PbrSlot = "color" | "normal" | "rough"
 
-export interface PbrFileClass {
+interface PbrFileClass {
   slot: PbrSlot
   /** Normal en convenció DirectX (`_dx`): cal invertir el verd. `undefined` = el nom no ho diu. */
   directX?: boolean
@@ -80,8 +80,8 @@ export function fileTokens(path: string): string[] {
 }
 
 /** El navegador el pot llegir com a imatge. */
-export const isImageFile = (path: string): boolean => IMAGE_EXT.test(path)
-export const isExrFile = (path: string): boolean => EXR_EXT.test(path)
+const isImageFile = (path: string): boolean => IMAGE_EXT.test(path)
+const isExrFile = (path: string): boolean => EXR_EXT.test(path)
 /** Una imatge o un EXR: el que pot ser un mapa d'un joc. */
 export const isTextureFile = (path: string): boolean => isImageFile(path) || isExrFile(path)
 export const isZipFile = (path: string): boolean => /\.zip$/i.test(path)
@@ -109,11 +109,11 @@ export function classifyTextureFile(path: string): PbrFileClass | null {
   return { ...found }
 }
 
-export interface PbrPlanItem extends PbrFileClass {
+interface PbrPlanItem extends PbrFileClass {
   path: string
 }
 
-export interface PbrPlan {
+interface PbrPlan {
   color?: PbrPlanItem
   normal?: PbrPlanItem
   rough?: PbrPlanItem

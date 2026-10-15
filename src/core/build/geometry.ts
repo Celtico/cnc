@@ -54,7 +54,7 @@ function holeKey(h: Hole): string {
 }
 
 /** Afegeix un forat si no n'hi ha un d'idèntic. */
-export function addHole(p: Panel, h: Hole): boolean {
+function addHole(p: Panel, h: Hole): boolean {
   const key = holeKey(h)
   if (p.holes.some((e) => holeKey(e) === key)) return false
   p.holes.push(h)
@@ -105,7 +105,7 @@ function edgeHoleAt(panel: Panel, w: Vec3, spec: { diameter: number; depth: numb
   return { x: l[0], y: l[1], diameter: spec.diameter, depth: spec.depth, face: "edge", edge, ...(spec.tag ? { tag: spec.tag } : {}) }
 }
 
-export interface DowelSpec {
+interface DowelSpec {
   diameter: number
   faceDepth: number
   edgeDepth: number

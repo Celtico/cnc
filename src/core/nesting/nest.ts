@@ -19,11 +19,11 @@ import type { Panel } from "../model"
  * Y cap amunt, en mm.
  */
 
-export const SheetSchema = z.object({
+const SheetSchema = z.object({
   w: z.number().positive(),
   h: z.number().positive(),
 })
-export type Sheet = z.infer<typeof SheetSchema>
+type Sheet = z.infer<typeof SheetSchema>
 
 export const STANDARD_SHEETS: readonly (Sheet & { label: string })[] = [
   { label: "2800 × 2070", w: 2800, h: 2070 },
@@ -113,7 +113,7 @@ interface OpenBoard {
 const r = (v: number): number => Math.round(v * 100) / 100
 
 /** El tauler apaïsat: el costat llarg (i la veta) en X. */
-export function landscape(sheet: Sheet): Sheet {
+function landscape(sheet: Sheet): Sheet {
   return sheet.h > sheet.w ? { w: sheet.h, h: sheet.w } : sheet
 }
 

@@ -4,7 +4,7 @@ import { FormRow } from "./FormRow"
 import { NumberField, NumRow } from "./NumRow"
 
 /** Els textos d'una regla de quantitat («2 frontisses», «Fins a aquesta alçada de porta», «Més altes»…). */
-export interface CountWords {
+interface CountWords {
   /** Què es compta, en plural: «frontisses», «còpies». */
   unit: string
   /** Ajuda del primer graó: «Fins a aquesta alçada de porta.» */

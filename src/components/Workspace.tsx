@@ -19,7 +19,7 @@ import type { WorkspaceState } from "./useWorkspace"
  * <extra> a dalt de la columna; al mòbil, una tercera pestanya. Es munta el primer cop que s'obre i després es queda
  * muntat (amagat) per no perdre'n l'estat.
  */
-export interface WorkspaceExtra {
+interface WorkspaceExtra {
   label: string
   icon: ReactNode
   content: ReactNode

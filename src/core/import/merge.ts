@@ -1,5 +1,5 @@
 import { deepEqual, IMPORT_BOX_VERSION, isDamagedImport, type HardwareItem, type HardwareTarget } from "../model"
-import { isRefKind, VIEW_KINDS, type HettichArticle, type HettichFile } from "./hettich"
+import { isRefKind, VIEW_KINDS, type HettichArticle } from "./hettich"
 import { importFileKind, makerOf } from "./makers"
 import { holeParams } from "./importItem"
 import { MODEL_3D_KINDS } from "./formats"
@@ -14,7 +14,7 @@ import { MODEL_3D_KINDS } from "./formats"
  */
 
 /** Els items de la biblioteca que són aquest article (també les còpies que n'hagi fet l'usuari). */
-export function importedMatches(library: readonly HardwareItem[], maker: string, article: string): HardwareItem[] {
+function importedMatches(library: readonly HardwareItem[], maker: string, article: string): HardwareItem[] {
   return library.filter((x) => x.imported && x.imported.maker === maker && x.imported.article === article)
 }
 
@@ -23,7 +23,7 @@ function kindsOf(item: HardwareItem): Set<string> {
   return new Set((item.imported?.files ?? []).map((n) => importFileKind(n)))
 }
 
-export interface MergePreview {
+interface MergePreview {
   /** Els items que s'ampliaran. */
   items: HardwareItem[]
   /** Què s'hi afegeix («3D i forats», «vistes 2D», «plànols de muntatge»), buit si res de nou. */
@@ -109,7 +109,7 @@ export function dismissImportUpdate(item: HardwareItem): HardwareItem {
 
 const union = (a: readonly string[], b: readonly string[]) => [...new Set([...a, ...b])]
 
-export interface MergeResult {
+interface MergeResult {
   item: HardwareItem
   /** La proposta nova s'ha desat a part (`imported.update`): l'item és confirmat o se n'han editat els forats. */
   pendingUpdate: boolean
@@ -194,9 +194,6 @@ function mergeProposal(existing: HardwareItem, fresh: HardwareItem, withStep: bo
   }
   return { ...keep({ ...base, update: { targets: structuredClone(newTargets), params: newParams, notes, ...(nw.bbox ? { bbox: nw.bbox } : {}) } }), pendingUpdate: true }
 }
-
-/** Els fitxers d'un article que s'afegeixen a l'item (els noms, com `imported.files`). */
-export const articleFileNames = (files: readonly HettichFile[]) => files.map((f) => f.path.split("/").pop()!.trim())
 
 /** Els importats amb la caixa d'abans (`boxVersion` < `IMPORT_BOX_VERSION`): s'ha de refer del model desat. */
 export const needsBoxRepair = (it: HardwareItem): boolean => !!it.imported && !it.imported.damaged && (it.imported.boxVersion ?? 0) < IMPORT_BOX_VERSION

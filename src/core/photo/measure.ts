@@ -47,7 +47,7 @@ export interface MeasureValue {
   error2?: number
 }
 
-export interface PlaneModelInput {
+interface PlaneModelInput {
   /** 4 punts de la referència a la imatge (qualsevol ordre). */
   points: readonly Pt[]
   /** Mides conegudes de la referència (mm) o null si no se saben. */
@@ -57,9 +57,9 @@ export interface PlaneModelInput {
   aspect?: number | null
 }
 
-export type ScaleMode = "mm" | "relative" | "image"
+type ScaleMode = "mm" | "relative" | "image"
 
-export interface PlaneModel {
+interface PlaneModel {
   /** Homografia pla (amplada = 1, alçada = 1/aspect) → imatge. */
   h: Mat3
   hInv: Mat3
@@ -100,7 +100,7 @@ export function planeModel(input: PlaneModelInput): PlaneModel | null {
 }
 
 /** Punt de la imatge → pla unitari. */
-export function toUnitPlane(m: PlaneModel, p: Pt): Pt {
+function toUnitPlane(m: PlaneModel, p: Pt): Pt {
   const [x, y] = p
   const inv = m.hInv
   const w = inv[6] * x + inv[7] * y + inv[8]
@@ -133,13 +133,13 @@ function relativeOf(m: PlaneModel, meas: Measure): { r: number; r2?: number } | 
 }
 
 /** Marge d'error de les estimacions segons d'on surt l'escala. */
-export const ESTIMATE_ERROR: Record<ScaleMode, number> = { mm: 0.05, relative: 0.05, image: 0.15 }
+const ESTIMATE_ERROR: Record<ScaleMode, number> = { mm: 0.05, relative: 0.05, image: 0.15 }
 
 /**
  * Amplada efectiva de la referència en mm: la mitjana de les cintes (cadascuna dividida
  * per la seva mesura relativa), si n'hi ha; si no, l'amplada coneguda; si no, null.
  */
-export function effectiveWidth(m: PlaneModel, measures: readonly Measure[], refW: number | null): number | null {
+function effectiveWidth(m: PlaneModel, measures: readonly Measure[], refW: number | null): number | null {
   const ratios: number[] = []
   for (const meas of measures) {
     if (!meas.tape || meas.tape <= 0) continue
@@ -197,7 +197,7 @@ export function scaledOrigin(originMm: readonly [number, number, number], scale:
 
 // --- Qualitat del calibratge ----------------------------------------------------------
 
-export interface CalibrationQuality {
+interface CalibrationQuality {
   /** Relació entre les escales dels dos eixos del pla (1 = perfecte). */
   scaleRatio: number
   /** Angle entre els dos eixos del pla (90° = perfecte). */
@@ -242,7 +242,7 @@ export const WIDE_ANGLE_FOCAL_35 = 20
  * Punt de la imatge → punt 3D (coordenades del pla de referència) sobre el pla
  * `axis = value` (0: x, 1: y, 2: z). Null si el raig no l'arriba a tocar per davant.
  */
-export function imageToPointOn(cam: Camera, p: Pt, axis: 0 | 1 | 2, value: number): Vec3 | null {
+function imageToPointOn(cam: Camera, p: Pt, axis: 0 | 1 | 2, value: number): Vec3 | null {
   const { r, t, f, cx, cy } = cam
   const d: Vec3 = [(p[0] - cx) / f, (p[1] - cy) / f, 1]
   const rt = (v: Vec3): Vec3 => [r[0] * v[0] + r[3] * v[1] + r[6] * v[2], r[1] * v[0] + r[4] * v[1] + r[7] * v[2], r[2] * v[0] + r[5] * v[1] + r[8] * v[2]]

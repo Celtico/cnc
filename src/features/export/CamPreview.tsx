@@ -6,7 +6,7 @@ import { approachSegment, type CamOp, type Pt } from "../../core/export/xcsPrevi
 import type { Machine } from "../../core/model"
 import { camSheetView, colorFor, fmtMm, opLabel, svgPath, token } from "./camDrawing"
 
-export interface CamSheet {
+interface CamSheet {
   file: string
   text: string
 }

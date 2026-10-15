@@ -145,7 +145,7 @@ export interface HardwareAsset {
 }
 
 /** Fila única de preferències (id = "user"). El contingut es valida amb zod en llegir-lo. */
-export interface SettingsRow {
+interface SettingsRow {
   id: string
   data: unknown
   updatedAt: number

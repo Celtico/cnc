@@ -6,7 +6,7 @@ import { applyRefCuts } from "./refCuts"
 
 type Box = { min: Vec3; max: Vec3 }
 
-export interface ColumnWallProblem {
+interface ColumnWallProblem {
   refId: string
   panel: Panel
   message: string

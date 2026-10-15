@@ -17,15 +17,15 @@ export const MOBLE_FORMAT = "mobles-cnc"
 export const MOBLE_VERSION = 3
 export const MOBLE_BASE_VERSION = 1
 /** v2: porta ferratges importats (i cap col·locat a mà). */
-export const MOBLE_IMPORTED_VERSION = 2
+const MOBLE_IMPORTED_VERSION = 2
 /**
  * **v3** = porta ferratges col·locats a mà (`Composition.hardwarePlacements`, generador de mecanitzats): una app d'abans
  * els trauria en silenci (el moble sortiria sense les ranures i forats del ferratge); amb la v3, el rebutja.
  */
-export const MOBLE_PLACEMENTS_VERSION = 3
+const MOBLE_PLACEMENTS_VERSION = 3
 
 /** La versió amb què es desa una composició: la més baixa que la llegeix sencera. */
-export function mobleVersionFor(composition: unknown): 1 | 2 | 3 {
+function mobleVersionFor(composition: unknown): 1 | 2 | 3 {
   if (usesHardwarePlacements(composition)) return MOBLE_PLACEMENTS_VERSION
   return usesImportedHardware(composition) ? MOBLE_IMPORTED_VERSION : MOBLE_BASE_VERSION
 }
@@ -108,7 +108,7 @@ export const MobleFileSchema = z.object({
 })
 export type MobleFile = z.infer<typeof MobleFileSchema>
 
-export interface MobleInput {
+interface MobleInput {
   name: string
   composition: Composition
   nesting?: NestOptions
@@ -178,7 +178,7 @@ export function mobleFileName(name: string): string {
   return `${safe || "moble"}.moble`
 }
 
-export type MobleParse =
+type MobleParse =
   | { ok: true; file: MobleFile; warnings: string[] }
   | { ok: false; error: string }
 

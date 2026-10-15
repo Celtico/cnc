@@ -13,7 +13,7 @@ export type Tool = "select" | "wall" | "room" | "window" | "door" | "calibrate"
 /** Un element, una paret, un grup o, amb Maj + clic, diversos elements (`multi`). */
 export type Selection = { kind: "item" | "wall" | "group"; id: string } | { kind: "multi"; ids: string[] } | null
 
-export const GRID = 10
+const GRID = 10
 
 export const snapGrid = (v: number, g = GRID) => Math.round(v / g) * g
 
@@ -44,7 +44,7 @@ export function ambientBox(a: Ambient, geos: Map<string, ItemGeometry | null>): 
  * Marges del plànol que tapen els controls (px): a l'esquerra la columna d'eines, a dalt les pestanyes Plànol · 3D i
  * les opcions de vista, a baix el zoom i l'escala. «Encabir» deixa l'habitació al lloc que queda lliure.
  */
-export const PLAN_INSETS = { top: 64, right: 24, bottom: 56, left: 84 }
+const PLAN_INSETS = { top: 64, right: 24, bottom: 56, left: 84 }
 
 /** Vista que encabeix la caixa (o un pis de 8 × 6 m si no hi ha res) en un requadre de W × H px, sense els marges `insets`. */
 export function fitView(box: { x0: number; y0: number; x1: number; y1: number } | null, W: number, H: number, insets = PLAN_INSETS): View {

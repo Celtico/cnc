@@ -38,7 +38,7 @@ export type Rnd = () => number
 export const pick = <T>(r: Rnd, xs: readonly T[]): T => xs[Math.floor(r() * xs.length)]!
 export const int = (r: Rnd, lo: number, hi: number): number => lo + Math.floor(r() * (hi - lo + 1))
 /** Múltiple de `step` entre lo i hi. */
-export const step = (r: Rnd, lo: number, hi: number, s: number): number => lo + s * int(r, 0, Math.floor((hi - lo) / s))
+const step = (r: Rnd, lo: number, hi: number, s: number): number => lo + s * int(r, 0, Math.floor((hi - lo) / s))
 
 export const MATERIALS = ["Melamina blanca", "Melamina 19", "Roure massís / xapat", "Noguera xapada", "MDF lacat", "DM (fons)", "DM 10", "Contraxapat 4mm"] as const
 
@@ -91,7 +91,7 @@ function randomZone(r: Rnd, id: string, depth: number): Zone {
 }
 
 /** Un mòdul aleatori (mides i opcions raonables: el que es pot fer des de la UI). */
-export function randomModule(r: Rnd, id: string): Module {
+function randomModule(r: Rnd, id: string): Module {
   const thickness = pick(r, [16, 19, 19, 19, 30])
   const material = pick(r, MATERIALS.slice(0, 5))
   const base: Base = pick(r, [{ kind: "none" }, { kind: "plinth", height: 80, setback: 30 }, { kind: "legs", height: 100 }, { kind: "open" }, { kind: "wall", height: 1450 }] as Base[])
@@ -144,7 +144,7 @@ export function randomComposition(seed: number): Composition {
  * Ids estables: mòduls `M1…`, compartiments `M1/0`, `M1/0.1`… (per posició a l'arbre), objectes `R1…`, peces `P1…`,
  * models `G1…`, peces corregudes `U1…` i forats del taulell `C1…`, amb totes les referències entre ells.
  */
-export function stableIds(comp: Composition): Composition {
+function stableIds(comp: Composition): Composition {
   const mods = new Map(comp.modules.map((m, i) => [m.id, `M${i + 1}`]))
   const refs = new Map(comp.references.map((x, i) => [x.id, `R${i + 1}`]))
   const parts = new Map((comp.parts ?? []).map((x, i) => [x.id, `P${i + 1}`]))
@@ -175,7 +175,7 @@ export function stableIds(comp: Composition): Composition {
   }
 }
 
-export interface CorpusItem {
+interface CorpusItem {
   id: string
   make: () => Composition
 }
@@ -186,7 +186,7 @@ export interface CorpusItem {
  * 600 × 500 × 450 amb dos de push-open i darrere metàl·lic (barra de sincronització). Fix al corpus: cap plantilla fa
  * servir jocs.
  */
-export function kitDrawerComposition(): Composition {
+function kitDrawerComposition(): Composition {
   const ht11 = DEFAULT_HARDWARE_KITS.find((k) => k.id === "kit-dtc-ht11")!
   const a = defaultModule("kit-a", "Calaixos DTC", { width: 732, height: 720, depth: 500, thickness: 16 })
   const b = defaultModule("kit-b", "Calaixos push", { width: 600, height: 500, depth: 450, thickness: 16 })
@@ -206,7 +206,7 @@ export function kitDrawerComposition(): Composition {
  * la primera, la segona i la tercera divisió (tots 1 mm menys, centrats), prestatges fixos i regulables, una porta
  * i calaixos; i un d'encastat amb les portes de tota la zona i 2 mm. Fix al corpus: cap plantilla porta el camp.
  */
-export function innerClearanceComposition(): Composition {
+function innerClearanceComposition(): Composition {
   const a = defaultModule("in-a", "Dues columnes", { width: 900, height: 1800, depth: 560, innerClearance: 1 })
   const b = defaultModule("in-b", "Encastat", { width: 800, height: 1200, depth: 500, innerClearance: 2 })
   const two = (id: string, dir: "v" | "h", x: Zone, y: Zone): Zone => ({ id, split: { dir, sizes: ["auto", "auto"], children: [x, y] } })

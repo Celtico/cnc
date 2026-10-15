@@ -4,7 +4,7 @@
  * Si el fitxer no és JPEG o no porta EXIF, retorna un objecte buit.
  */
 
-export interface ExifInfo {
+interface ExifInfo {
   /** Focal real de l'objectiu en mm (tag 0x920A). */
   focalMm?: number
   /** Focal equivalent a 35 mm (tag 0xA405). */

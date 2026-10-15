@@ -8,7 +8,7 @@ import { addMissingReferences, createProjectFromMoble, projectToMoble, restoreUs
 /** Clau de la configuració del Render d'un ambient (la mateixa que `AmbientEditor`, `saveKey`). */
 const renderKey = (ambientId: number) => `ambient:${ambientId}`
 
-export interface AmbientToFile {
+interface AmbientToFile {
   file: AmbientFile
   /** Avisos per al diàleg: elements que no van al fitxer (moble esborrat o il·legible). */
   notes: string[]
@@ -66,7 +66,7 @@ export async function saveAmbientAsFile(ambientId: number, settings: Settings, i
   return { filename, bytes: blob.size, how }
 }
 
-export type OpenAmbientResult = { ok: true; ambientId: number; name: string; warnings: string[] } | { ok: false; error: string }
+type OpenAmbientResult = { ok: true; ambientId: number; name: string; warnings: string[] } | { ok: false; error: string }
 
 /**
  * Obre un `.ambient` (ja llegit): **sempre** crea un ambient nou i còpies noves dels seus mobles i objectes (ids nous,

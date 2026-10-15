@@ -10,7 +10,7 @@ import { surfaceMaterial } from "./surfaceMaterial"
 import { releaseModelGpu } from "./models3d"
 import { disposeTree, photoTexturesPending, tileClone } from "./textures"
 
-export { disposeTree }
+
 
 /**
  * Miniatures 3D de les targetes (Mobles i Objectes) sense cap visor obert: un sol renderitzador fora de
@@ -20,7 +20,7 @@ export { disposeTree }
 /** 2:1, com les targetes (a l'ordinador, una mica més amples; al mòbil, una mica menys: es retalla poc). */
 const W = 480
 const H = 240
-export { THUMB_VERSION } from "./thumbVersion"
+
 
 let renderer: WebGLRenderer | null = null
 let env: Texture | null = null

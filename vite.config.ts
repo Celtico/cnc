@@ -23,9 +23,6 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(version),
     __APP_COMMIT__: JSON.stringify(commit),
   },
-  // OpenCascade només es carrega en importar un ferratge (worker). Sense això, `pnpm dev` el descobria en aquell moment,
-  // l'optimitzava i recarregava la pàgina a mitja importació.
-  optimizeDeps: { include: ["occt-import-js"] },
   plugins: [
     react(),
     VitePWA({
@@ -64,10 +61,8 @@ export default defineConfig({
         globIgnores: ["splash/**", "assets/draco_*", "assets/basis_*"],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         // Textures de foto (~14 MB) i pesos d'OIDN: no es precachegen; es desen el primer cop que es fan servir.
-        // OpenCascade (`occt-import-js`, WASM de ~7,6 MB, només per importar ferratges): tampoc (`globPatterns` no hi
-        // porta `.wasm`); es desa en fer-lo servir.
         runtimeCaching: [
-          // OpenCascade a part de Draco i Basis (`src/pwaWasmCache.ts`).
+          // WASM de Draco i Basis (`src/pwaWasmCache.ts`).
           ...WASM_RUNTIME_CACHING,
           {
             urlPattern: ({ url }) => url.pathname.startsWith("/textures/"),

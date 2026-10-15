@@ -15,7 +15,7 @@ export const ACCENTS = [
   { id: "purple", label: "Lila", swatch: "#9333ea" },
   { id: "gray", label: "Gris", swatch: "#52525b" },
 ] as const
-export type AccentId = (typeof ACCENTS)[number]["id"]
+type AccentId = (typeof ACCENTS)[number]["id"]
 
 const KEY = "mobles:accent"
 const SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950]
@@ -31,7 +31,7 @@ function read(): AccentId {
 }
 
 /** Aplica el color a l'arrel del document. "wood" treu la substitució. */
-export function applyAccent(id: AccentId): void {
+function applyAccent(id: AccentId): void {
   const root = document.documentElement.style
   for (const s of SHADES) {
     if (id === "wood") root.removeProperty(`--chakra-colors-wood-${s}`)

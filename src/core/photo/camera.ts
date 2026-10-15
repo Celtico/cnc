@@ -100,7 +100,7 @@ export function toCamera(cam: Camera, p: Vec3): Vec3 {
 }
 
 /** Coordenades de càmera → píxel. Null si el punt és darrere la càmera. */
-export function projectCamera(cam: Camera, c: Vec3): Pt | null {
+function projectCamera(cam: Camera, c: Vec3): Pt | null {
   if (c[2] <= 1e-9) return null
   return [cam.cx + (cam.f * c[0]) / c[2], cam.cy + (cam.f * c[1]) / c[2]]
 }

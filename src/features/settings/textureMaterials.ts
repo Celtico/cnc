@@ -17,7 +17,7 @@ export function textureSetName(key: string, info: PolyHavenInfo | null | undefin
   return k ? polyHavenTitle(k.replace(/ /g, "_")) : fallback
 }
 
-export interface TextureMaterialsResult {
+interface TextureMaterialsResult {
   added: MaterialPref[]
   /** Jocs sense foto de color (no se'n pot fer cap material). */
   skipped: string[]
@@ -46,9 +46,9 @@ export async function materialsFromTextures(textures: Map<string, Blob>, opts: {
 }
 
 /** Mida real d'una repetició si no se'n sap res (la de «Joc PBR» de sempre). */
-export const DEFAULT_SET_TILE_MM = 800
+const DEFAULT_SET_TILE_MM = 800
 
-export interface PickedTextureSet {
+interface PickedTextureSet {
   set: LoadedTextureSet
   /** Nom per al material: el de Poly Haven (API o l'id), si no el dels fitxers. */
   name: string

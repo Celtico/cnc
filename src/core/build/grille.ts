@@ -7,7 +7,7 @@ import { cutoutArea, type Cutout, type GrillePattern } from "../model"
  *
  * `exclude`: rectangles (locals) on no s'hi fa cap tall (p. ex. la trapa i el seu marge).
  */
-export interface GrilleResult {
+interface GrilleResult {
   cutouts: Cutout[]
   /** Àrea oberta / àrea de la peça, 0..1. */
   openRatio: number

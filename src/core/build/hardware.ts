@@ -28,7 +28,7 @@ import { r } from "./geometry"
 export class HardwareError extends Error {}
 
 /** Mecanitzat avaluat (números en mm). */
-export type ResolvedOp =
+type ResolvedOp =
   | { kind: "drill"; face: "A" | "B"; u: number; v: number; d: number; depth: number; tag?: string }
   | { kind: "edgeDrill"; along: number; d: number; depth: number; tag?: string }
   | { kind: "through"; u: number; v: number; d: number; tag?: string }
@@ -61,7 +61,7 @@ export function resolveOps(item: HardwareItem, key: string, extra: Record<string
 }
 
 /** Diàmetre, fondària i tag del primer forat d'una peça del ferratge (per als forats que el constructor col·loca al moble). */
-export function drillSpec(item: HardwareItem, key: string, extra: Record<string, number> = {}): { diameter: number; depth: number; tag?: string } {
+function drillSpec(item: HardwareItem, key: string, extra: Record<string, number> = {}): { diameter: number; depth: number; tag?: string } {
   const op = resolveOps(item, key, extra)[0]
   if (!op || op.kind === "through") throw new HardwareError(`«${item.name}»: «${key}» no és un forat cec`)
   return { diameter: op.d, depth: op.depth, ...(op.tag ? { tag: op.tag } : {}) }
@@ -72,7 +72,7 @@ export function drillSpec(item: HardwareItem, key: string, extra: Record<string,
  * (x per defecte; «y» gira un quart), `mirrorX`/`mirrorY` = la mida de la peça per mesurar des de l'altre cantell
  * (frontissa a la dreta, abatible que obre amunt), `round` = arrodonir a la centèsima (com `r`).
  */
-export interface HardwareFrame {
+interface HardwareFrame {
   at: { x: number; y: number }
   axis?: "x" | "y"
   mirrorX?: number

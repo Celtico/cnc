@@ -116,7 +116,7 @@ export const child = (n: XmlNode | undefined, name: string): XmlNode | undefined
 export const childrenOf = (n: XmlNode | undefined, name: string): XmlNode[] => (n ? n.children.filter((c) => c.name === name) : [])
 
 /** Seguint un camí de noms de fills: `path(tool, "ToolBody", "ToolDimension", "Diameter")`. */
-export function path(n: XmlNode | undefined, ...names: string[]): XmlNode | undefined {
+function path(n: XmlNode | undefined, ...names: string[]): XmlNode | undefined {
   let cur = n
   for (const name of names) cur = child(cur, name)
   return cur

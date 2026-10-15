@@ -235,7 +235,7 @@ export function movePartToGroup(comp: Composition, id: string, group: string): C
  * Caixa d'un grup: les seves peces lliures i els seus models 3D (el mateix nom de grup; per decisió de l'usuari,
  * 2026-10-14), en coordenades de la composició. Sense res, `null`.
  */
-export function groupBox(comp: Composition, group: string): { min: [number, number, number]; max: [number, number, number] } | null {
+function groupBox(comp: Composition, group: string): { min: [number, number, number]; max: [number, number, number] } | null {
   return multiBox(comp, groupItems(comp, group))
 }
 

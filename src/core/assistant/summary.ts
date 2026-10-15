@@ -24,7 +24,7 @@ import {
  * referir-se a les coses (ids), en mm, sense les dades que no fan falta (ferratges sencers, forats). Pur.
  */
 
-export interface ZoneSummary {
+interface ZoneSummary {
   id: string
   /** Llum (mm) del compartiment tal com es construeix: amplada × alçada. */
   w?: number
@@ -158,7 +158,7 @@ export function allWarnings(comp: Composition, build: CompositionBuild, settings
 export const warningKey = (w: CompositionWarning) => `${w.moduleId ?? ""}|${w.zoneId ?? ""}|${w.code}|${w.message}`
 
 /** Avisos de fusteria (els del build i els de materials, `materialIssues`), amb el nom del mòdul. */
-export function summarizeWarnings(comp: Composition, build: CompositionBuild, settings: Pick<Settings, "materials">): WarningSummary[] {
+function summarizeWarnings(comp: Composition, build: CompositionBuild, settings: Pick<Settings, "materials">): WarningSummary[] {
   return allWarnings(comp, build, settings).map((w) => ({
     ...(w.moduleId ? { module: comp.modules.find((m) => m.id === w.moduleId)?.name ?? w.moduleId } : {}),
     ...(w.zoneId ? { zone: w.zoneId } : {}),

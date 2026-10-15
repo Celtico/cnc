@@ -9,7 +9,7 @@ export const SMALL_GLB_BYTES = 5 * 1024 * 1024
 /** Les malles opaques sempre poden fer servir, com a mínim, aquesta part del pressupost. */
 const MIN_OPAQUE_SHARE = 0.25
 
-export interface TrianglePlan {
+interface TrianglePlan {
   /** Part dels triangles opacs que es queda (1 = no es toca; es delmen). */
   opaqueRatio: number
   /** Part dels grups (fulles) de les malles amb alfa que es queda (1 = totes; no es delmen, se'n treuen). */

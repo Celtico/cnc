@@ -26,7 +26,7 @@ const sizeOrAuto = z.union([mm.positive(), z.literal("auto")])
  * abans de la v19 hi porten els números d'abans: es converteixen en llegir-los (`migrateModuleHardware`), amb els mateixos
  * números (res no canvia de lloc).
  */
-export const ModuleHardwareSchema = z.preprocess(migrateModuleHardware, ModuleHardwareKitSchema)
+const ModuleHardwareSchema = z.preprocess(migrateModuleHardware, ModuleHardwareKitSchema)
 
 // --- Carcassa ----------------------------------------------------------------------
 
@@ -328,7 +328,7 @@ export function refOnPanel(r: RefObject, panel: CableHole["panel"], at: { x: num
 }
 
 /** Mecanitzats extra de la carcassa que no depenen de cap zona. */
-export const CarcassExtrasSchema = z.object({
+const CarcassExtrasSchema = z.object({
   /** Passacables (forats passants) a les peces de la carcassa. */
   cableHoles: z.array(CableHoleSchema),
 })
@@ -490,7 +490,7 @@ export const WorktopCutoutSchema = z.object({
   /** Distància del cantell de davant del taulell al forat; buit = centrat en fondària. */
   front: mm.min(0).optional(),
 })
-export type WorktopCutout = z.infer<typeof WorktopCutoutSchema>
+type WorktopCutout = z.infer<typeof WorktopCutoutSchema>
 
 /**
  * Peces corregudes que van d'un mòdul a un altre (de la fila): el taulell de sobre dels
@@ -668,7 +668,7 @@ export const isTurned = (m: Module): boolean => !!m.turned && m.carcass.base.kin
 export const mountOf = (m: Module): ModuleMount => (m.carcass.base.kind === "wall" ? "hung" : m.wallGap !== undefined ? "floor" : "wall")
 
 /** Fila d'un mòdul: a terra (baixos) o penjat a la paret (alts). */
-export type ModuleRow = "floor" | "wall"
+type ModuleRow = "floor" | "wall"
 export const rowOf = (m: Module): ModuleRow => (m.carcass.base.kind === "wall" ? "wall" : "floor")
 
 /**
@@ -1032,7 +1032,7 @@ export function coveringZone(root: Zone, id: string): Zone | undefined {
 }
 
 /** El mòdul té algun front que es construeix (porta, calaixos, abatible, reixeta o front fix; els tapats no compten). */
-export function hasBuiltFronts(root: Zone): boolean {
+function hasBuiltFronts(root: Zone): boolean {
   let hit = false
   walkBuiltZones(root, (z, { covered }) => {
     if (z.front && !covered) hit = true

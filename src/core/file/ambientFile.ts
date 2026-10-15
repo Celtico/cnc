@@ -15,11 +15,11 @@ export const AMBIENT_FORMAT = "mobles-cnc-ambient"
 export const AMBIENT_VERSION = 1
 
 /** Un moble o objecte de l'ambient: `key` = el `projectId` dels elements dins del fitxer. */
-export const FileFurnitureSchema = z.object({
+const FileFurnitureSchema = z.object({
   key: z.number().int(),
   moble: MobleFileSchema,
 })
-export type FileFurniture = z.infer<typeof FileFurnitureSchema>
+type FileFurniture = z.infer<typeof FileFurnitureSchema>
 
 export const AmbientFileSchema = z.object({
   format: z.literal(AMBIENT_FORMAT),
@@ -34,7 +34,7 @@ export const AmbientFileSchema = z.object({
 })
 export type AmbientFile = z.infer<typeof AmbientFileSchema>
 
-export interface AmbientInput {
+interface AmbientInput {
   name: string
   ambient: Ambient
   /** El `.moble` de cada moble enllaçat, pel seu `projectId` local (`projectToMoble`). Els que no hi són es treuen. */
@@ -43,7 +43,7 @@ export interface AmbientInput {
   exportedAt?: string
 }
 
-export interface AmbientBuild {
+interface AmbientBuild {
   file: AmbientFile
   /** Elements de l'ambient que no van al fitxer (el seu moble no és a `furniture`: esborrat o il·legible). */
   dropped: number
@@ -92,7 +92,7 @@ export function ambientFileName(name: string): string {
   return `${safe || "ambient"}.moble`
 }
 
-export type AmbientParse = { ok: true; file: AmbientFile; warnings: string[] } | { ok: false; error: string }
+type AmbientParse = { ok: true; file: AmbientFile; warnings: string[] } | { ok: false; error: string }
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v)

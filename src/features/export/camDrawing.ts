@@ -3,10 +3,10 @@ import type { Machine } from "../../core/model"
 
 /** Colors per eina (tokens de Chakra: s'adapten al mode fosc). El groc és per a les peces petites. */
 const PALETTE = ["blue", "orange", "green", "purple", "pink", "teal", "red", "cyan"]
-export const toolColor = (i: number) => `var(--chakra-colors-${PALETTE[i % PALETTE.length]}-solid)`
+const toolColor = (i: number) => `var(--chakra-colors-${PALETTE[i % PALETTE.length]}-solid)`
 export const token = (name: string) => `var(--chakra-colors-${name.replace(/\./g, "-")})`
 
-export interface CamSheetView {
+interface CamSheetView {
   preview: XcsPreview
   tools: (CamToolInfo & { color: string })[]
   colorOf: Map<string, string>

@@ -130,7 +130,7 @@ const extrusion = (e: RawEntity): [number, number, number] => [num(e, 210, 0), n
 export const DXF_LIMITS = { entities: 200_000, points: 2_000_000, insertCopies: 10_000 } as const
 
 /** Error del lector per un fitxer massa gran o absurd (en català). */
-export class DxfLimitError extends Error {}
+class DxfLimitError extends Error {}
 
 /** Angle en graus a [0, 360); `null` si no és un número. */
 const deg360 = (a: number): number | null => (Number.isFinite(a) ? ((a % 360) + 360) % 360 : null)

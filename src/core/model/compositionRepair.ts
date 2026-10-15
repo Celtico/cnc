@@ -10,7 +10,7 @@ import { repairValue, type RepairIssue } from "./repair"
  * desava a sobre de les dades de debò.
  */
 
-export interface CompositionRepair {
+interface CompositionRepair {
   /** Composició vàlida, o `null` si no s'ha pogut reparar (no és un objecte o encara falla). */
   composition: Composition | null
   /** Què s'ha tret o restaurat (en català, per a un avís). Buit si ja era vàlida. */

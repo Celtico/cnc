@@ -163,7 +163,7 @@ export function buildBvh(pos: Float32Array): Bvh {
   return { f32: f32.subarray(0, nodes * NODE_WORDS), u32: u32.subarray(0, nodes * NODE_WORDS), count: nodes, order }
 }
 
-export interface BvhHit {
+interface BvhHit {
   t: number
   tri: number
   u: number

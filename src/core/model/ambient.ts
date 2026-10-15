@@ -65,7 +65,7 @@ export const WallSchema = z.object({
 export type Wall = z.infer<typeof WallSchema>
 
 export const BlockShapeSchema = z.enum(["box", "sofa", "bed", "table"])
-export type BlockShape = z.infer<typeof BlockShapeSchema>
+type BlockShape = z.infer<typeof BlockShapeSchema>
 
 const Placement = {
   x: mm,
@@ -98,7 +98,7 @@ export const AmbientItemSchema = z.discriminatedUnion("kind", [
 export type AmbientItem = z.infer<typeof AmbientItemSchema>
 export type BlockItem = Extract<AmbientItem, { kind: "block" }>
 
-export const PlanImageSchema = z.object({
+const PlanImageSchema = z.object({
   src: z.string().startsWith("data:image/"),
   /** Píxels de la imatge (per escalar-la). */
   pxW: z.number().positive(),
@@ -199,7 +199,7 @@ function parseAmbientData(raw: unknown): Ambient {
 
 // --- Blocs --------------------------------------------------------------------------------
 
-export interface BlockPreset {
+interface BlockPreset {
   id: string
   name: string
   shape: BlockShape
@@ -368,7 +368,7 @@ export const OBJECT_TEMPLATES: Template[] = [
 export const rad = (deg: number) => (deg * Math.PI) / 180
 
 /** Quatre cantonades (plànol) d'un element de petjada w × d centrat a (x, y) i girat `rot`. */
-export function footprintCorners(x: number, y: number, w: number, d: number, rot: number): PlanPt[] {
+function footprintCorners(x: number, y: number, w: number, d: number, rot: number): PlanPt[] {
   const c = Math.cos(rad(rot)), s = Math.sin(rad(rot))
   return (
     [
@@ -884,7 +884,7 @@ export function ambientSummary(a: Ambient, kindOf: (it: AmbientItem) => AmbientI
 }
 
 /** Caixa d'un element al plànol (x0, y0, x1, y1), la de la seva petjada girada. */
-export type ItemBoxOf = (it: AmbientItem) => { x0: number; y0: number; x1: number; y1: number } | null
+type ItemBoxOf = (it: AmbientItem) => { x0: number; y0: number; x1: number; y1: number } | null
 
 /**
  * Alinear els elements triats (selecció múltiple dels Ambients, com a l'editor; per decisió de l'usuari, 2026-10-14) al

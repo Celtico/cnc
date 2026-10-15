@@ -89,7 +89,7 @@ export function templateWalls(t: AmbientTemplate): Wall[] {
 }
 
 /** Gruix de les parets de les plantilles: les cares de dins són a 50 mm de l'eix. */
-export const TEMPLATE_WALL = 100
+const TEMPLATE_WALL = 100
 
 export function resolveTemplateRef(ref: string): Template | undefined {
   const [kind, a, ...rest] = ref.split(":")
@@ -105,7 +105,7 @@ export function resolveTemplateRef(ref: string): Template | undefined {
 }
 
 /** Centre i gir d'un element (de petjada w × d) a l'habitació (eixos de les parets a 0 i a w/d). */
-export function placeTemplateItem(t: Pick<AmbientTemplate, "w" | "d">, it: AmbientTemplateItem, size: { w: number; d: number }): { x: number; y: number; rot: number } {
+function placeTemplateItem(t: Pick<AmbientTemplate, "w" | "d">, it: AmbientTemplateItem, size: { w: number; d: number }): { x: number; y: number; rot: number } {
   const face = TEMPLATE_WALL / 2
   const g = it.gap ?? 0
   const half = size.d / 2

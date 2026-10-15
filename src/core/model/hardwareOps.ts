@@ -54,14 +54,6 @@ export function planeAxes(n: WorldAxis): [WorldAxis, WorldAxis] {
 export const AXIS_ENDS: Record<WorldAxis, [string, string]> = { x: ["esquerra", "dreta"], y: ["baix", "dalt"], z: ["darrere", "davant"] }
 export const AXIS_NAME: Record<WorldAxis, string> = { x: "De costat", y: "Alçada", z: "Fondària" }
 
-/** Els eixos P i Q d'un grup de peces (la peça lliure no en té de fixos: «Eix 1» i «Eix 2»). */
-export function partAxes(kind: PartKind): { p: WorldAxis; q: WorldAxis } | null {
-  const n = partKindOf(kind).normal
-  if (!n) return null
-  const [p, q] = planeAxes(n)
-  return { p, q }
-}
-
 /** On es mesura una coordenada: des del punt de referència del ferratge, des d'un cantell (mínim o màxim) o del mig. */
 export const PosSchema = z.object({ from: z.enum(["ref", "min", "max", "center"]), at: mm })
 export type Pos = z.infer<typeof PosSchema>
@@ -69,14 +61,6 @@ export type Pos = z.infer<typeof PosSchema>
 /** Cantell d'un forat de cantell: el mínim o el màxim de l'eix P o Q. */
 export const EdgeRefSchema = z.enum(["pmin", "pmax", "qmin", "qmax"])
 export type EdgeRef = z.infer<typeof EdgeRefSchema>
-
-export const GEN_OP_KINDS = [
-  { id: "drill", label: "Forat" },
-  { id: "groove", label: "Ranura" },
-  { id: "pocket", label: "Caixera" },
-  { id: "contour", label: "Contorn" },
-] as const
-export type GenOpKind = (typeof GEN_OP_KINDS)[number]["id"]
 
 /**
  * Una operació del generador. Posició (`p`, `q`) = el **centre**: del forat, de la ranura (al llarg i a través; una ranura
@@ -132,7 +116,7 @@ export function machiningParts(ops: readonly GenOp[]): PartKind[] {
 }
 
 /** Eina (els camps de `MachineTool` que calen aquí: el core/model no depèn de les màquines). */
-export interface GenTool {
+interface GenTool {
   code: string
   kind: string
   diameter: number
@@ -169,24 +153,8 @@ function dedupe(pts: readonly (readonly [number, number])[]): [number, number][]
   return out
 }
 
-/** Descripció curta d'una operació: «Ranura 8 × 10, de cantell a cantell, cara A». */
-export function genOpText(op: GenOp): string {
-  const face = op.face === "edge" ? "al cantell" : `cara ${op.face}`
-  const depth = op.through ? "passant" : `× ${n(op.depth)}`
-  switch (op.kind) {
-    case "drill":
-      return `Forat Ø${n(op.d ?? 0)} ${depth}, ${face}`
-    case "groove":
-      return `Ranura ${n(op.w ?? 0)} ${depth}, ${op.full ? "de cantell a cantell" : `de ${n(op.len ?? 0)}`}, ${face}`
-    case "pocket":
-      return `Caixera ${n(op.w ?? 0)} × ${n(op.h ?? 0)} ${depth}, ${face}`
-    case "contour":
-      return `Contorn de ${op.points?.length ?? 0} punts ${op.through ? "passant" : `× ${n(op.depth)}`}, ${face}`
-  }
-}
-
 /** Un problema d'una operació (per a l'editor i per al moble: amb algun, el ferratge no fa cap forat). */
-export interface GenOpProblem {
+interface GenOpProblem {
   op: string
   message: string
 }
@@ -297,9 +265,6 @@ export function migratePlacePos(raw: unknown): unknown {
   return raw
 }
 
-/** Variables de les fórmules d'una posició (`PlacePos.expr`). */
-export const PLACE_VARS = ["L", "A", "G", "M"] as const
-
 /**
  * Com es reparteixen les còpies d'un ferratge repetit al llarg de l'eix:
  * - `step` (el d'abans): la primera al punt i les altres cada `spacing` mm;
@@ -307,8 +272,7 @@ export const PLACE_VARS = ["L", "A", "G", "M"] as const
  * - `span`: repartides entre els marges (la primera i l'última als marges, iguals entre elles);
  * - `pitch`: cada `spacing` mm entre els marges, tantes com hi caben, centrades.
  */
-export const REPEAT_LAYOUTS = ["step", "centred", "span", "pitch"] as const
-export type RepeatLayout = (typeof REPEAT_LAYOUTS)[number]
+const REPEAT_LAYOUTS = ["step", "centred", "span", "pitch"] as const
 
 /**
  * Repetició d'un ferratge col·locat: `count` còpies (o les que diu la regla `rule` segons la mida de la peça al llarg
@@ -323,7 +287,7 @@ export const RepeatSchema = z.object({
   rule: StepRuleSchema.optional(),
   margins: z.tuple([mm.min(0), mm.min(0)]).optional(),
 })
-export type Repeat = z.infer<typeof RepeatSchema>
+type Repeat = z.infer<typeof RepeatSchema>
 
 /** Quantes còpies fa una repetició amb la peça de mida `len` al llarg de l'eix (1–100). */
 export function repeatCount(rep: Repeat | undefined, len: number): number {
@@ -361,12 +325,3 @@ export const PlacementTargetSchema = z.object({
   freePart: z.string().optional(),
 })
 export type PlacementTarget = z.infer<typeof PlacementTargetSchema>
-
-/** Etiqueta del cantell d'un forat de cantell, segons els eixos del grup («cantell de davant»). */
-export function edgeLabel(kind: PartKind, e: EdgeRef): string {
-  const ax = partAxes(kind)
-  if (!ax) return { pmin: "Cantell 1r eix, inici", pmax: "Cantell 1r eix, final", qmin: "Cantell 2n eix, inici", qmax: "Cantell 2n eix, final" }[e]
-  const axis = e[0] === "p" ? ax.p : ax.q
-  const end = AXIS_ENDS[axis][e.endsWith("min") ? 0 : 1]
-  return `Cantell ${axis === "y" ? (end === "dalt" ? "de dalt" : "de baix") : end === "esquerra" ? "esquerre" : end === "dreta" ? "dret" : end === "davant" ? "de davant" : "de darrere"}`
-}

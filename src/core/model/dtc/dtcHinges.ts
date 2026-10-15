@@ -21,7 +21,7 @@ import type { StepRule } from "../hardwareOps"
 
 const HINGE_COUNT: StepRule = { steps: [{ upTo: 900, n: 2 }, { upTo: 1600, n: 3 }, { upTo: 2100, n: 4 }], else: 5 }
 
-export interface DtcHingeSpec {
+interface DtcHingeSpec {
   id: string
   series: string
   /** «C81», «C82 Anyway», «C82 slide-on», «C80», «B80». */
@@ -43,7 +43,7 @@ export interface DtcHingeSpec {
 
 const PILOT = { d: 2, depth: 10 }
 
-export function dtcHinge(sp: DtcHingeSpec): HardwareItem {
+function dtcHinge(sp: DtcHingeSpec): HardwareItem {
   const K = sp.cup.K ?? 5
   const sc = sp.screws ?? { pitch: 45, inset: 9.5 }
   const door: HardwareTarget = {

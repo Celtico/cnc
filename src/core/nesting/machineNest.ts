@@ -3,7 +3,7 @@ import type { Machine, MachineTool, Panel } from "../model"
 import type { NestOptions } from "./nest"
 
 /** Nesting de debò: les opcions i d'on surten la separació i el marge. */
-export interface NestPlan {
+interface NestPlan {
   options: NestOptions
   /** La màquina d'on surten la separació i el marge (sense: els del projecte). */
   machine?: Machine

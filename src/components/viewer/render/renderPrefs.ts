@@ -3,7 +3,7 @@
  * `localStorage` `mobles:render:<clau>` (p. ex. `ambient:12`, `moble:7`). Només es fa servir el que té el mateix tipus que
  * el valor per defecte (una clau vella o dolenta no trenca res).
  */
-export interface SavedRender {
+interface SavedRender {
   opts?: Record<string, unknown>
   look?: Record<string, unknown>
   mood?: string

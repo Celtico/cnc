@@ -5,7 +5,7 @@ import type { ModelObject } from "./composition"
  * Els arbres són reduïts per al mòbil (escorça delmada, part de les fulles, compressió meshopt: `gltfpack -c`).
  * `size`: la mida real del model (mm, amplada · alçada · fondària), la que agafa en afegir-lo.
  */
-export interface ModelAsset {
+interface ModelAsset {
   id: string
   name: string
   url: string

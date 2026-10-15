@@ -6,9 +6,9 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
 import { deinterleaveGeometry, mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js"
 import { keepMask, keptGroupScale, MAX_TEXTURE_SIZE, planTriangles, SMALL_GLB_BYTES, TRIANGLE_BUDGET, type OptimizeReport } from "./optimizeGlbPlan"
 
-export type { OptimizeReport }
 
-export interface OptimizeOptions {
+
+interface OptimizeOptions {
   /** Triangles màxims (per defecte 100.000). */
   budget?: number
   /** Costat màxim de les textures en px (per defecte 1024). */

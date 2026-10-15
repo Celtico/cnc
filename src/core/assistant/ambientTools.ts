@@ -153,7 +153,7 @@ export const AMBIENT_TOOL_INPUTS = {
     .describe("Materials del terra, les parets, el sostre i el terra de fora (noms de get_ambient › materials)."),
 } as const
 
-export type AmbientToolName = keyof typeof AMBIENT_TOOL_INPUTS
+type AmbientToolName = keyof typeof AMBIENT_TOOL_INPUTS
 type In<N extends AmbientToolName> = z.output<(typeof AMBIENT_TOOL_INPUTS)[N]>
 
 /** Un moble o objecte de la llista de l'usuari, amb la caixa (mm): amplada × alçada × fondària. */
@@ -537,7 +537,7 @@ async function listLibrary(i: In<"list_library">, ctx: AmbientToolContext): Prom
 
 // --- Resum --------------------------------------------------------------------------------------
 
-export interface AmbientSummaryForAssistant {
+interface AmbientSummaryForAssistant {
   walls: { id: string; label: string; a: number[]; b: number[]; length: number; thickness: number; height: number; material?: string; openings?: { index: number; kind: string; at: number; width: number; height: number; sill: number; panes?: number }[] }[]
   items: { id: string; kind: "moble" | "objecte" | "bloc" | "absent"; name: string; project_id?: number; w: number; h: number; d: number; x: number; y: number; rot: number; elevation?: number; group?: string; box: number[] }[]
   materials: { floor?: string; walls?: string; ceiling?: string; outside_floor?: string }
@@ -548,7 +548,7 @@ export interface AmbientSummaryForAssistant {
   bounds?: number[]
 }
 
-export function summarizeAmbient(a: Ambient, names: Map<number, LibraryEntry>): AmbientSummaryForAssistant {
+function summarizeAmbient(a: Ambient, names: Map<number, LibraryEntry>): AmbientSummaryForAssistant {
   const pts = a.walls.flatMap((w) => [w.a, w.b])
   return {
     walls: a.walls.map((w, k) => ({
@@ -589,7 +589,7 @@ export function summarizeAmbient(a: Ambient, names: Map<number, LibraryEntry>): 
   }
 }
 
-export interface AmbientPayload {
+interface AmbientPayload {
   done?: Record<string, unknown>
   ambient?: AmbientSummaryForAssistant
   materials?: string[]
@@ -602,7 +602,7 @@ export async function ambientPayload(name: string, outcome: { doc: Ambient; resu
   return name === "get_ambient" ? { ambient, materials: ctx.settings.materials.map((m) => m.name) } : { done: outcome.result, ambient }
 }
 
-export function describeAmbientTool(name: string, result: Record<string, unknown>): string {
+function describeAmbientTool(name: string, result: Record<string, unknown>): string {
   switch (name) {
     case "get_ambient":
       return "Ha mirat l'ambient"

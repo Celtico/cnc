@@ -12,7 +12,7 @@ import { useSettings } from "../settings/SettingsContext"
 import { MaterialSelect } from "../settings/MaterialSelect"
 import { HardwarePick } from "./HardwarePick"
 
-export type CarcassSection = "dims" | "structure"
+type CarcassSection = "dims" | "structure"
 
 /**
  * Formulari de la carcassa del mòdul seleccionat, per seccions (l'inspector en fa una secció plegable per a cadascuna):

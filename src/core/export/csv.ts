@@ -7,7 +7,7 @@ const GRAIN_LABEL: Record<Grain, string> = {
   none: "Indiferent",
 }
 
-export interface CsvOptions {
+interface CsvOptions {
   /** Separador de camps. Excel en català espera ";". */
   separator?: string
   /** Separador decimal. Excel en català espera ",". */

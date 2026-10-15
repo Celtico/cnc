@@ -9,7 +9,7 @@ import { useEffect, useMemo } from "react"
  * passar per sobre, i entre els de passar per sobre, l'últim. S'escriu al canvas (no al `body`): si el component
  * es desmunta a mig hover, en desmuntar-se treu el seu i no queda cap mà penjada a la resta de l'app.
  */
-export type ViewerCursor = "pointer" | "grab" | "grabbing"
+type ViewerCursor = "pointer" | "grab" | "grabbing"
 
 interface CanvasCursors {
   hover: Map<symbol, ViewerCursor>

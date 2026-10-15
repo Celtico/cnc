@@ -114,11 +114,11 @@ function dtcKit(sp: SeriesSpec): HardwareKit {
   })
 }
 
-export const DTC_MAGIC_PRO_HT10 = dtcKit({ series: 10, code: "N", boxSideHeight: 62.5, backHeight: 39, frontBrackets: ["HT10011", "HT10016"], frontHoleOffsets: [-8, 8], backScrewYs: [12, 28], pages: "231–232" })
+const DTC_MAGIC_PRO_HT10 = dtcKit({ series: 10, code: "N", boxSideHeight: 62.5, backHeight: 39, frontBrackets: ["HT10011", "HT10016"], frontHoleOffsets: [-8, 8], backScrewYs: [12, 28], pages: "231–232" })
 export const DTC_MAGIC_PRO_HT11 = dtcKit({ series: 11, code: "M", boxSideHeight: 88, backHeight: 63, frontBrackets: ["TB01011", "TB01016"], frontHoleOffsets: [-16, 16], backScrewYs: [19, 51], pages: "233–234" })
-export const DTC_MAGIC_PRO_HT12 = dtcKit({ series: 12, code: "K", boxSideHeight: 126, backHeight: 101, frontBrackets: ["HT12012", "HT12016"], frontHoleOffsets: [-16, 16], backScrewYs: [19, 51], pages: "239–240" })
-export const DTC_MAGIC_PRO_HT13 = dtcKit({ series: 13, code: "C", boxSideHeight: 174, backHeight: 148, frontBrackets: ["TB03011", "TB03016"], frontHoleOffsets: [-80, -48, 48, 80], backScrewYs: [19, 51, 115, 147], pages: "243–244" })
-export const DTC_MAGIC_PRO_HT14 = dtcKit({ series: 14, code: "F", boxSideHeight: 238, backHeight: 212, frontBrackets: ["TB03011", "TB03016"], frontHoleOffsets: [-80, -48, 48, 80], backScrewYs: [19, 51, 115, 147], pages: "249–250" })
+const DTC_MAGIC_PRO_HT12 = dtcKit({ series: 12, code: "K", boxSideHeight: 126, backHeight: 101, frontBrackets: ["HT12012", "HT12016"], frontHoleOffsets: [-16, 16], backScrewYs: [19, 51], pages: "239–240" })
+const DTC_MAGIC_PRO_HT13 = dtcKit({ series: 13, code: "C", boxSideHeight: 174, backHeight: 148, frontBrackets: ["TB03011", "TB03016"], frontHoleOffsets: [-80, -48, 48, 80], backScrewYs: [19, 51, 115, 147], pages: "243–244" })
+const DTC_MAGIC_PRO_HT14 = dtcKit({ series: 14, code: "F", boxSideHeight: 238, backHeight: 212, frontBrackets: ["TB03011", "TB03016"], frontHoleOffsets: [-80, -48, 48, 80], backScrewYs: [19, 51, 115, 147], pages: "249–250" })
 
 /** Els jocs DTC MAGIC-PRO, de la N a la F (l'HT11 M és el primer i el de referència). */
 export const DTC_MAGIC_PRO_KITS: { id: string; name: string; kit: HardwareKit }[] = [

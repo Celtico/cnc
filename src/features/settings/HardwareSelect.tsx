@@ -13,7 +13,7 @@ import { useSettings } from "./SettingsContext"
 /** Columnes de les targetes al calaix (més estret que una pàgina). */
 const COLS = { base: 2, md: 2 }
 
-export interface HardwareDrawerProps {
+interface HardwareDrawerProps {
   /** Títol del calaix (el del camp: «Frontissa», «Tirador», «Afegir ferratge»). */
   label: string
   /** Els que es poden triar aquí (ja filtrats: del mateix tipus, o que es poden col·locar a aquestes peces). */
@@ -75,7 +75,7 @@ export function HardwareSelect(props: HardwareDrawerProps & { hideLabel?: boolea
 }
 
 /** El calaix del selector de ferratges (també sol, sense botó: «Afegir ferratge»). */
-export function HardwareDrawer({ open, onOpenChange, label, items, current, inherited, emptyLabel, note, none, onPick }: HardwareDrawerProps & { open: boolean; onOpenChange: (open: boolean) => void }) {
+function HardwareDrawer({ open, onOpenChange, label, items, current, inherited, emptyLabel, note, none, onPick }: HardwareDrawerProps & { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { settings } = useSettings()
   const base = useMountBase(settings)
   const [query, setQuery] = useState("")

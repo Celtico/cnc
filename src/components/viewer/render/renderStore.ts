@@ -8,7 +8,7 @@ import type { SceneGetter } from "./RenderDialog"
  * i, en tornar-lo a obrir des del mateix document (la mateixa `saveKey`), hi és. Des d'un altre document, se'n fa un de nou.
  * Sense React ni three: el bloc d'entrada no carrega el render fins que s'obre.
  */
-export interface RenderRequest {
+interface RenderRequest {
   getScene: SceneGetter
   name: string
   saveKey: string

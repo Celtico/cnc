@@ -19,7 +19,7 @@ export interface MeshLike {
   position: ArrayLike<number>
 }
 
-export interface MeshCircle {
+interface MeshCircle {
   /** Eix del fitxer (0 = X, 1 = Y, 2 = Z) perpendicular al cercle. */
   axis: 0 | 1 | 2
   /** Centre al pla (les dues altres coordenades, en l'ordre dels eixos) i radi (mm). */
@@ -409,7 +409,7 @@ export function plateFrameFromMesh(meshes: readonly MeshLike[], scale = 1): Hard
 }
 
 /** Tirador a partir de la malla: els forats roscats de la cara de muntatge; marc com el de `proposeHandle`. */
-export function handleFrameFromMesh(meshes: readonly MeshLike[], scale = 1, throughDiameter = 5): HardwareProposal | null {
+function handleFrameFromMesh(meshes: readonly MeshLike[], scale = 1, throughDiameter = 5): HardwareProposal | null {
   const points = meshPoints(meshes, scale)
   if (points.length < 24) return null
   const face = faceWithHoles(points, 1.4, 4.5)
@@ -461,7 +461,7 @@ export function handleFrameFromMesh(meshes: readonly MeshLike[], scale = 1, thro
 }
 
 /** Pota a partir de la malla: els forats de la placa; marc com el de `proposeLeg` (`u` = X del fitxer al pla). */
-export function legFrameFromMesh(meshes: readonly MeshLike[], scale = 1): HardwareProposal | null {
+function legFrameFromMesh(meshes: readonly MeshLike[], scale = 1): HardwareProposal | null {
   const points = meshPoints(meshes, scale)
   if (points.length < 24) return null
   const face = faceWithHoles(points, 1, 5)

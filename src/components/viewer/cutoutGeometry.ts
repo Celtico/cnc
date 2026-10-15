@@ -66,7 +66,7 @@ export function cutoutGeometry(p: Panel): ExtrudeGeometry {
  * troben a menys de `angle` de la seva; les arestes més vives (cantell i cara, cantonades) no
  * canvien. Modifica i torna la mateixa geometria (si és indexada, la deixa com és).
  */
-export function creaseNormals<T extends BufferGeometry>(g: T, angle = Math.PI / 6): T {
+function creaseNormals<T extends BufferGeometry>(g: T, angle = Math.PI / 6): T {
   const pa = g.getAttribute("position")
   if (g.index || !pa || pa.count < 3) return g
   const n = pa.count - (pa.count % 3)
@@ -280,7 +280,7 @@ function prismGeometry(sc: NonNullable<Panel["solidCuts"]>[number]): BufferGeome
  * passants de cara a cara (un tub pel cantell d'un bloc de pedra). Grups: [0] cares, [1]
  * cantells i parets dels talls, com `cutoutGeometry`.
  */
-export function solidCutGeometry(p: Panel): BufferGeometry {
+function solidCutGeometry(p: Panel): BufferGeometry {
   const base = cutoutGeometry(p)
   const face = new MeshBasicMaterial()
   const edge = new MeshBasicMaterial()

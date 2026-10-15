@@ -19,11 +19,11 @@ import { encodeNormal } from "./shading"
  * - `env`: cel HDRI RGB, la CDF marginal (h + 1) i la condicional (h × (w + 1)).
  */
 export const TRI_VEC4 = 5
-export const MAT_VEC4 = 6
-export const BEVEL_VEC4 = 5
-export const PORTAL_VEC4 = 3
+const MAT_VEC4 = 6
+const BEVEL_VEC4 = 5
+const PORTAL_VEC4 = 3
 
-export interface PackedTextures {
+interface PackedTextures {
   texels: Uint32Array
   /** Per textura: inici (en texels), w, h, repetició (wrapS | wrapT << 2 | flipY << 4 | lineal << 5). */
   entries: { offset: number; w: number; h: number; flags: number }[]

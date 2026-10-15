@@ -48,7 +48,7 @@ export const missingRuleTools = (m: Pick<Machine, "tools">, r: MachineRules): st
 /** Regla de perfilar per al gruix (interval tancat). */
 export const profileRuleFor = (r: MachineRules, thickness: number) => r.profile.find((x) => thickness >= x.min - 1e-6 && thickness <= x.max + 1e-6)
 
-export type RuleKind = "groove" | "pocket" | "profile"
+type RuleKind = "groove" | "pocket" | "profile"
 const KIND_LABEL: Record<RuleKind, string> = { groove: "Ranures", pocket: "Caixeres", profile: "Perfilar" }
 
 /** Tria d'eines per regla dins d'un export: recull els avisos (un per regla i eina) i quantes eines falten. */

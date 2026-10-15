@@ -225,7 +225,7 @@ function recipe(item: HardwareItem): Recipe | null {
 }
 
 /** Centre de l'entrada d'un forat (coordenades locals) i la normal de la cara on entra (locals). */
-export function holeEntry(p: Panel, h: Pick<Hole, "x" | "y" | "face" | "edge">): { at: Vec3; normal: Vec3 } {
+function holeEntry(p: Panel, h: Pick<Hole, "x" | "y" | "face" | "edge">): { at: Vec3; normal: Vec3 } {
   const T = p.thickness
   if (h.face === "A") return { at: [h.x, h.y, T], normal: [0, 0, 1] }
   if (h.face === "B") return { at: [h.x, h.y, 0], normal: [0, 0, -1] }
@@ -242,13 +242,13 @@ export function holeEntry(p: Panel, h: Pick<Hole, "x" | "y" | "face" | "edge">):
 }
 
 /** Una direcció local de la peça al mòdul (sense l'origen). */
-export function worldDir(p: Panel, d: Vec3): Vec3 {
+function worldDir(p: Panel, d: Vec3): Vec3 {
   const { xAxis: a, yAxis: b, zAxis: c } = p.placement
   return [d[0] * a[0] + d[1] * b[0] + d[2] * c[0], d[0] * a[1] + d[1] * b[1] + d[2] * c[1], d[0] * a[2] + d[1] * b[2] + d[2] * c[2]]
 }
 
 /** Forats d'una peça amb els talls rodons (tiradors) com a forats passants de cara A. */
-export function mountHoles(p: Panel): Hole[] {
+function mountHoles(p: Panel): Hole[] {
   const cut = (p.cutouts ?? []).flatMap((c) => (c.kind === "circle" ? [{ x: c.x, y: c.y, diameter: c.diameter, depth: p.thickness, face: "A" as const, ...(c.tag ? { tag: c.tag } : {}) }] : []))
   return [...p.holes, ...cut]
 }
@@ -540,7 +540,7 @@ function fitter(b: Box, dir: Vec3, aspect: number, fov: number) {
 }
 
 /** La càmera més a prop que veu tota la caixa `b` (mm) mirant des de `dir` (unitari, del punt mirat cap a la càmera). Pur. */
-export function fitCamera(b: Box, dir: Vec3, aspect = 1.6, fov = MOUNT_FOV): { target: Vec3; dir: Vec3; dist: number } {
+function fitCamera(b: Box, dir: Vec3, aspect = 1.6, fov = MOUNT_FOV): { target: Vec3; dir: Vec3; dist: number } {
   const k = fitter(b, dir, aspect, fov)
   return k.at(k.cf)
 }

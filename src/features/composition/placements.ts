@@ -1,6 +1,6 @@
-import { applyGenOp, frameSpan, mirrorOpP, partFrame, placeAt, placeVars, refPoints } from "../../core/build/hardwarePlace"
+import { applyGenOp, frameSpan, mirrorOpP, partFrame, placeAt, refPoints } from "../../core/build/hardwarePlace"
 import type { CompositionWarning } from "../../core/build/buildComposition"
-import { AXIS_ENDS, AXIS_NAME, exprError, isPlaceable, machiningParts, newId, partKindForRole, PART_KINDS, type Composition, type HardwareItem, type HardwarePlacement, type Panel, type PartKind, type PlacePos, type PlacementTarget, type StepRule, type WorldAxis } from "../../core/model"
+import { AXIS_ENDS, AXIS_NAME, isPlaceable, machiningParts, newId, partKindForRole, PART_KINDS, type Composition, type HardwareItem, type HardwarePlacement, type Panel, type PartKind, type PlacePos, type PlacementTarget, type WorldAxis } from "../../core/model"
 
 /**
  * Ferratges col·locats a mà (Editor › mòdul o peça lliure › «Ferratges»): utilitats sense React per a
@@ -11,7 +11,7 @@ import { AXIS_ENDS, AXIS_NAME, exprError, isPlaceable, machiningParts, newId, pa
 export type PlacementScope = { kind: "module"; moduleId: string } | { kind: "part"; partId: string }
 
 /** Una peça on es pot col·locar un ferratge: l'id local (al mòdul) o el de la peça lliure, el nom i el grup. */
-export interface PlaceablePanel {
+interface PlaceablePanel {
   key: string
   label: string
   part: PartKind
@@ -45,11 +45,6 @@ export function scopePlacements(comp: Composition, scope: PlacementScope): Hardw
 export function roleFor(item: HardwareItem, panelPart: PartKind): PartKind {
   const parts = machiningParts(item.machining ?? [])
   return parts.includes(panelPart) ? panelPart : (parts[0] ?? panelPart)
-}
-
-/** Un ferratge nou a la peça `on` amb el punt de referència al mig. */
-export function newPlacement(item: HardwareItem, on: PlaceablePanel): HardwarePlacement {
-  return { id: newId("hp"), item: structuredClone(item), targets: [{ part: roleFor(item, on.part), ...on.target }], p: { from: "center", at: 0 }, q: { from: "center", at: 0 } }
 }
 
 /** Noms dels eixos de la peça (P i Q del moble al seu pla): «De costat» (esquerra/dreta), «Fondària» (darrere/davant)… */
@@ -136,16 +131,6 @@ export function simplifyPlacement(pl: HardwarePlacement, panel: Panel | undefine
   return { ...rest, p: pos("p"), q: pos("q") }
 }
 
-/** La regla inicial de «Per mida» (com les frontisses: 2 fins a 900, 3 fins a 1600, 4 fins a 2100, si no 5). */
-export const DEFAULT_REPEAT_RULE: StepRule = { steps: [{ upTo: 900, n: 2 }, { upTo: 1600, n: 3 }, { upTo: 2100, n: 4 }], else: 5 }
-
-/** Error de la fórmula d'una posició amb la peça d'ara (`null` si és bona o no n'hi ha). */
-export function placePosError(pos: PlacePos, panel: Panel, axis: "p" | "q"): string | null {
-  if (!pos.expr) return null
-  const [lo, hi] = frameSpan(partFrame(panel), axis)
-  return exprError(pos.expr, placeVars(panel, hi - lo))
-}
-
 /** On cau ara una posició (mm des de l'inici de l'eix de la peça), o `null` si la fórmula no es pot avaluar. */
 export function placePosValue(pos: PlacePos, panel: Panel, axis: "p" | "q"): number | null {
   const f = partFrame(panel)
@@ -154,7 +139,7 @@ export function placePosValue(pos: PlacePos, panel: Panel, axis: "p" | "q"): num
 }
 
 /** Una marca de la previsualització: la caixa (P, Q des de l'inici de la peça) d'una operació, rodona si és un forat. */
-export interface PreviewMark {
+interface PreviewMark {
   x0: number
   y0: number
   x1: number

@@ -77,7 +77,7 @@ export function splitDirsFor(b: ZoneBounds): ("v" | "h")[] {
   return [...(b.bottom && b.top ? (["v"] as const) : []), ...(b.left && b.right ? (["h"] as const) : [])]
 }
 
-export type FrontChoice = Front["kind"] | "none"
+type FrontChoice = Front["kind"] | "none"
 
 /**
  * Un front (porta, calaixos, abatible, reixeta o front fix) només es fa si el compartiment és **aguantat pels quatre

@@ -20,12 +20,11 @@ export const LIGHT_KINDS = [
   { id: "panel", label: "Làmpada plana per encastar" },
   { id: "bar", label: "Barra LED per encastar" },
 ] as const
-export type LightKind = (typeof LIGHT_KINDS)[number]["id"]
+type LightKind = (typeof LIGHT_KINDS)[number]["id"]
 const KIND_IDS = LIGHT_KINDS.map((k) => k.id) as [LightKind, ...LightKind[]]
 
 /** Una llargada de barra que es ven (es talla cada `barStep`). */
-export const LightBarSchema = z.object({ length: mm.positive(), article: z.string().min(1), watts: mm.positive() })
-export type LightBar = z.infer<typeof LightBarSchema>
+const LightBarSchema = z.object({ length: mm.positive(), article: z.string().min(1), watts: mm.positive() })
 
 export const LightKitSchema = z.object({
   maker: z.string().min(1),

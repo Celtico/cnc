@@ -52,7 +52,7 @@ export interface PartJoint {
   through?: boolean
 }
 
-export interface FreePartsBuild {
+interface FreePartsBuild {
   panels: Panel[]
   /** Peces que no es tallen a la CNC (ferro, pedra, vidre…): només 3D i llista. */
   extras: Panel[]
@@ -81,7 +81,7 @@ export const JOINT_LABEL: Record<PartJointKind, string> = {
 }
 
 /** Joc, fresa i pestanyes de la composició (amb els valors per defecte). */
-export function joineryOf(comp: Composition): Joinery {
+function joineryOf(comp: Composition): Joinery {
   return { ...DEFAULT_JOINERY, ...comp.joinery }
 }
 

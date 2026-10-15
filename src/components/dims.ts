@@ -45,7 +45,7 @@ export interface DimLayout {
   extent: { x: number; y: number; w: number; h: number }
 }
 
-export type Box = { x0: number; y0: number; x1: number; y1: number }
+type Box = { x0: number; y0: number; x1: number; y1: number }
 
 /** Mm amb coma i com a molt un decimal (dues si cal). */
 export const fmtMm = (v: number) => String(Math.round(v * 100) / 100).replace(".", ",")

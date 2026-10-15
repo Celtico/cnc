@@ -31,7 +31,7 @@ import { LightKitSchema, type LightKit } from "./lightKit"
 const mm = z.number().finite()
 
 /** Número o fórmula curta (`"cupOffset"`, `"-pitch/2"`); l'avalua `evalExpr` (sense `eval`). */
-export const ExprSchema = z.union([mm, z.string().min(1).max(200)])
+const ExprSchema = z.union([mm, z.string().min(1).max(200)])
 
 // --- Ferratges d'abans (preferències ≤ v18 i mòduls desats abans) -------------------------------------------------
 
@@ -135,7 +135,7 @@ const V3Schema = z.tuple([mm, mm, mm])
  * **Fins que no es confirma (`confirmed`), no fa cap forat**: es pot triar, però el moble avisa i la porta queda sense
  * cassoletes (millor cap forat que un de dolent al taller).
  */
-export const HardwareImportSchema = z.object({
+const HardwareImportSchema = z.object({
   maker: z.string(),
   article: z.string(),
   /** Carpetes de la descàrrega (en alemany, com venen). */
@@ -194,7 +194,6 @@ export const HardwareImportSchema = z.object({
    */
   damaged: z.boolean().optional(),
 })
-export type HardwareImport = z.infer<typeof HardwareImportSchema>
 
 /** Versió de la caixa dels importats (`HardwareImport.boxVersion`): si puja, la caixa es refà del model desat. */
 export const IMPORT_BOX_VERSION = 1
@@ -313,10 +312,6 @@ export const HARDWARE_SLOTS = [
   { slot: "glassFrame", engine: "glassFrame", category: "profile", label: "Marc de vitrina", uses: "portes de vidre" },
 ] as const
 export type HardwareSlot = (typeof HARDWARE_SLOTS)[number]["slot"]
-/** Llocs d'accessoris: opcionals a la còpia del mòdul (sense, l'item d'inici). */
-export const ACCESSORY_SLOTS = ["rail", "led", "glassFrame"] as const satisfies readonly HardwareSlot[]
-export type AccessorySlot = (typeof ACCESSORY_SLOTS)[number]
-export type CoreSlot = Exclude<HardwareSlot, AccessorySlot>
 export const slotOf = (s: HardwareSlot) => HARDWARE_SLOTS.find((x) => x.slot === s)!
 export const slotForEngine = (e: HardwareEngine) => HARDWARE_SLOTS.find((x) => x.engine === e)!
 
@@ -349,7 +344,7 @@ export const ModuleHardwareKitSchema = z.object({
 })
 export type ModuleHardware = z.infer<typeof ModuleHardwareKitSchema>
 /** Una còpia amb tots els llocs (la d'un mòdul nou, `kitFrom`). */
-export type FullModuleHardware = Required<ModuleHardware>
+type FullModuleHardware = Required<ModuleHardware>
 
 /** Quin item de la biblioteca fa servir cada lloc als mòduls nous. */
 export const HardwareDefaultsSchema = z.object({
@@ -367,7 +362,7 @@ export const HardwareDefaultsSchema = z.object({
 export type HardwareDefaults = z.infer<typeof HardwareDefaultsSchema>
 
 /** Paràmetres de cada motor (etiqueta i límits per a l'editor, `NumRow`). */
-export interface HardwareParamSpec {
+interface HardwareParamSpec {
   key: string
   label: string
   min: number
@@ -390,7 +385,7 @@ function legHasOwnSides(item: Pick<HardwareItem, "engine"> & { params?: Hardware
 /** El nom d'un paramètre per a aquest item (de moment, el del motor). */
 export const hardwareParamLabel = (_item: Pick<HardwareItem, "engine"> & { params?: HardwareItem["params"] }, p: HardwareParamSpec): string => p.label
 
-export const HARDWARE_PARAMS: Record<HardwareEngine, HardwareParamSpec[]> = {
+const HARDWARE_PARAMS: Record<HardwareEngine, HardwareParamSpec[]> = {
   cup: [
     P("cupDiameter", "Cassoleta (Ø)", 10, 60, 0.5),
     P("cupDepth", "Fondària", 5, 20, 0.5),
@@ -1050,7 +1045,7 @@ export function hardwareChoices(library: readonly HardwareItem[], current: Hardw
  * que es claven al perfil (motor `barHandle` sense cap forat). Per decisió de l'usuari («les opcions no compatibles no han
  * de sortir»): a una porta o abatible de vidre només surten aquests, i a un front de fusta, mai.
  */
-export const FRAME_HINGE_IDS: ReadonlySet<string> = new Set(["hinge-hafele-metallamat-a", "hinge-hafele-duomatic-premium-alu", "hinge-hafele-duomatic-alu-narrow"])
+const FRAME_HINGE_IDS: ReadonlySet<string> = new Set(["hinge-hafele-metallamat-a", "hinge-hafele-duomatic-premium-alu", "hinge-hafele-duomatic-alu-narrow"])
 export function isFrameHardware(item: Pick<HardwareItem, "id" | "engine" | "targets">): boolean {
   if (item.engine === "cup") return FRAME_HINGE_IDS.has(item.id)
   if (item.engine === "barHandle") return item.targets.every((t) => !t.ops.length)
@@ -1131,13 +1126,6 @@ export type HardwarePlacement = z.infer<typeof HardwarePlacementSchema>
 /** La composició porta algun ferratge col·locat a mà (el `.moble` és v3: una app d'abans els trauria en silenci). */
 export function usesHardwarePlacements(comp: unknown): boolean {
   return isRecord(comp) && Array.isArray(comp.hardwarePlacements) && comp.hardwarePlacements.length > 0
-}
-
-/** Canvia els mecanitzats del generador; d'un importat, el deixa sense confirmar (cal tornar-lo a revisar). */
-export function setMachining(item: HardwareItem, ops: HardwareItem["machining"]): HardwareItem {
-  const { machining: _old, ...rest } = item
-  const next: HardwareItem = ops?.length ? { ...rest, machining: ops } : rest
-  return next.imported ? { ...next, imported: { ...next.imported, confirmed: false } } : next
 }
 
 /**

@@ -10,7 +10,7 @@ import {
   type PanelRole,
 } from "../model"
 
-export const ROLE_LABELS: Record<PanelRole, string> = {
+const ROLE_LABELS: Record<PanelRole, string> = {
   side: "Lateral",
   bottom: "Base",
   top: "Sostre",
@@ -109,7 +109,7 @@ const BY_NUMBER: readonly EdgeSide[] = ["top", "right", "bottom", "left"]
  * cap a 1 · 2 (dalt, dreta). Cantells i inglets es giren junts, així dues peces mirall (lateral
  * esquerre/dret) cauen a la mateixa fila i la fila diu el mateix per a totes.
  */
-export function canonicalSides(p: Pick<Panel, "edges" | "mitres">): { edges: EdgeBanding; mitres: EdgeSide[]; code: string } {
+function canonicalSides(p: Pick<Panel, "edges" | "mitres">): { edges: EdgeBanding; mitres: EdgeSide[]; code: string } {
   let best: { edges: EdgeBanding; mitres: EdgeSide[]; code: string } | undefined
   for (const m of SIDE_MAPS) {
     const edges = { left: false, right: false, bottom: false, top: false } as EdgeBanding

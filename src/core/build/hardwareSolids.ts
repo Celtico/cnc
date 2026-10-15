@@ -415,7 +415,7 @@ export function fixedSolids(panels: readonly Panel[]): Map<string, HwSolid[]> {
 }
 
 /** Els vuit vèrtexs (o la caixa que conté el cilindre) d'un sòlid, en coordenades locals. */
-export function solidCorners(s: HwSolid): Vec3[] {
+function solidCorners(s: HwSolid): Vec3[] {
   const [u, v, w] = s.kind === "box" ? s.axes : basisFor(s.axis)
   const [hx, hy, hz] = s.kind === "box" ? scale(s.size, 0.5) : [s.r, s.r, s.h / 2]
   const out: Vec3[] = []

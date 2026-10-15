@@ -46,7 +46,7 @@ function orient(a: Pt, b: Pt, c: Pt): number {
 }
 
 /** Dos segments es creuen (sense comptar els extrems compartits). */
-export function segmentsCross(a: Pt, b: Pt, c: Pt, d: Pt): boolean {
+function segmentsCross(a: Pt, b: Pt, c: Pt, d: Pt): boolean {
   const d1 = orient(c, d, a)
   const d2 = orient(c, d, b)
   const d3 = orient(a, b, c)
@@ -191,7 +191,7 @@ export interface PNode {
 }
 
 /** Perfil guardat: nodes o, dels perfils antics, punts [x, y, bulge]. */
-export type ProfilePoint = PNode | BPt
+type ProfilePoint = PNode | BPt
 
 export function toNodes(pts: ProfilePoint[]): PNode[] {
   return pts.map((p) => (Array.isArray(p) ? (p[2] ? { x: p[0], y: p[1], b: p[2] } : { x: p[0], y: p[1] }) : p))

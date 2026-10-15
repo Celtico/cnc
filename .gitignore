@@ -28,3 +28,6 @@ docs/maestro/*.pdf
 
 # Catàlegs en PDF dels fabricants (massa grans; no es pugen al repo)
 docs/*.pdf
+
+# Fitxers temporals per esborrar a mà
+_to_delete/

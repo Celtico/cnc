@@ -13,7 +13,7 @@ import { EDGE_NUMBER, EDGE_SIDES, type Panel } from "../model"
  */
 export type ProcessKind = "secondFace" | "mitre" | "edge" | "edgeDrill" | "glue" | "push"
 
-export interface Process {
+interface Process {
   kind: ProcessKind
   /** Nom curt per a l'etiqueta: «CANTELL». */
   label: string
@@ -21,7 +21,7 @@ export interface Process {
   detail: string
 }
 
-export const PROCESS_LABELS: Record<ProcessKind, string> = {
+const PROCESS_LABELS: Record<ProcessKind, string> = {
   secondFace: "2a cara",
   mitre: "Inglet 45°",
   edge: "Cantell",

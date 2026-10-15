@@ -7,7 +7,7 @@ import { floatToRgba8 } from "../../core/photo/pbrMaps"
  */
 
 /** Capçalera d'un OpenEXR (`v/1\x01`). */
-export function isExrBytes(head: Uint8Array): boolean {
+function isExrBytes(head: Uint8Array): boolean {
   return head.length >= 4 && head[0] === 0x76 && head[1] === 0x2f && head[2] === 0x31 && head[3] === 0x01
 }
 
