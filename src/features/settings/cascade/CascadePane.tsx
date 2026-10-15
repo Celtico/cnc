@@ -1,7 +1,7 @@
 import { Box, Button, Dialog, HStack, IconButton, Menu, Portal, Spinner, Splitter, Stack, Switch, Text } from "@chakra-ui/react"
 import { ReactFlowProvider } from "@xyflow/react"
 import { useContext, useRef, useState } from "react"
-import { LuChevronsDownUp, LuChevronsUpDown, LuDownload, LuEllipsis, LuRefreshCw, LuTrash2, LuUpload, LuWorkflow } from "react-icons/lu"
+import { LuCheck, LuChevronsDownUp, LuCircleAlert, LuChevronsUpDown, LuDownload, LuEllipsis, LuRefreshCw, LuTrash2, LuUpload, LuWorkflow } from "react-icons/lu"
 import { PanelSplit, SplitHandle } from "../../../components/PanelSplit"
 import { SearchBar } from "../../../components/SearchBar"
 import { UndoRedo } from "../../../components/UndoRedo"
@@ -14,6 +14,7 @@ import { fileAccept } from "../../file/fileAccept"
 import { PaneHeadContext } from "../paneHead"
 import { CascadeCanvas } from "./CascadeCanvas"
 import { CascadeDetail } from "./CascadeDetail"
+import type { DraftSaveState } from "./useCascadeDraft"
 import { useCascadeEditor } from "./useCascadeEditor"
 
 /**
@@ -33,6 +34,7 @@ export function CascadePane() {
 function CascadeEditor() {
   const head = useContext(PaneHeadContext)
   const ed = useCascadeEditor()
+  const exportDraft = () => downloadText(draftToJson(ed.draft), "opcions-en-cascada.json", "application/json")
   const [panelWidth, setPanelWidth] = usePersistentNumber("mobles:cascade-panel", 340)
   const [asking, setAsking] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
@@ -69,7 +71,7 @@ function CascadeEditor() {
             </HStack>
           }
         />
-        <HStack gap={1}>
+        <HStack gap={1} wrap="wrap">
           <Button size="sm" variant="outline" onClick={ed.collapseAll}>
             <LuChevronsDownUp /> Plegar tot
           </Button>
@@ -81,6 +83,12 @@ function CascadeEditor() {
               <LuWorkflow /> Reordenar automàticament
             </Button>
           </Tooltip>
+          <SaveButton state={ed.save} />
+          <Tooltip content="Un fitxer JSON amb el dibuix i les diferències amb l'app (es pot tornar a importar)">
+            <Button size="sm" variant="outline" onClick={exportDraft}>
+              <LuDownload /> Guardar a fitxer
+            </Button>
+          </Tooltip>
           <Menu.Root positioning={{ placement: "bottom-end" }}>
             <Menu.Trigger asChild>
               <IconButton aria-label="Més accions" size="sm" variant="ghost">
@@ -90,7 +98,7 @@ function CascadeEditor() {
             <Portal>
               <Menu.Positioner>
                 <Menu.Content>
-                  <Menu.Item value="export" onClick={() => downloadText(draftToJson(ed.draft), "opcions-en-cascada.json", "application/json")}>
+                  <Menu.Item value="export" onClick={exportDraft}>
                     <LuDownload /> Exportar JSON (amb les diferències)
                   </Menu.Item>
                   <Menu.Item value="import" onClick={() => fileInput.current?.click()}>
@@ -169,5 +177,29 @@ function ViewSwitch({ label, checked, onChange }: { label: string; checked: bool
       <Switch.Control />
       <Switch.Label>{label}</Switch.Label>
     </Switch.Root>
+  )
+}
+
+/**
+ * L'esborrany es desa sol (mig segon després de cada canvi, a aquest navegador). El botó ho diu i, si encara queda res per
+ * desar, ho desa ara mateix.
+ */
+function SaveButton({ state }: { state: DraftSaveState }) {
+  const tip = state === "failed" ? "No s'ha pogut desar en aquest navegador (navegació privada?): guarda'l a fitxer" : "Es desa sol a cada canvi, en aquest navegador"
+  return (
+    <Tooltip content={tip}>
+      <Button
+        size="sm"
+        variant="ghost"
+        colorPalette={state === "failed" ? "red" : "gray"}
+        color={state === "saved" ? "fg.muted" : undefined}
+        minW="104px"
+        aria-live="polite"
+        onClick={() => window.dispatchEvent(new Event("mobles:flush-save"))}
+      >
+        {state === "saving" ? <Spinner size="xs" /> : state === "failed" ? <LuCircleAlert /> : <LuCheck />}
+        {state === "saving" ? "Desant…" : state === "failed" ? "No s'ha desat" : "Desat"}
+      </Button>
+    </Tooltip>
   )
 }

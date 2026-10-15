@@ -11,6 +11,9 @@ export function initialCollapsed(draft: CascadeDraft): Set<string> {
   return new Set(branchIds(tree).filter((id) => !roots.has(id)))
 }
 
+/** Com està el desat: tot desat, per desar (es desa sol en mig segon) o no s'ha pogut desar. */
+export type DraftSaveState = "saved" | "saving" | "failed"
+
 /**
  * L'esborrany de la cascada amb desfer/refer (`useHistory`) i les branques plegades (fora de l'historial), desats sols a
  * IndexedDB (`db.drafts`, `useDebouncedSave`): sobreviu a recarregar la pàgina. No toca res de l'Editor.
@@ -36,6 +39,15 @@ export function useCascadeDraft() {
     }
   }, [reset])
   const stored = useMemo(() => (loaded ? { draft: history.value, collapsed: [...collapsed] } : null), [loaded, history.value, collapsed])
-  useDebouncedSave(stored, (v) => (v ? saveCascadeDraft(v) : undefined), 500)
-  return { history, collapsed, setCollapsed, loaded }
+  const [saved, setSaved] = useState<{ value: unknown; ok: boolean } | null>(null)
+  useDebouncedSave(stored, (v) => {
+    if (!v) return undefined
+    return saveCascadeDraft(v).then((ok) => {
+      setSaved({ value: v, ok })
+      return ok
+    })
+  }, 500)
+  // Acabat de carregar, el que hi ha és el desat (o la llavor de l'app, que no cal desar).
+  const save: DraftSaveState = !stored || saved === null ? "saved" : saved.value === stored ? (saved.ok ? "saved" : "failed") : "saving"
+  return { history, collapsed, setCollapsed, loaded, save }
 }

@@ -35,7 +35,7 @@ const FIT = { padding: 0.15, maxZoom: 1, duration: 250 }
  * mesurades dels nodes, la cerca i els gestos (unir, esborrar, plegar sense que el node es mogui de lloc, afegir).
  */
 export function useCascadeEditor() {
-  const { history, collapsed, setCollapsed, loaded } = useCascadeDraft()
+  const { history, collapsed, setCollapsed, loaded, save } = useCascadeDraft()
   const draft = history.value
   const rf = useReactFlow<CascadeFlowNode, Edge>()
   // D'entrada, només l'arbre (les fletxes «a dins de»), com el dibuix de l'usuari.
@@ -240,6 +240,7 @@ export function useCascadeEditor() {
 
   return {
     loaded,
+    save,
     draft,
     diff,
     flow,

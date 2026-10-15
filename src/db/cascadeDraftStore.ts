@@ -11,11 +11,12 @@ export async function loadCascadeDraft(): Promise<unknown> {
   }
 }
 
-/** Desa l'esborrany. Sense IndexedDB (navegació privada) dura mentre l'app és oberta. */
-export async function saveCascadeDraft(data: unknown): Promise<void> {
+/** Desa l'esborrany; `false` si no s'ha pogut (sense IndexedDB, navegació privada: dura mentre l'app és oberta). */
+export async function saveCascadeDraft(data: unknown): Promise<boolean> {
   try {
     await db.drafts.put({ id: ID, data, updatedAt: Date.now() })
+    return true
   } catch {
-    // Res: sense IndexedDB no es pot desar.
+    return false
   }
 }
