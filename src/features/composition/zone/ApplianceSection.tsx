@@ -170,6 +170,8 @@ export function ApplianceFields({ root, zone, onChange, hardware, noHandles, bou
             optionId={module ? "module.appliance.handle" : "zone.appliance.handle"}
             slot="handle"
             label="Tirador"
+            // El front de moble és de fusta: cap tirador de marc d'alumini de vitrina (no farien cap forat).
+            glass={false}
             current={za!.handle && za!.handle !== "none" ? za!.handle : push ? undefined : moduleSlotItem(hardware, "handle")}
             inherited={noHandles ? undefined : moduleSlotItem(hardware, "handle")}
             emptyLabel={noHandles ? "Com el mòdul (cap, push)" : undefined}
