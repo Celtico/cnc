@@ -6,6 +6,7 @@ import { usePersistentNumber } from "../../lib/usePersistentNumber"
 import { allToolSet, contextLine, setAppSettings } from "./appTools"
 import { currentDoc, useHubDoc, type HubDoc } from "./assistantHub"
 import type { ChatTarget } from "./chatTarget"
+import { useLatest } from "../../lib/useLatest"
 
 const ChatPanel = lazy(() => import("./ChatPanel"))
 
@@ -27,8 +28,7 @@ export default function GlobalAssistant({ open, onClose, settings, closeRequest 
   const doc = useHubDoc()
   // Les eines de l'app llegeixen les preferències d'ara (màquina, materials…).
   setAppSettings(settings)
-  const settingsRef = useRef(settings)
-  settingsRef.current = settings
+  const settingsRef = useLatest(settings)
   // Els documents que l'assistent ha canviat en aquest torn: en acabar, un pas de desfer a cadascun.
   const touched = useRef(new Set<HubDoc>())
   const target = useMemo<ChatTarget<unknown>>(() => {
@@ -50,7 +50,7 @@ export default function GlobalAssistant({ open, onClose, settings, closeRequest 
       intro: doc ? `Ara és obert «${doc.name}»: ${doc.target.intro} També pots demanar-li que obri, busqui o creï altres mobles, objectes i ambients.` : "Demana-li el que faries tu a l'app: buscar, obrir o crear mobles, objectes i ambients, anar a una pàgina… Quan hi hagi un document obert, també el podrà canviar.",
       suggestions: doc ? doc.target.suggestions : APP_SUGGESTIONS,
     }
-  }, [doc])
+  }, [doc, settingsRef])
   // A l'ordinador, una columna a la dreta de l'app (per decisió de l'usuari: «encara que estigui obert, s'ha de poder
   // navegar»): l'app s'estreny i tot continua a la vista i es pot fer servir. Al mòbil, el calaix a pantalla completa.
   const docked = useBreakpointValue({ base: false, md: true }) ?? true

@@ -28,6 +28,8 @@ import { isShaped, mitreGeometry, shapedGeometry } from "./cutoutGeometry"
 import { cutoutMaterials, panelMaterials, panelVisualKey, visualPanel } from "./exportablePanel"
 import { disposeMaterial } from "./textures"
 import { HOLE_COLOR, holeMarkMatrices, PROPOSED_HOLE_COLOR } from "./hardwareShapes"
+import { useLatest } from "../../lib/useLatest"
+import { useKeyed } from "../../lib/useKeyed"
 
 /** Color de selecció (el mateix taronja que els botons + del 3D). */
 const SELECT_COLOR = "#b57a37"
@@ -673,10 +675,7 @@ function CameraRig({ size, viewDir, fitKey, onFramedChange, initialCamera, onCam
   const fitTriggered = useRef(new Set<string>())
   const reportAfterGoal = useRef(false)
   const reportTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const reportRef = useRef(onCameraChange)
-  useEffect(() => {
-    reportRef.current = onCameraChange
-  })
+  const reportRef = useLatest(onCameraChange)
   // Es llegeix 1 s després de deixar-la anar (l'esmorteïment encara la mou una mica).
   // Lectura pendent: en desmuntar el visor o amagar la pàgina es fa de seguida (si no, es perdria).
   const pendingReport = useRef<(() => void) | null>(null)
@@ -712,7 +711,7 @@ function CameraRig({ size, viewDir, fitKey, onFramedChange, initialCamera, onCam
   }
   useEffect(() => {
     if (fittedSize.current && fittedSize.current !== `${size.width}x${size.height}x${size.depth}`) setFramed(false)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- només quan canvia la mida del moble
   }, [size.width, size.height, size.depth])
 
   // Vista ortogràfica: la càmera al costat triat, a una distància fixa, i el zoom que hi fa cabre el moble (amplada i
@@ -741,7 +740,7 @@ function CameraRig({ size, viewDir, fitKey, onFramedChange, initialCamera, onCam
     setFramed(false)
     fittedSize.current = `${size.width}x${size.height}x${size.depth}`
     invalidate()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- la vista ortogràfica es posa quan canvia el costat, no amb cada canvi de mida
   }, [camera, viewDir, viewport.width, viewport.height, fitKey])
 
   useEffect(() => {
@@ -789,7 +788,7 @@ function CameraRig({ size, viewDir, fitKey, onFramedChange, initialCamera, onCam
     // L'animació cap a l'enquadrament (`useFrame`) demana els fotogrames fins que arriba.
     invalidate()
     // Les mides es llegeixen però no disparen el reenquadrament.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- s'enquadra en obrir i amb «Enquadrar», no amb cada canvi de mida
   }, [camera, viewDir, viewport.width, viewport.height, fitKey])
 
   // Desfer/refer d'una càmera: hi va de seguida (sense animació) i es queda com la restaurada (redimensionar no la treu).
@@ -805,7 +804,7 @@ function CameraRig({ size, viewDir, fitKey, onFramedChange, initialCamera, onCam
     controls.current?.update()
     setFramed(false)
     invalidate()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- es va a la vista demanada només quan arriba una petició nova (`cameraGoto`)
   }, [cameraGoto?.n])
 
   useFrame((st, dt) => {
@@ -917,7 +916,7 @@ function ModelMesh({ m, selected, shift, onSelect, materials }: { m: ModelObject
   const [loaded, setLoaded] = useState(0)
   useEffect(() => onModelsLoaded(() => setLoaded((v) => v + 1)), [])
   const { id, name, src, x, y, z, w, h, d, rot, material } = m
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `loaded`: es refà quan acaba de carregar un model
   const obj = useMemo(() => modelInstance({ id, name, src, x, y, z, w, h, d, rot, ...(material ? { material } : {}) }, materials), [id, name, src, x, y, z, w, h, d, rot, material, materials, loaded])
   // El material propi (de Preferències) és de la instància: s'allibera quan se'n fa una altra.
   useEffect(() => () => void (obj && disposeModelInstance(obj)), [obj])
@@ -1008,8 +1007,7 @@ function RefGhost({
 }) {
   const controls = useThree((st) => st.controls) as unknown as { enabled: boolean } | null
   const [drag, setDrag] = useState<{ x: number; y: number; z: number; axes: Axis[]; snapped: Axis[] } | null>(null)
-  const latest = useRef(drag)
-  latest.current = drag
+  const latest = useLatest(drag)
   const state = useRef<{ plane: Plane; grab: Vector3; axes: Axis[]; start: [number, number]; moved: boolean } | null>(null)
   const snap = useMemo((): SnapTargets => {
     const t = { x: [...targets.x], y: [...targets.y], z: [...targets.z] }
@@ -1540,8 +1538,7 @@ export const PanelMesh = memo(function PanelMesh({
   const ownSig = useMemo(() => (givenSig === undefined ? panelVisualKey(panel, showHoles || hardware) : ""), [givenSig, panel, showHoles, hardware])
   const sig = givenSig ?? ownSig
   // La peça que es dibuixa: la mateixa mentre la signatura no canviï (una construcció nova la torna a fer igual).
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const vpanel = useMemo(() => panel, [sig])
+  const vpanel = useKeyed(panel, sig)
 
   const { matrix, explode } = useMemo(() => {
     const { origin, xAxis, yAxis, zAxis, explodeDir } = panel.placement

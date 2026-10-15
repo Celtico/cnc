@@ -19,6 +19,7 @@ import { ambientBox, eyePose, snapGrid } from "./planGeom"
 import { curvedWallPieces } from "./curvedWall"
 import { roofGroup } from "./roof3d"
 import { genericLegsGroup } from "../../components/viewer/genericLegs"
+import { useLatest } from "../../lib/useLatest"
 
 /**
  * Vista 3D de l'ambient (m): terra i parets amb els materials de simulació i cada moble o bloc
@@ -141,10 +142,7 @@ function Controls({ target, home, fitSignal, eye, eyeSignal, maxDistance, onPose
     invalidate()
   }
   // Desar la càmera 1 s després que es quedi quieta (l'esmorteïment encara la mou una mica en deixar-la anar).
-  const reportRef = useRef(onCameraChange)
-  useEffect(() => {
-    reportRef.current = onCameraChange
-  })
+  const reportRef = useLatest(onCameraChange)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   // Botó marcat ara (es desa amb la càmera).
   const mark = useRef<"home" | "eye" | null>(null)
@@ -206,7 +204,7 @@ function Controls({ target, home, fitSignal, eye, eyeSignal, maxDistance, onPose
     pose(home, target, 40)
     setMark("home")
     scheduleReport()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- s'enquadra en obrir i amb «Enquadrar», no amb cada canvi de l'ambient
   }, [fitSignal])
   // Interior: angular (com les fotos de revista) i des de dins; orbitar hi gira al voltant del punt mirat.
   useEffect(() => {
@@ -215,7 +213,7 @@ function Controls({ target, home, fitSignal, eye, eyeSignal, maxDistance, onPose
       setMark("eye")
       scheduleReport()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- es va a l'«Interior» només quan es demana
   }, [eyeSignal])
   // «Càmera d'abans»: hi torna (i es desa com la d'ara).
   useEffect(() => {
@@ -223,7 +221,7 @@ function Controls({ target, home, fitSignal, eye, eyeSignal, maxDistance, onPose
     pose(goto.pose.position, goto.pose.target, goto.pose.fov ?? 40)
     setMark(goto.pose.pose ?? null)
     scheduleReport()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- es va a la vista desada només quan arriba una petició nova (`goto`)
   }, [goto?.n])
   // Orbitar, desplaçar o fer zoom (l'usuari) treu la marca dels botons.
   return (
@@ -432,7 +430,8 @@ function Room({
   // Sostre de les habitacions tancades: només quan la càmera és a dins (al visor i al render; des de
   // dalt no es veu). Al render tanca la llum: entra per les finestres, com a les fotos.
   // La teulada (el sostre de dins es queda, amb el seu material, just sota la teulada).
-  const roof = useMemo(() => (showRoof ? roofGroup(ambient, materials) : null), [showRoof, ambient.roof, ambient.walls, ambient.wallMaterial, materials]) // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- només les parts de l'ambient que canvien la teulada
+  const roof = useMemo(() => (showRoof ? roofGroup(ambient, materials) : null), [showRoof, ambient.roof, ambient.walls, ambient.wallMaterial, materials])
   useEffect(() => () => (roof ? disposeTree(roof) : undefined), [roof])
   const ceiling = useMemo(() => {
     if (!showCeiling || !closedRoom(ambient.walls)) return null

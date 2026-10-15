@@ -67,8 +67,7 @@ function Ball({ m }: { m: MaterialPref }) {
     const next = ballMaterial(m)
     setMat(next)
     return () => disposeMaterial(next)
-    // Només quan canvia l'aspecte (`ballKey`), no el nom ni els gruixos.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- només quan canvia l'aspecte (`ballKey`), no el nom ni els gruixos
   }, [key])
   useEffect(() => invalidate(), [geo, mat, invalidate])
   if (!geo || !mat) return null

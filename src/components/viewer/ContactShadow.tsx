@@ -53,7 +53,7 @@ export function ContactShadow({
     const camera = new OrthographicCamera(-scale / 2, scale / 2, scale / 2, -scale / 2, 0, far)
     return { target, targetBlur, plane, blurPlane, depth, hBlur, vBlur, shown, camera }
     // `far` es posa a la càmera a part (no cal refer els render targets).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `far` es posa a la càmera a part, sense refer els render targets
   }, [resolution, scale])
   useEffect(
     () => () => {

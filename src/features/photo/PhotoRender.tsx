@@ -1,12 +1,13 @@
 import { Environment, Lightformer, PerspectiveCamera } from "@react-three/drei"
 import { Canvas } from "@react-three/fiber"
-import { useEffect, useMemo, useRef } from "react"
+import { useEffect, useMemo } from "react"
 import { Matrix4, Object3D } from "three"
 import { PanelMesh } from "../../components/viewer/CabinetViewer"
 import { TextureRefresh } from "../../components/viewer/SceneHelpers"
 import { LIGHT_SPEC, type LightId } from "../../components/viewer/presentationScene"
 import { cabinetToPlane, type Camera, type SceneOptions } from "../../core/photo/camera"
 import type { MaterialPref, Panel } from "../../core/model"
+import { useLatest } from "../../lib/useLatest"
 
 const S = 0.001
 
@@ -72,11 +73,8 @@ export function PhotoRender({ panels, camera, scene, width, height, size, materi
   // el Canvas creés la llum i apuntava a l'origen).
   // La funció pot ser nova a cada render del pare: es guarda en una ref i el canvas només es «treu» en desmuntar-se
   // (abans, cada render del pare el posava a null i ja no tornava: la imatge descarregada sortia sense el moble).
-  const onCanvasRef = useRef(onCanvas)
-  useEffect(() => {
-    onCanvasRef.current = onCanvas
-  })
-  useEffect(() => () => onCanvasRef.current?.(null), [])
+  const onCanvasRef = useLatest(onCanvas)
+  useEffect(() => () => onCanvasRef.current?.(null), [onCanvasRef])
 
   return (
     // Només pinta quan canvia alguna cosa (càmera, moble, llum, textures que arriben).

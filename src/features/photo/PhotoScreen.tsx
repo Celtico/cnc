@@ -15,7 +15,7 @@ import {
   Switch,
 } from "@chakra-ui/react"
 import { segGroup, segItem } from "../../components/segmented"
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react"
 import { createPortal } from "react-dom"
 import {
   LuArrowDownToLine,
@@ -79,6 +79,7 @@ import { ESTIMATED_WARNING, estimatedApplied } from "./appliedState"
 import { MeasureTable } from "./MeasureTable"
 import { applyTargets, type ApplyTarget } from "./applyTargets"
 import { useDebouncedSave } from "../../lib/useDebouncedSave"
+import { useLatest } from "../../lib/useLatest"
 
 const POINT_NAMES = ["baix-esquerra", "baix-dreta", "dalt-dreta", "dalt-esquerra"]
 
@@ -245,6 +246,8 @@ export function PhotoScreen({
 /** Un camp buit mentre s'escriu dona NaN: pel dibuix compta com a 0. */
 const fin = (v: number | null | undefined): number => (typeof v === "number" && Number.isFinite(v) ? v : 0)
 /** Valor conegut o null (camp en blanc). */
+/** Sense mesures: sempre la mateixa llista (si no, els `useMemo` que en depenen es tornarien a fer a cada render). */
+const NO_MEASURES: never[] = []
 const known = (v: number | null | undefined): number | null => (typeof v === "number" && Number.isFinite(v) && v > 0 ? v : null)
 
 /** Amplada efectiva de la referència (mm) d'un calibratge, o null si no se sap l'escala. */
@@ -345,7 +348,7 @@ function PhotoCalibrator({
 
   const { width: W, height: H } = photo
   const calibrated = cal.points.length === 4
-  const measures = cal.measures ?? []
+  const measures = cal.measures ?? NO_MEASURES
   const refW = known(cal.ref.w)
   const refH = known(cal.ref.h)
 
@@ -361,7 +364,7 @@ function PhotoCalibrator({
   const quality = useMemo(() => (homography ? calibrationQuality(homography, fPx, W / 2, H / 2) : null), [homography, fPx, W, H])
   const wallOffset = cal.plane === "wall" ? fin(cal.refWallOffset) : 0
   // Punt de la imatge → pla on es recolza el moble (la paret real, no la referència).
-  const toSupport = (p: Pt): Pt | null => (camera ? imageToPlaneAt(camera, p, -wallOffset) : homography ? imageToPlane(homography, p) : null)
+  const toSupport = useCallback((p: Pt): Pt | null => (camera ? imageToPlaneAt(camera, p, -wallOffset) : homography ? imageToPlane(homography, p) : null), [camera, homography, wallOffset])
   // Línia del terra → alçada del terra sobre la paret.
   const floor = useMemo(() => (camera && cal.floorLine ? floorLevel(camera, cal.floorLine, wallOffset) : null), [camera, cal.floorLine, wallOffset])
   // Origen 3D (mm). Sense origen: cantonada baix-esquerra de la referència, a la paret.
@@ -372,13 +375,13 @@ function PhotoCalibrator({
     if (!cal.origin) return null
     const q = toSupport(cal.origin)
     return q ? [q[0], q[1], 0] : null
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cal.originMm, cal.originScale, scaleW, cal.origin, camera, homography, wallOffset])
+  }, [cal.originMm, cal.originScale, scaleW, cal.origin, toSupport])
   // Escala amb què es desa un origen nou (mm d'ara).
   const originScaleNow = scaleW ? { originScale: scaleW } : { originScale: undefined }
-  const originPlane: Pt = origin3 ? [origin3[0], origin3[1]] : [0, 0]
+  const originX = origin3 ? origin3[0] : 0
+  const originY = origin3 ? origin3[1] : 0
   const originZ = origin3 ? origin3[2] : 0
-  const sceneOffset = useMemo<Pt>(() => [fin(originPlane[0]) + fin(cal.offset[0]), fin(originPlane[1]) + fin(cal.offset[1])], [originPlane[0], originPlane[1], cal.offset])
+  const sceneOffset = useMemo<Pt>(() => [fin(originX) + fin(cal.offset[0]), fin(originY) + fin(cal.offset[1])], [originX, originY, cal.offset])
   const sceneOpts = useMemo(
     () => ({ plane: cal.plane, offset: sceneOffset, totalDepth, wallOffset, offsetZ: fin(originZ) + fin(cal.offsetZ) }),
     [cal.plane, sceneOffset, totalDepth, wallOffset, cal.offsetZ, originZ],
@@ -407,7 +410,7 @@ function PhotoCalibrator({
   const AXIS_MM = 300
   const axes = useMemo(() => {
     if (!camera || !calibrated || cal.plane !== "wall") return null
-    const o: Vec3m = [originPlane[0], originPlane[1], -wallOffset + originZ]
+    const o: Vec3m = [originX, originY, -wallOffset + originZ]
     const at = (dx: number, dy: number, dz: number) => project(camera, [o[0] + dx, o[1] + dy, o[2] + dz])
     const o2 = at(0, 0, 0)
     const x = at(AXIS_MM, 0, 0)
@@ -415,7 +418,7 @@ function PhotoCalibrator({
     const z = at(0, 0, AXIS_MM)
     if (!o2 || !x || !y || !z) return null
     return { o: o2, ends: [x, y, z] as const }
-  }, [camera, calibrated, cal.plane, originPlane[0], originPlane[1], originZ, wallOffset])
+  }, [camera, calibrated, cal.plane, originX, originY, originZ, wallOffset])
   const refOutline = useMemo(() => (model ? rectanglePoints(1, 1 / model.aspect).map((p) => applyHomography(model.h, p)) : null), [model])
 
   const layer = cal.layer ?? "both"
@@ -492,7 +495,7 @@ function PhotoCalibrator({
       const dx = end[0] - axes.o[0]
       const dy = end[1] - axes.o[1]
       const len = Math.hypot(dx, dy) || 1
-      drag.current = { kind: "axis", axis, start: p, o0: [originPlane[0], originPlane[1], originZ], dir: [dx / len, dy / len], pxPerMm: len / AXIS_MM }
+      drag.current = { kind: "axis", axis, start: p, o0: [originX, originY, originZ], dir: [dx / len, dy / len], pxPerMm: len / AXIS_MM }
     } else if (measureId !== undefined) {
       drag.current = { kind: "measure", id: measureId, index: Number(target.dataset.index) }
       setLens(p)
@@ -552,11 +555,11 @@ function PhotoCalibrator({
   }
 
   // En marcar la línia del terra, es proposa l'origen al seu extrem esquerre (si no n'hi ha).
+  const originScaleRef = useLatest(originScaleNow)
   useEffect(() => {
     if (!floor || cal.originMm || cal.origin) return
-    setCal((c) => ({ ...c, originMm: [Math.round(floor.xLeft), Math.round(floor.y), 0], ...originScaleNow, offset: [0, 0], offsetZ: 0 }))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [floor, cal.originMm, cal.origin])
+    setCal((c) => ({ ...c, originMm: [Math.round(floor.xLeft), Math.round(floor.y), 0], ...originScaleRef.current, offset: [0, 0], offsetZ: 0 }))
+  }, [floor, cal.originMm, cal.origin, originScaleRef])
 
   const presets = visibleReferences(settings)
   const presetKey = presets.findIndex((r) => r.w === cal.ref.w && r.h === cal.ref.h && (r.wallOffset ?? 0) === (cal.refWallOffset ?? 0))

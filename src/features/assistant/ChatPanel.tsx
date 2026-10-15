@@ -12,6 +12,7 @@ import { describeFailure, loadSdk, makeClient } from "./claudeClient"
 import { runTurn } from "./chatTurn"
 import type { ChatTarget } from "./chatTarget"
 import { NO_KEY_ERROR, OFFLINE_ERROR, type AssistantError } from "./errors"
+import { useLatest } from "../../lib/useLatest"
 
 /** Costat llarg màxim de les fotos i plànols que s'envien (docs/xat-ia.md). */
 const MAX_IMAGE_PX = 1568
@@ -156,12 +157,12 @@ export default function ChatPanel({ settings, target, onClose, closeRequest = 0 
   const askNewChat = () => (items.length || running ? setConfirmClose(true) : newChat())
   // Tornar a tocar el botó «Assistent» del menú el tanca com la ✕ (per decisió de l'usuari, 2026-10-14).
   const lastReq = useRef(closeRequest)
+  const onCloseRef = useLatest(onClose)
   useEffect(() => {
     if (closeRequest === lastReq.current) return
     lastReq.current = closeRequest
-    close()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [closeRequest])
+    onCloseRef.current?.()
+  }, [closeRequest, onCloseRef])
   const startFresh = () => {
     setConfirmClose(false)
     newChat()

@@ -138,6 +138,7 @@ import { UndoRedo } from "../../components/UndoRedo"
 import { TreeRow, TreeRowMenu, TreeSection, type TreeRowDnd, type TreeRowFlags } from "../../components/TreeRow"
 import type { ChatTarget } from "../assistant/chatTarget"
 import { registerDoc } from "../assistant/assistantHub"
+import { useLatest } from "../../lib/useLatest"
 
 /** Xat de l'assistent IA (docs/xat-ia.md): a demanda, el primer cop que s'obre la pestanya «Assistent». */
 
@@ -291,6 +292,8 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
     setCamGoto((g) => ({ pose: prev, n: (g?.n ?? 0) + 1 }))
   }
 
+  // L'ambient d'ara, per als callbacks (que no es tornen a crear a cada canvi).
+  const ambRef = useLatest(amb)
   // Canvi de l'ambient: `commit` = un pas de desfer (en deixar anar); si no, en viu (arrossegant).
   // El cadenat de l'arbre: els elements i les parets bloquejats no es mouen, vingui d'on vingui el canvi.
   const change = useCallback(
@@ -298,14 +301,10 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
       const prev = ambRef.current
       setAmb({ ...next, items: keepLocked(prev.items, next.items, ["x", "y", "rot", "elevation"]), walls: keepLocked(prev.walls, next.walls, ["a", "b"]) }, { commit })
     },
-    [setAmb],
+    [setAmb, ambRef],
   )
   // Assistent IA: llegeix l'ambient d'ara i hi aplica els canvis en viu; en acabar el torn, un sol pas de desfer.
-  const ambRef = useRef(amb)
-  useEffect(() => {
-    ambRef.current = amb
-  })
-  const getAmb = useCallback(() => ambRef.current, [])
+  const getAmb = useCallback(() => ambRef.current, [ambRef])
   const applyLive = useCallback((next: Ambient) => setAmb(next, { commit: false }), [setAmb])
   const commitLive = history.commit
   const assistantTarget = useMemo(() => {
@@ -539,7 +538,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
       const all = ambRef.current
       change({ ...next, items: mergeHidden(all.items, all.items.filter((it) => !it.hidden), next.items), walls: mergeHidden(all.walls, all.walls.filter((w) => !w.hidden), next.walls) }, commit)
     },
-    [change],
+    [change, ambRef],
   )
   // L'ordre de l'arbre de l'apartat d'un element (Mobles o Objectes; els grups, on surt el primer dels seus).
   const sectionOrder = (it: AmbientItem): string[] => {

@@ -88,6 +88,8 @@ import { useDebouncedSave } from "../../lib/useDebouncedSave"
 import { MaterialSelect } from "../settings/MaterialSelect"
 import { chatTarget } from "../assistant/chatTarget"
 import { registerDoc } from "../assistant/assistantHub"
+import { useLatest } from "../../lib/useLatest"
+import { useKeyed } from "../../lib/useKeyed"
 
 /** Xat de l'assistent IA (docs/xat-ia.md): a demanda, el primer cop que s'obre la pestanya «Assistent». */
 
@@ -178,9 +180,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     [setDoc],
   )
   // L'assistent IA llegeix la composició d'ara i hi aplica els canvis en viu; en acabar el torn, un sol pas de desfer.
-  const compRef = useRef(comp)
-  compRef.current = comp
-  const getComp = useCallback(() => compRef.current, [])
+  const compRef = useLatest(comp)
+  const getComp = useCallback(() => compRef.current, [compRef])
   const applyLive = useCallback((next: Composition) => setComp(next, { commit: false }), [setComp])
   // Dreceres de desfer/refer (`undoKeyAction`): no als camps de text lliure ni amb un diàleg modal obert (l'editor de
   // perfils té el seu desfer: ⌘Z hi desfeia el moble del darrere).
@@ -304,8 +305,6 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
 
   const build = useCompositionBuild(comp)
   const panels = build?.panels ?? NO_PANELS
-  const panelsRef = useRef(panels)
-  panelsRef.current = panels
 
   // Desa amb retard quan la composició canvia; el que queda pendent es desa en sortir de l'Editor (si
   // no, Exportar llegiria la versió anterior). Només si és vàlida (com a Preferències): un camp a mig escriure no
@@ -324,7 +323,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       const more = read.problems.length > 4 ? ` (i ${read.problems.length - 4} més)` : ""
       toaster.create({ id: `repaired-${projectId}`, title: "S'han tret dades malmeses del moble", description: shown + more, type: "warning", duration: 12000 })
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- l'avís surt un cop, en obrir el moble
   }, [])
 
   const kind = compositionKind(comp)
@@ -392,9 +391,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           : { kind: "module", id: module.id }
   // La mateixa selecció ha de ser el mateix objecte d'un render a l'altre: si no, tots els càlculs
   // que en depenen (useMemo) es refarien a cada render.
-  const selectionKey = JSON.stringify(selectionNow)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const selection = useMemo(() => selectionNow, [selectionKey])
+  const selection = useKeyed(selectionNow, JSON.stringify(selectionNow))
   // Assistent personal (`assistantHub.ts`): aquest document s'hi registra amb les seves eines i què hi ha seleccionat
   // (amb els ids que fan servir les eines). La selecció es llegeix en el moment (ref), no en registrar-se.
   const describeSelection = useRef<() => string | undefined>(() => undefined)

@@ -60,6 +60,7 @@ import { LightSections } from "./LightSections"
 import { useSessionString } from "./useSessionString"
 import { ThicknessChips } from "./MaterialBits"
 import { PaneHeadContext } from "./paneHead"
+import { useDraft } from "../../lib/useDraft"
 
 const NO_MATERIALS: MaterialPref[] = []
 
@@ -789,8 +790,7 @@ function HardwareCard({
 }) {
   const [retargeting, setRetargeting] = useState(false)
   // El nom es canvia en acabar (sortir del camp o Retorn), com als materials; buit, es queda l'antic. Esc el desfà.
-  const [nameText, setNameText] = useState(item.name)
-  useEffect(() => setNameText(item.name), [item.name])
+  const [nameText, setNameText] = useDraft(item.name)
   const cancelName = useRef(false)
   useEffect(() => {
     dirty.current = nameText !== item.name

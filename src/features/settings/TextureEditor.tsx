@@ -6,6 +6,7 @@ import { WOOD_PRESETS, type Finish, type MaterialPref, type WoodGen } from "../.
 import { woodGenOf } from "../../components/viewer/textures"
 import { isEditable, previewStyle } from "./materialPreview"
 import { WOOD_EXTRA_PRESETS } from "./woodPresets"
+import { useDraft } from "../../lib/useDraft"
 
 type Editable = Exclude<Finish, { kind: "image" }>
 
@@ -231,8 +232,7 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
  * mil·lisegons: no es fa a cada píxel d'arrossegament); el número s'actualitza en viu.
  */
 function Slider({ label, value, min, max, step, fmt = (v) => String(v), onChange }: { label: string; value: number; min: number; max: number; step: number; fmt?: (v: number) => string; onChange: (v: number) => void }) {
-  const [v, setV] = useState(value)
-  useEffect(() => setV(value), [value])
+  const [v, setV] = useDraft(value)
   const commit = () => v !== value && onChange(v)
   return (
     // Fila: etiqueta a l'esquerra; el lliscador i el valor a la dreta.

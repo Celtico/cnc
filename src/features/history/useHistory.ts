@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react"
 import { commitHistory, initHistory, pushHistory, redoHistory, undoHistory, type History, type HistoryOptions, type SetOptions } from "./history"
 import { undoKeyAction } from "./undoKeys"
+import { useLatest } from "../../lib/useLatest"
 
 interface UseHistory<T> {
   /** El valor actual (amb els canvis en viu). */
@@ -26,14 +27,11 @@ interface UseHistory<T> {
  */
 export function useHistory<T>(initial: T, opts: HistoryOptions = {}): UseHistory<T> {
   const [state, setState] = useState<History<T>>(() => initHistory(initial))
-  const optsRef = useRef(opts)
-  useEffect(() => {
-    optsRef.current = opts
-  })
+  const optsRef = useLatest(opts)
   const set = useCallback((next: T | ((cur: T) => T), s?: SetOptions) => {
     setState((h) => pushHistory(h, typeof next === "function" ? (next as (cur: T) => T)(h.present) : next, Date.now(), optsRef.current, s))
-  }, [])
-  const commit = useCallback(() => setState((h) => commitHistory(h, Date.now(), optsRef.current)), [])
+  }, [optsRef])
+  const commit = useCallback(() => setState((h) => commitHistory(h, Date.now(), optsRef.current)), [optsRef])
   const undo = useCallback(() => setState(undoHistory), [])
   const redo = useCallback(() => setState(redoHistory), [])
   const reset = useCallback((value: T) => setState(initHistory(value)), [])

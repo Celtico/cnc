@@ -159,7 +159,8 @@ describe("ferratge muntat", () => {
     const cam = c.target.map((v, i) => v + c.dir[i]! * c.dist)
     const f = c.dir.map((v) => -v)
     const unit = (a: number[]) => a.map((x) => x / Math.hypot(...a))
-    const r = unit([f[1]! * 0 - f[2]! * 1, f[2]! * 0 - f[0]! * 0, f[0]! * 1 - f[1]! * 0])
+    // f × (0, 1, 0)
+    const r = unit([-f[2]!, 0, f[0]!])
     const u = [r[1]! * f[2]! - r[2]! * f[1]!, r[2]! * f[0]! - r[0]! * f[2]!, r[0]! * f[1]! - r[1]! * f[0]!]
     const t = Math.tan((32 * Math.PI) / 360)
     const pts: [number, number, number][] = []

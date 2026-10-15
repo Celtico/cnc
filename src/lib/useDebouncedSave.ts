@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { useLatest } from "./useLatest"
 
 /**
  * Desa `value` amb retard quan canvia (mentre s'arrossega o s'escriu no es desa a cada pas) i,
@@ -11,10 +12,7 @@ import { useEffect, useRef, useState } from "react"
 export function useDebouncedSave<T>(value: T, save: (v: T) => unknown, delay = 350): void {
   const saved = useRef(value)
   const pending = useRef<{ v: T } | null>(null)
-  const saveRef = useRef(save)
-  useEffect(() => {
-    saveRef.current = save
-  })
+  const saveRef = useLatest(save)
   const [flush] = useState(() => () => {
     const p = pending.current
     if (!p) return

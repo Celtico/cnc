@@ -19,6 +19,7 @@ import { mergeSaved, readRenderPrefs, writeRenderPrefs } from "./renderPrefs"
 import { BACKDROPS, aimBackdrop, loadBackdrop, saveBackdropPhoto, type BackdropKind, type Panorama } from "./backdrops"
 import { DEFAULT_RENDER_OPTS, extractScene, photoCamera, type RenderEnv, type RenderOpts, type RenderRoom } from "./sceneData"
 import { aces, agx, bloomBuffer, createDrawScheduler, makeAgxLut, makePowLut, makeSrgbLut, sampleBloom, srgbLut, vignette, type ToneCurve } from "./tonemap"
+import { useLatest } from "../../../lib/useLatest"
 
 export type SceneGetter = () => { scene: Scene; camera: Camera; width: number; height: number; snapshot?: () => string } | null
 
@@ -193,17 +194,14 @@ export function RenderDialog({ open, onClose, getScene, name, saveKey }: { open:
   /** La GPU ha fallat en aquest diàleg (motiu; si era per la mida, només a aquesta resolució). */
   const [gpuFailed, setGpuFailed] = useState<{ why: string; res: Resolution | null } | null>(null)
   const [engineLabel, setEngineLabel] = useState("")
-  const envRef = useRef(env)
-  envRef.current = env
+  const envRef = useLatest(env)
   /** Vista per les finestres carregada (`opts.view`; es carrega a part, com el cel). */
   const [pano, setPano] = useState<{ kind: BackdropKind; p: Panorama } | null>(null)
-  const panoRef = useRef(pano)
-  panoRef.current = pano
+  const panoRef = useLatest(pano)
   const [look, setLookState] = useState<Look>(DEFAULT_LOOK)
   const skipSave = useRef(false)
   const lookRef = useRef(look)
-  const limitRef = useRef(limit)
-  limitRef.current = limit
+  const limitRef = useLatest(limit)
   const engine = useRef<RenderEngine | null>(null)
   /** Cada render nou: els avisos dels motors d'abans s'ignoren. */
   const token = useRef(0)
@@ -341,8 +339,7 @@ export function RenderDialog({ open, onClose, getScene, name, saveKey }: { open:
     }
     ctx.putImageData(img.current, 0, 0)
   }
-  const drawRef = useRef(draw)
-  drawRef.current = draw
+  const drawRef = useLatest(draw)
   // Com a molt un dibuix per fotograma, i més espaiats si costen (imatges grans).
   const drawer = useRef<ReturnType<typeof createDrawScheduler> | null>(null)
   const requestDraw = () => {
@@ -546,7 +543,6 @@ export function RenderDialog({ open, onClose, getScene, name, saveKey }: { open:
       dn.current.worker?.terminate()
       dn.current.worker = null
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   )
   useEffect(() => {
@@ -575,9 +571,10 @@ export function RenderDialog({ open, onClose, getScene, name, saveKey }: { open:
     let alive = true
     void gpuSupport().then((why) => alive && setGpuWhy(why))
     // Open Image Denoise si hi ha WebGPU i els pesos; si no, en silenci, l'À-Trous.
+    const d = dn.current
     void oidnReady().then((u) => {
       if (!alive) return
-      dn.current.oidn = u
+      d.oidn = u
       setDenoiser(u ? "oidn" : "atrous")
     })
     // Als ambients (llum de dia), exposició automàtica i una mica càlid, com les fotos d'interiors.
@@ -619,13 +616,13 @@ export function RenderDialog({ open, onClose, getScene, name, saveKey }: { open:
         return
       }
       disposeEngine()
-      dn.current.worker?.terminate()
-      dn.current.worker = null
-      dn.current.busy = 0
+      d.worker?.terminate()
+      d.worker = null
+      d.busy = 0
       job.current = null
       source.current = null
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- es prepara en obrir el diàleg; l'escena i la configuració es llegeixen en aquell moment
   }, [open])
 
   // Desar la configuració (no la del moment d'obrir: encara és la d'abans de llegir la desada).
@@ -649,15 +646,17 @@ export function RenderDialog({ open, onClose, getScene, name, saveKey }: { open:
       restart(opts, res, effectiveKind)
     }, 300)
     return () => window.clearTimeout(id)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- torna a començar quan canvien el motor, la qualitat o la llum; no en obrir
   }, [opts, res, room, format, env, pano, effectiveKind])
 
   // Vista per les finestres: es carrega la triada (la foto pròpia, si n'hi ha de desada).
   const viewKind = opts.view ?? "garden"
+  // La vista ja carregada: es mira en obrir o en canviar de vista, però carregar-ne una no torna a disparar l'efecte.
+  const panoKind = useLatest(pano?.kind)
   useEffect(() => {
     // Ja carregada (en tornar a obrir el diàleg amb un render a mig fer): no es torna a carregar, si no el render tornaria
     // a començar (una vista nova és un altre objecte).
-    if (!open || viewKind === "sky" || pano?.kind === viewKind) return
+    if (!open || viewKind === "sky" || panoKind.current === viewKind) return
     let alive = true
     void loadBackdrop(viewKind).then(
       (p) => alive && setPano(p ? { kind: viewKind, p } : null),
@@ -666,7 +665,7 @@ export function RenderDialog({ open, onClose, getScene, name, saveKey }: { open:
     return () => {
       alive = false
     }
-  }, [open, viewKind])
+  }, [open, viewKind, panoKind])
 
   useEffect(() => {
     if (!running) return

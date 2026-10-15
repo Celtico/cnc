@@ -23,6 +23,8 @@ import { TextureEditor } from "./TextureEditor"
 import { MapThumb, TextureMapRows, TextureSetRow } from "./TextureMapRows"
 import { encodeMap, pickFiles, textureSetSummary } from "./textureImport"
 import { readPickedTextureSet } from "./textureMaterials"
+import { useDraft } from "../../lib/useDraft"
+import { useLatest } from "../../lib/useLatest"
 
 /** Icones de les categories (com els apartats de les pàgines principals). */
 const CATEGORY_ICONS: Record<MaterialCategory, IconType> = { board: LuLayers3, back: LuLayers2, sim: LuSprayCan }
@@ -258,8 +260,7 @@ function MaterialCard({ m, dirty, footer, onChange, onRename, nameError, onDupli
   const [editing, setEditing] = useState(false)
   // El nom es canvia en acabar (sortir del camp o Retorn), no a cada tecla: llavors els mobles i ambients que el fan
   // servir el segueixen (`renameMaterialEverywhere`). Repetit o buit: l'error a sota i, en acabar, es queda l'antic.
-  const [nameText, setNameText] = useState(m.name)
-  useEffect(() => setNameText(m.name), [m.name])
+  const [nameText, setNameText] = useDraft(m.name)
   const typedError = nameText === m.name ? null : nameError(nameText)
   // Esc desfà: el `blur` que ve després no ha de desar el text d'abans (el seu `nameText` encara és l'escrit).
   const cancelName = useRef(false)
@@ -285,13 +286,16 @@ function MaterialCard({ m, dirty, footer, onChange, onRename, nameError, onDupli
   const finish = m.finish
   // Fotos d'abans (sense proporció): es mesura la imatge un cop.
   const needsAspect = finish.kind === "image" && finish.aspect === undefined ? finish.src : null
+  const latest = useLatest({ finish, onChange })
   useEffect(() => {
-    if (!needsAspect || finish.kind !== "image") return
+    if (!needsAspect) return
     const img = new Image()
-    img.onload = () => img.width && onChange({ finish: { ...finish, aspect: Math.round((img.height / img.width) * 1000) / 1000 } })
+    img.onload = () => {
+      const { finish: f, onChange: change } = latest.current
+      if (img.width && f.kind === "image") change({ finish: { ...f, aspect: Math.round((img.height / img.width) * 1000) / 1000 } })
+    }
     img.src = needsAspect
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [needsAspect])
+  }, [needsAspect, latest])
   const swatch = finish.kind === "wood" || finish.kind === "image" ? undefined : finish.color
   const setKind = (k: Finish["kind"]) => {
     if (k === finish.kind) return
