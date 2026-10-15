@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { applianceById, defaultModule, isApplianceModule, moduleType, setModuleAppliance, setModuleType, type Module } from "."
+import { buildComposition } from "../build/buildComposition"
+import { applianceById, defaultModule, emptyModule, isApplianceModule, moduleType, setModuleAppliance, setModuleType, type Module } from "."
 
 const base = (h = 770): Module => defaultModule("m", "M", { width: 600, height: h, depth: 560 })
 
@@ -44,5 +45,13 @@ describe("tipus del mòdul", () => {
     const hood = setModuleAppliance(base(), applianceById("appliance-bosch-dln57pc60"), 0)
     expect(hood.carcass.base.kind).toBe("wall")
     expect(moduleType(hood)).toBe("appliance")
+  })
+
+  it("el rentaplats en un buc sobre potes: el nínxol va de terra fins on arribava el buc (720 + 100 = 820), sense avís", () => {
+    const e = emptyModule("m", "M")
+    const dw = setModuleAppliance({ ...e, carcass: { ...e.carcass, base: { kind: "legs", height: 100 } } }, applianceById("appliance-bosch-smh6ycx02e"), 0)
+    expect(dw.carcass.height).toBe(820)
+    const b = buildComposition({ modules: [dw], references: [], support: { kind: "plinth", height: 100, plinth: { setback: 24 } } })
+    expect(b.warnings.filter((w) => w.code === "appliance")).toEqual([])
   })
 })

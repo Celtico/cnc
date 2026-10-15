@@ -1,4 +1,6 @@
-import { applianceDefaults } from "./applianceCarcass"
+import type { Range } from "./appliance"
+import { applianceDefaults, isFloorNiche } from "./applianceCarcass"
+import { moduleElevation } from "./composition"
 import { setModuleMount } from "./editOps"
 import { isAppliance } from "./hardwareLibrary"
 import type { HardwareItem } from "./hardwareSchema"
@@ -71,8 +73,8 @@ export function setModuleType(m: Module, type: ModuleType, here: number): Module
  * Tria l'aparell del mòdul Electrodomèstic (o el treu, `undefined`: continua sent Electrodomèstic, sense aparell): qualsevol
  * de la biblioteca (per decisió de l'usuari, 2026-10-15: «quan és baix o penjat no poden sortir electrodomèstics»; la placa
  * i la campana també es trien aquí). El
- * nínxol de terra es queda sense laterals (`applianceDefaults`); un aparell penjat (microones) penja el mòdul i un de terra
- * el baixa; l'amplada, la del nínxol si la que té no hi entra.
+ * nínxol de terra es queda sense laterals (`applianceDefaults`) i arriba de terra fins on arribava el mòdul; un aparell
+ * penjat (microones) penja el mòdul i un de terra el baixa; l'amplada, la del nínxol si la que té no hi entra.
  */
 export function setModuleAppliance(m: Module, item: HardwareItem | undefined, here: number): Module {
   const base = withType(withoutModuleAppliance(m), "appliance")
@@ -82,7 +84,11 @@ export function setModuleAppliance(m: Module, item: HardwareItem | undefined, he
   const hung = out.carcass.base.kind === "wall"
   if (a.mount === "wall" && !hung) out = setModuleMount(out, "hung", here)
   if (a.mount !== "wall" && hung) out = setModuleMount(out, "wall", here)
-  const w = a.niche?.w
-  const width = w && ((w.min !== undefined && out.carcass.width < w.min) || (w.max !== undefined && out.carcass.width > w.max)) ? (w.min ?? w.max!) : out.carcass.width
-  return withType({ ...out, carcass: applianceDefaults(a, { ...out.carcass, width }) }, "appliance")
+  const fit = (v: number, r: Range | undefined) => (r?.min !== undefined && v < r.min ? r.min : r?.max !== undefined && v > r.max ? r.max : v)
+  const width = fit(out.carcass.width, a.niche?.w)
+  // El nínxol de terra (rentaplats, rentadora, frigorífic sota taulell) va de terra fins a sota el taulell: l'alçada, la
+  // de dalt del mòdul d'ara (el suport més la caixa: un buc de 720 sobre potes de 100 fa 820), dins del que demana el
+  // fabricant.
+  const height = isFloorNiche(a) ? fit(moduleElevation(out.carcass) + out.carcass.height, a.niche?.h) : out.carcass.height
+  return withType({ ...out, carcass: applianceDefaults(a, { ...out.carcass, width, height }) }, "appliance")
 }

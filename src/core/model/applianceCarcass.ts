@@ -27,12 +27,12 @@ export type ApplianceCarcass = Partial<Record<CarcassPart, boolean>> & {
 }
 
 /** L'aparell de terra que fa del mòdul el nínxol (rentaplats, rentadora, frigorífic sota taulell). */
-const floorNiche = (a: Appliance): boolean => a.mount === "base" && takesFront(a)
+export const isFloorNiche = (a: Appliance): boolean => a.mount === "base" && takesFront(a)
 
 /** Les parts de la caixa que l'aparell fixa (vegeu el comentari de dalt); `hung`: el mòdul és penjat (Posició). */
 export function applianceCarcass(a: Appliance, hung: boolean): ApplianceCarcass {
   if (a.kind === "hob" || a.kind === "hood") return {}
-  if (floorNiche(a)) return { support: false, bottom: false, top: false, back: false, niche: true }
+  if (isFloorNiche(a)) return { support: false, bottom: false, top: false, back: false, niche: true }
   if (a.kind === "fridge") return { sides: true, bottom: true, top: true }
   if (a.kind === "microwave" && hung && a.wallNiche) return { sides: true, bottom: true, back: false }
   return { sides: true, bottom: true }
@@ -40,7 +40,7 @@ export function applianceCarcass(a: Appliance, hung: boolean): ApplianceCarcass 
 
 /** El que es posa en triar l'aparell (es pot canviar després): el nínxol de terra, sense laterals. */
 export function applianceDefaults(a: Appliance, c: Carcass): Carcass {
-  return floorNiche(a) ? { ...c, sides: { left: false, right: false } } : c
+  return isFloorNiche(a) ? { ...c, sides: { left: false, right: false } } : c
 }
 
 /**
