@@ -21,9 +21,15 @@ export interface ZoneBounds {
   noTop: boolean
 }
 
+/**
+ * La caixa té la peça de baix (la base): no amb «Sense base» (`Carcass.noBottom`, o el `{ kind: "open" }` d'abans). Amb
+ * potes, sempre: s'hi cargolen (el «Sense base» no compta, es conserva).
+ */
+export const hasBottom = (c: Pick<Carcass, "base" | "noBottom">): boolean => c.base.kind === "legs" || (c.base.kind !== "open" && !c.noBottom)
+
 /** El que envolta l'«Interior» (l'arrel): la caixa del mòdul. */
-export function carcassBounds(c: Pick<Carcass, "sides" | "base" | "top">): ZoneBounds {
-  const noBase = c.base.kind === "open"
+export function carcassBounds(c: Pick<Carcass, "sides" | "base" | "top" | "noBottom">): ZoneBounds {
+  const noBase = !hasBottom(c)
   const noTop = c.top.kind === "none"
   return { left: c.sides.left, right: c.sides.right, bottom: !noBase, top: !noTop, noBase, noTop }
 }

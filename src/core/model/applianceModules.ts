@@ -21,7 +21,7 @@ export function applianceById(id: string): HardwareItem {
  * (fins a sota del taulell dels baixos sobre potes de 100) i el sòcol que es doni (`plinth`, del terra al front).
  */
 export function nicheModule(name: string, applianceId: string, plinth: number, c: Partial<Carcass> = {}): Module {
-  const m = defaultModule(newId("m"), name, { width: 600, height: 870, depth: 560, sides: { left: false, right: false }, base: { kind: "open" }, top: { kind: "none" }, back: "none", ...c })
+  const m = defaultModule(newId("m"), name, { width: 600, height: 870, depth: 560, sides: { left: false, right: false }, base: { kind: "none" }, noBottom: true, top: { kind: "none" }, back: "none", ...c })
   return { ...m, root: { id: newId(), appliance: { hardware: applianceById(applianceId), plinth } } }
 }
 
@@ -83,7 +83,7 @@ export function applianceKitchen(frontMaterial = "Melamina roure"): Composition 
   const oven = dress(ovenColumn(), { base: legs })
   const drawers = base("Calaixos", 600, { front: { kind: "drawers", n: 3, heights: ["auto", "auto", "auto"] } })
   const sink = base("Fregadera", 800, { front: { kind: "door", mode: "double", hinge: "left" } }, { top: { kind: "none" } })
-  const dishwasher = dress(dishwasherModule(), { sides: { left: false, right: false }, base: { kind: "open" }, top: { kind: "none" }, back: "none" })
+  const dishwasher = dress(dishwasherModule(), { sides: { left: false, right: false }, base: { kind: "none" }, noBottom: true, top: { kind: "none" }, back: "none" })
   // La placa va al taulell (no al mòdul, sense tapa): l'avís diu el retall; a sota, dos calaixos.
   const hob = base("Fogons", 600, { front: { kind: "drawers", n: 2, heights: ["auto", "auto"] }, appliance: { hardware: applianceById("appliance-bosch-pie631hc1e") } }, { top: { kind: "none" } })
   const walls = [

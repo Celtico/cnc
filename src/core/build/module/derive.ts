@@ -1,4 +1,4 @@
-import type { PNode, Module, Zone } from "../../model"
+import { hasBottom, type PNode, type Module, type Zone } from "../../model"
 import type { ZoneRect } from "../layout"
 
 /** Mides derivades de la carcassa. */
@@ -53,7 +53,8 @@ export function derive(m: Module): Derived {
   const sideZ0 = D - sideDepth
   // Encastat: entre laterals, a `backInsetSetback` del darrere; l'interior comença a la seva cara de davant.
   const backInnerZ = c.back === "groove" ? c.backSetback + tb : c.back === "screwed" ? tb : c.back === "inset" ? (c.backInsetSetback ?? 0) + tb : 0
-  const hasBase = c.base.kind !== "open"
+  // «Sense base» (`noBottom`, o el `open` d'abans): cap peça de baix; amb sòcol, l'interior comença a dalt del sòcol.
+  const hasBase = hasBottom(c)
   const hasTop = c.top.kind !== "none"
   const baseY = c.base.kind === "plinth" ? c.base.height : 0
   // Paret buida: cal lloc per a dues pells i un llistó (almenys 6 mm entre pells).
@@ -75,7 +76,7 @@ export function derive(m: Module): Derived {
     interior: {
       x0: c.sides.left ? ws : 0,
       x1: c.sides.right ? W - ws : W,
-      y0: hasBase ? baseY + wb : 0,
+      y0: hasBase ? baseY + wb : baseY,
       y1: hasTop ? H - wt : H,
     },
     hasBase,

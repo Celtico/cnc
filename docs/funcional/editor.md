@@ -77,14 +77,20 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   - Moble: Resum (i avisos de fusteria), Encaixos (si alguna peça en fa),
     Materials de tot el moble (aplica a tots els mòduls), Acabats de l'escena (`Composition.scene`: `floor`, `wall` per a Presentació i miniatura; buit = «Com a
     Preferències»; `CabinetViewer sceneFinish`, `renderThumb(…, finish)`).
-  - Mòdul: Posició · Mides · **Caixa** · **Portes** (només amb l'Interior dividit) o **Electrodomèstic** (només sense
-    dividir) · **Unió** (si la caixa en fa) ·
+  - Mòdul: Posició · Mides · **Electrodomèstic** (només sense dividir; des del 2026-10-15, a dalt de la Caixa: l'aparell
+    decideix la caixa) · **Caixa** · **Portes** (només amb l'Interior dividit) · **Unió** (si la caixa en fa) ·
     **Materials** (en aquest ordre per decisió de l'usuari, 2026-10-13). **Sense «Acabats»** (per decisió de l'usuari,
     2026-10-08: «això dels acabats no està bé»; abans una secció `mod-joinery`, `LuHammer`): cada fila és a la secció del
     que toca, **un sol lloc per decisió i només el que la construcció llegeix** (`moduleRows` a
     `core/model/usedHardware.ts`, `frontsInspector.test.ts`), en cascada:
     - **Caixa** (`mod-structure`, `LuFrame`; abans «Estructura», es confonia amb la pestanya de l'arbre; `CarcassForm`):
-      base —amb la «Pota» pel mateix `HardwarePick`; amb el sòcol de les potes, «Tipus de sòcol», «Costats», «Retirada
+      **Suport** (Directe a terra · Sòcol · Potes; penjat: el text «Penjat a la paret, a … mm del terra», es canvia a
+      Posició) i, sota, **Base** (Sencera · Sense base, com la Tapa i el Fons; per decisió de l'usuari, 2026-10-15; amb
+      potes, el text «Sencera»: s'hi cargolen). Les parts que fixa l'electrodomèstic que és el mòdul (`applianceCarcass`;
+      vegeu Model › Electrodomèstic › La caixa que demana) surten com a **text** a la seva fila (Suport, Base, Fons, Tapa,
+      Laterals: «Sense base», «Els dos»…; l'ajuda diu «Rentaplats: directe a terra, sense base, sense tapa i sense fons. Ho
+      demana l'aparell»), com el penjat; les que es trien, amb el seu control. La resta, com sempre:
+      suport —amb la «Pota» pel mateix `HardwarePick`; amb el sòcol de les potes, «Tipus de sòcol», «Costats», «Retirada
       dels costats» i «Cantonades»; penjat, «Penjadors» i «Regleta» amb «Com el mòdul» i «Cap» (`BaseFields.tsx`)—, fons i, just a sota, **Ranura del fons** (en ranura) o **Retirada
       del fons** (encastat), tapa, laterals, parets, cantonades i, al final, el que és de tots els fronts del mòdul:
       **Estil dels fronts** (Recobrents / Encastats) i Folgança front–cos si hi ha algun front que es fa (un front fix
@@ -97,9 +103,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
       del moble › Zones › Front d'una zona dividida). Insígnia «Una porta» / «Dues portes». Després de la Caixa (els
       laterals diuen on hi caben) i abans dels Materials (Fronts, que en depèn).
     - **Electrodomèstic** (`mod-appliance`, `LuRefrigerator`, la mateixa `ApplianceSection` del compartiment amb `module`;
-      per decisió de l'usuari, 2026-10-15): només amb l'arrel **sense dividir**, al lloc de les Portes (mai surten
-      juntes): després de la Caixa (laterals i base diuen on obre i si hi ha sòcol) i abans dels Materials (el del front de
-      moble). Edita `root.appliance` (el model no canvia, sense migració): «Aparell», «Front de moble», «Obre», «Sòcol» i
+      per decisió de l'usuari, 2026-10-15): només amb l'arrel **sense dividir**, **a dalt de la Caixa** (l'aparell decideix
+      la caixa, no al revés: la Caixa només ofereix les parts de fusta que admet; triar-ne un de nou posa la seva caixa
+      estàndard, `applianceDefaults`). Edita `root.appliance` (el model no canvia, sense migració): «Aparell», «Front de moble», «Obre», «Sòcol» i
       «Tirador» com al compartiment. Si l'aparell ocupa el mòdul, l'arbre no ensenya l'«Interior» (vegeu Estructura) i el
       Front, els Prestatges i Dividir de l'arrel no compten (es conserven: «Cap» els torna); el mòdul sense dividir no té
       seccions pròpies de fronts o prestatges que calgui amagar (l'estil i les folgances de la Caixa i el material dels

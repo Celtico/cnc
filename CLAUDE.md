@@ -158,6 +158,7 @@ Les etiquetes i les ajudes de la UI fan servir sempre aquestes paraules (auditor
 |---|---|
 | **Cos** | la caixa del mòdul (laterals, base, tapa, fons) i el seu material («Com el cos») |
 | **Fons** | la peça del darrere del mòdul (el `trassera` del taller); **Fons del calaix**, la del calaix (fila del joc, avís `drawer-bottom`, material propi a Materials; el nom de peça `fons calaix` i l'etiqueta `Fons calaix n` no canvien: són els dels fitxers del taller) |
+| **Suport** / **Base** | Suport: on seu el mòdul (directe a terra, sòcol, potes; penjat, des de Posició). Base: la peça de baix de la caixa (Sencera · Sense base) |
 | **Fondària** | l'eix Z i la mida en Z (mai «Fons Z») |
 | **Portes** | la secció del mòdul amb les portes de dalt a baix de tot el mòdul (Interior dividit; Cap · Una · Dues, `LuDoorClosed`); al Front d'una porta, la fila Una · Dues |
 | **Front** | porta, front de calaix, abatible, reixeta, front fix; d'un compartiment sense dividir (les zones dividides no en tenen: les portes de tot el mòdul són a Mòdul › **Portes**) (l'estil i les folgances de tots els fronts del mòdul són a Mòdul › **Caixa**; el material, a Mòdul › **Materials**) |
@@ -192,7 +193,8 @@ Les etiquetes i les ajudes de la UI fan servir sempre aquestes paraules (auditor
     inspector, cada opció depèn només de les de més amunt; canviar-ne una de dalt fa aparèixer o desaparèixer les de
     sota, mai al revés (Laterals abans de Parets i Cantonades; l'imant de la reixeta després de Muntatge i Trapa;
     a Mòdul › Caixa, el fons i després la seva ranura o retirada, i els fronts al final; Mòdul › Portes després de la
-    Caixa i abans dels Materials, i al mateix lloc, sense dividir, Mòdul › Electrodomèstic). El que una opció de dalt fa irrellevant no
+    Caixa i abans dels Materials; Mòdul › Electrodomèstic abans de la Caixa: l'aparell decideix les parts de fusta, que surten
+    fixes com a text; a la Caixa, el Suport abans de la Base, i amb potes la base hi és sempre). El que una opció de dalt fa irrellevant no
     surt (un compartiment tapat no ensenya el seu Front; sense fronts, ni estil ni folgances ni material dels fronts;
     sense laterals ni divisors, ni prestatges ni accessoris ni fronts; sense on unir el divisor, ni Dividir: `zoneSupport.ts`).
   - **Un sol lloc per decisió**: una tria surt un cop a cada pantalla (l'electrodomèstic d'un mòdul sense dividir, a

@@ -271,7 +271,7 @@ export function activeRuns(comp: Composition): Run[] {
  * ni fons, amb les cantonades a inglet (com un bloc massís).
  */
 export function tableModule(id: string, name: string, overrides: Partial<Carcass> = {}): Module {
-  const m = defaultModule(id, name, { width: 1400, height: 760, depth: 400, base: { kind: "open" }, back: "none", joint: "mitre", ...overrides })
+  const m = defaultModule(id, name, { width: 1400, height: 760, depth: 400, base: { kind: "none" }, noBottom: true, back: "none", joint: "mitre", ...overrides })
   return { ...m, root: { id: newId() } }
 }
 

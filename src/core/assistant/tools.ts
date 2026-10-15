@@ -90,10 +90,11 @@ const TOOL_INPUTS = {
           z.object({ kind: z.literal("none") }).describe("Base directa a terra."),
           z.object({ kind: z.literal("plinth"), height: mm.min(20).max(300).default(100), setback: mm.min(0).max(200).default(50) }).describe("Sòcol retranquejat."),
           z.object({ kind: z.literal("legs"), height: mm.min(20).max(500).default(120) }).describe("Potes."),
-          z.object({ kind: z.literal("open") }).describe("Sense base: laterals fins a terra (cobreradiador)."),
+          z.object({ kind: z.literal("open") }).describe("Directe a terra i sense base (com none + bottom false): laterals fins a terra (cobreradiador)."),
         ])
         .optional()
-        .describe("Base (per penjar-lo, set_module_position mount=hung)."),
+        .describe("Suport de terra (per penjar-lo, set_module_position mount=hung)."),
+      bottom: z.boolean().optional().describe("Base (la peça de baix de la caixa): false = sense base (també als penjats i amb sòcol); amb potes sempre hi és (s'hi cargolen)."),
       back: z.enum(["groove", "screwed", "inset", "none"]).optional().describe("Fons: en ranura, cargolat darrere, encastat o sense."),
       top: z
         .union([z.enum(["full", "none"]), z.object({ kind: z.literal("ventSlot"), gap: mm.min(5).max(200) })])
@@ -103,7 +104,7 @@ const TOOL_INPUTS = {
       joint: z.enum(["butt", "mitre"]).optional().describe("Cantonades: normals o a inglet (45°)."),
       front_style: z.enum(["overlay", "inset"]).optional().describe("Fronts recobrents (per davant) o encastats (dins de la llum)."),
     })
-    .describe("Caixa del mòdul: base, fons, tapa, laterals, cantonades i estil dels fronts."),
+    .describe("Caixa del mòdul: suport, base, fons, tapa, laterals, cantonades i estil dels fronts. Un mòdul que és un electrodomèstic (rentaplats, frigorífic…) fixa les parts que demana l'aparell: les que no es poden triar no canvien la construcció."),
   split_zone: z
     .object({
       module: moduleRef,
@@ -297,7 +298,14 @@ function apply(comp: Composition, name: ToolName, input: never, ctx: ToolContext
       const c = { ...m.carcass }
       if (i.base) {
         if (c.base.kind === "wall") fail("El mòdul és penjat: no té base de terra. Primer set_module_position mount=wall o floor.")
-        c.base = i.base.kind === "legs" ? { kind: "legs", height: i.base.height } : i.base.kind === "plinth" ? { kind: "plinth", height: i.base.height, setback: i.base.setback } : { kind: i.base.kind }
+        // «open» (sense base, d'abans) és directe a terra amb `noBottom` (la forma d'ara, com la UI).
+        if (c.base.kind === "open" && !c.noBottom) c.noBottom = true
+        c.base = i.base.kind === "legs" ? { kind: "legs", height: i.base.height } : i.base.kind === "plinth" ? { kind: "plinth", height: i.base.height, setback: i.base.setback } : { kind: "none" }
+        if (i.base.kind === "open") c.noBottom = true
+      }
+      if (i.bottom !== undefined) {
+        if (i.bottom) delete c.noBottom
+        else c.noBottom = true
       }
       if (i.back) {
         c.back = i.back

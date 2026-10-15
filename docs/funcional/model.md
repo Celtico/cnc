@@ -30,7 +30,14 @@
   = separació de la paret, i **X pròpia** `Module.x`/`freeX`: surt de la fila i no empeny els altres, p. ex. una illa; camp
   «De costat (X)»). Els antics «Al terra» sense `x` continuen a la fila. **Girat 180°** (`Module.turned`, `isTurned`; només lliure al terra; Mòdul › Posició «Girat»; per decisió de l'usuari, 2026-10-13, per fer una illa amb dos mòduls d'esquena): el mòdul es construeix igual i `buildComposition` el gira al voltant del centre de la caixa de les seves peces (ocupa el mateix lloc; `CompositionBuild.modules[].mirrorX`, `moduleWorldX` per al clic i el ressaltat dels compartiments); l'obertura del 3D surt enrere (`opening.ts`, per l'`explodeDir`). Tests `build/turnedModule.test.ts`, `viewer/openingTurned.test.ts`. Taulell i sòcol correguts no tenen en compte `wallGap`.
 - **Carcassa** (inspector del mòdul, secció Caixa):
-  - **Base**: a terra · sòcol · potes · sense base. Avís `hanging` si un penjat sense penjadors té el fons prim. Amb potes, **«Sòcol ·
+  - **Suport** (`Carcass.base`): directe a terra · sòcol · potes (penjat, des de Posició). **Base** (la peça de baix,
+    `Carcass.noBottom`; per decisió de l'usuari, 2026-10-15: «la base que es pugui treure, perquè igual no necessita la
+    base»): **Sencera · Sense base**, com «Sense tapa» i «Sense fons», a qualsevol suport menys les **potes** (s'hi
+    cargolen: la base hi és sempre i el «Sense base» es conserva sense comptar). `hasBottom` (`zoneSupport.ts`) és l'única
+    pregunta («Sense base» = `noBottom` o el `{ kind: "open" }` d'abans, que `visibleModule` passa a `none` + `noBottom`:
+    mateixes peces, cap migració). Sense base: amb sòcol, l'interior comença a dalt del sòcol; la **Llum a sota** no surt
+    (va a la cara de sota de la base); els compartiments de baix compten la base que no hi és com a aguantada (`noBase`).
+    Test `build/noBottom.test.ts`. Avís `hanging` si un penjat sense penjadors té el fons prim. Amb potes, **«Sòcol ·
     Davant de les potes»** (`Base.plinth.setback`, per decisió de l'usuari, 2026-10-14; `MountingBuilder.buildLegPlinth`,
     `build/module/mounting.ts`): un tauler del
     gruix i material del cos, de tota l'amplada del mòdul, de terra fins a 5 mm sota la base (l'alçada del sòcol AXILO =
@@ -70,7 +77,7 @@
   - **Penjadors** (mòdul penjat, v45; per decisió de l'usuari, 2026-10-15: «als mobles de paret falten els ferratges per
     penjar el moble» → **penjador regulable i regleta**, i «fem-ho tot el més estàndard possible per si surt un nou
     client» → **el de la fitxa del fabricant**; `MountingBuilder.buildHangers`, `build/module/mounting.ts`): a
-    Mòdul › Caixa, sota «Base» (penjat), **«Penjadors»** (`Base.hanger`: «Com el mòdul» = el lloc `hanger` del mòdul,
+    Mòdul › Caixa, sota «Suport» (penjat), **«Penjadors»** (`Base.hanger`: «Com el mòdul» = el lloc `hanger` del mòdul,
     un altre de la biblioteca o **«Cap»**) i, si n'hi ha, **«Regleta»** (`Base.rail`, lloc `wallRail`, també «Cap»: plaques
     soltes a mà). **Per defecte, tots els mòduls penjats en porten** (també els desats: sense camp = el del mòdul o el
     d'inici). El d'inici (`hanger-concealed`, v2) és l'estàndard de penjador ocult amb regleta, el **Libra H2** d'Italiana
@@ -311,6 +318,15 @@
   tots els ferratges). `ZoneAppliance` = `hardware` (l'aparell) · `front` (sense = sí; `false` = sense front de moble) ·
   `hinge` (on obre: frigorífic i rentadora) · `plinth` (del terra al cantell de baix del front, als aparells de terra sense
   peça a sota; sense, 100, `DEFAULT_APPLIANCE_PLINTH`) · `handle` (el tirador del front, com als altres fronts).
+  - **La caixa que demana** (per decisió de l'usuari, 2026-10-15: «la base i altres parts de fusta si l'electrodomèstic ho
+    suporta, si no res; les opcions depenen de l'electrodomèstic seleccionat»; `core/model/applianceCarcass.ts`): un mòdul
+    que **és** l'aparell (`isApplianceModule`) fixa parts de la caixa (`applianceCarcass`, de la pràctica estàndard dels
+    fabricants) i `visibleModule` les construeix així (`applyApplianceCarcass`; les de l'usuari es conserven i tornen si es
+    treu l'aparell): **rentaplats, rentadora i frigorífic sota taulell** (de terra amb front de moble) = només el nínxol:
+    directe a terra (sense sòcol ni potes: el sòcol del front és a l'Electrodomèstic), sense base, sense tapa i sense fons;
+    els laterals es trien (en triar l'aparell, cap: `applianceDefaults`). **Frigorífic de columna**: els dos laterals, base
+    i tapa; fons i suport es trien. **Forn i microones**: els dos laterals i la base; al moble penjat, el microones sense
+    fons (paret del darrere oberta, Bosch p60). La placa i la campana no fixen res. Test `build/noBottom.test.ts`.
   - **On es tria** (per decisió de l'usuari, 2026-10-15: «els electrodomèstics no haurien de sortir al mòdul principal i
     desaparèixer l'Interior, perquè ja és l'electrodomèstic?»; un sol lloc per decisió, només UI, la fabricació no canvia):
     el d'un mòdul **sense dividir** és el de l'arrel (`root.appliance`) i es tria a **Mòdul › Electrodomèstic**; si l'ocupa

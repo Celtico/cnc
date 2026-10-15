@@ -73,10 +73,13 @@ export const BaseSchema = z.discriminatedUnion("kind", [
      */
     plinth: PlinthSidesSchema.extend({ setback: mm.min(0).max(200) }).optional(),
   }),
-  /** Sense base: laterals fins a terra i el buit obert (cobreradiador). */
+  /**
+   * Sense base (d'abans): laterals fins a terra i el buit obert (cobreradiador). És el mateix que `{ kind: "none" }` amb
+   * `Carcass.noBottom` (la forma d'ara: la UI ja no l'escriu; `hasBottom`, `visibleModule`).
+   */
   z.object({ kind: z.literal("open") }),
   /**
-   * Penjat a la paret: cap peça de base; `height` = alçada de la base del mòdul des del terra. **Penjadors** (v45): un a
+   * Penjat a la paret: ni sòcol ni potes (la base hi és, si no és «Sense base», `Carcass.noBottom`); `height` = alçada de la base del mòdul des del terra. **Penjadors** (v45): un a
    * cada lateral (`hanger`: el triat, «Cap» o, sense, el del mòdul) i la **regleta** de paret on s'enganxen (`rail`:
    * igual; ferratge per metres, tallada a l'amplada dels penjats seguits). Sense penjadors, tampoc regleta.
    */
@@ -129,6 +132,13 @@ export const CarcassSchema = z.object({
    */
   drawerBottomMaterial: z.string().optional(),
   base: BaseSchema,
+  /**
+   * **Sense base** (per decisió de l'usuari, 2026-10-15: «la base que es pugui treure, perquè igual no necessita la
+   * base»): la peça de baix de la caixa no es fa, sigui quin sigui el suport (`base`: a terra, sòcol o penjat; amb potes
+   * no compta: s'hi cargolen). Sense, hi és. Les dades d'abans amb `base: { kind: "open" }` són el mateix que
+   * `{ kind: "none" }` + `noBottom` (`hasBottom`; `visibleModule` les passa a aquesta forma).
+   */
+  noBottom: z.boolean().optional(),
   /**
    * Fons: en ranura, cargolat per darrere, encastat (entre laterals, tapa i base, amb espigues:
    * pot ser del mateix tauler que el cos) o sense.

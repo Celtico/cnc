@@ -1,7 +1,8 @@
 import { DEFAULT_CABINET } from "./cabinet"
 import { isAppliance, isLegacyHardware, type ModuleHardware } from "./hardware"
 import { doorLikeFront, fillsNiche, standsOnFloor, takesFront, type Appliance } from "./appliance"
-import { canHoldFront, canHoldShelves, carcassBounds, childBounds, type ZoneBounds } from "./zoneSupport"
+import { canHoldFront, canHoldShelves, carcassBounds, childBounds, hasBottom, type ZoneBounds } from "./zoneSupport"
+import { applianceCarcass, applyApplianceCarcass, type ApplianceCarcass } from "./applianceCarcass"
 import { DEFAULT_GRILLE, type Carcass, type Module, type Zone, type ZoneAppliance } from "./moduleSchema"
 
 // --- «Res amagat compta» -------------------------------------------------------------
@@ -11,9 +12,9 @@ import { DEFAULT_GRILLE, type Carcass, type Module, type Zone, type ZoneApplianc
  * són sempre a inglet) i hi ha una tapa o una base a baix de tot dels laterals per unir-hi (amb sòcol la base queda
  * entre els laterals). És la mateixa condició que fa sortir el control a l'inspector: si no surt, `joint` no compta.
  */
-export function jointApplies(c: Pick<Carcass, "sides" | "hollow" | "top" | "base">): boolean {
+export function jointApplies(c: Pick<Carcass, "sides" | "hollow" | "top" | "base" | "noBottom">): boolean {
   if (!(c.sides.left || c.sides.right) || c.hollow) return false
-  return c.top.kind !== "none" || (c.base.kind !== "open" && c.base.kind !== "plinth")
+  return c.top.kind !== "none" || (hasBottom(c) && c.base.kind !== "plinth")
 }
 
 /**
@@ -32,8 +33,16 @@ export function perDrawerSlides(front: { n: number; heights: readonly (number | 
 }
 
 export function visibleModule(m: Module): Module {
-  const c = m.carcass
+  // L'electrodomèstic que és el mòdul fixa parts de la caixa (`applianceCarcass`); les de l'usuari es conserven.
+  const rule = moduleApplianceCarcass(m)
+  const c = rule ? applyApplianceCarcass(m.carcass, rule.rule) : m.carcass
   const carcass: Carcass = { ...c }
+  // Base: «Sense base» és `noBottom` (el `open` d'abans, la mateixa caixa, passa a aquesta forma); amb potes no compta.
+  if (c.base.kind === "open") {
+    carcass.base = { kind: "none" }
+    carcass.noBottom = true
+  } else if (!hasBottom(c)) carcass.noBottom = true
+  else delete carcass.noBottom
   // Fons: sense fons, ni material ni gruix (els fons dels calaixos agafen el del cos); la ranura (posició i joc) només
   // compta en ranura i la retirada només encastat.
   if (c.back === "none") {
@@ -47,13 +56,13 @@ export function visibleModule(m: Module): Module {
   // Joc de la ranura: només en ranura; 0 és l'absència.
   if (c.back !== "groove" || !c.grooveClearance) delete carcass.grooveClearance
   if (c.back !== "inset") delete carcass.backInsetSetback
-  // La llum a sota només amb la base a l'aire (penjat o amb potes).
-  if (c.base.kind !== "wall" && c.base.kind !== "legs") delete carcass.underLight
+  // La llum a sota només amb la base a l'aire (penjat o amb potes) i si hi ha base (va a la seva cara de sota).
+  if ((c.base.kind !== "wall" && c.base.kind !== "legs") || !hasBottom(c)) delete carcass.underLight
   // Cantonades: només si el control surt (`jointApplies`); «Normals» és l'absència.
-  if (c.joint !== "mitre" || !jointApplies(c)) delete carcass.joint
+  if (c.joint !== "mitre" || !jointApplies(carcass)) delete carcass.joint
   // Tauler de taula: només amb la tapa sencera.
   if (c.top.kind !== "full") delete carcass.tableTop
-  const root = visibleZone(m.root, kitDefaultOf(m), false, carcassBounds(c), false, true)
+  const root = visibleZone(m.root, kitDefaultOf(m), false, carcassBounds(carcass), false, true)
   // Fons del calaix: només amb calaixos que es fan (la fila de Materials no surt sense).
   if (!hasDrawers(root) || !c.drawerBottomMaterial) delete carcass.drawerBottomMaterial
   // Folgança de les peces de dins: només amb l'arrel dividida (la fila no surt sense); 0 és l'absència.
@@ -162,6 +171,15 @@ export function zoneAppliance(z: Zone): Appliance | undefined {
 export function nicheAppliance(z: Zone): Appliance | undefined {
   const a = zoneAppliance(z)
   return a && fillsNiche(a) ? a : undefined
+}
+
+/**
+ * Les parts de la caixa que fixa l'electrodomèstic que és el mòdul (`isApplianceModule`; `applianceCarcass`): la Caixa
+ * les ensenya fixes i `visibleModule` les construeix així. Sense aparell (o amb la placa o la campana), cap.
+ */
+export function moduleApplianceCarcass(m: Pick<Module, "root" | "carcass">): { appliance: Appliance; rule: ApplianceCarcass } | undefined {
+  const a = nicheAppliance(m.root)
+  return a ? { appliance: a, rule: applianceCarcass(a, m.carcass.base.kind === "wall") } : undefined
 }
 
 /**

@@ -234,7 +234,8 @@ function radiatorModule(): Module {
     width: 790,
     height: 1390,
     depth: 420,
-    base: { kind: "open" },
+    base: { kind: "none" },
+    noBottom: true,
     back: "none",
     top: { kind: "ventSlot", gap: 60 },
   })

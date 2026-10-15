@@ -1,6 +1,7 @@
 import { buildComposition, type CompositionBuild, type CompositionWarning } from "../build/buildComposition"
 import { materialIssues } from "../build/materialIssues"
 import {
+  hasBottom,
   backChoices,
   boardChoices,
   canHoldFront,
@@ -107,6 +108,7 @@ function carcassSummary(m: Module): Record<string, unknown> {
   void _hw
   return {
     base,
+    ...(hasBottom(c) ? {} : { bottom: false }),
     back: c.back,
     top: c.top.kind === "ventSlot" ? { kind: "ventSlot", gap: c.top.gap } : c.top.kind,
     sides: c.sides,

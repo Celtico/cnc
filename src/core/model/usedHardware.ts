@@ -1,5 +1,6 @@
 import type { Front, Module, Zone, ZoneAppliance } from "./composition"
 import { applianceFront, visibleModule, walkBuiltZones } from "./composition"
+import { hasBottom } from "./zoneSupport"
 import { applianceFronts, furnitureHinges } from "./appliance"
 import { isDrawerKit, moduleSlotItem, type HardwareItem, type HardwareSlot } from "./hardware"
 import { isPushClosing, kitOptionsOf, type HardwareKit } from "./hardwareKit"
@@ -167,7 +168,7 @@ export function carcassDowels(m: Module): string[] {
   const hollow = !!c.hollow && c.hollow.thickness >= 2 * c.thickness + 6
   const tableTop = !!c.tableTop && c.top.kind === "full"
   const hasTop = c.top.kind !== "none"
-  const hasBase = c.base.kind !== "open"
+  const hasBase = hasBottom(c)
   const mitre = c.joint === "mitre"
   const mitreTop = !hollow && !tableTop && mitre && hasTop && sides
   const mitreBottom = !hollow && mitre && hasBase && c.base.kind !== "plinth" && sides

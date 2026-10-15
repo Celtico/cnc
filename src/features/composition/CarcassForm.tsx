@@ -1,5 +1,5 @@
 import { Button, HStack, Stack, Switch, Text } from "@chakra-ui/react"
-import { DEFAULT_GRILLE, UI_PATHS, backChoices, boardChoices, hardwareSummary, jointApplies, materialByName, moduleRows, moduleSlotItem, type Base, type Carcass, type HardwareItem, type Module, type ModuleRows, type Top } from "../../core/model"
+import { DEFAULT_GRILLE, UI_PATHS, applianceCarcassText, backChoices, hasBottom, moduleApplianceCarcass, visibleModule, boardChoices, hardwareSummary, jointApplies, materialByName, moduleRows, moduleSlotItem, type Base, type Carcass, type HardwareItem, type Module, type ModuleRows, type Top } from "../../core/model"
 import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { IconChoice } from "../../components/IconChoice"
@@ -27,6 +27,12 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
   const { gaps } = useSettings().settings
   const set = (patch: Partial<Carcass>) => onChange({ ...module, carcass: { ...c, ...patch } })
   const setFronts = (patch: Partial<Module["fronts"]>) => onChange({ ...module, fronts: { ...module.fronts, ...patch } })
+  // La caixa tal com es construeix (`visibleModule`): el `open` d'abans com a «Sense base» i les parts que fixa
+  // l'electrodomèstic que és el mòdul (`moduleApplianceCarcass`). Es mostra aquesta; s'escriu a la de l'usuari.
+  const vc = visibleModule(module).carcass
+  const fixed = moduleApplianceCarcass(module)
+  const rule = fixed?.rule
+  const ruleHelp = fixed ? applianceCarcassText(fixed.appliance, fixed.rule) : undefined
 
   if (section === "dims")
     return (
@@ -39,43 +45,66 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
   if (section === "structure")
     return (
       <Stack gap={4}>
-        {/* «Penjat a la paret» és una posició, no una base: es tria a la secció Posició. */}
+        {/* Suport (on seu el mòdul) i Base (la peça de baix) són dues decisions (per decisió de l'usuari, 2026-10-15: «la
+            base que es pugui treure»). «Penjat a la paret» és una posició: es tria a la secció Posició. Un electrodomèstic
+            que és el mòdul fixa les parts que demana (`applianceCarcass`): surten com a text, amb el perquè a l'ajuda. */}
         {c.base.kind === "wall" ? (
           <>
-            <FormRow label="Base" help="Es canvia a Posició.">
-              <Text fontSize="sm" color="fg.muted" pt="7px">
-                Cap (penjat a la paret, a {c.base.height} mm del terra)
-              </Text>
-            </FormRow>
+            <FixedRow label="Suport" text={`Penjat a la paret, a ${c.base.height} mm del terra`} help="Es canvia a Posició." />
             <HangerFields module={module} base={c.base} onChange={(base) => set({ base })} />
           </>
+        ) : rule?.support === false ? (
+          <FixedRow label="Suport" text="Directe a terra" help={ruleHelp} />
         ) : (
-          <FormRow label="Base">
+          <FormRow label="Suport">
             <IconChoice
               hideLabel
-              label="Base"
-              value={c.base.kind as Exclude<Base["kind"], "wall">}
+              label="Suport"
+              value={vc.base.kind as "none" | "plinth" | "legs"}
               options={[
                 { value: "none", label: "Directe a terra", icon: LuArrowDownToLine, hint: "Directe a terra, sense sòcol ni potes" },
                 { value: "plinth", label: "Sòcol", icon: LuPanelBottom, hint: "Sòcol retranquejat a sota" },
                 { value: "legs", label: "Potes", icon: LuFootprints, hint: "Potes regulables" },
-                { value: "open", label: "Sense base (obert)", icon: LuSquareDashedBottom, hint: "Sense base: obert per sota" },
               ]}
               onChange={(k) => {
                 const base: Base = k === "plinth" ? { kind: "plinth", height: 60, setback: 30 } : k === "legs" ? { kind: "legs", height: 100 } : { kind: k }
-                set({ base })
+                // El «Sense base» d'abans (`open`) es conserva com a `noBottom`.
+                set(c.base.kind === "open" ? { base, noBottom: true } : { base })
+              }}
+            />
+          </FormRow>
+        )}
+        {/* La Base, sota el Suport (en depèn): amb potes hi és sempre (s'hi cargolen). */}
+        {vc.base.kind === "legs" ? (
+          <FixedRow label="Base" text="Sencera" help="Les potes es cargolen a la cara de sota de la base: amb potes, la base hi és sempre." />
+        ) : rule?.bottom !== undefined ? (
+          <FixedRow label="Base" text={rule.bottom ? "Sencera" : "Sense base"} help={ruleHelp} />
+        ) : (
+          <FormRow label="Base" help={vc.base.kind === "plinth" ? "Sense base, el mòdul queda obert per sota fins al sòcol." : undefined}>
+            <IconChoice
+              hideLabel
+              label="Base"
+              value={hasBottom(c) ? "full" : "none"}
+              options={[
+                { value: "full", label: "Sencera", icon: LuPanelBottom, hint: "La peça de baix de la caixa" },
+                { value: "none", label: "Sense base", icon: LuSquareDashedBottom, hint: "Sense base: obert per sota" },
+              ]}
+              onChange={(v) => {
+                if (v === "none") return set({ noBottom: true })
+                const { noBottom: _n, ...rest } = c
+                onChange({ ...module, carcass: { ...rest, base: rest.base.kind === "open" ? { kind: "none" } : rest.base } })
               }}
             />
           </FormRow>
         )}
         {/* Base a tota l'amplada i les seves mides a sota, una fila per camp. */}
-        {c.base.kind === "plinth" && (
+        {vc.base.kind === "plinth" && c.base.kind === "plinth" && (
           <>
             <NumRow label="Alçada sòcol" value={c.base.height} min={20} max={300} step={5} onChange={(height) => set({ base: { kind: "plinth", height, setback: (c.base as { setback: number }).setback } })} />
             <NumRow label="Retranqueig" value={c.base.setback} min={0} max={100} step={5} onChange={(setback) => set({ base: { kind: "plinth", height: (c.base as { height: number }).height, setback } })} />
           </>
         )}
-        {c.base.kind === "legs" && (
+        {vc.base.kind === "legs" && c.base.kind === "legs" && (
           <>
             <NumRow label="Alçada potes" value={c.base.height} min={20} max={400} step={5} onChange={(height) => set({ base: { ...(c.base as Extract<Base, { kind: "legs" }>), height } })} />
             <LegPick base={c.base} onChange={(base) => set({ base })} />
@@ -102,8 +131,8 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
           </>
         )}
 
-        {/* Llum a sota del moble: només amb la base a l'aire (penjat o amb potes). */}
-        {(c.base.kind === "wall" || c.base.kind === "legs") && (
+        {/* Llum a sota del moble: només amb la base a l'aire (penjat o amb potes) i si hi ha base (va a la seva cara de sota). */}
+        {(vc.base.kind === "wall" || vc.base.kind === "legs") && hasBottom(vc) && (
           <>
             <FormRow label="Llum a sota" help="A la cara de sota de la base: il·lumina el taulell (com les cuines). Un joc de llum fa el forat o el rebaix de la làmpada i el del cable a la base.">
               <Switch.Root size="sm" pt="6px" checked={!!c.underLight} onCheckedChange={(e) => {
@@ -120,7 +149,7 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
           </>
         )}
 
-        <FormRow label="Fons">
+        {rule?.back !== undefined ? <FixedRow label="Fons" text={rule.back ? "Amb fons" : "Sense fons"} help={ruleHelp} /> : <FormRow label="Fons">
           <IconChoice
             hideLabel
             label="Fons"
@@ -134,7 +163,7 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
             // Encastat amb un fons prim (< 15 mm, sense espigues): comença «Com el cos» (mateix material i gruix), sense l'avís.
             onChange={(back) => set(back === "inset" && c.back !== "inset" && c.backThickness < 15 ? { back, backMaterial: c.material, backThickness: c.thickness } : { back })}
           />
-        </FormRow>
+        </FormRow>}
         {/* Just sota el Fons: la ranura (en ranura) o la retirada (encastat); sense, no surten (res amagat compta). */}
         {rows.back === "groove" && <NumRow label="Ranura del fons" value={c.backSetback} min={0} max={60} step={1} onChange={(backSetback) => set({ backSetback })} help="Distància al cantell posterior" />}
         {rows.back === "groove" && (
@@ -144,7 +173,7 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
           </>
         )}
         {rows.back === "inset" && <NumRow label="Retirada del fons" value={c.backInsetSetback ?? 0} min={0} max={60} step={1} onChange={(backInsetSetback) => set({ backInsetSetback })} help="Distància del fons encastat al cantell posterior (0 = enrasat)" />}
-        <FormRow label="Tapa">
+        {rule?.top !== undefined ? <FixedRow label="Tapa" text={rule.top ? (vc.top.kind === "full" ? "Sencera" : vc.top.kind === "ventSlot" ? "Ranura d'aire" : "Reixeta") : "Sense tapa"} help={ruleHelp} /> : <FormRow label="Tapa">
           <IconChoice
             hideLabel
             label="Tapa"
@@ -160,16 +189,16 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
               set({ top })
             }}
           />
-        </FormRow>
-        {c.top.kind === "ventSlot" && <NumRow label="Ranura d'aire" value={c.top.gap} min={20} max={200} step={5} onChange={(gap) => set({ top: { kind: "ventSlot", gap } })} />}
+        </FormRow>}
+        {vc.top.kind === "ventSlot" && c.top.kind === "ventSlot" && <NumRow label="Ranura d'aire" value={c.top.gap} min={20} max={200} step={5} onChange={(gap) => set({ top: { kind: "ventSlot", gap } })} />}
 
         {/* Tauler de taula: tapa per sobre dels laterals, amb voladís i forma. */}
-        {c.top.kind === "full" && <TableTopFields module={module} onChange={onChange} />}
+        {vc.top.kind === "full" && c.top.kind === "full" && <TableTopFields module={module} onChange={onChange} />}
 
         {/* Laterals abans de Parets i Cantonades: totes dues en depenen (opcions en cascada: cada una només mira les de més amunt). */}
         {/* No dins d'un Field.Root: el Field dona el mateix id als dos interruptors i els dos
             rètols activaven el mateix (no es podia treure el lateral dret). */}
-        <FormRow label="Laterals">
+        {rule?.sides ? <FixedRow label="Laterals" text="Els dos" help={ruleHelp} /> : <FormRow label="Laterals">
           <HStack gap={4} wrap="wrap" pt="6px">
             <Switch.Root size="sm" checked={c.sides.left} onCheckedChange={(e) => set({ sides: { ...c.sides, left: e.checked } })}>
               <Switch.HiddenInput />
@@ -182,7 +211,7 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
               <Switch.Label fontSize="sm">Dret</Switch.Label>
             </Switch.Root>
           </HStack>
-        </FormRow>
+        </FormRow>}
 
         {/* Parets buides: caixa de dues pells que fa el moble com si fos de fusta gruixuda. */}
         <FormRow label="Parets">
@@ -213,14 +242,14 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
         {/* Sense laterals, o sense tapa ni base a baix dels laterals (amb sòcol la base queda
             entre els laterals), no hi ha cantonades a unir a inglet. */}
         {/* La mateixa condició que fa servir la construcció (`jointApplies`): si el control no surt, `joint` no compta. */}
-        {c.hollow && (c.sides.left || c.sides.right) ? (
+        {c.hollow && (vc.sides.left || vc.sides.right) ? (
           // Amb parets buides les cantonades són sempre a inglet (com un bloc massís).
           <FormRow label="Cantonades" help="Amb parets buides, sempre a inglet: pells de fora a 45° i tires del davant en marc.">
             <Text fontSize="sm" pt="7px">
               A inglet
             </Text>
           </FormRow>
-        ) : !jointApplies(c) ? null : (
+        ) : !jointApplies(vc) ? null : (
           <FormRow label="Cantonades">
             <IconChoice
               hideLabel
@@ -363,6 +392,17 @@ export function MaterialsForm({ carcass: c, onPatch, mixed, hasBack = c.back !==
 const prefHint = (value: number, pref: number): string => (value === pref ? "Com a Preferències." : `A Preferències: ${String(pref).replace(".", ",")} mm.`)
 
 /** Botó per tornar al valor de Preferències quan el mòdul en té un altre. */
+/** Una part de la caixa que no es tria aquí (penjat, potes, l'electrodomèstic): el que és, i el perquè a l'ajuda. */
+function FixedRow({ label, text, help }: { label: string; text: string; help?: string }) {
+  return (
+    <FormRow label={label} help={help}>
+      <Text fontSize="sm" color="fg.muted" pt="7px">
+        {text}
+      </Text>
+    </FormRow>
+  )
+}
+
 function PrefReset({ value, pref, onReset }: { value: number; pref: number; onReset: () => void }) {
   if (value === pref) return null
   return (
