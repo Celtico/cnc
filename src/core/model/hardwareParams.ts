@@ -1,0 +1,117 @@
+import type { HardwareEngine, HardwareItem } from "./hardwareSchema"
+
+/** Paràmetres editables de cada motor (Preferències › Ferratges): etiquetes, límits i ajudes. */
+
+/** Paràmetres de cada motor (etiqueta i límits per a l'editor, `NumRow`). */
+interface HardwareParamSpec {
+  key: string
+  label: string
+  min: number
+  max: number
+  step: number
+  help?: string
+  /** Només als items amb joc de llum (`HardwareItem.light`). */
+  light?: boolean
+  /** Només si l'item el porta als `params` (les distàncies de davant i de darrere d'una pota). */
+  optional?: boolean
+}
+const P = (key: string, label: string, min: number, max: number, step = 0.5, help?: string): HardwareParamSpec => ({ key, label, min, max, step, ...(help ? { help } : {}) })
+/** Els paràmetres que s'editen d'un item: els del motor, menys els d'un joc de llum si no en porta i els opcionals que no té. */
+export const hardwareParams = (item: Pick<HardwareItem, "engine" | "light"> & { params?: HardwareItem["params"] }): HardwareParamSpec[] =>
+  HARDWARE_PARAMS[item.engine].filter((p) => (!p.light || item.light) && (!p.optional || (item.params && p.key in item.params)) && !(p.key === "inset" && legHasOwnSides(item)))
+/** Una pota amb una distància per a cada costat (la AXILO 78): «Als cantells» no surt (no es fa servir). */
+function legHasOwnSides(item: Pick<HardwareItem, "engine"> & { params?: HardwareItem["params"] }): boolean {
+  return item.engine === "leg" && !!item.params && ["insetLeft", "insetRight", "insetBack", "insetFront"].every((k) => k in item.params!)
+}
+/** El nom d'un paramètre per a aquest item (de moment, el del motor). */
+export const hardwareParamLabel = (_item: Pick<HardwareItem, "engine"> & { params?: HardwareItem["params"] }, p: HardwareParamSpec): string => p.label
+
+const HARDWARE_PARAMS: Record<HardwareEngine, HardwareParamSpec[]> = {
+  cup: [
+    P("cupDiameter", "Cassoleta (Ø)", 10, 60, 0.5),
+    P("cupDepth", "Fondària", 5, 20, 0.5),
+    P("cupOffset", "Al cantell", 5, 40, 0.5, "Del cantell de la porta al centre de la cassoleta."),
+    P("endOffset", "Als extrems", 30, 300, 5, "Primera i última frontissa, des de dalt i des de baix (després s'ajusten a la filera System 32)."),
+    P("gap", "Separació mínima", 0, 50, 1, "Entre cassoletes, a més del Ø (si no hi caben, se'n posen menys i s'avisa)."),
+    P("margin", "Marge", 0, 20, 0.5, "Matèria al voltant de la cassoleta fins a la vora de la porta."),
+  ],
+  system32: [
+    P("edgeOffset", "Al cantell", 10, 100, 0.5, "Fileres de davant i de darrere, des dels cantells del lateral."),
+    P("pitch", "Pas", 16, 64, 1),
+    P("diameter", "Diàmetre", 3, 10, 0.5),
+    P("depth", "Fondària", 5, 20, 0.5),
+  ],
+  dowel: [
+    P("diameter", "Diàmetre", 4, 12, 0.5),
+    P("faceDepth", "A la cara", 5, 30, 0.5, "Fondària del forat a la cara de la peça que continua."),
+    P("edgeDepth", "Al cantell", 5, 40, 0.5, "Fondària del forat al cantell de la peça que hi topa."),
+    P("endOffset", "Als extrems", 20, 200, 1, "Primera i última espiga, des dels extrems de la unió."),
+  ],
+  slide: [
+    P("sideClearance", "Folgança lateral", 0, 30, 0.5, "Per costat, entre la caixa i el lateral del moble."),
+    P("boxThickness", "Gruix de la caixa", 8, 25, 1),
+    P("bottomThickness", "Fons del calaix (gruix)", 3, 19, 1),
+    P("boxDrop", "Front − caixa", 0, 100, 1, "Alçada del front menys alçada de la caixa."),
+    P("bottomOffset", "Fons del calaix a", 0, 40, 1, "Del cantell de baix de la caixa a la ranura del fons del calaix."),
+    P("backClearance", "Folgança darrere", 0, 50, 1),
+    P("frontOffset", "1r forat", 10, 200, 0.5, "Des del darrere del front."),
+    P("secondOffset", "2n forat", 32, 600, 1, "Després del primer."),
+    P("holeHeight", "Alçada", 5, 100, 0.5, "Dels forats, des de baix de la caixa."),
+  ],
+  flapArm: [
+    P("offset", "Al cantell", 5, 60, 0.5, "Del cantell de gir als forats."),
+    P("diameter", "Diàmetre", 3, 20, 0.5),
+    P("depth", "Fondària", 3, 20, 0.5),
+    P("endOffset", "Als costats", 20, 300, 5, "Dels costats de l'abatible (si és estret, a ¼ i ¾)."),
+    { ...P("strutG", "Bracket al lateral", 50, 600, 1, "Pistó de gas: del cantell de gir al bracket d'armari (G)."), optional: true },
+    { ...P("strutLength", "Llarg del pistó", 100, 600, 1), optional: true },
+    { ...P("sideSetback", "Del davant", 20, 100, 0.5, "Pistó de gas: del davant del lateral als forats del bracket."), optional: true },
+  ],
+  magnet: [
+    P("diameter", "Diàmetre", 3, 30, 0.5),
+    P("depth", "Fondària", 2, 15, 0.5),
+    P("cornerOffset", "A les cantonades", 10, 300, 5, "Des de dalt i des de baix."),
+  ],
+  barHandle: [
+    P("diameter", "Diàmetre", 2, 12, 0.5),
+    P("margin", "Marge", 0, 20, 0.5, "Matèria al voltant dels forats (vores i altres forats)."),
+    P("inset", "Al cantell", 10, 200, 1, "A les portes i abatibles, del cantell que obre al tirador."),
+  ],
+  leg: [
+    P("inset", "Als cantells", 20, 300, 1, "De la vora de fora del mòdul a l'eix de cada pota (de costat i de davant/darrere)."),
+    { ...P("insetLeft", "Lateral esquerre", 20, 300, 1, "Del cantell de fora del lateral esquerre a l'eix de les potes de l'esquerra."), optional: true },
+    { ...P("insetRight", "Lateral dret", 20, 300, 1, "Del cantell de fora del lateral dret a l'eix de les potes de la dreta."), optional: true },
+    { ...P("insetBack", "Darrere", 20, 300, 1, "Del cantell de darrere de la base a l'eix de les potes del darrere."), optional: true },
+    { ...P("insetFront", "Davant", 20, 300, 1, "Del cantell de davant de la base a l'eix de les potes del davant (deixa lloc al sòcol)."), optional: true },
+  ],
+
+  model: [],
+  // La prebroca dels cargols és una regla del taller (Preferències › Regles de mecanitzat › «Prebroca dels cargols», `Settings.kitPilot`),
+  // no un número de cada joc: res a editar aquí (els `params` es queden per compatibilitat i els omple `setKitPilot`).
+  drawerKit: [],
+  plate: [
+    P("setback", "Del davant", 0, 200, 0.5, "Del cantell de davant del lateral a la referència de la placa (la filera System 32: 37)."),
+    P("offset", "Alçada", -100, 100, 0.5, "Del centre de la cassoleta a la referència de la placa (amunt, positiu)."),
+  ],
+  rail: [
+    P("diameter", "Diàmetre", 10, 40, 1, "Del tub."),
+    P("drop", "Del sostre", 20, 200, 5, "Del sostre del compartiment a l'eix de la barra."),
+  ],
+  ledProfile: [
+    P("width", "Amplada", 6, 250, 1, "Del perfil (de costat a costat); d'una làmpada, el Ø o el costat del cos."),
+    P("height", "Alçada", 4, 30, 1, "Del perfil (el que baixa del prestatge); d'una làmpada, la seva alçada."),
+    P("setback", "Del davant", 0, 400, 5, "Del cantell de davant del prestatge al perfil (o al centre de la làmpada)."),
+    { ...P("spacing", "Entre llums", 150, 1500, 50, "Cada quants mm una làmpada al llarg del compartiment (com a mínim una)."), light: true },
+    { ...P("depth", "Rebaix", 3, 30, 0.5, "Fondària del forat o del rebaix de la làmpada a la peça de sobre (cal deixar-hi 5 mm de tauler)."), light: true },
+  ],
+  glassFrame: [
+    P("frame", "Perfil", 10, 60, 1, "Amplada vista del perfil d'alumini del marc."),
+    P("glass", "Vidre", 3, 10, 0.5, "Gruix del vidre (entra 5 mm al perfil)."),
+  ],
+}
+
+/** Col·locació de la placa d'una frontissa importada (paràmetres de la frontissa, copiats de la placa en aparellar-la). */
+export const HINGE_PLATE_PARAMS: HardwareParamSpec[] = [
+  P("plateSetback", "Placa: del davant", 0, 200, 0.5, "De la cara de darrere de la porta a la referència de la placa (la filera System 32: 37). Amb fronts encastats el gruix del front ja s'hi suma sol."),
+  P("plateOffset", "Placa: alçada", -100, 100, 0.5, "Del centre de la cassoleta a la referència de la placa (amunt, positiu)."),
+]
