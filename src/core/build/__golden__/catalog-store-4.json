@@ -1,4 +1,73 @@
 {
+ "store-emmagatzematge-armari-1": {
+  "panels": 13,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "back|trassera|2200x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@c8ee1d05",
+   "bottom|baix|762x590x19|Melamina blanca|x|e0010|h6:50c80b82|g0|c0|o-|@11a485b9",
+   "door|porta d|2116x396.5x19|Melamina blanca|x|e1111|h5:bb9f18d8|g0|c2:11aae164|o-|@64486fd1",
+   "door|porta e|2116x396.5x19|Melamina blanca|x|e1111|h5:af2ab5a1|g0|c2:7d0a96dc|o-|@96cf7341",
+   "plinth|socol|762x80x19|Melamina blanca|x|e1010|h0|g0|c0|o-|@70994e89",
+   "shelf|estanter 1|761x570x19|Melamina blanca|x|e0010|h0|g0|c0|o-|@ed264cb5",
+   "shelf|estanter 2|761x570x19|Melamina blanca|x|e0010|h0|g0|c0|o-|@8223f58f",
+   "shelf|estanter 3|761x570x19|Melamina blanca|x|e0010|h0|g0|c0|o-|@ed270a27",
+   "shelf|estanter 4|761x570x19|Melamina blanca|x|e0010|h0|g0|c0|o-|@e110f36c",
+   "shelf|estanter 5|761x570x19|Melamina blanca|x|e0010|h0|g0|c0|o-|@6f056683",
+   "side|lat d|2200x590x19|Melamina blanca|x|e0110|h132:19a76460|g0|c0|o-|@5019b0c2",
+   "side|lat e|2200x590x19|Melamina blanca|x|e1100|h132:19a76460|g0|c0|o-|@641cff2b",
+   "top|dalt|762x590x19|Melamina blanca|x|e1000|h6:50c80b82|g0|c0|o-|@f613ffc8"
+  ]
+ },
+ "store-emmagatzematge-armari-2": {
+  "panels": 26,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "back|trassera|2200x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@86c1c91a",
+   "back|trassera|2200x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@c8ee1d05",
+   "bottom|baix|762x440x19|Melamina gris|x|e0010|h6:d50f39e6|g0|c0|o-|@6c213794",
+   "bottom|baix|762x440x19|Melamina gris|x|e0010|h6:d50f39e6|g0|c0|o-|@da81b31e",
+   "door|porta d|2116x396.5x19|Melamina gris|x|e1111|h5:bb9f18d8|g0|c2:11aae164|o-|@6973b452",
+   "door|porta d|2116x396.5x19|Melamina gris|x|e1111|h5:bb9f18d8|g0|c2:11aae164|o-|@e96322b3",
+   "door|porta e|2116x396.5x19|Melamina gris|x|e1111|h5:af2ab5a1|g0|c2:7d0a96dc|o-|@57453092",
+   "door|porta e|2116x396.5x19|Melamina gris|x|e1111|h5:af2ab5a1|g0|c2:7d0a96dc|o-|@6d530982",
+   "plinth|socol|762x80x19|Melamina gris|x|e1010|h0|g0|c0|o-|@c6102b97",
+   "plinth|socol|762x80x19|Melamina gris|x|e1010|h0|g0|c0|o-|@d564c2e1",
+   "shelf|estanter 1|761x420x19|Melamina gris|x|e0010|h0|g0|c0|o-|@0c84840d",
+   "shelf|estanter 1|761x420x19|Melamina gris|x|e0010|h0|g0|c0|o-|@d834c01f",
+   "shelf|estanter 2|761x420x19|Melamina gris|x|e0010|h0|g0|c0|o-|@1ab8b34b",
+   "shelf|estanter 2|761x420x19|Melamina gris|x|e0010|h0|g0|c0|o-|@61f6b195",
+   "shelf|estanter 3|761x420x19|Melamina gris|x|e0010|h0|g0|c0|o-|@6387c239",
+   "shelf|estanter 3|761x420x19|Melamina gris|x|e0010|h0|g0|c0|o-|@c4347753",
+   "shelf|estanter 4|761x420x19|Melamina gris|x|e0010|h0|g0|c0|o-|@68650686",
+   "shelf|estanter 4|761x420x19|Melamina gris|x|e0010|h0|g0|c0|o-|@ada82b84",
+   "shelf|estanter 5|761x420x19|Melamina gris|x|e0010|h0|g0|c0|o-|@4a895b1f",
+   "shelf|estanter 5|761x420x19|Melamina gris|x|e0010|h0|g0|c0|o-|@f89806d9",
+   "side|lat d|2200x440x19|Melamina gris|x|e0110|h132:b37ec1fa|g0|c0|o-|@5455a63d",
+   "side|lat d|2200x440x19|Melamina gris|x|e0110|h132:b37ec1fa|g0|c0|o-|@ce96fc38",
+   "side|lat e|2200x440x19|Melamina gris|x|e1100|h132:b37ec1fa|g0|c0|o-|@3f1b289b",
+   "side|lat e|2200x440x19|Melamina gris|x|e1100|h132:b37ec1fa|g0|c0|o-|@641cff2b",
+   "top|dalt|762x440x19|Melamina gris|x|e1000|h6:d50f39e6|g0|c0|o-|@23b105de",
+   "top|dalt|762x440x19|Melamina gris|x|e1000|h6:d50f39e6|g0|c0|o-|@f613ffc8"
+  ]
+ },
+ "store-emmagatzematge-armari-3": {
+  "panels": 9,
+  "extras": 1,
+  "warnings": [],
+  "p": [
+   "back|trassera|2200x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@c8ee1d05",
+   "bottom|baix|762x590x19|Melamina blanca|x|e0010|h6:50c80b82|g0|c0|o-|@11a485b9",
+   "door|porta d|2116x396.5x19|Melamina roure|x|e1111|h5:08325952|g0|c2:11aae164|o-|@64486fd1",
+   "door|porta e|2116x396.5x19|Melamina roure|x|e1111|h5:c60cea2f|g0|c2:7d0a96dc|o-|@96cf7341",
+   "fixedShelf|estanter fixe|762x590x19|Melamina blanca|x|e0010|h6:50c80b82|g0|c0|o-|@24b9ce7f",
+   "plinth|socol|762x80x19|Melamina blanca|x|e1010|h0|g0|c0|o-|@70994e89",
+   "side|lat d|2200x590x19|Melamina blanca|x|e0110|h131:03d941e5|g0|c0|o-|@5019b0c2",
+   "side|lat e|2200x590x19|Melamina blanca|x|e1100|h131:03d941e5|g0|c0|o-|@641cff2b",
+   "top|dalt|762x590x19|Melamina blanca|x|e1000|h6:50c80b82|g0|c0|o-|@f613ffc8"
+  ]
+ },
  "store-emmagatzematge-llibreria-1": {
   "panels": 26,
   "extras": 0,
@@ -1157,26 +1226,6 @@
    "side|lat d|650x590x19|Roure massís / xapat|x|e0110|h36:2f4a041c|g0|c0|o-|@b367c65f",
    "side|lat e|650x590x19|Roure massís / xapat|x|e1100|h36:2f4a041c|g0|c0|o-|@641cff2b",
    "top|dalt|1162x590x19|Roure massís / xapat|x|e1000|h6:42d3b4c1|g0|c0|o-|@6386d739"
-  ]
- },
- "store-exterior-emmagatzematge-exterior-3": {
-  "panels": 13,
-  "extras": 0,
-  "warnings": [],
-  "p": [
-   "back|trassera|1800x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@c8ee1d05",
-   "bottom|baix|762x440x19|Melamina gris|x|e0010|h6:d50f39e6|g0|c0|o-|@6c213794",
-   "door|porta d|1716x396.5x19|Melamina gris|x|e1111|h4:19c90095|g0|c2:b95a4527|o-|@6973b452",
-   "door|porta e|1716x396.5x19|Melamina gris|x|e1111|h4:be34ddb9|g0|c2:d64df1bd|o-|@6d530982",
-   "plinth|socol|762x80x19|Melamina gris|x|e1010|h0|g0|c0|o-|@c6102b97",
-   "shelf|estanter 1|761x420x19|Melamina gris|x|e0010|h0|g0|c0|o-|@2bc1028a",
-   "shelf|estanter 2|761x420x19|Melamina gris|x|e0010|h0|g0|c0|o-|@c1f68919",
-   "shelf|estanter 3|761x420x19|Melamina gris|x|e0010|h0|g0|c0|o-|@5480b8d9",
-   "shelf|estanter 4|761x420x19|Melamina gris|x|e0010|h0|g0|c0|o-|@9c61f954",
-   "shelf|estanter 5|761x420x19|Melamina gris|x|e0010|h0|g0|c0|o-|@38ebef24",
-   "side|lat d|1800x440x19|Melamina gris|x|e0110|h108:f973796f|g0|c0|o-|@5455a63d",
-   "side|lat e|1800x440x19|Melamina gris|x|e1100|h108:f973796f|g0|c0|o-|@641cff2b",
-   "top|dalt|762x440x19|Melamina gris|x|e1000|h6:d50f39e6|g0|c0|o-|@954d3331"
   ]
  }
 }

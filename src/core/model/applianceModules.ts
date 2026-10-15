@@ -66,8 +66,9 @@ export function ovenColumn(): Module {
  * la campana (grup filtrant amb el retall a la base). Taulell de pedra de 30 (sense nesting) sobre els baixos. Cos blanc,
  * fronts de roure (també els dels electrodomèstics).
  */
-export function applianceKitchen(): Composition {
-  const body = { material: "Melamina blanca", thickness: 19, frontMaterial: "Melamina roure" }
+/** `frontMaterial`: el material dels fronts (també els dels electrodomèstics). */
+export function applianceKitchen(frontMaterial = "Melamina roure"): Composition {
+  const body = { material: "Melamina blanca", thickness: 19, frontMaterial }
   // Potes de 100 amb el sòcol de fusta davant (a 5 del davant: les potes genèriques són a 50, el peu fa Ø48).
   const legs = { kind: "legs" as const, height: 100, plinth: { setback: 5 } }
   const dress = (m: Module, c: Partial<Carcass> = {}): Module => ({ ...m, carcass: { ...m.carcass, ...body, ...c } })

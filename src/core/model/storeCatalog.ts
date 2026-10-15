@@ -2,6 +2,7 @@ import { DEFAULT_JOINERY, type FreePart } from "./freePart"
 import type { PNode } from "./polygon"
 import { defaultModule, modulePlacements, DEFAULT_GRILLE, newId, partsOnlyKind, tableModule, type Carcass, type Composition, type CompositionKind, type Module, type RefObject, type Zone } from "./composition"
 import type { Template } from "./templates"
+import { applianceKitchen } from "./applianceModules"
 
 /**
  * Plantilles per a botigues de mobles (catàleg de `cad-mobles-cataleg.md`, més la categoria Cuina): per a cada tipus de
@@ -614,6 +615,11 @@ export const STORE_CATALOG: StoreCategory[] = [
         { name: "Forn i rebost", style: "Contemporani", materials: "melamina blanca, fronts lacats", colors: "blanc, greige", use: "Columna de forn i microones i dues de rebost", audience: "cuines amb paret lliure", price: 2400, make: () => kitchen({ mat: WHITE, front: LAC, talls: ["oven", "pantry", "pantry"] }) },
         { name: "Nevera", style: "Minimalista", materials: "fronts de roure", colors: "roure natural", use: "Columnes de frigorífic integrat, forn i rebost", audience: "reformes de cuina", price: 2900, make: () => kitchen({ mat: WHITE, front: OAKM, talls: ["fridge", "oven", "pantry"] }) },
         { name: "Rebost", style: "Funcional", materials: "melamina gris", colors: "gris", use: "Dues columnes de rebost de prestatges", audience: "cuines amb poc armari", price: 1290, make: () => kitchen({ mat: GREY, front: GREY, talls: ["pantry", "pantry"] }) },
+      ]),
+      items("cuina", "Cuina amb electrodomèstics", [
+        { name: "Roure", style: "Contemporani", materials: "melamina blanca, fronts de roure, taulell de pedra", colors: "blanc, roure, pedra", use: "Columnes de frigorífic combi i de forn amb microones, rentaplats integrable en un mòdul sense res, placa d'inducció sobre calaixos i grup filtrant al moble de dalt (Bosch), amb els fronts muntats com diu el fabricant", audience: "cuines amb electrodomèstics integrables", price: 9900, make: () => applianceKitchen(OAKM) },
+        { name: "Greige", style: "Minimalista", materials: "melamina blanca, fronts lacats greige, taulell de pedra", colors: "greige, pedra", use: "La mateixa cuina integrada amb fronts lacats: els electrodomèstics no es veuen", audience: "cuines obertes al menjador", price: 10900, make: () => applianceKitchen(GREIGE) },
+        { name: "Antracita", style: "Modern", materials: "melamina blanca, fronts lacats antracita, taulell de pedra", colors: "antracita, pedra", use: "Cuina integrada fosca amb columnes de frigorífic i forn", audience: "reformes de cuina", price: 10900, make: () => applianceKitchen(ANTH) },
       ]),
       items("cuina", "Racó de cafè", [
         { name: "Barista", style: "Contemporani", materials: "fronts antracita, taulell de pedra, prestatges de roure", colors: "antracita, roure, marbre", use: "Moble de cafè amb calaixos i porta i prestatges a sobre", audience: "menjadors i despatxos", price: 1490, make: () => kitchen({ mat: GREY, front: ANTH, bases: [["drawers", 600], ["door", 600]], shelves: { n: 2, mat: OAK }, top: { kind: "stone" } }) },
