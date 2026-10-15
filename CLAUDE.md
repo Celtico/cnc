@@ -60,6 +60,8 @@ el codi només porta els valors inicials.
 - **`@anthropic-ai/sdk`** (aprovat per l'usuari el 2026-10-09 per a l'assistent IA, `docs/xat-ia.md`): el navegador crida
   l'API de Claude amb la clau de l'usuari (Preferències › Assistent IA, `dangerouslyAllowBrowser`). **A demanda**
   (`import()` a `features/assistant/claudeClient.ts`, en obrir el xat o provar la clau): no és al bloc d'entrada.
+- **`@xyflow/react`** (React Flow, aprovat per l'usuari el 2026-10-15): només el dibuix de Preferències › Opcions en
+  cascada, carregat a demanda (`lazy`).
 - Lint: `oxlint`. **Mai prettier.**
 
 ## Arquitectura
@@ -207,8 +209,8 @@ Les etiquetes i les ajudes de la UI fan servir sempre aquestes paraules (auditor
     no surten: es trien a cada compartiment («Com el mòdul» = l'heretat). Res del que la construcció no llegeix no surt, i
     al revés (`usedHardwareSlots`, `moduleRows`; res amagat compta).
   - **Opció nova a un inspector → al registre** de les opcions en cascada (`core/model/options/`, `optionId` a la fila; ho
-    comprova `src/optionCascade.test.ts`): així surt a Preferències › Opcions en cascada, es pot amagar i triar-ne el per
-    defecte ([convencions](docs/convencions.md)).
+    comprova `src/optionCascade.test.ts`): així surt a l'esborrany de Preferències › Opcions en cascada (un dibuix per
+    pensar la cascada; **no s'aplica a l'Editor**, [convencions](docs/convencions.md)).
   - Quan aparegui un cas nou, s'afegeix aquí.
 - Abans de codi nou al `core/`, escriu o actualitza els tests (Vitest). Canvis de fabricació: proves d'or (vegeu més amunt).
 - Canvis petits i verificables. Després de cada canvi ha de passar `pnpm check` (typecheck, lint amb 0 avisos, codi mort,

@@ -161,6 +161,16 @@ interface ChatRow {
   updatedAt: number
 }
 
+/**
+ * Esborranys de treball que no són un moble (fila per esborrany; id = "option-cascade": el dibuix de Preferències ›
+ * Opcions en cascada, `db/cascadeDraftStore.ts`). El contingut es valida en llegir-lo.
+ */
+interface DraftRow {
+  id: string
+  data: unknown
+  updatedAt: number
+}
+
 class MoblesDB extends Dexie {
   projects!: EntityTable<Project, "id">
   photos!: EntityTable<Photo, "id">
@@ -169,6 +179,7 @@ class MoblesDB extends Dexie {
   models!: EntityTable<UserModel, "id">
   hardwareAssets!: EntityTable<HardwareAsset, "id">
   chats!: EntityTable<ChatRow, "id">
+  drafts!: EntityTable<DraftRow, "id">
 
   constructor() {
     super("mobles-cnc")
@@ -213,6 +224,16 @@ class MoblesDB extends Dexie {
       models: "id, createdAt",
       hardwareAssets: "id, createdAt",
       chats: "id",
+    })
+    this.version(8).stores({
+      projects: "++id, name, updatedAt",
+      photos: "++id, projectId",
+      settings: "id",
+      ambients: "++id, name, updatedAt",
+      models: "id, createdAt",
+      hardwareAssets: "id, createdAt",
+      chats: "id",
+      drafts: "id",
     })
   }
 }

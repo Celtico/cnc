@@ -1,4 +1,5 @@
-import { Stack, Text } from "@chakra-ui/react"
+import { Spinner, Stack, Text } from "@chakra-ui/react"
+import { lazy, Suspense } from "react"
 import { LuFactory, LuLampFloor, LuLayoutGrid, LuListTree, LuMessageSquare, LuPalette, LuRoute, LuRuler, LuScan, LuScanEye, LuSunMoon, LuTag, LuWrench } from "react-icons/lu"
 import { setKitPilot, defaultMachine, type Composition, type Settings } from "../../core/model"
 import { SettingsGroup } from "../../components/SettingsGroup"
@@ -12,7 +13,6 @@ import { DeleteMaterialDialog } from "./DeleteMaterialDialog"
 import { DeleteHardwareDialog } from "./DeleteHardwareDialog"
 import { HardwareList } from "./HardwarePane"
 import { AssistantPane } from "./AssistantPane"
-import { OptionCascadePane } from "./OptionCascadePane"
 import { AccentField, ThemeField } from "./screen/AppearanceFields"
 import { BoardsFields } from "./screen/BoardsFields"
 import { GapsFields } from "./screen/GapsFields"
@@ -27,6 +27,9 @@ import { useHardwareActions, useMaterialActions } from "./screen/useLibraryActio
 import { useSectionReset } from "./screen/useSectionReset"
 import { useSettingsDraft } from "./screen/useSettingsDraft"
 import { useSettingsFile } from "./screen/useSettingsFile"
+
+// El dibuix de la cascada porta React Flow: es carrega en obrir la pàgina.
+const CascadePane = lazy(() => import("./cascade/CascadePane").then((m) => ({ default: m.CascadePane })))
 
 export function SettingsScreen({ previewComposition }: { previewComposition?: Composition }) {
   const { settings, loading, save } = useSettings()
@@ -88,14 +91,10 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
             <GapsFields gaps={draft.gaps} onChange={(gaps) => set("gaps", gaps)} />
           </Pane>
 
-          <Pane
-            id="options"
-            title="Opcions en cascada"
-            icon={LuListTree}
-            desc="Totes les opcions de l'Editor en arbre: amagar les que no fas servir i el valor per defecte dels elements nous."
-            onReset={() => setReset({ key: "optionPrefs", label: "Opcions en cascada", note: "Totes les opcions tornen a sortir i els per defecte tornen als inicials. Els mobles fets no canvien." })}
-          >
-            <OptionCascadePane prefs={draft.optionPrefs} onChange={(optionPrefs) => set("optionPrefs", optionPrefs)} />
+          <Pane id="options" wide title="Opcions en cascada" icon={LuListTree} desc="Un esborrany de la cascada d'opcions de l'Editor per dibuixar com la vols: no canvia res de l'Editor.">
+            <Suspense fallback={<Spinner colorPalette="wood" />}>
+              <CascadePane />
+            </Suspense>
           </Pane>
 
           <Pane id="label" title="Etiquetes" icon={LuTag} desc="Mida de l'etiqueta de les peces." onReset={() => setReset({ key: "label", label: "Etiquetes" })}>

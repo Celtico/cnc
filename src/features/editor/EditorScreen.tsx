@@ -4,7 +4,7 @@ import { Workspace } from "../../components/Workspace"
 import { useWorkspace } from "../../components/useWorkspace"
 import { TopBarActions } from "../../components/TopBar"
 import { toaster } from "../../components/ui/toaster"
-import { applyModuleOptionDefaults, applySettingsToModule, compositionKind, CompositionSchema, emptyModule, partsOnlyKind, tableModule, type Composition } from "../../core/model"
+import { applySettingsToModule, compositionKind, CompositionSchema, emptyModule, partsOnlyKind, tableModule, type Composition } from "../../core/model"
 import { readComposition, updateProjectComposition, type CompositionRead } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { StructureTree } from "../composition/StructureTree"
@@ -122,9 +122,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           selection={selection}
           onSelect={(s) => pick(s, true)}
           onChange={setComp}
-          // Un mòdul nou: materials i folgances de Preferències i, al «+» de sempre (no a les taules), els per defecte de
-          // Preferències › Opcions en cascada.
-          newModule={(id, n) => (kind === "taula" ? applySettingsToModule(settings, tableModule(id, n)) : applyModuleOptionDefaults(applySettingsToModule(settings, emptyModule(id, n)), settings.optionPrefs))}
+          newModule={(id, n) => applySettingsToModule(settings, kind === "taula" ? tableModule(id, n) : emptyModule(id, n))}
           partCenter={{ x: Math.round(scene.size.width / 2), y: partsOnlyKind(kind) ? 0 : Math.round(scene.size.height / 2), z: partsOnlyKind(kind) ? 0 : Math.round(scene.size.depth + 50) }}
         />
         }

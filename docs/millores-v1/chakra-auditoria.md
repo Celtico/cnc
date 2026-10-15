@@ -38,6 +38,7 @@ La regla ja és al `CLAUDE.md` (UI › Regles i Com treballar) i a `docs/convenc
 | 20 | Panells de l'espai de treball (desplaçament propi, barra fina) | Desplaçament natiu | `ScrollArea` | El desplaçament natiu de l'iPhone (inèrcia) i la capçalera `sticky` de Propietats funcionen; `ScrollArea` hi posaria una barra pròpia | — | **es manté** (natiu) |
 | 21 | `components/SearchBar.tsx`, `PickerDrawer.tsx` i `FloatingWindow.tsx` (`FloatingPanel`), `ViewOptions.tsx`, `NameDialog.tsx`, `StatBox.tsx`, `NumRow.tsx`, `TopBar.tsx` (nom), `PhotoScreen` (foto buida) | — | `InputGroup`, `FloatingPanel`, `Popover`, `Dialog`, `Stat`, `NumberInput`, `Editable`, `EmptyState` | Ja són de Chakra | — | correcte |
 | 22 | `DimLine`, `BoardDrawing`, `PanelDrawing`, `dims.ts`, el visor 3D | Dibuixos SVG i 3D | — | Chakra no en té | — | **es manté** (no hi ha equivalent) |
+| 23 | `features/settings/cascade/` (Preferències › Opcions en cascada) | Llenç de nodes i fletxes editable (afegir, unir, esborrar, plegar, zoom, minimapa) | — (el `TreeView` només és una llista en arbre: no uneix nodes ni dibuixa fletxes entre branques) | No | — | **React Flow** (`@xyflow/react`, aprovat per l'usuari el 2026-10-15); el panell, els botons, els menús i el diàleg són de Chakra i els colors del llenç, tokens de Chakra (2026-10-15: abans era un `TreeView`) |
 
 ## ResizeHandle → Splitter (fet)
 

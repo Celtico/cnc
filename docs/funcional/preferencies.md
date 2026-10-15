@@ -177,51 +177,55 @@
     davant (placa o System 32); als altres, el forat fins als cantells, la fondària i, si n'hi ha dos, la distància). Els
     textos de l'SVG van amb `style={{ fontSize }}` (l'atribut `font-size` el tapa el CSS global). Tests
     `build/hardwareMount.test.ts`.
-- **Opcions en cascada** (per decisió de l'usuari, 2026-10-15: «el dibuix en cascada» de totes les opcions de l'Editor;
-  `settings/OptionCascadePane.tsx`, `LuListTree`, apartat **Editor**): tota la cascada d'opcions dels inspectors (Estructura,
-  Moble, Mòdul › Posició · Mides · Electrodomèstic · Caixa · Portes · Unió · Materials, Compartiment › Electrodomèstic ·
-  Front › Porta · Calaixos · Abatible · Reixeta · Prestatges i accessoris · Filera System 32 · Dividir · Divisió, Peça lliure,
-  Objecte de referència i Selecció múltiple) en un **arbre** (`TreeView` de Chakra amb les línies de cada branca, `size="sm"`,
-  les icones de les seccions de l'inspector, `settings/optionIcons.ts`; obertes d'entrada Moble, Mòdul i Compartiment, es
-  recorda a la sessió `mobles:option-cascade-open`). **Una dada, una font**: l'arbre surt del **registre**
-  `core/model/options/` (`OPTION_CASCADE`: id estable, nom, tipus, control, tries amb el que **fan aparèixer** (ull) o
-  **desaparèixer** (ull tatxat), quan surt —`showIf`—, el valor d'un element nou, `hideable`, `defaultEditable`, el fitxer
-  de la UI i la possible incoherència de l'auditoria); cada fila i secció dels inspectors en porta l'id (`optionId`) i el test
-  `src/optionCascade.test.ts` falla si en falta un o si un id del registre no és a la UI. A cada opció (`OptionNodeView`):
-  el nom, «Surt quan: …» (**només es llegeix**: la condició també decideix la fabricació, res amagat compta; només la
-  canvia el codi), les tries (la inicial, plena), **«Amagar»** si es pot (`hideable`) i el **«Per defecte als nous»** si es
-  pot triar (`defaultEditable`; el mateix control que l'inspector: `ChoiceChips`, `Switch` o `NumberField`, i «Inicial (…)»
-  per tornar-hi); si no, el per defecte en text (p. ex. «Com el mòdul», «Preferències › Folgances per defecte»: **un sol
-  lloc per decisió**, els materials i les folgances es trien a les seves pàgines). Les que no es poden amagar porten
-  «Fixa» (el perquè al tooltip). Les **possibles incoherències** de l'auditoria del 2026-10-15 surten amb «Possible
-  incoherència» i el text (no s'han corregit: l'usuari les revisarà amb l'arbre). Una **cerca** (`SearchBar`, sense accents)
-  filtra: les que coincideixen amb tot el que tenen a sota i les de sobre, tot obert. A dalt, quantes n'hi ha d'amagades i
-  de per defecte propis; «Restaurar valors inicials» les torna totes.
-  - **Amagar** (`optionPrefs[id].hidden`; `useOptionHidden`, a `SettingsContext`, el fan servir `FormRow`, `NumRow`,
-    `FoldItem` i `HardwarePick`): la fila o la secció no surt, ni les de sota (`hiddenBy`: una de sobre amagada amaga les
-    seves); les amagades es veuen grises amb «Amagada» (o «Amagada amb «…»»). Els mobles fets **no canvien** (conserven el
-    seu valor i es fabriquen igual); els nous fan servir el per defecte. **No es poden amagar** (`why`): les Mides i la
-    Posició (del mòdul, de la peça, de l'objecte i de la selecció), la Tapa i els Laterals (sense, no hi hauria on aguantar
-    prestatges ni fronts), el Front i el Contingut del compartiment, la Divisió i les seves mides, el nombre de Calaixos, la
-    Caixa sencera i els Triats de la selecció. Les opcions de la porta són les mateixes a Compartiment › Front i a Mòdul ›
-    Portes (mateix id: amagar-ne una l'amaga als dos llocs); les files de Moble › Encaixos també surten a la peça.
-  - **Per defecte** (`optionPrefs[id].default`, validat contra el registre, `optionDefault`/`userOptionDefault`; un valor
-    del codi o invàlid no compta): el mòdul del «+» (`applyModuleOptionDefaults` després d'`applySettingsToModule`, a
-    `EditorScreen`; no a les taules ni als mòduls de l'assistent): mides, Suport (amb l'alçada i el retranqueig del sòcol o
-    l'alçada de les potes, també en triar-lo a la Caixa: `baseWithDefaults`), Base, Fons, Tapa, Tauler de taula, Laterals,
-    Parets, Cantonades, Estil dels fronts i el seu Interior; els compartiments nous en blanc d'una divisió o d'«Afegir zona»
-    (`withNewZoneDefaults`: Contingut, Quantitat, Regulació, Davant, Penjar, Llum); el front que es posa per primer cop
-    (`switchFront(…, frontWithDefaults)`: Portes Una · Dues, Frontisses, Vitrina, nombre de Calaixos, Obre cap a, Patró i
-    Muntatge de la reixeta; el front recordat del compartiment no es toca); la peça lliure nova (Orientació, Efecte, Veta,
-    Cantell) i l'objecte nou (Efecte). Sense cap preferència, res no canvia (proves d'or idèntiques).
+- **Opcions en cascada: un esborrany per dibuixar, no s'aplica** (per decisió de l'usuari, 2026-10-15: «amb reactflow o
+  similar que pugui agregar i treure nodes, no per aplicar a la realitat fins que no ho tinguem clar; el que més fa només
+  són obrir i tancar»; `settings/cascade/`, `LuListTree`, apartat **Editor**, pàgina ampla, carregada a demanda: React Flow
+  no és al bloc d'entrada). Substitueix l'arbre amb «Amagar» i «Per defecte als nous» del mateix dia (v48), que es va treure:
+  **res d'aquesta pàgina canvia l'Editor** ni els mòduls nous.
+  - **El dibuix** (`CascadeCanvas`, `@xyflow/react` 12.12.0, aprovat per l'usuari): nodes de **secció**, **opció** i
+    **tria** (la tria, vora a ratlles i cantonades rodones) amb la icona de la secció de l'inspector
+    (`settings/optionIcons.ts`), el tipus, el nom i «Surt quan: …»; insígnia **taronja «Revisar»** si té una possible
+    incoherència (les de l'auditoria del registre, `issue`) i una icona si té nota. Fletxes: **a dins de** (contínua, fa
+    l'arbre), **fa aparèixer** (a ratlles, color principal) i **fa desaparèixer** (a ratlles, vermella); l'interruptor
+    «Fa aparèixer / desaparèixer» amaga aquestes dues. Disposició **automàtica en arbre** (`core/model/options/cascadeLayout.ts`,
+    sense dependència: els fills en fila, el pare al mig, cada nivell a la mateixa distància; d'esquerra a dreta o de dalt a
+    baix amb el botó de la fletxa, es recorda al navegador); els nodes no s'arrosseguen. Desplaçar i zoom (també amb els
+    dits), minimapa, controls amb «Encaixar-ho tot» (textos de React Flow en català, `ariaLabelConfig`). Tema clar/fosc i
+    paleta `wood`: les variables `--xy-*` apunten als tokens de Chakra.
+  - **Plegar i desplegar** (el que més es fa): el botó del node (fletxa; plegat, diu quants en té a dins) o **doble clic al
+    node**; el node no es mou de la pantalla (la vista es desplaça el que s'ha mogut). «Plegar tot» / «Desplegar tot»
+    (encaixa). D'entrada, obertes les arrels (els inspectors) i la resta plegat.
+  - **Editar**: «Afegir» (`SearchBar`: un node a dins del triat —una tria si és una opció— o, sense res triat, una secció
+    solta; també **doble clic al buit**), esborrar amb **Supr / ⌫** o el botó (un node s'emporta el que té a dins), **unir**
+    arrossegant d'una nansa a una altra («aquest surt quan aquell»: si el de destí no és a dins de res hi queda a dins; si
+    no, «fa aparèixer»; res de cercles), desfer/refer (`useHistory`, ⌘Z). El **panell del costat** (`CascadeDetail`,
+    `PanelSplit`, amplada recordada; al mòbil, a sota): del node triat, Nom, Tipus (`ChoiceChips`), Surt quan, Nota (per a
+    tu) i Revisar (la incoherència; buida = resolta), «Afegir a dins», «Esborrar» i **«A l'app ara»** (com és al codi: el
+    nom, la condició, el fitxer de la UI, el per defecte, «Com a l'app»); de la fletxa triada, què fa (A dins de · Fa
+    aparèixer · Fa desaparèixer) i els dos extrems; sense res triat, com es fa servir i la llista de diferències. La
+    **cerca** obre el camí fins als que coincideixen, els marca i hi va.
+  - **Diferències amb l'app** (`diffDraft`, interruptor «Diferències (n)»): nodes **Nou** (verd) i **Canviat** (lila: el
+    nom, el tipus o la condició; la nota i la incoherència no compten), fletxes noves en verd i les de l'app que s'han tret,
+    puntejades «· treta»; els nodes trets, a la llista del panell amb «Recuperar» (també les fletxes). **Exportar JSON**
+    (menú «…», `opcions-en-cascada.json`): l'esborrany i les diferències (nodes afegits, trets i canviats amb l'abans i
+    l'ara, fletxes afegides i tretes, notes) per fer-les després al codi; **Importar JSON**; **«Tornar a carregar des de
+    l'app»** (confirmació, es pot desfer): l'esborrany torna a ser el que fa el codi ara.
+  - **La llavor és el registre** `core/model/options/` (`OPTION_CASCADE`, `appCascade()` a `cascadeDraft.ts`: una opció del
+    registre = un node amb el seu id; cada tria = un node `opció=valor`; `reveals`/`hides` = fletxes), sempre al dia amb el
+    codi: cada fila i secció dels inspectors en porta l'id (`optionId`) i el test `src/optionCascade.test.ts` falla si en
+    falta un o si un id del registre no és a la UI.
+  - **Es desa sol** a IndexedDB (`db.drafts`, fila `option-cascade`, Dexie v8, `db/cascadeDraftStore.ts`): l'esborrany i
+    les branques plegades; sobreviu a recarregar. Un desat que no es pot llegir torna a començar de l'app. No va amb
+    l'export de les preferències.
 - **Objectes de referència inicials** (`BUILTIN_REFERENCES`): genèrics (A4, rajoles, portes, **una sola tele** de 55″,
   radiador, endoll; per decisió de l'usuari, no una llista de teles). Les teles antigues es treuen (`RETIRED_REFERENCES`,
   `isRetired`, també les còpies «TV Sony KD-55XD8505…»).
 - **Visor 3D**: qualitat, escena de Presentació (terra i paret: materials de la biblioteca, `PresentationScene.floorMaterial`
   / `wallMaterial`, o les mostres ràpides; terra per defecte «Parquet de roure»), llum i «Cel del render». **Tema**:
   dia/nit/sistema i color principal (`theme/accent.ts` redirigeix les variables CSS de `wood`).
-- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 48 (opcions en cascada, `optionPrefs`, additiu:
-sense, cap d'amagada; una entrada dolenta només treu aquella, `parseOptionPrefs`); 47 (el material del cos dels electrodomèstics:
+- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 49 (fora `optionPrefs`: les opcions en cascada ja no
+amaguen res ni posen per defecte, es treuen en llegir); 48 (opcions en cascada, `optionPrefs`: amagar i per defecte als nous,
+retirat a la 49); 47 (el material del cos dels electrodomèstics:
 «Electrodomèstic negre», el vidre negre dels forns, microones i plaques, `APPLIANCE_MATERIALS`, additiu; els items del
 catàleg passen a la `version` 3, amb el cos de la família —`applianceBodyMaterial`— en lloc de «Acer inox» a tots: la
 biblioteca es refà sola com a cada versió d'item i les còpies dels mobles desats, només pel cos, `upgradeApplianceBodies` a

@@ -18,8 +18,6 @@ import {
   splitDirsFor,
   findZone,
   nicheAppliance,
-  frontWithDefaults,
-  withNewZoneDefaults,
   type Front,
   type ModuleHardware,
   type Zone,
@@ -32,7 +30,6 @@ import { CoveredFront, ZoneFrontSection } from "./zone/FrontSection"
 import { ZoneShelvesSection } from "./zone/ShelvesSection"
 import { FrontFields } from "./zone/FrontFields"
 import { ApplianceSection } from "./zone/ApplianceSection"
-import { useSettings } from "../settings/SettingsContext"
 
 /**
  * Accions de la zona seleccionada (van a la capçalera de l'inspector, com a icones):
@@ -140,9 +137,6 @@ export function ZonePanel({
    */
   childSizes?: number[]
 }) {
-  // Els compartiments nous (dividir, afegir zona) amb els per defecte de l'usuari (Preferències › Opcions en cascada).
-  const { optionPrefs } = useSettings().settings
-  const grow = (next: Zone) => onChange(withNewZoneDefaults(root, next, optionPrefs))
   // Hi ha on fer servir prestatges i accessoris: tapat per portes (com obert), o el seu contingut no l'omple.
   const shelvesBehind = coveredBy ? !coveredByFixed : !fillsZone(zone.front)
   // Darrere d'un front fix (el seu o, a les dades d'abans, el de tota la zona que el tapa si es fes) no es divideix: les
@@ -158,7 +152,7 @@ export function ZonePanel({
           <FoldItem optionId="zone.split" id="zone-split" title={`Divisió ${zone.split.dir === "v" ? "vertical" : "horitzontal"}`} badge={`${zone.split.children.length} zones`} icon={zone.split.dir === "v" ? LuColumns2 : LuRows2}>
             <SplitSizes root={root} zone={zone} onChange={onChange} onSelect={onSelect} childSizes={childSizes} />
             <HStack wrap="wrap">
-              <Button size="sm" variant="outline" onClick={() => grow(addChild(root, zone.id))}>
+              <Button size="sm" variant="outline" onClick={() => onChange(addChild(root, zone.id))}>
                 <LuPlus /> Afegir zona
               </Button>
               <Button size="sm" variant="outline" onClick={() => onChange(unsplitZone(root, zone.id))}>
@@ -192,12 +186,12 @@ export function ZonePanel({
               </Text>
               <HStack wrap="wrap">
                 {splitDirsFor(bounds).includes("v") && (
-                  <Button size="sm" variant="outline" onClick={() => grow(splitZone(root, zone.id, "v", 2))}>
+                  <Button size="sm" variant="outline" onClick={() => onChange(splitZone(root, zone.id, "v", 2))}>
                     <LuSquareSplitHorizontal /> En vertical
                   </Button>
                 )}
                 {splitDirsFor(bounds).includes("h") && (
-                  <Button size="sm" variant="outline" onClick={() => grow(splitZone(root, zone.id, "h", 2))}>
+                  <Button size="sm" variant="outline" onClick={() => onChange(splitZone(root, zone.id, "h", 2))}>
                     <LuSquareSplitVertical /> En horitzontal
                   </Button>
                 )}
@@ -220,10 +214,9 @@ export function ModuleDoorsSection({ root, onChange, hardware, noHandles, bounds
   const door = root.front?.kind === "door" ? root.front : undefined
   const value = door?.mode ?? "none"
   const canDoor = canHoldFront(bounds, "door")
-  const { optionPrefs } = useSettings().settings
   const choose = (mode: "none" | "single" | "double") => {
     if (mode === "none") return onChange(switchFront(root, root.id, "none"))
-    const base = door ? root : switchFront(root, root.id, "door", (k) => frontWithDefaults(k, optionPrefs))
+    const base = door ? root : switchFront(root, root.id, "door")
     const f = findZone(base, root.id)?.front
     if (f?.kind !== "door") return
     // Una porta nova va amb les frontisses a un costat on hi ha on posar-les.

@@ -1,13 +1,12 @@
 import { Text } from "@chakra-ui/react"
 import type { ReactNode } from "react"
 import { FoldItem } from "../../../components/Fold"
-import { UI_PATHS, canHoldFront, findZone, frontLimitsHelp, frontWithDefaults, setFront, switchFront, type Front, type ModuleHardware, type Zone, type ZoneBounds } from "../../../core/model"
+import { UI_PATHS, canHoldFront, findZone, frontLimitsHelp, setFront, switchFront, type Front, type ModuleHardware, type Zone, type ZoneBounds } from "../../../core/model"
 import type { KitOrder } from "../../../core/build/buildModule"
 import { FormRow } from "../../../components/FormRow"
 import { FRONT_ICONS } from "../zoneIcons"
 import { IconChoice } from "../../../components/IconChoice"
 import { FrontFields } from "./FrontFields"
-import { useSettings } from "../../settings/SettingsContext"
 
 const FRONT_LABELS: Record<Front["kind"] | "none", string> = {
   none: "Obert",
@@ -31,7 +30,6 @@ export function CoveredFront({ id, title, coveredBy }: { id: string; title: stri
 
 /** Tipus de front d'un compartiment (botons d'icona) i els seus camps. */
 export function ZoneFrontSection({ root, zone, onChange, openRatio, drawerHeights, hardware, noHandles = false, kits, bounds, afterHinge }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; openRatio?: number; drawerHeights?: number[]; hardware: ModuleHardware; noHandles?: boolean; kits?: KitOrder[]; /** Què aguanta el compartiment: els fronts que no s'hi poden fixar no surten (el triat, sí). */ bounds: ZoneBounds; /** Després de la «Frontissa» (la filera System 32 del mòdul). */ afterHinge?: ReactNode }) {
-  const { optionPrefs } = useSettings().settings
   const all = Object.keys(FRONT_LABELS) as (Front["kind"] | "none")[]
   const current = zone.front?.kind ?? "none"
   const options = all.filter((k) => k === current || canHoldFront(bounds, k))
@@ -40,7 +38,7 @@ export function ZoneFrontSection({ root, zone, onChange, openRatio, drawerHeight
   const limits = frontLimitsHelp(bounds, all, current)
   /** Una porta nova va amb les frontisses a un costat on hi ha on posar-les. */
   const choose = (k: Front["kind"] | "none") => {
-    const next = switchFront(root, zone.id, k, (kind) => frontWithDefaults(kind, optionPrefs))
+    const next = switchFront(root, zone.id, k)
     const f = findZone(next, zone.id)?.front
     if (f?.kind === "door" && f.mode === "single" && !bounds[f.hinge] && bounds[f.hinge === "left" ? "right" : "left"]) onChange(setFront(next, zone.id, { ...f, hinge: f.hinge === "left" ? "right" : "left" }))
     else onChange(next)

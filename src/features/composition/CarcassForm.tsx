@@ -1,5 +1,5 @@
 import { Button, HStack, Stack, Switch, Text } from "@chakra-ui/react"
-import { DEFAULT_GRILLE, UI_PATHS, applianceCarcassText, baseWithDefaults, backChoices, hasBottom, moduleApplianceCarcass, visibleModule, boardChoices, hardwareSummary, jointApplies, materialByName, moduleRows, moduleSlotItem, type Base, type Carcass, type HardwareItem, type Module, type ModuleRows, type Top } from "../../core/model"
+import { DEFAULT_GRILLE, UI_PATHS, applianceCarcassText, backChoices, hasBottom, moduleApplianceCarcass, visibleModule, boardChoices, hardwareSummary, jointApplies, materialByName, moduleRows, moduleSlotItem, type Base, type Carcass, type HardwareItem, type Module, type ModuleRows, type Top } from "../../core/model"
 import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { IconChoice } from "../../components/IconChoice"
@@ -8,7 +8,7 @@ import { ProfileEditor } from "./ProfileEditor"
 import { PRESETS, matchPreset } from "./profilePresets"
 import { LuCircle, LuPencilRuler, LuRectangleHorizontal, LuSquircle } from "react-icons/lu"
 import { LuArrowDownToLine, LuDrill, LuFootprints, LuGrid3X3, LuInspectionPanel, LuLayers2, LuPanelBottom, LuPanelTop, LuSquareDashed, LuSquare, LuSquareDashedBottom, LuSquareSquare, LuSquareStack, LuTriangleRight, LuWind } from "react-icons/lu"
-import { useOptionHidden, useSettings } from "../settings/SettingsContext"
+import { useSettings } from "../settings/SettingsContext"
 import { MaterialSelect } from "../settings/MaterialSelect"
 import { HardwarePick } from "./HardwarePick"
 import { HangerFields, PlinthFields } from "./BaseFields"
@@ -24,7 +24,7 @@ type CarcassSection = "dims" | "structure"
  */
 export function CarcassForm({ module, onChange, section, rows = moduleRows(module) }: { module: Module; onChange: (m: Module) => void; section: CarcassSection; rows?: ModuleRows }) {
   const c = module.carcass
-  const { gaps, optionPrefs } = useSettings().settings
+  const { gaps } = useSettings().settings
   const set = (patch: Partial<Carcass>) => onChange({ ...module, carcass: { ...c, ...patch } })
   const setFronts = (patch: Partial<Module["fronts"]>) => onChange({ ...module, fronts: { ...module.fronts, ...patch } })
   // La caixa tal com es construeix (`visibleModule`): el `open` d'abans com a «Sense base» i les parts que fixa
@@ -67,7 +67,7 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
                 { value: "legs", label: "Potes", icon: LuFootprints, hint: "Potes regulables" },
               ]}
               onChange={(k) => {
-                const base: Base = baseWithDefaults(k, optionPrefs)
+                const base: Base = k === "plinth" ? { kind: "plinth", height: 60, setback: 30 } : k === "legs" ? { kind: "legs", height: 100 } : { kind: k }
                 // El «Sense base» d'abans (`open`) es conserva com a `noBottom`.
                 set(c.base.kind === "open" ? { base, noBottom: true } : { base })
               }}
@@ -411,9 +411,8 @@ function FixedRow({ label, text, help, optionId }: { label: string; text: string
   )
 }
 
-function PrefReset({ value, pref, onReset, optionId }: { value: number; pref: number; onReset: () => void; optionId: string }) {
-  const hidden = useOptionHidden(optionId)
-  if (value === pref || hidden) return null
+function PrefReset({ value, pref, onReset }: { value: number; pref: number; onReset: () => void; /** L'id a les opcions en cascada (el test). */ optionId: string }) {
+  if (value === pref) return null
   return (
     <HStack justify="flex-end" mt={-2}>
       <Button size="2xs" variant="ghost" colorPalette="wood" onClick={onReset}>

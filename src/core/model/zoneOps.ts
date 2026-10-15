@@ -219,16 +219,15 @@ export function setFront(root: Zone, id: string, front: Front | null): Zone {
 /**
  * Canvia el **tipus** de contingut («Contingut» de l'inspector): el front recordat d'aquell tipus (`fronts[kind]`) o, si
  * no n'hi ha, el front en blanc (`defaultFront`), amb el tirador propi del front d'abans si el nou tipus també en pot
- * portar (porta, calaixos i abatible). `"none"` = obert. `blank`: el front en blanc (a l'Editor, amb els per defecte de
- * l'usuari, `frontWithDefaults`).
+ * portar (porta, calaixos i abatible). `"none"` = obert.
  */
-export function switchFront(root: Zone, id: string, kind: Front["kind"] | "none", blank: (kind: Front["kind"]) => Front = defaultFront): Zone {
+export function switchFront(root: Zone, id: string, kind: Front["kind"] | "none"): Zone {
   if (kind === "none") return setFront(root, id, null)
   const z = findZone(root, id)
   if (!z) return root
   if (z.front?.kind === kind) return root
   const remembered = z.fronts?.[kind]
-  const next: Front = remembered ? structuredClone(remembered) : blank(kind)
+  const next: Front = remembered ? structuredClone(remembered) : defaultFront(kind)
   const oldHandle = z.front && "handle" in z.front ? z.front.handle : undefined
   if (!remembered && oldHandle && (next.kind === "door" || next.kind === "drawers" || next.kind === "flap")) next.handle = structuredClone(oldHandle)
   return setFront(root, id, next)

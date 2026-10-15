@@ -1,16 +1,29 @@
 import { describe, expect, it } from "vitest"
-import { DEFAULT_SETTINGS, applySettingsToModule, emptyModule, parseSettings, splitZone, switchFront } from ".."
-import { OPTION_NODES, hiddenBy, isOptionHidden, optionDefault, parseOptionPrefs, setOptionPref, validOptionValue, type OptionPrefs } from "./optionCascade"
-import { applyModuleOptionDefaults, applyPartOptionDefaults, applyRefOptionDefaults, baseWithDefaults, frontWithDefaults, withNewZoneDefaults } from "./optionDefaults"
+import { DEFAULT_SETTINGS, parseSettings } from ".."
+import { OPTION_NODES } from "./optionCascade"
+import {
+  addDraftNode,
+  appCascade,
+  choiceId,
+  connectDraft,
+  diffDraft,
+  draftToJson,
+  edgeId,
+  parseDraftJson,
+  parseStoredDraft,
+  removeFromDraft,
+  restoreAppEdge,
+  restoreAppNode,
+  setDraftEdgeKind,
+  updateDraftNode,
+  type CascadeDraft,
+} from "./cascadeDraft"
+import { ancestorIds, descendantCount, draftTree, layoutDraft, visibleIds } from "./cascadeLayout"
 
 describe("registre de les opcions en cascada", () => {
   const nodes = [...OPTION_NODES.values()]
   it("les tries revelen o amaguen opcions que hi són", () => {
     const bad = nodes.flatMap((n) => (n.choices ?? []).flatMap((c) => [...(c.reveals ?? []), ...(c.hides ?? [])].filter((id) => !OPTION_NODES.has(id)).map((id) => `${n.id} → ${id}`)))
-    expect(bad).toEqual([])
-  })
-  it("un per defecte que es pot triar té un control i un valor del codi vàlid", () => {
-    const bad = nodes.filter((n) => n.defaultEditable && (n.default === undefined || !validOptionValue(n, n.default))).map((n) => n.id)
     expect(bad).toEqual([])
   })
   it("els apartats (`group`) no s'amaguen; els que no s'amaguen diuen per què", () => {
@@ -19,93 +32,126 @@ describe("registre de les opcions en cascada", () => {
   })
 })
 
-describe("amagar", () => {
-  it("amaga l'opció i les de sota; una que no es pot amagar no s'amaga", () => {
-    const prefs: OptionPrefs = { "module.carcass.back": { hidden: true }, "module.dims": { hidden: true } }
-    expect(isOptionHidden(prefs, "module.carcass.back")).toBe(true)
-    expect(hiddenBy(prefs, "module.carcass.backSetback")).toBe("module.carcass.back")
-    expect(isOptionHidden(prefs, "module.carcass.top")).toBe(false)
-    expect(isOptionHidden(prefs, "module.dims.width")).toBe(false)
-    expect(isOptionHidden(undefined, "module.carcass.back")).toBe(false)
-  })
-  it("una preferència buida o amb el valor del codi es treu", () => {
-    let p = setOptionPref({}, "module.carcass.back", { hidden: true })
-    p = setOptionPref(p, "module.carcass.back", { default: "groove" })
-    expect(p).toEqual({ "module.carcass.back": { hidden: true, default: "groove" } })
-    p = setOptionPref(p, "module.carcass.back", { hidden: false, default: "none" })
-    expect(p).toEqual({})
-  })
-  it("un per defecte que no és vàlid no compta", () => {
-    expect(optionDefault({ "module.carcass.back": { default: "foo" } }, "module.carcass.back")).toBe("none")
-    expect(optionDefault({ "module.dims.width": { default: 99999 } }, "module.dims.width")).toBe(600)
-    expect(optionDefault({ "module.dims.width": { default: 800 } }, "module.dims.width")).toBe(800)
+describe("v49: les preferències de la v48 (amagar i per defecte) es treuen", () => {
+  it("una v48 amb `optionPrefs` es llegeix sense", () => {
+    const { settings } = parseSettings({ ...DEFAULT_SETTINGS, version: 48, optionPrefs: { "module.carcass.back": { hidden: true } } })
+    expect(settings).not.toHaveProperty("optionPrefs")
   })
 })
 
-describe("lectura (v48)", () => {
-  it("unes preferències d'abans no en tenen cap; una entrada dolenta només treu aquella", () => {
-    const { settings } = parseSettings({ ...DEFAULT_SETTINGS, version: 47, optionPrefs: undefined })
-    expect(settings.optionPrefs).toEqual({})
-    const problems: string[] = []
-    expect(parseOptionPrefs({ a: { hidden: true }, b: { hidden: "sí" } }, problems)).toEqual({ a: { hidden: true } })
-    expect(problems).toHaveLength(1)
+describe("esborrany: la llavor de l'app", () => {
+  const app = appCascade()
+  it("un node per opció del registre i un per tria, amb els tipus", () => {
+    const choices = [...OPTION_NODES.values()].reduce((s, n) => s + (n.choices?.length ?? 0), 0)
+    expect(app.nodes).toHaveLength(OPTION_NODES.size + choices)
+    expect(app.nodes.find((n) => n.id === "module.carcass.back")?.kind).toBe("option")
+    expect(app.nodes.find((n) => n.id === "module")?.kind).toBe("section")
+    expect(app.nodes.find((n) => n.id === choiceId("module.position.mount", "hung"))).toMatchObject({ kind: "choice", label: "Penjat" })
+  })
+  it("fletxes: a dins de (l'arbre), fa aparèixer i fa desaparèixer", () => {
+    const ids = new Set(app.edges.map((e) => e.id))
+    expect(ids.has(edgeId("contains", "module.position", "module.position.mount"))).toBe(true)
+    expect(ids.has(edgeId("contains", "module.position.mount", choiceId("module.position.mount", "hung")))).toBe(true)
+    expect(ids.has(edgeId("reveals", choiceId("module.position.mount", "hung"), "module.position.height"))).toBe(true)
+    expect(ids.has(edgeId("hides", choiceId("module.position.mount", "floor"), "module.position.gap"))).toBe(true)
+  })
+  it("les possibles incoherències i les condicions vénen del registre", () => {
+    const withIssue = [...OPTION_NODES.values()].filter((n) => n.issue).length
+    expect(app.nodes.filter((n) => n.issue)).toHaveLength(withIssue)
+    expect(app.nodes.find((n) => n.id === "module.position.height")?.when).toBe("Fila = Penjat")
+  })
+  it("sense canvis, cap diferència; les arrels són les del registre", () => {
+    expect(diffDraft(app).count).toBe(0)
+    expect(draftTree(app).roots.length).toBeGreaterThanOrEqual(5)
+    expect(draftTree(app).roots).toContain("module")
   })
 })
 
-describe("per defecte dels elements nous", () => {
-  const base = applySettingsToModule(DEFAULT_SETTINGS, emptyModule("m", "Mòdul"))
-  it("sense preferències, el mòdul nou no canvia", () => {
-    expect(applyModuleOptionDefaults(base, {})).toBe(base)
-    expect(applyModuleOptionDefaults(base, undefined)).toBe(base)
+describe("esborrany: editar i diferències", () => {
+  const app = appCascade()
+  it("afegir, canviar, treure i unir", () => {
+    let d: CascadeDraft = addDraftNode(app, { id: "n1", kind: "option", label: "Opció nova" }, "module.carcass")
+    d = updateDraftNode(d, "module.carcass.back", { label: "Fons de l'armari", note: "provar", when: "  " })
+    d = removeFromDraft(d, ["module.position"])
+    d = connectDraft(d, choiceId("module.carcass.back", "groove"), "n1")
+    const diff = diffDraft(d)
+    expect([...diff.added]).toEqual(["n1"])
+    expect(diff.changed.get("module.carcass.back")?.after.label).toBe("Fons de l'armari")
+    // Treure una secció en treu tot el que té a dins.
+    expect(diff.removed.map((n) => n.id)).toContain("module.position.mount")
+    expect(diff.removed.map((n) => n.id)).toContain(choiceId("module.position.mount", "hung"))
+    // n1 ja és a dins de la Caixa: la nova fletxa és «fa aparèixer».
+    expect(diff.addedEdges.has(edgeId("reveals", choiceId("module.carcass.back", "groove"), "n1"))).toBe(true)
+    expect(diff.addedEdges.has(edgeId("contains", "module.carcass", "n1"))).toBe(true)
+    // El text buit es treu.
+    expect(d.nodes.find((n) => n.id === "module.carcass.back")).not.toHaveProperty("when")
   })
-  it("mides, suport, fons, tapa, laterals i el compartiment de l'usuari", () => {
-    const prefs: OptionPrefs = {
-      "module.dims.height": { default: 720 },
-      "module.carcass.support": { default: "plinth" },
-      "module.carcass.plinthHeight": { default: 100 },
-      "module.carcass.back": { default: "groove" },
-      "module.carcass.top": { default: "full" },
-      "module.carcass.sides": { default: "both" },
-      "module.carcass.frontStyle": { default: "inset" },
-      "zone.shelves.count": { default: 2 },
-      "zone.front.kind": { default: "door" },
-      "zone.front.door.mode": { default: "double" },
-    }
-    const m = applyModuleOptionDefaults(base, prefs)
-    expect(m.carcass.height).toBe(720)
-    expect(m.carcass.base).toEqual({ kind: "plinth", height: 100, setback: 30 })
-    expect(m.carcass.back).toBe("groove")
-    expect(m.carcass.top).toEqual({ kind: "full" })
-    expect(m.carcass.sides).toEqual({ left: true, right: true })
-    expect(m.fronts.style).toBe("inset")
-    expect(m.root.shelves).toEqual({ n: 2, adjustable: true })
-    expect(m.root.front).toEqual({ kind: "door", mode: "double", hinge: "left" })
-    // El material i les folgances de Preferències es queden.
-    expect(m.carcass.material).toBe(base.carcass.material)
+  it("la nota no és una diferència", () => {
+    expect(diffDraft(updateDraftNode(app, "module.carcass.back", { note: "mirar-ho" })).count).toBe(0)
   })
-  it("el suport triat a la Caixa fa servir les mides per defecte de l'usuari", () => {
-    expect(baseWithDefaults("plinth", undefined)).toEqual({ kind: "plinth", height: 60, setback: 30 })
-    expect(baseWithDefaults("legs", { "module.carcass.legHeight": { default: 150 } })).toEqual({ kind: "legs", height: 150 })
+  it("un node sense pare queda a dins del primer que s'hi uneix; res de cercles", () => {
+    let d = addDraftNode(app, { id: "free", kind: "section", label: "Lliure" })
+    d = connectDraft(d, "module", "free")
+    expect(d.edges.at(-1)?.kind).toBe("contains")
+    expect(connectDraft(d, "free", "free")).toBe(d)
+    // «module» a dins de «free» faria un cercle: és «fa aparèixer».
+    const c = connectDraft(d, "free", "module")
+    expect(c.edges.at(-1)?.kind).toBe("reveals")
+    expect(setDraftEdgeKind(c, c.edges.at(-1)!.id, "contains")).toBe(c)
+    expect(setDraftEdgeKind(c, c.edges.at(-1)!.id, "hides").edges.at(-1)?.kind).toBe("hides")
   })
-  it("el front que es posa per primer cop i els compartiments nous d'una divisió", () => {
-    const prefs: OptionPrefs = { "zone.front.drawers.count": { default: 4 }, "zone.shelves.led": { default: true } }
-    expect(frontWithDefaults("drawers", prefs)).toEqual({ kind: "drawers", n: 4, heights: ["auto", "auto", "auto", "auto"] })
-    const root = { id: "r", shelves: { n: 1, adjustable: true } }
-    const split = splitZone(root, "r", "v", 2)
-    const next = withNewZoneDefaults(root, split, prefs)
-    const [a, b] = next.split!.children
-    expect(a!.shelves).toEqual({ n: 1, adjustable: true })
-    expect(a!.led).toBeUndefined()
-    expect(b!.led).toEqual({})
-    // Un front recordat no es toca (switchFront el recupera sencer).
-    const z = { id: "z", fronts: { drawers: { kind: "drawers" as const, n: 2, heights: ["auto" as const, "auto" as const] } } }
-    expect(switchFront(z, "z", "drawers", (k) => frontWithDefaults(k, prefs)).front).toEqual(z.fronts.drawers)
+  it("recuperar un node o una fletxa de l'app", () => {
+    const d = removeFromDraft(app, ["module.carcass.back"])
+    const back = restoreAppNode(d, "module.carcass.back")
+    expect(back.nodes.some((n) => n.id === "module.carcass.back")).toBe(true)
+    expect(back.edges.some((e) => e.id === edgeId("contains", "module.carcass", "module.carcass.back"))).toBe(true)
+    const e = app.edges[0]!
+    expect(restoreAppEdge(removeFromDraft(app, [], [e.id]), e.id).edges.some((x) => x.id === e.id)).toBe(true)
   })
-  it("peça lliure i objecte de referència", () => {
-    const p = { id: "p", name: "P", orient: "front" as const, w: 600, h: 400, thickness: 19, material: "M", x: 0, y: 0, z: 0 }
-    expect(applyPartOptionDefaults(p, { "part.cnc.edge": { default: true }, "part.material.grain": { default: "none" } })).toEqual({ ...p, edged: true, grain: "none" })
-    expect(applyPartOptionDefaults(p, {})).toEqual(p)
-    const r = { id: "r", name: "R", w: 1, h: 1, d: 1, x: 0, y: 0, z: 0 }
-    expect(applyRefOptionDefaults(r, { "ref.effect": { default: "cut" } }).effect).toBe("cut")
+})
+
+describe("esborrany: fitxer i desat", () => {
+  it("exportar i tornar a importar; el fitxer porta les diferències", () => {
+    const d = addDraftNode(appCascade(), { id: "n1", kind: "choice", label: "Nova" }, "module.carcass.back")
+    const json = draftToJson(d, new Date("2026-10-15T00:00:00Z"))
+    const file = JSON.parse(json)
+    expect(file.diff.nodesAfegits.map((n: { id: string }) => n.id)).toEqual(["n1"])
+    expect(parseDraftJson(json)).toEqual(d)
+    expect(() => parseDraftJson("{")).toThrow("No és un fitxer JSON.")
+    expect(() => parseDraftJson("{\"nodes\":1}")).toThrow()
+  })
+  it("les fletxes a un node que no hi és i els repetits es treuen en llegir", () => {
+    const raw = { draft: { nodes: [{ id: "a", kind: "section", label: "A" }, { id: "a", kind: "section", label: "A2" }], edges: [{ id: "x", source: "a", target: "b", kind: "contains" }] }, collapsed: ["a"] }
+    expect(parseStoredDraft(raw)).toEqual({ draft: { nodes: [{ id: "a", kind: "section", label: "A" }], edges: [] }, collapsed: ["a"] })
+    expect(parseStoredDraft({ foo: 1 })).toBeNull()
+  })
+})
+
+describe("esborrany: plegar i disposició", () => {
+  const d: CascadeDraft = {
+    nodes: ["r", "a", "b", "a1", "a2", "s"].map((id) => ({ id, kind: "section" as const, label: id })),
+    edges: [["r", "a"], ["r", "b"], ["a", "a1"], ["a", "a2"], ["a2", "r"]].map(([s, t]) => ({ id: edgeId("contains", s!, t!), source: s!, target: t!, kind: "contains" as const })),
+  }
+  const tree = draftTree(d)
+  it("l'arbre (el cercle a2 → r no compta) i el que es veu amb una branca plegada", () => {
+    expect(tree.roots).toEqual(["r", "s"])
+    expect(descendantCount(tree, "r")).toBe(4)
+    expect(visibleIds(tree, new Set(["a"]))).toEqual(["r", "a", "b", "s"])
+    expect(ancestorIds(tree, "a2")).toEqual(["a", "r"])
+  })
+  it("d'esquerra a dreta: nivells en columnes, el pare al mig dels fills, sense trepitjar-se", () => {
+    const pos = layoutDraft(tree, new Set(), () => ({ w: 100, h: 20 }), "LR", { level: 50, sibling: 10, tree: 40 })
+    expect(pos.get("r")!.x).toBe(0)
+    expect(pos.get("a")!.x).toBe(150)
+    expect(pos.get("a1")!.x).toBe(300)
+    expect(pos.get("a1")!.y).toBe(0)
+    expect(pos.get("a2")!.y).toBe(30)
+    expect(pos.get("a")!.y).toBe(15)
+    expect(pos.get("b")!.y).toBe(60)
+    // L'arbre següent, després del primer.
+    expect(pos.get("s")!.y).toBe(130)
+    const tb = layoutDraft(tree, new Set(["a"]), () => ({ w: 100, h: 20 }), "TB")
+    expect(tb.has("a1")).toBe(false)
+    expect(tb.get("a")!.y).toBe(tb.get("b")!.y)
   })
 })

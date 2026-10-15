@@ -3,18 +3,19 @@
  * dels inspectors (moble, mòdul, compartiment, peça lliure, objecte de referència i selecció múltiple), amb un id estable
  * que la fila de la UI porta (`optionId`) i que un test comprova (`src/optionCascade.test.ts`). Només dades.
  *
- * Les condicions (`showIf`: quan surt cada opció) es mostren però no es poden canviar: també decideixen la fabricació
- * (res amagat compta) i només les canvia el codi. L'usuari pot **amagar** una opció (`hideable`) i triar-ne el **valor
- * per defecte dels mòduls, compartiments i peces nous** (`defaultEditable`).
+ * És la cascada **tal com és al codi** i la llavor de l'esborrany de Preferències › Opcions en cascada (`cascadeDraft.ts`):
+ * l'usuari hi dibuixa com la vol, però res no s'aplica a l'Editor (per decisió de l'usuari, 2026-10-15: «no per aplicar a la
+ * realitat fins que no ho tinguem clar»). `hideable`, `defaultEditable` i `why` són informatius: el que es podria amagar o
+ * triar si un dia es fa.
  */
 
-/** Valor per defecte que l'usuari pot triar: el `value` d'una tria, un número (mm, unitats) o un interruptor. */
+/** Valor per defecte: el `value` d'una tria, un número (mm, unitats) o un interruptor. */
 export type OptionValue = string | number | boolean
 
 /** `group`: un inspector o un apartat que no és cap fila (no porta `optionId`); `section`: una secció plegable; `field`: una fila. */
 export type OptionKind = "group" | "section" | "field"
 
-/** El control de la fila a l'inspector (el mateix que fa servir l'arbre de Preferències per al valor per defecte). */
+/** El control de la fila a l'inspector. */
 export type OptionControl = "choice" | "switch" | "number" | "material" | "hardware" | "text" | "buttons"
 
 /** Icones de les seccions (les de l'inspector; la UI les tradueix a `react-icons/lu`). */
@@ -50,15 +51,15 @@ export interface OptionNode {
   default?: OptionValue
   /** El per defecte en paraules quan no és un valor simple («Com el mòdul», «Preferències › Materials»…). */
   defaultText?: string
-  /** L'usuari pot triar el valor per defecte (Preferències › Opcions en cascada). */
+  /** Informatiu: se'n podria triar el valor per defecte (no s'aplica). */
   defaultEditable?: boolean
-  /** L'usuari la pot amagar: llavors sempre fa servir el valor per defecte. */
+  /** Informatiu: es podria amagar (llavors faria servir el valor per defecte; no s'aplica). */
   hideable: boolean
   /** Per què no es pot amagar (o una nota de l'amagar). */
   why?: string
   /** El fitxer de la UI on és (relatiu a `src/`): el test comprova que hi porta l'id. */
   code: string
-  /** Possible incoherència trobada a l'auditoria (2026-10-15): es mostra a l'arbre, no s'ha corregit. */
+  /** Possible incoherència trobada a l'auditoria (2026-10-15): surt marcada a l'esborrany, no s'ha corregit. */
   issue?: string
   note?: string
   children?: OptionNode[]

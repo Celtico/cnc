@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
-import { DEFAULT_SETTINGS, isOptionHidden, type Settings } from "../../core/model"
+import { DEFAULT_SETTINGS, type Settings } from "../../core/model"
 import { currentSettings, loadSettings, saveSettings } from "../../db/settingsStore"
 import { useLiveQuery } from "../../db/useLiveQuery"
 import { toaster } from "../../components/ui/toaster"
@@ -40,11 +40,3 @@ export function useSettings(): SettingsCtx {
   return useContext(Ctx)
 }
 
-/**
- * L'opció de l'Editor amb aquest id (o una de sobre) és amagada a Preferències › Opcions en cascada: la fila o la secció
- * no surt (`FormRow`, `NumRow`, `FoldItem` i `HardwarePick` amb `optionId`). Sense id, mai.
- */
-export function useOptionHidden(id: string | undefined): boolean {
-  const { settings } = useContext(Ctx)
-  return !!id && isOptionHidden(settings.optionPrefs, id)
-}
