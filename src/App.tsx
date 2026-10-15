@@ -1,6 +1,7 @@
-import { Box, Container, Flex, Spinner } from "@chakra-ui/react"
+import { Box, Container, Flex, Spinner, Splitter } from "@chakra-ui/react"
 import { Suspense, lazy, useCallback, useState } from "react"
 import { Toaster } from "./components/ui/toaster"
+import { PanelSplit, SplitHandle } from "./components/PanelSplit"
 import { TopBar, TopBarActionsProvider } from "./components/TopBar"
 import { SaveFileDialog } from "./features/file/SaveFileDialog"
 import type { ProjectsRequest } from "./features/projects/ProjectsScreen"
@@ -9,6 +10,7 @@ import { useSessionString } from "./features/settings/useSessionString"
 import { useSettings } from "./features/settings/SettingsContext"
 import { UnitContext } from "./lib/units"
 import { usePersistentFlag } from "./lib/usePersistentFlag"
+import { usePersistentNumber } from "./lib/usePersistentNumber"
 import { AppContent } from "./app/AppContent"
 import { MobileNav } from "./app/MobileNav"
 import { ProjectMenu } from "./app/ProjectMenu"
@@ -49,6 +51,9 @@ export function App() {
   // Assistent personal: el calaix (muntat el primer cop que s'obre) i la navegació que fa servir (`assistantHub.ts`).
   const assistant = useAssistantDrawer()
   useHubNav(nav)
+  // A l'ordinador, l'assistent és una columna a la dreta: la vora esquerra canvia l'amplada (sense cap barra a la vista, per
+  // decisió de l'usuari, 2026-10-14; 48–900 px, doble clic torna a 400).
+  const [assistantWidth, setAssistantWidth] = usePersistentNumber("mobles:assistant-width", 400)
 
   return (
     <UnitContext.Provider value={settings.display.unit}>
@@ -64,9 +69,10 @@ export function App() {
         onSettings={() => go("settings")}
       />
 
+      <PanelSplit flex={1} minW={0} panels={[{ id: "main" }, { id: "assistant", width: assistantWidth, setWidth: setAssistantWidth, min: 48, max: 900, hidden: !assistant.open }]}>
       {/* A l'ordinador, l'app ocupa just la finestra: cada zona fa el seu propi desplaçament
           (llista, preferències, i a l'editor l'arbre i les propietats per separat). */}
-      <Flex direction="column" flex={1} minW={0} h={{ md: "100dvh" }}>
+      <Splitter.Panel id="main" display="flex" flexDirection="column" minW={0} h={{ md: "100dvh" }}>
         {showTopBar && projectId !== null && (
           <TopBar
             projectId={projectId}
@@ -123,15 +129,20 @@ export function App() {
             </Suspense>
           </TopBarActionsProvider>
         </Container>
-      </Flex>
+      </Splitter.Panel>
+      <SplitHandle id="main:assistant" quiet hidden={!assistant.open} label="Amplada de l'assistent" onReset={() => setAssistantWidth(400)} />
+      {/* Al mòbil, l'assistent és un calaix (amb portal): la columna no hi és. */}
+      <Splitter.Panel id="assistant" display={{ base: "none", md: assistant.open ? "block" : "none" }}>
+        {assistant.mounted && (
+          <Suspense fallback={null}>
+            <GlobalAssistant open={assistant.open} onClose={assistant.close} settings={settings} closeRequest={assistant.closeRequest} />
+          </Suspense>
+        )}
+      </Splitter.Panel>
+      </PanelSplit>
 
       <MobileNav section={nav.section} assistantOpen={assistant.open} onSection={nav.goSection} onAssistant={assistant.toggle} />
 
-      {assistant.mounted && (
-        <Suspense fallback={null}>
-          <GlobalAssistant open={assistant.open} onClose={assistant.close} settings={settings} closeRequest={assistant.closeRequest} />
-        </Suspense>
-      )}
       {renderHost.req && (
         <Suspense fallback={null}>
           <RenderHost />

@@ -21,7 +21,6 @@ export function PhotoInspector({
   scene,
   photo,
   embedded,
-  panelWidth,
   customRef,
   setCustomRef,
   tool,
@@ -42,7 +41,6 @@ export function PhotoInspector({
   scene: CalibrationScene
   photo: Photo
   embedded: boolean
-  panelWidth: number
   customRef: boolean
   setCustomRef: (v: boolean) => void
   tool: Tool
@@ -62,7 +60,7 @@ export function PhotoInspector({
   const estimated = estimatedApplied(cal)
 
   return (
-    <Card.Root variant="outline" w={embedded ? "full" : { base: "full", lg: `${panelWidth}px` }} flexShrink={0} {...(embedded ? { bg: "transparent", borderWidth: 0, shadow: "none" } : {})}>
+    <Card.Root variant="outline" w="full" flexShrink={0} {...(embedded ? { bg: "transparent", borderWidth: 0, shadow: "none" } : {})}>
       <Card.Body gap={4} p={embedded ? 0 : undefined}>
         {estimated.length > 0 && (
           <Alert.Root status="warning" size="sm">

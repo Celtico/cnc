@@ -41,6 +41,17 @@ src/
   EditorInspector…), `features/ambients/editor/`, `components/viewer/cabinet/`.
 - El que necessita un hook o un component se li passa explícitament (arguments i props). Res de contextos nous si no cal.
 
+## UI: Chakra primer
+- **Si Chakra ja ho té fet, es fa servir el de Chakra: no es reinventa la roda** (per decisió de l'usuari, 2026-10-15).
+  Abans de fer un component, mira la llista de components de Chakra v3 (https://chakra-ui.com/docs/components; els
+  instal·lats, a `node_modules/@chakra-ui/react/dist/types/components/`): `Splitter`, `Tabs`, `Slider`, `TreeView`,
+  `FileUpload`, `ColorPicker`, `SegmentGroup`, `Accordion`, `Editable`, `EmptyState`…
+- Un component de `components/` que fa una cosa que Chakra ja té és només un **embolcall petit que el configura** (valors per
+  defecte, l'aspecte de l'app, la persistència): `PanelSplit` sobre `Splitter`, `FoldGroup` sobre `Accordion`. Res de lògica
+  pròpia d'arrossegar, de teclat o d'ARIA si el component de Chakra ja la porta.
+- El que es manté fet a mà ha de tenir un motiu concret (què no pot fer el de Chakra) a
+  [`millores-v1/chakra-auditoria.md`](millores-v1/chakra-auditoria.md).
+
 ## React: una manera de fer cada cosa
 | Per a | Fes servir |
 |---|---|
@@ -49,6 +60,7 @@ src/
 | El mateix objecte mentre una clau no canviï | `useKeyed(valor, clau)` (`lib/useKeyed.ts`) |
 | Desar amb retard | `useDebouncedSave` (`lib/`) |
 | Preferència de vista al navegador | `usePersistentFlag` / `usePersistentNumber` (`lib/`) |
+| Panells amb vora arrossegable (amplada recordada) | `PanelSplit` + `SplitHandle` (`components/`, sobre el `Splitter` de Chakra) |
 | Tancar l'editor si l'element triat ja no hi és | `useCloseWhenGone` (`features/settings/`) |
 - Els efectes porten **totes** les dependències. Si un efecte s'ha de disparar només amb algunes (enquadrar la càmera en
   obrir, un avís un cop), la línia de dependències porta

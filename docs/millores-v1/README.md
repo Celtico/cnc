@@ -10,6 +10,7 @@ Origen: `docs/prompt/PROMPT-millore-v1.md`. Cada àrea té el seu estudi (com fu
 | [ambients-fitxer.md](ambients-fitxer.md) | Desar ambients com a fitxer `.ambient` | §5 |
 | [cnc-mecanitzats.md](cnc-mecanitzats.md) | Preguntes per al germà + canvis de codi que no depenen de la resposta | §1 |
 | [ferratges.md](ferratges.md) | Estudi Hettich / Blum / SWOOD, model de dades, visualització en 3 nivells | §8, §9, §10 |
+| [chakra-auditoria.md](chakra-auditoria.md) | Components i comportaments fets a mà que Chakra v3 ja porta (Splitter, Tabs, Slider…): decisió per a cadascun | regla «no es reinventa la roda» |
 
 ## Fase 3 — revisió conjunta
 

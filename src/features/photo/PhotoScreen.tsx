@@ -1,5 +1,5 @@
 import { shrinkImage } from "../../lib/imageShrink"
-import { Box, Button, EmptyState, HStack, Heading, Stack, VStack } from "@chakra-ui/react"
+import { Box, Button, EmptyState, HStack, Heading, Splitter, Stack, VStack } from "@chakra-ui/react"
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import { createPortal } from "react-dom"
 import { LuCamera, LuImagePlus, LuTrash2 } from "react-icons/lu"
@@ -11,7 +11,7 @@ import { DEFAULT_FOCAL_35 } from "../../core/photo/camera"
 import { readExif } from "../../core/photo/exif"
 import { addPhoto, db, removeProjectPhoto, updateProjectPhoto, type Photo, type PhotoCalibration } from "../../db/db"
 import { useLiveQuery } from "../../db/useLiveQuery"
-import { ResizeHandle } from "../../components/ResizeHandle"
+import { PanelSplit, SplitHandle } from "../../components/PanelSplit"
 import { downloadBlob, slugify } from "../../lib/download"
 import { useSettings } from "../settings/SettingsContext"
 import { usePersistentNumber } from "../../lib/usePersistentNumber"
@@ -246,74 +246,90 @@ function PhotoCalibrator({
 
   const showMarks = renderMode === "lines" || !calibrated || tool !== "none" || pending.length > 0 || marksInRender
 
+  const view = (
+    <VStack align="stretch" gap={2} flex={1} w="full" minW={0}>
+      <Box position="relative" w="full" mx="auto" maxW={embedded ? `calc((100dvh - 9rem) * ${W / H})` : `calc(70vh * ${W / H})`} style={{ aspectRatio: `${W} / ${H}` }} rounded="lg" overflow="hidden" bg="bg.muted">
+        {url && layer !== "cabinet" && <img src={url} alt="Foto del racó" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />}
+        {camera && layer !== "photo" && renderMode === "realistic" && (
+          <PhotoRender
+            panels={panels}
+            camera={camera}
+            scene={sceneOpts}
+            width={W}
+            height={H}
+            size={cabinetSize}
+            materials={settings.materials}
+            light={presentation.light}
+            shadows={renderShadows}
+            opacity={opacity}
+            selectedModule={selectedModule}
+            onCanvas={(c) => (glCanvas.current = c)}
+          />
+        )}
+        <svg
+          ref={svgRef}
+          viewBox={`0 0 ${W} ${H}`}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", touchAction: "none", cursor: tool !== "none" || !calibrated ? "crosshair" : "move" }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+        >
+          {layer !== "photo" && renderMode === "lines" && <CabinetFaces faces={faces} panels={panels} selectedModule={selectedModule} opacity={opacity} stroke={stroke} />}
+          {/* En mode realista les marques s'amaguen (és una imatge per ensenyar); tornen
+              a sortir si es tria una eina, si falta calibrar o si es demanen. */}
+          {showMarks && <CalibrationMarks cal={cal} scene={scene} pending={pending} depthResult={depthResult} markerR={markerR} stroke={stroke} font={font} />}
+          {/* Lupa: el dit tapa el punt al mòbil */}
+          {lens && url && <Lens url={url} at={lens} W={W} H={H} r={markerR * 3.2} stroke={stroke} />}
+        </svg>
+      </Box>
+      <CalibrationHint cal={cal} scene={scene} showMarks={showMarks} tool={tool} pending={pending} />
+      {depthResult && <DepthAlert depthResult={depthResult} onClose={() => setDepthResult(null)} plane={cal.plane} composition={composition} setCal={setCal} onApplyMeasure={onApplyMeasure} />}
+    </VStack>
+  )
+  const controls = (
+    <Controls embedded={embedded} target={controlsTarget}>
+      <PhotoInspector
+        cal={cal}
+        setCal={setCal}
+        scene={scene}
+        photo={photo}
+        embedded={embedded}
+        customRef={customRef}
+        setCustomRef={setCustomRef}
+        tool={tool}
+        setTool={setTool}
+        setPending={setPending}
+        composition={composition}
+        onApplyMeasure={onApplyMeasure}
+        renderMode={renderMode}
+        renderShadows={renderShadows}
+        opacity={opacity}
+        layer={layer}
+        marksInRender={marksInRender}
+        setMarksInRender={setMarksInRender}
+        onDownload={() => void downloadPng()}
+      />
+    </Controls>
+  )
+  if (embedded)
+    return (
+      <Stack direction="column" gap={3} align="stretch">
+        {view}
+        {controls}
+      </Stack>
+    )
+  // Ordinador gran: la foto i el panell, amb la vora arrossegable (`PanelSplit`); a sota de `lg`, un sota l'altre.
+  // L'amplada desada és la del panell, sense l'espai de 20 px fins a la vora (farciment del panell).
   return (
-    <Stack direction={embedded ? "column" : { base: "column", lg: "row" }} gap={embedded ? 3 : 5} align={embedded ? "stretch" : "flex-start"}>
-      <VStack align="stretch" gap={2} flex={1} w="full" minW={0}>
-        <Box position="relative" w="full" mx="auto" maxW={embedded ? `calc((100dvh - 9rem) * ${W / H})` : `calc(70vh * ${W / H})`} style={{ aspectRatio: `${W} / ${H}` }} rounded="lg" overflow="hidden" bg="bg.muted">
-          {url && layer !== "cabinet" && <img src={url} alt="Foto del racó" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />}
-          {camera && layer !== "photo" && renderMode === "realistic" && (
-            <PhotoRender
-              panels={panels}
-              camera={camera}
-              scene={sceneOpts}
-              width={W}
-              height={H}
-              size={cabinetSize}
-              materials={settings.materials}
-              light={presentation.light}
-              shadows={renderShadows}
-              opacity={opacity}
-              selectedModule={selectedModule}
-              onCanvas={(c) => (glCanvas.current = c)}
-            />
-          )}
-          <svg
-            ref={svgRef}
-            viewBox={`0 0 ${W} ${H}`}
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", touchAction: "none", cursor: tool !== "none" || !calibrated ? "crosshair" : "move" }}
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onPointerCancel={onPointerUp}
-          >
-            {layer !== "photo" && renderMode === "lines" && <CabinetFaces faces={faces} panels={panels} selectedModule={selectedModule} opacity={opacity} stroke={stroke} />}
-            {/* En mode realista les marques s'amaguen (és una imatge per ensenyar); tornen
-                a sortir si es tria una eina, si falta calibrar o si es demanen. */}
-            {showMarks && <CalibrationMarks cal={cal} scene={scene} pending={pending} depthResult={depthResult} markerR={markerR} stroke={stroke} font={font} />}
-            {/* Lupa: el dit tapa el punt al mòbil */}
-            {lens && url && <Lens url={url} at={lens} W={W} H={H} r={markerR * 3.2} stroke={stroke} />}
-          </svg>
-        </Box>
-        <CalibrationHint cal={cal} scene={scene} showMarks={showMarks} tool={tool} pending={pending} />
-        {depthResult && <DepthAlert depthResult={depthResult} onClose={() => setDepthResult(null)} plane={cal.plane} composition={composition} setCal={setCal} onApplyMeasure={onApplyMeasure} />}
-      </VStack>
-
-      {!embedded && <ResizeHandle from="lg" width={panelWidth} onWidth={setPanelWidth} min={280} max={560} defaultWidth={340} panelSide="right" label="Amplada del panell de la foto" />}
-
-      <Controls embedded={embedded} target={controlsTarget}>
-        <PhotoInspector
-          cal={cal}
-          setCal={setCal}
-          scene={scene}
-          photo={photo}
-          embedded={embedded}
-          panelWidth={panelWidth}
-          customRef={customRef}
-          setCustomRef={setCustomRef}
-          tool={tool}
-          setTool={setTool}
-          setPending={setPending}
-          composition={composition}
-          onApplyMeasure={onApplyMeasure}
-          renderMode={renderMode}
-          renderShadows={renderShadows}
-          opacity={opacity}
-          layer={layer}
-          marksInRender={marksInRender}
-          setMarksInRender={setMarksInRender}
-          onDownload={() => void downloadPng()}
-        />
-      </Controls>
-    </Stack>
+    <PanelSplit from="lg" gap={{ base: 5, lg: 0 }} panels={[{ id: "photo" }, { id: "panel", width: panelWidth + 20, setWidth: (w) => setPanelWidth(w - 20), min: 300, max: 580 }]}>
+      <Splitter.Panel id="photo">
+        <Box pe={{ lg: 5 }}>{view}</Box>
+      </Splitter.Panel>
+      <SplitHandle id="photo:panel" label="Amplada del panell de la foto" onReset={() => setPanelWidth(340)} />
+      <Splitter.Panel id="panel">
+        <Box ps={{ lg: 5 }}>{controls}</Box>
+      </Splitter.Panel>
+    </PanelSplit>
   )
 }

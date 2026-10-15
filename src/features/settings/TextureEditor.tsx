@@ -1,4 +1,4 @@
-import { Box, Button, CloseButton, Dialog, Flex, HStack, Input, Portal, Stack, Text } from "@chakra-ui/react"
+import { Box, Button, CloseButton, Dialog, Flex, HStack, Input, Portal, Slider, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useState } from "react"
 import { LuDices, LuRotateCcw } from "react-icons/lu"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
@@ -49,7 +49,14 @@ export function TextureEditor({ m, open, onClose, onApply }: { m: MaterialPref; 
                     <Text fontSize="xs" color="fg.muted" flexShrink={0}>
                       Mostra de {Math.round(1200 * zoom)} mm
                     </Text>
-                    <input type="range" min={0.25} max={4} step={0.25} value={zoom} onChange={(e) => setZoom(Number(e.target.value))} aria-label="Mida de la mostra" style={{ flex: 1, accentColor: "var(--chakra-colors-wood-solid)" }} />
+                    <Slider.Root size="sm" flex={1} aria-label={["Mida de la mostra"]} min={0.25} max={4} step={0.25} value={[zoom]} onValueChange={(e) => setZoom(e.value[0]!)}>
+                      <Slider.Control>
+                        <Slider.Track>
+                          <Slider.Range />
+                        </Slider.Track>
+                        <Slider.Thumbs />
+                      </Slider.Control>
+                    </Slider.Root>
                   </HStack>
                 </Stack>
                 <Stack gap={3} flex={1} minW={0}>
@@ -107,14 +114,14 @@ function Controls({ f, setF }: { f: Editable; setF: (f: Editable) => void }) {
         </FormRow>
         <ColorField label="Color de fons" value={g.base} onChange={(base) => set({ base })} />
         <ColorField label="Color de la veta" value={g.dark} onChange={(dark) => set({ dark })} />
-        <Slider label="Densitat de la veta" value={g.lines} min={2} max={80} step={1} onChange={(lines) => set({ lines })} />
-        <Slider label="Ondulació" value={g.wobble} min={0} max={0.25} step={0.01} fmt={(v) => `${Math.round(v * 400)} %`} onChange={(wobble) => set({ wobble })} />
-        <Slider label="Contrast de les fibres" value={g.contrast} min={0} max={1} step={0.05} fmt={(v) => `${Math.round(v * 100)} %`} onChange={(contrast) => set({ contrast })} />
-        <Slider label="Franges de to" value={g.bands} min={0} max={60} step={1} onChange={(bands) => set({ bands })} />
-        <Slider label="Vetes de catedral" value={g.figure} min={0} max={8} step={1} onChange={(figure) => set({ figure })} />
-        <Slider label="Porus" value={g.pores} min={0} max={5000} step={100} onChange={(pores) => set({ pores })} />
-        <Slider label="Gra fi" value={g.grain} min={0} max={30} step={1} onChange={(grain) => set({ grain })} />
-        <Slider label="Mida de la repetició" value={g.tileMm} min={200} max={4000} step={50} fmt={(v) => `${v} mm`} onChange={(tileMm) => set({ tileMm })} />
+        <SliderRow label="Densitat de la veta" value={g.lines} min={2} max={80} step={1} onChange={(lines) => set({ lines })} />
+        <SliderRow label="Ondulació" value={g.wobble} min={0} max={0.25} step={0.01} fmt={(v) => `${Math.round(v * 400)} %`} onChange={(wobble) => set({ wobble })} />
+        <SliderRow label="Contrast de les fibres" value={g.contrast} min={0} max={1} step={0.05} fmt={(v) => `${Math.round(v * 100)} %`} onChange={(contrast) => set({ contrast })} />
+        <SliderRow label="Franges de to" value={g.bands} min={0} max={60} step={1} onChange={(bands) => set({ bands })} />
+        <SliderRow label="Vetes de catedral" value={g.figure} min={0} max={8} step={1} onChange={(figure) => set({ figure })} />
+        <SliderRow label="Porus" value={g.pores} min={0} max={5000} step={100} onChange={(pores) => set({ pores })} />
+        <SliderRow label="Gra fi" value={g.grain} min={0} max={30} step={1} onChange={(grain) => set({ grain })} />
+        <SliderRow label="Mida de la repetició" value={g.tileMm} min={200} max={4000} step={50} fmt={(v) => `${v} mm`} onChange={(tileMm) => set({ tileMm })} />
         <Actions onSeed={() => set({ seed: newSeed() })} onReset={() => setF({ kind: "wood", species: f.species, gen: { ...WOOD_PRESETS[f.species] } })} />
       </>
     )
@@ -123,9 +130,9 @@ function Controls({ f, setF }: { f: Editable; setF: (f: Editable) => void }) {
     return (
       <>
         <ColorField label="Color" value={f.color} onChange={(color) => setF({ ...f, color })} />
-        <Slider label="Fils per repetició" value={f.threads ?? 96} min={8} max={240} step={4} onChange={(threads) => setF({ ...f, threads })} />
-        <Slider label="Irregularitat dels fils" value={f.slub ?? 0} min={0} max={1} step={0.05} fmt={(v) => `${Math.round(v * 100)} %`} onChange={(slub) => setF({ ...f, slub })} />
-        <Slider label="Mida de la repetició" value={f.tileMm ?? 200} min={20} max={2000} step={10} fmt={(v) => `${v} mm`} onChange={(tileMm) => setF({ ...f, tileMm })} />
+        <SliderRow label="Fils per repetició" value={f.threads ?? 96} min={8} max={240} step={4} onChange={(threads) => setF({ ...f, threads })} />
+        <SliderRow label="Irregularitat dels fils" value={f.slub ?? 0} min={0} max={1} step={0.05} fmt={(v) => `${Math.round(v * 100)} %`} onChange={(slub) => setF({ ...f, slub })} />
+        <SliderRow label="Mida de la repetició" value={f.tileMm ?? 200} min={20} max={2000} step={10} fmt={(v) => `${v} mm`} onChange={(tileMm) => setF({ ...f, tileMm })} />
         <Actions onReset={() => setF({ kind: "fabric", color: f.color })} />
       </>
     )
@@ -134,9 +141,9 @@ function Controls({ f, setF }: { f: Editable; setF: (f: Editable) => void }) {
       <>
         <ColorField label="Color de la peça" value={f.color} onChange={(color) => setF({ ...f, color })} />
         <ColorField label="Color de la junta" value={f.grout} onChange={(grout) => setF({ ...f, grout })} />
-        <Slider label="Mida de la peça" value={f.size} min={20} max={1500} step={10} fmt={(v) => `${v} mm`} onChange={(size) => setF({ ...f, size })} />
-        <Slider label="Gruix de la junta" value={f.joint ?? 3} min={0} max={30} step={0.5} fmt={(v) => `${v} mm`} onChange={(joint) => setF({ ...f, joint })} />
-        <Slider label="Variació de to" value={f.variation ?? 0.05} min={0} max={0.4} step={0.01} fmt={(v) => `${Math.round(v * 100)} %`} onChange={(variation) => setF({ ...f, variation })} />
+        <SliderRow label="Mida de la peça" value={f.size} min={20} max={1500} step={10} fmt={(v) => `${v} mm`} onChange={(size) => setF({ ...f, size })} />
+        <SliderRow label="Gruix de la junta" value={f.joint ?? 3} min={0} max={30} step={0.5} fmt={(v) => `${v} mm`} onChange={(joint) => setF({ ...f, joint })} />
+        <SliderRow label="Variació de to" value={f.variation ?? 0.05} min={0} max={0.4} step={0.01} fmt={(v) => `${Math.round(v * 100)} %`} onChange={(variation) => setF({ ...f, variation })} />
         <FormRow label="Col·locació">
           <ChoiceChips label="Col·locació" value={f.layout ?? "grid"} options={[{ id: "grid", label: "Quadrícula" }, { id: "brick", label: "Trencajunts" }]} onChange={(layout) => setF({ ...f, layout })} />
         </FormRow>
@@ -152,10 +159,10 @@ function Controls({ f, setF }: { f: Editable; setF: (f: Editable) => void }) {
         </FormRow>
         <ColorField label="Color de la pedra" value={f.color} onChange={(color) => setF({ ...f, color })} />
         <ColorField label={style === "granite" ? "Color del gra" : "Color de les vetes"} value={f.vein} onChange={(vein) => setF({ ...f, vein })} />
-        <Slider label={style === "granite" ? "Quantitat de gra de color" : style === "marble" ? "Vetes" : "Contrast"} value={f.veins} min={0} max={1} step={0.05} fmt={pct} onChange={(veins) => setF({ ...f, veins })} />
-        <Slider label={style === "granite" ? "Punts foscos" : "Porus i gra"} value={f.grain ?? 0.3} min={0} max={1} step={0.05} fmt={pct} onChange={(grain) => setF({ ...f, grain })} />
-        <Slider label="Polit (mat → brillant)" value={f.polish ?? 0.6} min={0} max={1} step={0.05} fmt={pct} onChange={(polish) => setF({ ...f, polish })} />
-        <Slider label="Mida de la repetició" value={f.size} min={100} max={4000} step={50} fmt={(v) => `${v} mm`} onChange={(size) => setF({ ...f, size })} />
+        <SliderRow label={style === "granite" ? "Quantitat de gra de color" : style === "marble" ? "Vetes" : "Contrast"} value={f.veins} min={0} max={1} step={0.05} fmt={pct} onChange={(veins) => setF({ ...f, veins })} />
+        <SliderRow label={style === "granite" ? "Punts foscos" : "Porus i gra"} value={f.grain ?? 0.3} min={0} max={1} step={0.05} fmt={pct} onChange={(grain) => setF({ ...f, grain })} />
+        <SliderRow label="Polit (mat → brillant)" value={f.polish ?? 0.6} min={0} max={1} step={0.05} fmt={pct} onChange={(polish) => setF({ ...f, polish })} />
+        <SliderRow label="Mida de la repetició" value={f.size} min={100} max={4000} step={50} fmt={(v) => `${v} mm`} onChange={(size) => setF({ ...f, size })} />
         <Actions onSeed={() => setF({ ...f, seed: newSeed() })} onReset={() => setF({ ...f, veins: 0.5, size: 1200, seed: 7, grain: 0.3, polish: 0.6 })} />
       </>
     )
@@ -168,8 +175,8 @@ function Controls({ f, setF }: { f: Editable; setF: (f: Editable) => void }) {
         <FormRow label="Acabat">
           <ChoiceChips label="Acabat" value={surface} options={[{ id: "polished", label: "Polit" }, { id: "brushed", label: "Raspallat" }, { id: "hammered", label: "Martellejat" }]} onChange={(v) => v && setF({ ...f, surface: v })} />
         </FormRow>
-        <Slider label="Rugositat (mirall → mat)" value={f.roughness ?? 0.35} min={0} max={1} step={0.05} fmt={pct} onChange={(roughness) => setF({ ...f, roughness })} />
-        {surface !== "polished" && <Slider label={surface === "brushed" ? "Intensitat del raspallat" : "Intensitat dels cops"} value={f.strength ?? 0.5} min={0} max={1} step={0.05} fmt={pct} onChange={(strength) => setF({ ...f, strength })} />}
+        <SliderRow label="Rugositat (mirall → mat)" value={f.roughness ?? 0.35} min={0} max={1} step={0.05} fmt={pct} onChange={(roughness) => setF({ ...f, roughness })} />
+        {surface !== "polished" && <SliderRow label={surface === "brushed" ? "Intensitat del raspallat" : "Intensitat dels cops"} value={f.strength ?? 0.5} min={0} max={1} step={0.05} fmt={pct} onChange={(strength) => setF({ ...f, strength })} />}
         <FormRow label="Colors habituals">
           <HStack gap={1.5} wrap="wrap">
             {METALS.map((mt) => (
@@ -187,8 +194,8 @@ function Controls({ f, setF }: { f: Editable; setF: (f: Editable) => void }) {
     return (
       <>
         <ColorField label="Color del vidre" value={f.color} onChange={(color) => setF({ ...f, color })} />
-        <Slider label="Opacitat" value={f.opacity ?? 0.35} min={0.05} max={0.95} step={0.05} fmt={pct} onChange={(opacity) => setF({ ...f, opacity })} />
-        <Slider label="Glaçat (transparent → mat)" value={f.frost ?? 0} min={0} max={1} step={0.05} fmt={pct} onChange={(frost) => setF({ ...f, frost })} />
+        <SliderRow label="Opacitat" value={f.opacity ?? 0.35} min={0.05} max={0.95} step={0.05} fmt={pct} onChange={(opacity) => setF({ ...f, opacity })} />
+        <SliderRow label="Glaçat (transparent → mat)" value={f.frost ?? 0} min={0} max={1} step={0.05} fmt={pct} onChange={(frost) => setF({ ...f, frost })} />
         <Actions onReset={() => setF({ kind: "glass", color: f.color })} />
       </>
     )
@@ -196,7 +203,7 @@ function Controls({ f, setF }: { f: Editable; setF: (f: Editable) => void }) {
   return (
     <>
       <ColorField label="Color" value={f.color} onChange={(color) => setF({ ...f, color })} />
-      <Slider label="Brillant (mat → mirall)" value={1 - (f.roughness ?? (f.kind === "lacquer" ? 0.35 : 0.8))} min={0} max={1} step={0.05} fmt={pct} onChange={(g) => setF({ ...f, roughness: Math.round((1 - g) * 100) / 100 })} />
+      <SliderRow label="Brillant (mat → mirall)" value={1 - (f.roughness ?? (f.kind === "lacquer" ? 0.35 : 0.8))} min={0} max={1} step={0.05} fmt={pct} onChange={(g) => setF({ ...f, roughness: Math.round((1 - g) * 100) / 100 })} />
       <Actions onReset={() => setF({ kind: f.kind, color: f.color })} />
     </>
   )
@@ -231,14 +238,20 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
  * Control lliscant que aplica el valor en deixar-lo anar (generar una textura costa uns
  * mil·lisegons: no es fa a cada píxel d'arrossegament); el número s'actualitza en viu.
  */
-function Slider({ label, value, min, max, step, fmt = (v) => String(v), onChange }: { label: string; value: number; min: number; max: number; step: number; fmt?: (v: number) => string; onChange: (v: number) => void }) {
+function SliderRow({ label, value, min, max, step, fmt = (v) => String(v), onChange }: { label: string; value: number; min: number; max: number; step: number; fmt?: (v: number) => string; onChange: (v: number) => void }) {
   const [v, setV] = useDraft(value)
-  const commit = () => v !== value && onChange(v)
   return (
     // Fila: etiqueta a l'esquerra; el lliscador i el valor a la dreta.
     <FormRow label={label}>
       <HStack gap={3} minH="32px">
-        <input type="range" min={min} max={max} step={step} value={v} aria-label={label} onChange={(e) => setV(Number(e.target.value))} onPointerUp={commit} onKeyUp={commit} onBlur={commit} style={{ flex: 1, minWidth: 0, accentColor: "var(--chakra-colors-wood-solid)" }} />
+        <Slider.Root size="sm" flex={1} minW={0} aria-label={[label]} min={min} max={max} step={step} value={[v]} onValueChange={(e) => setV(e.value[0]!)} onValueChangeEnd={(e) => e.value[0] !== value && onChange(e.value[0]!)}>
+          <Slider.Control>
+            <Slider.Track>
+              <Slider.Range />
+            </Slider.Track>
+            <Slider.Thumbs />
+          </Slider.Control>
+        </Slider.Root>
         <Text fontSize="sm" color="fg.muted" fontVariantNumeric="tabular-nums" flexShrink={0} minW="4.5em" textAlign="right">
           {fmt(v)}
         </Text>

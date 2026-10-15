@@ -36,7 +36,7 @@ document**; si canvies com funciona, actualitza'l en el mateix commit.
   [`ferratges-import.md`](docs/ferratges-import.md) (**adormit des del 2026-10-08**: importar del fabricant, sense UI; el
   codi és aïllat a `core/import`) · [`foto-mesures.md`](docs/foto-mesures.md) · [`xat-ia.md`](docs/xat-ia.md) (assistent
   IA) · [`colleccions-mobles.md`](docs/colleccions-mobles.md) · [`cad-mobles-cataleg.md`](docs/cad-mobles-cataleg.md) ·
-  [`millores-v1/`](docs/millores-v1/) (auditories i decisions, p. ex. `coherencia-editor.md`) · [`notes-cel.md`](docs/notes-cel.md).
+  [`millores-v1/`](docs/millores-v1/) (auditories i decisions, p. ex. `coherencia-editor.md`, `chakra-auditoria.md`) · [`notes-cel.md`](docs/notes-cel.md).
 - Prompts de cada fase a `docs/prompt/` (històric; el que mana és el codi i aquests documents).
 
 ## Principi de disseny
@@ -104,6 +104,12 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
 
 ## UI (Chakra v3 + react-icons)
 ### Regles
+- **Si Chakra ja ho té fet, es fa servir el de Chakra: no es reinventa la roda** (per decisió de l'usuari, 2026-10-15). Abans
+  de fer un component o un comportament (vores arrossegables, pestanyes, lliscadors, arbres, pujar fitxers…), mira la llista
+  de components de Chakra v3 (https://chakra-ui.com/docs/components, i els instal·lats a
+  `node_modules/@chakra-ui/react/dist/types/components/`). Al `components/` només hi van **embolcalls petits que configuren
+  Chakra** (p. ex. `PanelSplit` sobre `Splitter`). El que es manté fet a mà té el motiu escrit a
+  [`docs/millores-v1/chakra-auditoria.md`](docs/millores-v1/chakra-auditoria.md).
 - **Mobile-first**: la faig servir sobretot a l'iPhone. Mínim breakpoints `base` i `md`.
 - **És una app, no una web**: contingut a **tota l'amplada** (sense `Container` amb `maxW`); 3D, foto, alçat i nesting
   s'estiren. Només es limita l'amplada dels formularis i dels textos llargs.
@@ -169,9 +175,11 @@ Les etiquetes i les ajudes de la UI fan servir sempre aquestes paraules (auditor
   resolt el mateix a l'app** i fes-ho igual.
   - **Reutilitza o generalitza; no copiïs.** Si ja hi ha un component que fa la feina, s'hi afegeix el que falta (prop,
     variant) a `components/`. Si n'hi ha dos que fan el mateix, s'unifiquen abans d'afegir-ne un tercer.
+  - **Si Chakra ja ho té fet, es fa servir el de Chakra: no es reinventa la roda** (abans de fer un component, mira la llista
+    de components de Chakra v3; vegeu UI › Regles).
   - **Un concepte, un component**: cercador + «+» = `SearchBar`, tria = `ChoiceChips`/`IconChoice`, interruptor = `Switch`,
     lliscador = `Slider`, material = `MaterialSelect`, ferratge = `HardwareSelect`, calaix de tria = `PickerDrawer`,
-    cota = `layoutDims` + `DimLine`, camp = `FormRow`. Res d'elements nadius (`<input type="checkbox|range">`)
+    cota = `layoutDims` + `DimLine`, camp = `FormRow`, vora arrossegable = `PanelSplit` (`Splitter`). Res d'elements nadius (`<input type="checkbox|range">`)
     fora de `components/ui`.
   - **El mateix gest fa el mateix a tot arreu**: seleccionar, cercar, afegir, esborrar, plegar i moure es fan igual a Mobles,
     Objectes, Ambients i Preferències (mateixa posició, icona del catàleg, text i cursor).

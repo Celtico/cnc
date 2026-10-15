@@ -1,4 +1,4 @@
-import { Box, Editable, HStack, IconButton } from "@chakra-ui/react"
+import { Box, Breadcrumb, Editable, HStack, IconButton } from "@chakra-ui/react"
 import { createContext, useContext, type ReactNode } from "react"
 import { createPortal } from "react-dom"
 import { LuChevronLeft, LuChevronRight, LuSettings } from "react-icons/lu"
@@ -71,41 +71,40 @@ export function DocBar({ onBack, onSettings, actionsRef, menu, tabs, rootLabel, 
         <IconButton display={{ base: "inline-flex", md: "none" }} aria-label={`Tornar a ${rootLabel}`} variant="ghost" size="sm" onClick={onBack}>
           <LuChevronLeft />
         </IconButton>
-        <HStack display={{ base: "none", md: "flex" }} gap={1} flexShrink={0}>
-          <Box
-            asChild
-            color="fg.muted"
-            fontSize="sm"
-            px={1.5}
-            py={1}
-            rounded="sm"
-            _hover={{ color: "fg", bg: "bg.muted" }}
-          >
-            <button type="button" onClick={onBack}>
-              {rootLabel}
-            </button>
-          </Box>
-          <Box color="fg.subtle" aria-hidden>
-            <LuChevronRight />
-          </Box>
-        </HStack>
-        <Editable.Root
-          key={name} // si es reanomena des d'un altre lloc, s'actualitza
-          defaultValue={name}
-          onValueCommit={(e) => {
-            const v = e.value.trim()
-            if (v && v !== name) onRename(v)
-          }}
-          fontSize="sm"
-          fontWeight="semibold"
-          minW={0}
-          w="auto"
-          maxW="100%"
-          aria-label={nameLabel}
-        >
-          <Editable.Preview title="Clica per canviar el nom" truncate px={1.5} />
-          <Editable.Input px={1.5} />
-        </Editable.Root>
+        {/* La molla de pa de Chakra: «Mobles ›» (només a l'ordinador) i el nom, que s'edita amb un clic. */}
+        <Breadcrumb.Root aria-label="Ruta" minW={0} flex={1}>
+          <Breadcrumb.List gap={1} flexWrap="nowrap" minW={0}>
+            <Breadcrumb.Item display={{ base: "none", md: "inline-flex" }} flexShrink={0}>
+              <Breadcrumb.Link asChild px={1.5} py={1} rounded="sm" _hover={{ color: "fg", bg: "bg.muted" }}>
+                <button type="button" onClick={onBack}>
+                  {rootLabel}
+                </button>
+              </Breadcrumb.Link>
+            </Breadcrumb.Item>
+            <Breadcrumb.Separator display={{ base: "none", md: "inline-flex" }} color="fg.subtle" opacity={1}>
+              <LuChevronRight />
+            </Breadcrumb.Separator>
+            <Breadcrumb.Item minW={0} color="fg" aria-current="page">
+              <Editable.Root
+                key={name} // si es reanomena des d'un altre lloc, s'actualitza
+                defaultValue={name}
+                onValueCommit={(e) => {
+                  const v = e.value.trim()
+                  if (v && v !== name) onRename(v)
+                }}
+                fontSize="sm"
+                fontWeight="semibold"
+                minW={0}
+                w="auto"
+                maxW="100%"
+                aria-label={nameLabel}
+              >
+                <Editable.Preview title="Clica per canviar el nom" truncate px={1.5} />
+                <Editable.Input px={1.5} />
+              </Editable.Root>
+            </Breadcrumb.Item>
+          </Breadcrumb.List>
+        </Breadcrumb.Root>
       </HStack>
       {tabs && (
         <Box display={{ base: "none", md: "flex" }} flexShrink={0}>

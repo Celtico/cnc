@@ -4,6 +4,9 @@
 
 #### Mòduls compartits (com les apps professionals)
 Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat nova d'un editor es fa al mòdul compartit:
+- **`PanelSplit`** + `SplitHandle` (`components/`): panells amb vora arrossegable, sobre el **`Splitter` de Chakra** (només el
+  configura: amplades en px recordades, mínim i màxim, plegar; al mòbil, en columna i sense vores). Al `Workspace`, a la Foto
+  i a la columna de l'Assistent. Cap altra vora feta a mà.
 - **`Workspace`** + `useWorkspace(id)` (`components/`): estructura · visor · propietats, vores arrossegables, plegar amb els
   botons de les cantonades, pestanyes Estructura · Propietats al mòbil, amplades recordades; a l'Editor i als Ambients.
   `extra` (l'Assistent de l'Editor i dels Ambients): un segon panell a la columna de la dreta, pestanyes Propietats · <extra> a dalt

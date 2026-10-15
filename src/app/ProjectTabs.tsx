@@ -1,4 +1,4 @@
-import { Box, HStack, SegmentGroup, Stack, Text } from "@chakra-ui/react"
+import { Box, HStack, SegmentGroup, Tabs, Text } from "@chakra-ui/react"
 import type { PROJECT_NAV, Screen } from "./nav"
 
 type Props = { screen: Screen; projectNav: typeof PROJECT_NAV; onGo: (s: Screen) => void }
@@ -27,39 +27,29 @@ export function ProjectTabs({ screen, projectNav, onGo }: Props) {
 
 /**
  * Al mòbil, les pàgines del moble a sang (de vora a vora), com unes pestanyes d'app: icona a sobre, nom a
- * sota i la triada amb el color principal i una ratlla a baix.
+ * sota i la triada amb el color principal i una ratlla a baix (les `Tabs` de Chakra, variant `line`: fletxes del teclat i
+ * rols de pestanya inclosos).
  */
 export function MobileProjectTabs({ screen, projectNav, onGo }: Props) {
   const current = screen === "photo" ? "editor" : screen
   return (
-    <HStack gap={0} role="tablist" aria-label="Pàgines del moble">
-      {projectNav.map((n) => {
-        const on = current === n.id
-        return (
-          <Box
-            key={n.id}
-            asChild
-            flex={1}
-            minW={0}
-            pt={1.5}
-            pb={1}
-            color={on ? "wood.fg" : "fg.muted"}
-            borderBottomWidth="2px"
-            borderColor={on ? "wood.solid" : "transparent"}
-          >
-            <button type="button" role="tab" aria-selected={on} onClick={() => onGo(n.id as Screen)}>
-              <Stack align="center" gap={0.5}>
-                <Box fontSize="xl" display="inline-flex">
-                  <n.icon />
-                </Box>
-                <Text fontSize="xs" fontWeight={on ? "semibold" : "medium"} truncate maxW="full">
-                  {n.label}
-                </Text>
-              </Stack>
-            </button>
-          </Box>
-        )
-      })}
-    </HStack>
+    <Tabs.Root value={current} onValueChange={(e) => onGo(e.value as Screen)} variant="line" fitted colorPalette="wood" activationMode="manual">
+      {/* La ratlla de sota ja la fa la franja que la conté. */}
+      <Tabs.List aria-label="Pàgines del moble" borderBottomWidth={0}>
+        {projectNav.map((n) => {
+          const on = current === n.id
+          return (
+            <Tabs.Trigger key={n.id} value={n.id} minW={0} h="auto" flexDirection="column" gap={0.5} pt={1.5} pb={1} _selected={{ color: "wood.fg" }}>
+              <Box fontSize="xl" display="inline-flex">
+                <n.icon />
+              </Box>
+              <Text fontSize="xs" fontWeight={on ? "semibold" : "medium"} truncate maxW="full">
+                {n.label}
+              </Text>
+            </Tabs.Trigger>
+          )
+        })}
+      </Tabs.List>
+    </Tabs.Root>
   )
 }
