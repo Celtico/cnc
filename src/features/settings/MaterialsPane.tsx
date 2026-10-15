@@ -2,7 +2,7 @@ import { Badge, Box, Button, HStack, IconButton, Input, SimpleGrid, Stack, Switc
 import { useContext, useEffect, useRef, useState, type ReactNode, type RefObject } from "react"
 import { LuCopy, LuFactory, LuImagePlus, LuLayers2, LuLayers3, LuPaintbrush, LuSprayCan, LuStar, LuSwatchBook, LuTrash2 } from "react-icons/lu"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
-import { EditorDialog } from "../../components/EditorDialog"
+import { FloatingWindow } from "../../components/FloatingWindow"
 import { SearchBar } from "../../components/SearchBar"
 import { NumberField } from "../../components/NumRow"
 import { toaster } from "../../components/ui/toaster"
@@ -53,7 +53,7 @@ function materialSummary(m: MaterialPref): string {
 
 /**
  * Preferències › Materials: una graella de targetes per categoria (Taulers · Fons · Simulació, el mateix acordió que les
- * galeries) i, en tocar-ne una, l'editor a pantalla completa (com la finestra del Render). `footer`: «Per defecte als mòduls
+ * galeries) i, en tocar-ne una, l'editor en una finestra (`FloatingWindow`, com la del Render). `footer`: «Per defecte als mòduls
  * nous» (només a l'editor d'un tauler o d'un fons); `defaults`: els noms per defecte (★ a la targeta).
  */
 export function MaterialsList({ materials, onChange, onRename, onDelete, footer, defaults }: { materials: MaterialPref[]; onChange: (m: MaterialPref[]) => void; onRename: (from: string, to: string) => void; onDelete: (m: MaterialPref) => void; footer?: ReactNode; defaults: { material: string; backMaterial: string } }) {
@@ -165,14 +165,16 @@ export function MaterialsList({ materials, onChange, onRename, onDelete, footer,
           {q ? "Cap resultat." : "Encara no n'hi ha cap."}
         </Text>
       )}
-      <EditorDialog
+      <FloatingWindow
+        id="material-editor"
         open={editorOpen && m !== null}
-        title={shownM?.name}
+        title={shownM?.name ?? ""}
         subtitle={shownM ? MATERIAL_CATEGORIES.find((c) => c.id === materialCategory(shownM))?.label : undefined}
         onClose={close}
         dirty={dirty}
-        // Sense el teclat al mòbil: el focus va al ✕; un material nou, al nom (seleccionat, `autoFocusName`).
-        focusSelector={shownM !== null && justAdded === shownM.id ? "[data-material-name]" : null}
+        // Sense el teclat al mòbil: el focus va a la finestra; un material nou, al nom (seleccionat, `autoFocusName`).
+        initialFocus={shownM !== null && justAdded === shownM.id ? "[data-material-name]" : false}
+        split
       >
         {shownM && <MaterialStage m={shownM} live={editorOpen} />}
         {shownM && (
@@ -198,7 +200,7 @@ export function MaterialsList({ materials, onChange, onRename, onDelete, footer,
             canDelete={materials.length > 1}
           />
         )}
-      </EditorDialog>
+      </FloatingWindow>
       <MaterialLibrary open={library} onClose={() => setLibrary(false)} onPick={fromLibrary} onBlank={blank} onTextureSet={() => void fromTextureSet()} materials={materials} onOpenExisting={(id) => {
         const x = materials.find((y) => y.id === id)
         if (x) open(x)

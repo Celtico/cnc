@@ -21,19 +21,57 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
 - **Desfer/refer comú** (`features/history/`): `history.ts` (pur, test: límit, ajuntar per temps `coalesceMs` o per
   `group`, canvis en viu `commit: false` + `commitHistory` en deixar anar, refer que es buida) i `useHistory` (React:
   `value`, `set`, `commit`, `undo`, `redo`, `reset`, `state`/`restore`); `useUndoKeys` amb `undoKeyAction` (`undoKeys.ts`,
-  test; `scope` = un diàleg amb desfer propi) i els botons `components/UndoRedo` (`LuUndo2` · `LuRedo2`). Editor de
+  test; `scope` = una finestra amb desfer propi: només les tecles de dins) i els botons `components/UndoRedo` (`LuUndo2` · `LuRedo2`). Editor de
   mobles, Ambients i editor de perfils. Un editor nou amb desfer fa servir aquest, no un de propi.
 - **`NameDialog`** (`components/`): posar un nom (grup nou, canviar el nom, mòdul nou), amb un nom per defecte seleccionat.
-- **`PickerDrawer`** (`components/PickerDrawer.tsx`: `PickerDrawer`, `PickerButton`, `PickerRow`): el calaix dels
-  selectors (dreta a l'ordinador, de baix al mòbil, cercador a dalt). El fan servir el `MaterialSelect` i el
-  **`HardwareSelect`** (tria d'un ferratge al moble, vegeu Preferències › Ferratges).
+- **`FloatingWindow`** (`components/FloatingWindow.tsx`, mides a `windowRect.ts` amb test): **la finestra**, una de sola
+  per a tot el que s'obre per triar o editar (per decisió de l'usuari, 2026-10-15: «tot el que s'obre, una finestra com la
+  del Render»). Embolcall del `FloatingPanel` de Chakra (`useFloatingPanel` + `RootProvider`): títol i, al costat,
+  `subtitle` (la categoria, el progrés del Render); minimitzar (només la barra) · maximitzar (o doble clic a la barra) ·
+  restaurar · ✕ a l'ordinador; es mou per la barra i s'estira per les vores i les cantonades. **No és modal**: l'app de
+  darrere es continua fent servir. **Mida i lloc recordats per `id`** al navegador (`mobles:window:<id>`; en obrir-la,
+  s'encongeix i es mou fins que hi cap, `fitWindowRect`); el primer cop, segons `kind`: **`picker`** (tries) estreta (380 px,
+  480 la dels ferratges) i alta, enganxada a la dreta com el calaix d'abans; **`editor`** (editors i visors) gran (fins a
+  1200 × 820, o la mida que demana: desar com a fitxer 520 × 380) i al mig de la zona de treball, sense tapar el menú
+  lateral. **Al mòbil, sempre a tota la pantalla** (maximitzada, sense moure-la ni els botons de mida) dins de la zona segura
+  (`&[data-maximized]`, els quatre costats). **Capes**: per sobre de les barres de l'app (`banner` + la pila de Chakra,
+  `--z-index`) i per sota dels menús, popovers, avisos (toasts), tooltips i diàlegs, que s'obren des de dins d'una finestra i
+  hi han de quedar per sobre (una confirmació d'«Eliminar» oberta des de l'editor del material); **entre finestres, la que
+  es toca o té el focus passa al davant** (el focus ho fa sol; en tocar-la sense focus a dins, se li dona: Safari no el
+  dona als botons). Una finestra que s'obre **des d'un diàleg modal** (el substitut d'«Eliminar material») va per sobre del
+  diàleg; el diàleg porta `trapFocus={false}`, `persistentElements={WINDOWS_PERSIST}` i
+  `onEscapeKeyDown={keepDialogOnWindowEscape}` (`windowRect.ts`). **Esc tanca la del davant** (la que té el focus; amb
+  `dirty`, un nom a mig escriure, només el desfà; `closeOnEscape={false}` mentre es dibuixa amb la ploma o importa). **Focus**
+  en obrir-se: el primer camp on s'escriu (el cercador d'una tria), un selector (`initialFocus`, el nom d'un material nou) o
+  la finestra (`false`: al mòbil no surt el teclat); en tancar-la, torna on era. `footer` (Cancel·lar · Aplicar, sempre a la
+  vista), `split` (editors de Preferències: la mostra i el formulari de costat a l'ordinador gran) i `bodyProps`.
+  - **Què és finestra**: Render (`RenderFrame`), les tries de material i de ferratge (`PickerWindow`), la fitxa d'una peça
+    de les col·leccions, «Afegir un moble / objecte» d'un ambient (`AmbientPicker`), els editors de materials i de
+    ferratges de Preferències, «Afegir un material» (`MaterialLibrary`), «Editar la textura», «Forma de la secció»
+    (`ProfileEditor`), «Importar un model 3D», «Desar … com a fitxer» (moble i ambient), Vista CAM i «Veure a casa» (AR).
+  - **Què és `Dialog`** (modal, Chakra): les confirmacions («Esborrar …?», «Eliminar …?» de materials i ferratges, «Ja hi ha
+    un render», «Començar una conversa nova?», esborrar l'historial, restaurar valors inicials) i les preguntes d'un sol camp
+    que aturen el que s'estava fent (`NameDialog`, «… per a…» d'un ambient del catàleg, «Mida real» del plànol, «Moure a un
+    grup»). Res més: un `Dialog` nou per editar o triar és una `FloatingWindow`.
+  - **Altres que no són finestra**: «Opcions de vista» (`ViewOptions`: un popover enganxat al botó; al mòbil, un full de
+    baix) i l'Assistent (columna a l'ordinador; al mòbil, un calaix no modal a pantalla completa).
+  - **Tries lligades a la selecció**: com que no són modals, l'inspector de l'editor de mobles i el dels ambients es
+    tornen a muntar quan canvia la selecció (`key`): les tries que s'hi havien obert es tanquen (si no, triar aniria a
+    parar al que s'ha seleccionat després). Dins d'un editor de Preferències passa el mateix en canviar d'element (`key`).
+  - **Teclat**: les dreceres de l'editor de mobles i dels ambients (Supr, fletxes, ⌘C/⌘V, Esc, desfer) no fan res amb el
+    focus dins d'una finestra o amb un diàleg modal obert; amb una finestra oberta i el focus a la pàgina, sí
+    (`lib/keyTarget.ts`, `undoKeys.ts`). L'editor de perfils només escolta les tecles de dins de la seva finestra.
+- **`PickerWindow`** (`components/PickerWindow.tsx`: `PickerWindow`, `PickerButton`, `PickerRow`): la finestra de tria
+  dels selectors (una `FloatingWindow` `picker`, cercador a dalt amb el focus). El fan servir el `MaterialSelect` i el
+  **`HardwareSelect`** (tria d'un ferratge al moble, vegeu Preferències › Ferratges); la mida es recorda per tipus
+  (`picker:material`, `picker:hardware`).
 - **Plànols acotats** (`components/dims.ts` + `components/DimLine.tsx`): totes les cotes dels dibuixos 2D (pla del
   muntatge, generador, vistes DXF, peça d'exemple, col·locació). **`StepRuleRows`** (`components/StepRuleRows.tsx`): les
   regles de graons (frontisses per alçada, distància del tirador, còpies d'un col·locat per mida).
-- **`MaterialSelect`** (`settings/MaterialSelect.tsx`) a tot arreu on es tria un material (amb **cercador** a dalt del calaix,
+- **`MaterialSelect`** (`settings/MaterialSelect.tsx`) a tot arreu on es tria un material (amb **cercador** a dalt de la finestra de tria,
   pel nom i sense accents, que obre les categories amb resultats): un **botó** (fons suau, a tota
-  l'amplada, sense fletxa ni icona: no ha de semblar un desplegable) amb la mostra i el nom que obre un calaix (a la dreta a
-  l'ordinador, de baix al mòbil) amb un acordió per categoria i les mostres (només de la categoria oberta); en tocar-ne una es
+  l'amplada, sense fletxa ni icona: no ha de semblar un desplegable) amb la mostra i el nom que obre la finestra de tria (`PickerWindow`: a la dreta
+  a l'ordinador, a tota la pantalla al mòbil) amb un acordió per categoria i les mostres (només de la categoria oberta); en tocar-ne una es
   tria i es tanca. `emptyLabel` per a «Com el cos», «Com a Preferències», «Tots els altres», «Cap (fantasma)».
 - **`FormRow`** (`components/FormRow`): **tots els camps de l'app són files etiqueta · control** (Preferències, inspectors,
   diàlegs de render, textura, foto i nesting): etiqueta a l'esquerra (min(150 px, 36 %)), control amb `maxW` i l'ajuda a
@@ -49,7 +87,7 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
   objectes són només icona; Efecte i Forma dels objectes, portes (una/dues, frontisses), abatible i muntatge de la reixeta,
   segments amb icona i text.
 - **Un sol acordió** (`components/Fold.tsx`, `FoldGroup` + `FoldItem`, sobre `Accordion` de Chakra; context i tipus a
-  `foldContext.ts`, estat de sessió a `sessionState.ts`): inspectors, Render, Foto, Exportar, galeries, calaix de materials,
+  `foldContext.ts`, estat de sessió a `sessionState.ts`): inspectors, Render, Foto, Exportar, galeries, finestra de tria de materials,
   taulells i forats (`RunsForm`) i eines de la màquina. Res d'`Accordion`/`Collapsible` de Chakra ni de plegables propis fora
   d'aquí. `FoldItem`: `id`, `icon` (del catàleg, obligatòria a les seccions), `title`, `badge`/`badgePalette`, `count`,
   `description` (sempre), `summary` (tancat), `actions` (al costat de la capçalera, mai a dins), `header` (fila de taula).
@@ -99,10 +137,9 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
   de baix és **sempre el menú general** (com les apps de l'iPhone).
 - **Mòbil sense títols repetits**: les pàgines d'inici porten el seu títol gran (com iOS) i no hi ha barra de dalt; només n'hi
   ha quan cal tornar enrere. **Un sol «‹ Tornar» a la vista** («‹ nom del moble», «‹ Preferències», «‹ Màquines CNC»;
-  `useSessionString` es manté igual entre components amb la mateixa clau; `DETAIL_KEYS`). Diàlegs i calaixos a pantalla
-  completa respecten la zona segura (`env(safe-area-inset-top)`), també el botó de tancar; l'editor de
-  materials i la Vista CAM, els quatre costats i el botó a `calc(env(…) + 8px)`, també a l'ordinador i a l'iPad; el Render
-  (panell flotant, maximitzat al mòbil), els quatre costats amb `&[data-maximized]` (`RenderFrame.tsx`).
+  `useSessionString` es manté igual entre components amb la mateixa clau; `DETAIL_KEYS`). Les finestres (`FloatingWindow`,
+  maximitzades al mòbil) respecten la zona segura als quatre costats amb `&[data-maximized]`; els calaixos a pantalla
+  completa (l'Assistent al mòbil), la de dalt, també el botó de tancar.
 
 #### Mides d'iOS a les pantalles tàctils
 - `src/theme/layout.css`, `@media (pointer: coarse)` (CSS sense capa: guanya a les de Chakra): es canvien les variables dels

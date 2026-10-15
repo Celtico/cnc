@@ -25,7 +25,8 @@ export function usePlanTools({ tool, onToolDone }: { tool: Tool; onToolDone: () 
   // Espai: arrossegar per desplaçar (com Figma). Esc / Retorn acaben la ploma.
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement)?.closest?.("input, textarea, select, [contenteditable]")) return
+      // Les tecles d'una finestra (no és modal) o d'un diàleg no són del plànol.
+      if ((e.target as HTMLElement)?.closest?.("input, textarea, select, [contenteditable], [role=dialog], [role=alertdialog]")) return
       if (e.code === "Space") space.current = true
       if (tool === "wall" && (e.key === "Escape" || e.key === "Enter")) {
         setChain([])

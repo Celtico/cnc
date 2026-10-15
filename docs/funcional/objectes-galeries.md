@@ -66,7 +66,7 @@
   `core/model/collections.ts`): Minimalisme arquitectònic i Minimalisme comercial, per famílies, 25 + 25 peces paramètriques
   (fronts push on la fitxa diu «sense tirador») amb una **fitxa d'estudi** (`PieceStudy`: referència, llenguatge, geometria,
   proporcions, materials, acabats, gruixos, ferratges, sensació, relació amb l'espai, graus 1–5, qualitat, fotos de la carpeta
-  `referencies`); tocar una peça obre la fitxa (calaix) i «Crear el moble»; la cerca també mira la fitxa;
+  `referencies`); tocar una peça obre la fitxa (una finestra a la dreta, `FloatingWindow`) i «Crear el moble»; la cerca també mira la fitxa;
   `collections.test.ts`.
 - **Targetes**: totes les graelles fan servir `GALLERY_COLS` (`projects/galleryGrid.ts`) i la **`GalleryCard`**
   (`projects/GalleryCard.tsx`: miniatura · nom de dues línies · què és · descripció · etiquetes (color principal) i preu ·

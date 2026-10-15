@@ -37,20 +37,20 @@ describe("undoKeyAction", () => {
   })
 })
 
-describe("undoKeyAction amb àmbit (desfer propi d'un diàleg)", () => {
+describe("undoKeyAction amb àmbit (desfer propi d'una finestra)", () => {
   const inside = { tagName: "svg", closest: (s: string) => (s.includes("dialog") ? {} : null) }
   const outside = { tagName: "BUTTON", closest: () => null }
   const scope = { contains: (n: never) => (n as unknown) === inside }
 
-  it("desfà amb les tecles de dins del diàleg encara que sigui modal", () => {
+  it("desfà amb les tecles de dins de la finestra encara que hi hagi un diàleg modal", () => {
     expect(undoKeyAction(key("z", {}, inside), modalOpen, scope)).toBe("undo")
     expect(undoKeyAction(key("z", { shiftKey: true }, inside), modalOpen, scope)).toBe("redo")
     expect(undoKeyAction(key("y", { metaKey: false, ctrlKey: true }, inside), modalOpen, scope)).toBe("redo")
-    // Focus al body (clic al dibuix): també.
-    expect(undoKeyAction(key("z", {}, { tagName: "BODY" }), modalOpen, scope)).toBe("undo")
+    // Focus al body (s'ha clicat la pàgina de sota, la finestra no és modal): és de la pàgina, no de la finestra.
+    expect(undoKeyAction(key("z", {}, { tagName: "BODY" }), modalOpen, scope)).toBeNull()
   })
 
-  it("no fa res amb tecles de fora del diàleg ni als camps de text", () => {
+  it("no fa res amb tecles de fora de la finestra ni als camps de text", () => {
     expect(undoKeyAction(key("z", {}, outside), modalOpen, scope)).toBeNull()
     const text = { tagName: "INPUT", inputMode: "text", closest: () => ({}) }
     expect(undoKeyAction(key("z", {}, text), modalOpen, { contains: () => true })).toBeNull()

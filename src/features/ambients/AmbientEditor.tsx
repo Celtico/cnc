@@ -162,7 +162,9 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
           />
         }
         right={
+          // Una selecció nova, un inspector nou: les finestres de tria que s'hi havien obert es tanquen (com a l'editor de mobles).
           <SelectionInspector
+            key={JSON.stringify(selection.sel)}
             name={name}
             amb={amb}
             change={change}
@@ -234,7 +236,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
         )}
       />
 
-      {/* Afegir un moble o un objecte: la mateixa galeria de la pàgina (Historial · Projectes · Catàleg) a pantalla completa. */}
+      {/* Afegir un moble o un objecte: la mateixa galeria de la pàgina (Historial · Projectes · Catàleg) en una finestra. */}
       <AmbientPicker what="moble" open={picker} onClose={() => setPicker(false)} ambientId={ambientId} ambientName={name} projects={projects} onAdd={(p) => (addMoble(p), setPicker(false))} onCreate={(c, n) => createAndAdd(c, n, "moble")} />
       <AmbientPicker what="object" open={objPicker} onClose={() => setObjPicker(false)} ambientId={ambientId} ambientName={name} projects={projects} onAdd={(p) => (addMoble(p), setObjPicker(false))} onCreate={(c, n) => createAndAdd(c, n, "object")} />
 

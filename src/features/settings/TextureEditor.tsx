@@ -1,7 +1,8 @@
-import { Box, Button, CloseButton, Dialog, Flex, HStack, Input, Portal, Slider, Stack, Text } from "@chakra-ui/react"
+import { Box, Button, Flex, HStack, Input, Slider, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useState } from "react"
 import { LuDices, LuRotateCcw } from "react-icons/lu"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
+import { FloatingWindow } from "../../components/FloatingWindow"
 import { WOOD_PRESETS, type Finish, type MaterialPref, type WoodGen } from "../../core/model"
 import { woodGenOf } from "../../components/viewer/textures"
 import { isEditable, previewStyle } from "./materialPreview"
@@ -15,7 +16,8 @@ type Editable = Exclude<Finish, { kind: "image" }>
  * controls): una mostra gran a escala real i els paràmetres del generador. Fusta (colors, veta,
  * ondulació, franges, catedrals, porus, gra, mida), teixit (fils, irregularitat), rajola (junta,
  * variació, trencajunts) i pedra o marbre (vetes). «Nova variació» canvia la llavor: el mateix
- * dibuix amb una altra disposició. Els canvis s'apliquen en acceptar.
+ * dibuix amb una altra disposició. Els canvis s'apliquen en acceptar. Una finestra (`FloatingWindow`), damunt de la de
+ * l'editor del material.
  */
 export function TextureEditor({ m, open, onClose, onApply }: { m: MaterialPref; open: boolean; onClose: () => void; onApply: (f: Finish) => void }) {
   const [f, setF] = useState<Editable | null>(null)
@@ -23,68 +25,58 @@ export function TextureEditor({ m, open, onClose, onApply }: { m: MaterialPref; 
   useEffect(() => {
     if (open && isEditable(m.finish)) setF(structuredClone(m.finish))
   }, [open, m.finish])
-  // El diàleg es queda muntat (tancat) mentre el material sigui editable: muntar-lo ja obert feia que el focus que hi
-  // entra comptés com «de fora» i es tanqués sol. Abans del primer `setF`, l'acabat del material.
+  // La finestra es queda muntada (tancada) mentre el material sigui editable. Abans del primer `setF`, l'acabat del material.
   const cur = f ?? (isEditable(m.finish) ? m.finish : null)
   if (!cur) return null
   const preview: MaterialPref = { ...m, finish: cur }
   // Mostra de 1200 mm d'ample (× zoom): es veu com es repeteix.
   const W = 560
   return (
-    <Dialog.Root open={open} onOpenChange={(e) => !e.open && onClose()} size={{ base: "full", md: "xl" }} placement="center" scrollBehavior="inside">
-      <Portal>
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          {/* La mida «full» del mòbil posa l'alçada a 100dvh i la «xl» no la treu: a l'ordinador, l'alçada del contingut fins
-              al 90 % de la finestra i el cos es desplaça (amb una finestra baixa, el títol i els botons es queden a la vista). */}
-          <Dialog.Content pt={{ base: "env(safe-area-inset-top, 0px)", md: 0 }} pb={{ base: "env(safe-area-inset-bottom, 0px)", md: 0 }} h={{ base: "100dvh", md: "auto" }} minH={{ md: "auto" }} maxH={{ md: "90dvh" }}>
-            <Dialog.Header>
-              <Dialog.Title>Editar la textura · {m.name}</Dialog.Title>
-            </Dialog.Header>
-            <Dialog.Body>
-              <Flex gap={5} direction={{ base: "column", md: "row" }}>
-                <Stack gap={2} flexShrink={0} w={{ base: "full", md: `${W}px` }}>
-                  <Box w="full" aspectRatio={W / 380} rounded="md" borderWidth="1px" style={previewStyle(preview, W / (2 * zoom))} backgroundRepeat="repeat" />
-                  <HStack gap={2}>
-                    <Text fontSize="xs" color="fg.muted" flexShrink={0}>
-                      Mostra de {Math.round(1200 * zoom)} mm
-                    </Text>
-                    <Slider.Root size="sm" flex={1} aria-label={["Mida de la mostra"]} min={0.25} max={4} step={0.25} value={[zoom]} onValueChange={(e) => setZoom(e.value[0]!)}>
-                      <Slider.Control>
-                        <Slider.Track>
-                          <Slider.Range />
-                        </Slider.Track>
-                        <Slider.Thumbs />
-                      </Slider.Control>
-                    </Slider.Root>
-                  </HStack>
-                </Stack>
-                <Stack gap={3} flex={1} minW={0}>
-                  <Controls f={cur} setF={setF} />
-                </Stack>
-              </Flex>
-            </Dialog.Body>
-            <Dialog.Footer>
-              <Button variant="outline" onClick={onClose}>
-                Cancel·lar
-              </Button>
-              <Button
-                colorPalette="wood"
-                onClick={() => {
-                  onApply(cur)
-                  onClose()
-                }}
-              >
-                Aplicar
-              </Button>
-            </Dialog.Footer>
-            <Dialog.CloseTrigger asChild top={{ base: "calc(env(safe-area-inset-top, 0px) + 8px)", md: 2 }}>
-              <CloseButton size="sm" aria-label="Tancar" />
-            </Dialog.CloseTrigger>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Portal>
-    </Dialog.Root>
+    <FloatingWindow
+      id="texture-editor"
+      open={open}
+      onClose={onClose}
+      title={`Editar la textura · ${m.name}`}
+      width={1040}
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>
+            Cancel·lar
+          </Button>
+          <Button
+            colorPalette="wood"
+            onClick={() => {
+              onApply(cur)
+              onClose()
+            }}
+          >
+            Aplicar
+          </Button>
+        </>
+      }
+    >
+      <Flex gap={5} direction={{ base: "column", md: "row" }}>
+        <Stack gap={2} flexShrink={0} w={{ base: "full", md: `${W}px` }} maxW="full">
+          <Box w="full" aspectRatio={W / 380} rounded="md" borderWidth="1px" style={previewStyle(preview, W / (2 * zoom))} backgroundRepeat="repeat" />
+          <HStack gap={2}>
+            <Text fontSize="xs" color="fg.muted" flexShrink={0}>
+              Mostra de {Math.round(1200 * zoom)} mm
+            </Text>
+            <Slider.Root size="sm" flex={1} aria-label={["Mida de la mostra"]} min={0.25} max={4} step={0.25} value={[zoom]} onValueChange={(e) => setZoom(e.value[0]!)}>
+              <Slider.Control>
+                <Slider.Track>
+                  <Slider.Range />
+                </Slider.Track>
+                <Slider.Thumbs />
+              </Slider.Control>
+            </Slider.Root>
+          </HStack>
+        </Stack>
+        <Stack gap={3} flex={1} minW={0}>
+          <Controls f={cur} setF={setF} />
+        </Stack>
+      </Flex>
+    </FloatingWindow>
   )
 }
 

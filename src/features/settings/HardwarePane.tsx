@@ -1,7 +1,7 @@
 import { Badge, Menu, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useContext, useRef, useState } from "react"
 import { LuStar } from "react-icons/lu"
-import { EditorDialog } from "../../components/EditorDialog"
+import { FloatingWindow } from "../../components/FloatingWindow"
 import { FoldGroup, FoldItem } from "../../components/Fold"
 import { toaster } from "../../components/ui/toaster"
 import { syncPairedPlates } from "../../core/model/hardwareEdit"
@@ -45,7 +45,7 @@ const SERIES_KEY = "mobles:md-open:hardware-series"
 
 /**
  * Preferències › Ferratges (millores v1 F2): la biblioteca com a graella de targetes per categoria (el mateix acordió que
- * Materials i les galeries) i, en tocar-ne una, l'editor a pantalla completa (`EditorDialog`): a l'esquerra el dibuix del
+ * Materials i les galeries) i, en tocar-ne una, l'editor en una finestra (`FloatingWindow`, com la del Render): a l'esquerra el dibuix del
  * patró de mecanitzats sobre una peça d'exemple (`PanelDrawing`, el mateix plànol que Peces, fet amb el motor de
  * fabricació, `hardwarePreview`) i a la dreta els paràmetres. «Afegir» parteix d'un tipus (el per defecte d'aquell lloc).
  */
@@ -214,13 +214,15 @@ export function HardwareList({
           {q ? "Cap resultat." : "Encara no n'hi ha cap."}
         </Text>
       )}
-      <EditorDialog
+      <FloatingWindow
+        id="hardware-editor"
         open={editorOpen && it !== null}
-        title={it?.name}
+        title={it?.name ?? ""}
         subtitle={it ? HARDWARE_CATEGORIES.find((c) => c.id === it.category)?.label : undefined}
         onClose={close}
         dirty={dirty}
-        focusSelector={it !== null && justAdded === it.id ? "[data-hardware-name]" : null}
+        initialFocus={it !== null && justAdded === it.id ? "[data-hardware-name]" : false}
+        split
       >
         {it && <HardwareStage item={it} base={mountBase} materials={materials} />}
         {it && (
@@ -257,7 +259,7 @@ export function HardwareList({
             onDelete={() => onDelete(it)}
           />
         )}
-      </EditorDialog>
+      </FloatingWindow>
     </Stack>
   )
 }

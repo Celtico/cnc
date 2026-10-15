@@ -14,8 +14,8 @@
   ni del taulell. Els que no són de CNC pinten els cantells amb el mateix material. Acabats `metal`, `glass`, `fabric`
   (trama) i `tiles` (rajola amb junta), procedurals (`patternTexture`).
 - **Textures procedurals editables** (`settings/TextureEditor.tsx`, «Editar la textura»): mostra gran a escala real amb zoom;
-  s'aplica en acceptar. A l'ordinador, com a molt el 90 % de l'alçada i el cos es desplaça (el títol i els botons a la
-  vista); el diàleg es queda muntat tancat (muntar-lo ja obert el tancava sol: el focus comptava com «de fora»). **Fusta** (`Finish.wood.gen`, `WoodGenSchema`, `WOOD_PRESETS` + `WOOD_EXTRA_PRESETS`), **Teixit**,
+  s'aplica en acceptar. Una finestra (`FloatingWindow`, damunt de la de l'editor del material): el cos es desplaça (el títol
+  i els botons a la vista); es queda muntada tancada mentre el material és editable. **Fusta** (`Finish.wood.gen`, `WoodGenSchema`, `WOOD_PRESETS` + `WOOD_EXTRA_PRESETS`), **Teixit**,
   **Rajola** (junta, variació, quadrícula o trencajunts), **Pedra** (`stone`: marbre, granit, travertí, formigó; soroll
   periòdic), **Metall** (polit, raspallat, martellejat), **Vidre**, **Color llis i lacat**. Tots menys la foto (`isEditable`).
   Tot a `textures.ts` (canvas; `woodTexture(species, gen)`, `patternTexture(kind, color, grout, opts)`), memòria de 48.
@@ -116,7 +116,7 @@
   preferències): `unknown-material` («El material «X» no és a Preferències: es veu amb un color per defecte i al taller
   sortirà amb aquest nom») i `thickness-not-listed` («El gruix 18 mm no és dels gruixos de «X»»), a «Avisos de fusteria»
   de l'Editor i a Exportar. A «Per defecte als mòduls nous», un gruix que no és del material és una nota, no una pastilla.
-- **Biblioteca** (`settings/libraryItems.ts`, `MATERIAL_LIBRARY`; diàleg `MaterialLibrary`): «Afegir» obre una graella de
+- **Biblioteca** (`settings/libraryItems.ts`, `MATERIAL_LIBRARY`; finestra `MaterialLibrary`): «Afegir» obre una graella de
   materials fets (fustes, lacats, pedres, metalls, vidres, teixits, terres, parets), «En blanc» i «Joc de textures…» (vegeu Mapes PBR). `libraryItems.test.ts`.
   Els que ja tens (mateix nom o mateix acabat, `ownedMaterial`) porten «Ja el tens»: tocar-ne un no fa un «X 2» en
   silenci, sinó que ofereix «Obrir el meu» o «Afegir una còpia».

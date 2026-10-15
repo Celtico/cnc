@@ -39,7 +39,7 @@
   objecte enllaçat, `{ key, moble: MobleFile }`; els elements apunten a `key`, dos elements del mateix moble la
   comparteixen), `models` (GLB de l'usuari, **un sol cop** per id, no a cada moble) i `render` (la configuració del Render
   desada per a l'ambient, `SavedRender`). Es desa amb «Desar com a fitxer…» (`LuSave`) al ⋯ de la targeta d'Ambients i al
-  ⋯ de la barra de l'ambient obert (`mobles:flush-save` abans), amb el diàleg comú del `.moble` (`SaveFileDialog.tsx`:
+  ⋯ de la barra de l'ambient obert (`mobles:flush-save` abans), amb la finestra comuna del `.moble` (`SaveFileDialog.tsx`:
   `SaveAmbientFileDialog`; interruptor «Incloure les fotos dels mobles», **apagat**, mida en viu i avisos): un moble que
   ja no existeix o amb la composició il·legible no hi va (ni els seus elements) i el diàleg ho diu. `parseAmbientData`
   repara **part a part** com el `.moble`: cada moble passa per `parseMobleData` (la mateixa reparació; un moble d'una

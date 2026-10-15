@@ -1,4 +1,5 @@
-import { CloseButton, Drawer, Portal, Text } from "@chakra-ui/react"
+import { Text } from "@chakra-ui/react"
+import { FloatingWindow } from "../../components/FloatingWindow"
 import type { Composition } from "../../core/model"
 import type { Project } from "../../db/db"
 import { FolderedGrid } from "../projects/Folders"
@@ -10,8 +11,8 @@ import { isObject } from "../objects/isObject"
 import { useAmbientMembership } from "./useAmbientMembership"
 
 /**
- * Finestra «Afegir un moble» / «Afegir un objecte» d'un ambient: la mateixa galeria que la pàgina Mobles o Objectes a
- * pantalla completa (Historial · Projectes, amb els grups com allà, · Catàleg), sense el botó «Nou». Tocar una targeta la
+ * Finestra «Afegir un moble» / «Afegir un objecte» d'un ambient (una `FloatingWindow` gran): la mateixa galeria que la
+ * pàgina Mobles o Objectes (Historial · Projectes, amb els grups com allà, · Catàleg), sense el botó «Nou». Tocar una targeta la
  * col·loca: un moble o objecte que ja tens s'enllaça (`onAdd`); una plantilla crea el moble i el col·loca (`onCreate`).
  * Sense «Seleccionar» ni «Grup nou» ni el menú dels grups: aquí només es tria (cap mode que es quedi els tocs).
  */
@@ -82,31 +83,13 @@ export function AmbientPicker({
     }
   }
   return (
-    <Drawer.Root open={open} onOpenChange={(e) => !e.open && onClose()} size="full" placement="bottom">
-      <Portal>
-        <Drawer.Backdrop />
-        <Drawer.Positioner>
-          {/* A pantalla completa: fora de la barra d'estat del telèfon (zona segura). */}
-          <Drawer.Content pt="env(safe-area-inset-top, 0px)" pb="env(safe-area-inset-bottom, 0px)">
-            <Drawer.Header>
-              <Drawer.Title flex={1}>
-                {objects ? "Afegir un objecte" : "Afegir un moble"} a «{ambientName}»
-              </Drawer.Title>
-              <Drawer.CloseTrigger asChild top="calc(env(safe-area-inset-top, 0px) + 8px)">
-                <CloseButton size="sm" aria-label="Tancar" />
-              </Drawer.CloseTrigger>
-            </Drawer.Header>
-            <Drawer.Body>
-              {open &&
-                (objects ? (
-                  <ObjectsGallery storageKey="mobles:ambient-objects" onCreate={onCreate} history={history} />
-                ) : (
-                  <NewMobleGallery storageKey="mobles:ambient-picker" onCreate={onCreate} history={history} />
-                ))}
-            </Drawer.Body>
-          </Drawer.Content>
-        </Drawer.Positioner>
-      </Portal>
-    </Drawer.Root>
+    <FloatingWindow id="ambient-picker" open={open} onClose={onClose} title={`${objects ? "Afegir un objecte" : "Afegir un moble"} a «${ambientName}»`} width={1200} height={900}>
+      {open &&
+        (objects ? (
+          <ObjectsGallery storageKey="mobles:ambient-objects" onCreate={onCreate} history={history} />
+        ) : (
+          <NewMobleGallery storageKey="mobles:ambient-picker" onCreate={onCreate} history={history} />
+        ))}
+    </FloatingWindow>
   )
 }

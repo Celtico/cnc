@@ -127,7 +127,10 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         />
         }
         right={
+          // Una selecció nova, un inspector nou: les finestres de tria (material, ferratge) que s'hi havien obert es tanquen
+          // (no són modals: si no, la tria aniria a parar al que s'ha seleccionat després).
           <EditorInspector
+            key={JSON.stringify(selection)}
             inspectorOpen={inspectorOpen}
             setInspectorOpen={setInspectorOpen}
             comp={comp}

@@ -21,7 +21,7 @@ export function MaterialPreview({ m, w = 240, h = 150, caption = true }: { m: Ma
 /**
  * Mostra gran de capçalera (a tota l'amplada de la targeta), a escala real: l'amplada es mesura
  * i sempre representa `PREVIEW_MM` mm. A sota, a la dreta, la mida que es veu. Amb `fill`, omple el
- * contenidor (alçada inclosa: la columna de l'editor a pantalla completa).
+ * contenidor (alçada inclosa: la columna de la finestra de l'editor).
  */
 export function MaterialHero({ m, h = 176, fill, children }: { m: MaterialPref; h?: number; fill?: boolean; children?: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null)

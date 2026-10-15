@@ -1,7 +1,7 @@
 import { Box, Field, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useState } from "react"
 import { LuCheck } from "react-icons/lu"
-import { PickerButton, PickerDrawer, PickerRow } from "../../components/PickerDrawer"
+import { PickerButton, PickerWindow, PickerRow } from "../../components/PickerWindow"
 import { fold } from "../projects/galleryGrid"
 import { FoldGroup, FoldItem } from "../../components/Fold"
 import { MATERIAL_CATEGORIES, materialCategory, type MaterialPref } from "../../core/model"
@@ -9,8 +9,8 @@ import { MaterialThumb } from "./MaterialBits"
 import { useSettings } from "./SettingsContext"
 
 /**
- * Tria d'un material, la mateixa a tota l'app: un botó amb la mostra i el nom que obre un calaix (a la dreta a
- * l'ordinador, de baix al mòbil) amb un acordió per categoria; dins, les mostres de la textura (només es pinten les
+ * Tria d'un material, la mateixa a tota l'app: un botó amb la mostra i el nom que obre la finestra de tria (`PickerWindow`:
+ * a la dreta a l'ordinador, a tota la pantalla al mòbil) amb un acordió per categoria; dins, les mostres de la textura (només es pinten les
  * de la categoria oberta) i en tocar-ne una es tria i es tanca. `emptyLabel`: una primera opció sense material
  * («Com el cos», «Com a Preferències»…), que dona `""`.
  */
@@ -56,7 +56,7 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
         }}
       />
 
-      <PickerDrawer open={open} onOpenChange={setOpen} title={label} query={query} onQuery={search} placeholder="Buscar un material">
+      <PickerWindow id="material" open={open} onOpenChange={setOpen} title={label} query={query} onQuery={search} placeholder="Buscar un material">
         {q && !cats.length && (
           <Text fontSize="sm" color="fg.muted">
             Cap material es diu així.
@@ -107,7 +107,7 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
             </FoldItem>
           ))}
         </FoldGroup>
-      </PickerDrawer>
+      </PickerWindow>
     </Field.Root>
   )
 }

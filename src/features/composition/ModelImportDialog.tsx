@@ -1,6 +1,7 @@
-import { Alert, Box, Button, CloseButton, Dialog, Portal, Progress, Stack, Text } from "@chakra-ui/react"
+import { Alert, Box, Button, Progress, Stack, Text } from "@chakra-ui/react"
 import { useImperativeHandle, useRef, useState, type Ref } from "react"
 import { LuPalette } from "react-icons/lu"
+import { FloatingWindow } from "../../components/FloatingWindow"
 import { NumRow } from "../../components/NumRow"
 import type { PickedFile } from "../../components/pickedFiles"
 import { SectionLabel } from "../../components/SectionLabel"
@@ -53,7 +54,7 @@ const ALTERNATIVES: Partial<Record<ImportFailure | "other", string[]>> = {
 }
 
 /**
- * Importar un model 3D (Objectes › Models 3D): finestra amb el progrés (llegir, baixar de Poly Haven, convertir,
+ * Importar un model 3D (Objectes › Models 3D): una finestra (`FloatingWindow`) amb el progrés (llegir, baixar de Poly Haven, convertir,
  * optimitzar), el resultat i «Afegir les textures a Materials». Els selectors s'obren amb `handle.pick`.
  */
 export function ModelImportDialog({ handle, onImported, onBusy }: { handle?: Ref<ModelImportHandle>; onImported: (m: ModelChoice) => void; onBusy?: (busy: boolean) => void }) {
@@ -90,33 +91,26 @@ export function ModelImportDialog({ handle, onImported, onBusy }: { handle?: Ref
     if (state.kind !== "busy") setState({ kind: "idle" })
   }
   return (
-    <Dialog.Root open={state.kind !== "idle"} onOpenChange={(e) => !e.open && close()} size={{ base: "full", md: "md" }} placement="center" scrollBehavior="inside" lazyMount unmountOnExit closeOnInteractOutside={false}>
-      <Portal>
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content pt={{ base: "env(safe-area-inset-top, 0px)", md: 0 }} pb={{ base: "env(safe-area-inset-bottom, 0px)", md: 0 }} data-testid="model-import-dialog">
-            <Dialog.Header>
-              <Dialog.Title>Importar un model 3D</Dialog.Title>
-            </Dialog.Header>
-            <Dialog.Body>
-              {state.kind === "busy" && <Busy progress={state.progress} />}
-              {state.kind === "done" && <Done state={state} />}
-              {state.kind === "error" && <Failed state={state} />}
-            </Dialog.Body>
-            <Dialog.Footer>
-              <Button colorPalette="wood" disabled={state.kind === "busy"} onClick={close}>
-                {state.kind === "done" ? "Fet" : "Tancar"}
-              </Button>
-            </Dialog.Footer>
-            {state.kind !== "busy" && (
-              <Dialog.CloseTrigger asChild top={{ base: "calc(env(safe-area-inset-top, 0px) + 8px)", md: 2 }}>
-                <CloseButton size="sm" aria-label="Tancar" />
-              </Dialog.CloseTrigger>
-            )}
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Portal>
-    </Dialog.Root>
+    // Mentre importa no es tanca (ni Esc ni ✕: `close` no fa res).
+    <FloatingWindow
+      id="model-import"
+      open={state.kind !== "idle"}
+      onClose={close}
+      title="Importar un model 3D"
+      width={560}
+      height={560}
+      closeOnEscape={state.kind !== "busy"}
+      testId="model-import-dialog"
+      footer={
+        <Button colorPalette="wood" disabled={state.kind === "busy"} onClick={close}>
+          {state.kind === "done" ? "Fet" : "Tancar"}
+        </Button>
+      }
+    >
+      {state.kind === "busy" && <Busy progress={state.progress} />}
+      {state.kind === "done" && <Done state={state} />}
+      {state.kind === "error" && <Failed state={state} />}
+    </FloatingWindow>
   )
 }
 

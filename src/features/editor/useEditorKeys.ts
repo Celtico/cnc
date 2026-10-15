@@ -7,6 +7,7 @@ import { readClip, writeClip, type Clip } from "./clipboard"
 import { clipOf, pasteClip } from "./pasteClip"
 import type { CompositionEdits } from "./editorCommands"
 import type { SetComp } from "./useEditorDoc"
+import { keyInDialog, modalOpen } from "../../lib/keyTarget"
 
 /**
  * Dreceres de teclat de l'editor: copiar, enganxar, duplicar, esborrar i agrupar, i moure el triat amb les fletxes.
@@ -45,7 +46,8 @@ export function useEditorKeys({
     if (e.defaultPrevented) return
     const t = e.target as HTMLElement | null
     if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return
-    if (document.querySelector('[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]')) return
+    // Dins d'una finestra o d'un diàleg, o amb una confirmació oberta, no (amb una finestra oberta i el focus aquí, sí).
+    if (keyInDialog(t) || modalOpen()) return
     const mod = e.metaKey || e.ctrlKey
     const key = e.key.toLowerCase()
     // ⌘G / Ctrl+G: els triats en un grup nou; ⇧⌘G: fora del grup (com Figma). Peces lliures i models 3D.
@@ -173,6 +175,7 @@ export function useEditorKeys({
     if ((selection.kind !== "ref" && selection.kind !== "part" && selection.kind !== "group" && selection.kind !== "model" && selection.kind !== "multi") || selectionLocked || e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return
     const t = e.target as HTMLElement | null
     if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return
+    if (keyInDialog(t) || modalOpen()) return
     if (selection.kind === "multi") {
       const k = e.shiftKey ? 10 : 1
       const d = { ArrowLeft: [-k, 0, 0], ArrowRight: [k, 0, 0], ArrowUp: [0, k, 0], ArrowDown: [0, -k, 0], PageUp: [0, 0, k], PageDown: [0, 0, -k] }[e.key]

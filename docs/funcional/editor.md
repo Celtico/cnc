@@ -252,7 +252,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   en toquen cap (mal col·locats) o tenen un avís; seleccionats, en taronja. Els forats del mòdul seleccionat es marquen en taronja a través de les portes (`CableMarks`).
 - **Desfer/refer** (⌘Z, ⇧⌘Z, Ctrl Y; vegeu «Desfer/refer comú» a Mòduls compartits): 50 passos, canvis a menys de
   500 ms = un pas (escriure «1180», arrossegar el gizmo); cada càmera desada també és un pas; la miniatura en queda fora. No als camps de text
-  lliure ni dins d'un diàleg ni amb un diàleg modal obert (amb l'editor de perfils obert, ⌘Z desfeia el moble del darrere).
+  lliure ni dins d'una finestra o un diàleg ni amb un diàleg modal obert (amb l'editor de perfils obert, ⌘Z desfeia el moble
+  del darrere); amb una finestra oberta (no són modals) i el focus a l'editor, sí. Les dreceres del teclat, igual
+  (`lib/keyTarget.ts`).
 - **Teclat**: Ctrl/⌘ C · X · V · D i Supr per al mòdul, l'objecte, el model, el compartiment, **el grup i la selecció
   múltiple** (`core/model/editOps.ts`, `clipOps.ts`; `features/editor/pasteClip.ts` `clipOf`/`pasteClip`, el mateix camí
   per al «Duplicar» de l'inspector del grup i de la selecció múltiple);

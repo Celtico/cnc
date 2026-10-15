@@ -121,12 +121,14 @@
     `RenderDialog` per document, `key` = `saveKey`): canviar d'apartat no l'atura i, en tornar al mateix moble o ambient i
     obrir el Render, hi és.
   - **Panell flotant** (per decisió de l'usuari, 2026-10-15: «el render podria anar amb el FloatingPanel» de Chakra;
-    `RenderFrame.tsx`, `useFloatingPanel` + `FloatingPanel.RootProvider`): no és modal, es pot continuar treballant mentre
+    `RenderFrame.tsx` sobre la finestra comuna `components/FloatingWindow.tsx`, la de totes les tries i editors, vegeu
+    [ui-moduls](ui-moduls.md)): no és modal, es pot continuar treballant mentre
     calcula. A l'ordinador s'obre gran i al mig, es mou per la barra de títol («Render · nom» i el progrés), s'estira per
     les vores i les cantonades, es **minimitza** (només la barra, amb el progrés; el render continua), es maximitza (o doble
     clic a la barra) i es restaura; Esc o ✕ el tanquen (el render continua). Al **mòbil** (`base`), sempre maximitzat a tota
     la pantalla dins de la zona segura, sense moure'l ni minimitzar-lo: ✕ i es torna a obrir amb la píndola. Per sobre de
-    les barres de l'app (`zIndex` `banner`) i per sota dels diàlegs i calaixos. La imatge i les opcions van de costat quan
+    les barres de l'app; entre finestres, la que es toca passa al davant; els menús, avisos i diàlegs (confirmacions, «Ja
+    hi ha un render») hi queden per sobre. La imatge i les opcions van de costat quan
     el **panell** fa ≥ 720 px d'ample (container query `render`, `renderLayout.ts`), no segons la finestra.
   - **Indicador del render en marxa** (per decisió de l'usuari: «l'app ho ha de mostrar en algun lloc»;
     `app/RenderStatusNav.tsx`): mentre hi ha un render començat (calculant, aturat o acabat), el menú lateral porta

@@ -4,6 +4,7 @@ import { LuTrash2 } from "react-icons/lu"
 import { backChoices, boardChoices, materialCategory, materialSettingsUsage, type MaterialPref, type Settings } from "../../core/model"
 import { materialUsage } from "../../db/materialRefs"
 import { FormRow } from "../../components/FormRow"
+import { keepDialogOnWindowEscape, WINDOWS_PERSIST } from "../../components/windowRect"
 import { MaterialSelect } from "./MaterialSelect"
 
 /**
@@ -36,7 +37,9 @@ export function DeleteMaterialDialog({ material, settings, onCancel, onConfirm }
   const used = usedBy.length > 0 || roles.length > 0
   const shown = usedBy.slice(0, 6)
   return (
-    <Dialog.Root role="alertdialog" open={material !== null} onOpenChange={(e) => !e.open && onCancel()} placement="center">
+    // El substitut es tria a la finestra de tria (`MaterialSelect`), que va per sobre del diàleg: no el tanca en tocar-la,
+    // el focus hi pot entrar i Esc la tanca a ella.
+    <Dialog.Root role="alertdialog" open={material !== null} onOpenChange={(e) => !e.open && onCancel()} placement="center" trapFocus={false} persistentElements={WINDOWS_PERSIST} onEscapeKeyDown={keepDialogOnWindowEscape}>
       <Portal>
         <Dialog.Backdrop />
         <Dialog.Positioner>

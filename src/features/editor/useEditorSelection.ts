@@ -3,6 +3,7 @@ import { compositionKind, findZone, isApplianceModule, partsOnlyKind, rowOf, tog
 import type { Selection } from "../composition/StructureTree"
 import { useKeyed } from "../../lib/useKeyed"
 import { useLatest } from "../../lib/useLatest"
+import { keyInDialog } from "../../lib/keyTarget"
 
 /**
  * La selecció de l'editor (arbre, 3D i alçat van sincronitzats): què hi ha triat, el mòdul de treball i com es tria
@@ -159,8 +160,9 @@ export function useEditorSelection({ comp, initial, kind, setMobilePane }: { com
       if (e.key !== "Escape" || e.defaultPrevented) return
       const t = e.target as HTMLElement | null
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return
-      // Si hi ha un menú o un diàleg obert, Esc el tanca a ell.
-      if (document.querySelector('[data-part="content"][data-state="open"], [role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]')) return
+      // Si hi ha un menú o un diàleg obert, Esc el tanca a ell; dins d'una finestra, la tanca (les finestres flotants no
+      // compten com a obertes: amb el focus a l'editor, Esc treu la selecció).
+      if (keyInDialog(t) || document.querySelector('[data-part="content"][data-state="open"]:not([data-scope="floating-panel"]), [role="dialog"][data-state="open"]:not([data-scope="floating-panel"]), [role="alertdialog"][data-state="open"]')) return
       deselectRef.current()
     }
     window.addEventListener("keydown", onKey)

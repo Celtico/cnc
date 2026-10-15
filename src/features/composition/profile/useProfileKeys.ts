@@ -1,15 +1,19 @@
-import { useEffect } from "react"
+import { useEffect, type RefObject } from "react"
 import { r1 } from "./profileGeometry"
 import type { ProfileShape } from "./useProfileShape"
 
-/** Teclat de l'editor de perfil (obert): Esc i Retorn a la ploma; Supr i fletxes al node seleccionat. */
-export function useProfileKeys(open: boolean, { drawing, sel, nodes, set, remove, cancelPen, finishPen }: ProfileShape) {
+/**
+ * Teclat de l'editor de perfil (obert): Esc i Retorn a la ploma; Supr i fletxes al node seleccionat. Només amb el focus
+ * dins de la finestra (`scope`): no és modal, i amb el focus a l'editor del moble les tecles són seves.
+ */
+export function useProfileKeys(open: boolean, { drawing, sel, nodes, set, remove, cancelPen, finishPen }: ProfileShape, scope: RefObject<HTMLElement | null>) {
   // Teclat.
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null
-      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return
+      if (!t || !scope.current?.contains(t)) return
+      if (t.tagName === "INPUT" || t.tagName === "TEXTAREA") return
       if (drawing) {
         if (e.key === "Escape") {
           e.preventDefault()

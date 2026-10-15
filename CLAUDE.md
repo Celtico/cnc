@@ -180,9 +180,14 @@ Les etiquetes i les ajudes de la UI fan servir sempre aquestes paraules (auditor
   - **Si Chakra ja ho té fet, es fa servir el de Chakra: no es reinventa la roda** (abans de fer un component, mira la llista
     de components de Chakra v3; vegeu UI › Regles).
   - **Un concepte, un component**: cercador + «+» = `SearchBar`, tria = `ChoiceChips`/`IconChoice`, interruptor = `Switch`,
-    lliscador = `Slider`, material = `MaterialSelect`, ferratge = `HardwareSelect`, calaix de tria = `PickerDrawer`,
-    cota = `layoutDims` + `DimLine`, camp = `FormRow`, vora arrossegable = `PanelSplit` (`Splitter`). Res d'elements nadius (`<input type="checkbox|range">`)
+    lliscador = `Slider`, material = `MaterialSelect`, ferratge = `HardwareSelect`, finestra = `FloatingWindow` (tria amb
+    cercador = `PickerWindow`), cota = `layoutDims` + `DimLine`, camp = `FormRow`, vora arrossegable = `PanelSplit` (`Splitter`). Res d'elements nadius (`<input type="checkbox|range">`)
     fora de `components/ui`.
+  - **Finestres** (per decisió de l'usuari, 2026-10-15): **tot el que s'obre per triar o editar és una `FloatingWindow`**
+    (`components/FloatingWindow.tsx`, sobre el `FloatingPanel` de Chakra, com el Render: no modal, es mou, s'estira, es
+    minimitza i es maximitza; al mòbil, a tota la pantalla); **les confirmacions curtes** («Esborrar?», «Començar una
+    conversa nova?») **i les preguntes d'un sol camp** (posar un nom, «Mida real», moure a un grup) **són un `Dialog` de
+    Chakra** (modal). Res de `Drawer` per triar ni de `Dialog` per editar. Detall a [ui-moduls](docs/funcional/ui-moduls.md).
   - **El mateix gest fa el mateix a tot arreu**: seleccionar, cercar, afegir, esborrar, plegar i moure es fan igual a Mobles,
     Objectes, Ambients i Preferències (mateixa posició, icona del catàleg, text i cursor).
   - **De punta a punta**: una opció nova es comprova a tots els llocs on té efecte (visor, miniatura, previsualització,

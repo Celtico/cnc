@@ -20,7 +20,7 @@
 - **Llista i detall** (`components/MasterDetail`: llista agrupada amb mostra; `SearchBar` amb «Afegir» (només icona,
   `iconOnly`) i a sota les categories; `head` = títol de la pàgina a dalt de la llista —`PaneHeadContext` a les pàgines `wide`—; `footer` = sota el
   detall) a Objectes de referència i Màquines CNC.
-- **Materials: graella de targetes i edició a pantalla completa** (per decisió de l'usuari, com la finestra del Render;
+- **Materials: graella de targetes i edició en una finestra** (per decisió de l'usuari, com la finestra del Render;
   `settings/MaterialsPane.tsx`, `MaterialsList`): a dalt el cercador (sense accents, `fold`) i «Afegir» (biblioteca); a sota,
   les categories en el mateix **acordió** que els apartats de les galeries (`gallery-accordion` tancat amb vora, icona, nom,
   comptador i, sota el nom, per a què serveix: Taulers i Fons, per al nesting; Simulació, decoratius per a objectes i
@@ -29,9 +29,9 @@
   `GALLERY_COLS` de **`GalleryCard`** (marge `--gallery-px`): la mostra del material de debò (`MaterialSwatch`, 3:2, CSS de
   `previewStyle` a escala fixa: sense canvas per targeta, les procedurals es pinten un cop i es recorden), nom de dues línies,
   «Acabat · gruixos · cantell» (`materialSummary`) i l'etiqueta «★ Tauler per defecte» / «★ Fons per defecte».
-  - Tocar una targeta obre l'**editor a pantalla completa** (`components/EditorDialog`, també el dels ferratges: `Dialog size="full"`, 100vw × 100dvh,
-    zona segura als quatre costats, ✕ a `calc(env(safe-area-inset-top) + 8px)` i el títol a la seva altura: nom del material
-    i categoria). Mostres (`MaterialStage`, fora de la `MaterialCard` amb `key`: canviar de material no refà el 3D): la
+  - Tocar una targeta obre l'**editor en una finestra** (`FloatingWindow` `split`, `id` `material-editor`; el dels ferratges,
+    `hardware-editor`): gran i al mig a l'ordinador (es mou, s'estira, es maximitza), a tota la pantalla al mòbil; títol: nom
+    del material i, al costat, la categoria. No és modal: tocar una altra targeta de la graella hi obre aquella. Mostres (`MaterialStage`, fora de la `MaterialCard` amb `key`: canviar de material no refà el 3D): la
     **tira a escala real** (`MaterialHero fill`, 600 mm = l'amplada, «A escala real») i la **bola de material**
     (`settings/MaterialBall.tsx`, «Bola de material»: esfera de 300 mm, `ballMaterial` a `viewer/ballMaterial.ts` = el
     mateix camí que les peces, `finishMaterial` d'`exportablePanel.ts`; u = π·D i v = π·D/2, repeticions en u enteres si
@@ -56,7 +56,7 @@
     duplicat **obre l'editor** amb el nom seleccionat; «Obrir el meu» de la biblioteca també l'obre. **Eliminar** des de
     l'editor el tanca. Al mòbil l'editor fa de pàgina de detall: el seu ✕ és el «Tornar» (cap «‹ Materials»; la pàgina de
     la graella només té «‹ Preferències»). Controls de 280 px com a molt.
-- **Ferratges: graella i editor a pantalla completa, com Materials** (`settings/HardwarePane.tsx`, `HardwareList`): cercador
+- **Ferratges: graella i editor en una finestra, com Materials** (`settings/HardwarePane.tsx`, `HardwareList`): cercador
   amb «Afegir» (menú per tipus: copia el per defecte d'aquell lloc), acordió per categoria (`HARDWARE_CATEGORIES`, icones a
   `settings/hardwareIcons.ts`; oberta la de Frontisses, `mobles:md-open:hardware`) i, dins, **per sèrie** (per decisió de
   l'usuari: Frontisses › Sensys · Intermat, Tiradors › Classic · Modern, Portes corredisses › SlideLine 55…; `itemSeries`, la
@@ -110,7 +110,7 @@
   de fila, `shift`); al dibuix del generador (i a sota, la llista «referència … · cantells …», `opPlace`), a les vistes
   DXF del fabricant (cercles `viewCircles` amb el Ø) i a la peça d'exemple (`PanelDrawing dims="full"`). Lletra
   proporcional (`dimFont`), `style={{ fontSize }}`. Test `components/dims.test.ts`.
-  Un «només 2D» (sense STEP): la vista frontal del DXF a la targeta. L'editor (`components/EditorDialog`, el mateix que Materials) comença amb **«Com va muntat»** (vegeu
+  Un «només 2D» (sense STEP): la vista frontal del DXF a la targeta. L'editor (la `FloatingWindow` `split`, com Materials) comença amb **«Com va muntat»** (vegeu
   més avall), dibuixa les peces d'exemple (`hardwarePreview`) amb un **Detall** acotat (`PanelDrawing dims`) i a la dreta
   les opcions en **l'acordió de l'app, com l'editor de materials** (`FoldItem` sols, recordats a la sessió, insígnia amb el
   resum; `data-testid="hardware-sections"`): **General** (`LuInfo`, oberta; tipus a la insígnia; fabricant, referència,
@@ -136,16 +136,16 @@
   amb el mateix id i un altre contingut (un mòdul d'abans amb una cassoleta de 30) és la que es fabrica i no es toca.
   «Restaurar valors inicials» torna biblioteca i per defecte. **A l'editor, un sol selector** (per decisió de l'usuari: «el
   selector a Mobles que surti amb un drawer com fa la col·locació de materials i objectes als ambients»):
-  `settings/HardwareSelect.tsx` (`HardwareSelect` = botó amb la miniatura 3D de la targeta i el nom; `HardwareDrawer` = el
-  calaix sol) sobre el calaix comú `components/PickerDrawer.tsx` (`PickerDrawer`, `PickerButton`, `PickerRow`; el
-  mateix que el `MaterialSelect`): cercador (`hardwareMatches`), categories › sèries (`seriesGroups`, a
+  `settings/HardwareSelect.tsx` (`HardwareSelect` = botó amb la miniatura 3D de la targeta i el nom; `HardwarePicker` = la
+  finestra de tria) sobre la finestra de tria comuna `components/PickerWindow.tsx` (`PickerWindow`, `PickerButton`,
+  `PickerRow`; la mateixa que el `MaterialSelect`; des del 2026-10-15 una finestra flotant, no un calaix): cercador (`hardwareMatches`), categories › sèries (`seriesGroups`, a
   `settings/hardwareGroups.ts`, com Preferències) i `GalleryCard` amb la miniatura (`settings/HardwareThumb.tsx`, mòdul
   d'exemple `useMountBase`: les mateixes miniatures desades). Frontissa, guia, braç, tirador de cada front
   (`HardwarePick`, a dalt «Com el mòdul»), l'Espiga (Mòdul › Unió), la Pota de la base (a dalt
   «Genèriques») i el Ferratge d'un col·locat (només els compatibles amb les peces, `placeableOn`). Les
   còpies que no són a la biblioteca tal qual (`hardwareChoices`, per contingut, no per id) surten a part, «Còpia pròpia»,
   triades: es veu el que es fabrica i s'hi pot tornar; els importats sense confirmar porten «Sense confirmar» i la nota a
-  dalt del calaix (es poden triar, no fan cap forat); triar-ne un de la biblioteca canvia la còpia.
+  dalt de la finestra de tria (es poden triar, no fan cap forat); triar-ne un de la biblioteca canvia la còpia.
   - **«Com va muntat»** (per decisió de l'usuari: «preview 3D i en pla, amb el panell de com va muntat al moble»;
     `MountPreview` a `HardwarePane`): el ferratge **muntat** en un mòdul petit fet pel **camí de fabricació de sempre**
     (`core/build/hardwareMount.ts`, `hardwareMount(item, base)`: `buildModule` amb l'item al seu lloc del joc; el mòdul

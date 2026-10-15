@@ -118,7 +118,7 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
 
 #### Vista CAM
 - Exportar › Màquina CNC (Maestro) › «Vista CAM» (`LuMonitorCog`): perquè el taller revisi cada programa a l'app abans
-  d'enviar-lo, sense TopSolid. Diàleg a pantalla completa (zona segura com el Render) amb `export/CamPreview.tsx` sobre **el
+  d'enviar-lo, sense TopSolid. Una finestra gran (`FloatingWindow`, com el Render; a tota la pantalla al mòbil) amb `export/CamPreview.tsx` sobre **el
   mateix text dels .xcs que va al zip** (`xcs.sheetList`).
 - El dibuix surt de **llegir l'MSL**, no del model: `core/export/xcsPreview.ts` (`parseXcsPreview`, pur i testejat) llegeix
   peça de treball, peces i etiquetes dels comentaris, forats, polilínies (rectes, `AddArc2PointRadius/Center/3Points…`),

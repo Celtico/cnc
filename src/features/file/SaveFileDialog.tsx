@@ -1,6 +1,7 @@
-import { Button, Dialog, Portal, Stack, Switch, Text } from "@chakra-ui/react"
+import { Button, Stack, Switch, Text } from "@chakra-ui/react"
 import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { LuSave } from "react-icons/lu"
+import { FloatingWindow } from "../../components/FloatingWindow"
 import { toaster } from "../../components/ui/toaster"
 import { ambientFileName } from "../../core/file/ambientFile"
 import { mobleFileName } from "../../core/file/mobleFile"
@@ -14,7 +15,7 @@ type Saved = { filename: string; bytes: number; how: "shared" | "downloaded" }
 type Measured = { bytes: number; notes?: string[]; hasPhoto: boolean }
 
 /**
- * El diàleg «Desar com a fitxer» comú (`.moble` i `.ambient`): explicació, interruptor de les fotos, mida en viu i avisos.
+ * La finestra «Desar com a fitxer» comuna (`.moble` i `.ambient`): explicació, interruptor de les fotos, mida en viu i avisos.
  * `measure` construeix el fitxer per saber-ne la mida (es torna a fer en canviar l'interruptor); `save` el desa.
  */
 function SaveAsFileDialog({
@@ -76,53 +77,50 @@ function SaveAsFileDialog({
   }
 
   return (
-    <Dialog.Root open={open} onOpenChange={(e) => !e.open && onClose()}>
-      <Portal>
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content>
-            <Dialog.Header>
-              <Dialog.Title>Desar «{name}» com a fitxer</Dialog.Title>
-            </Dialog.Header>
-            <Dialog.Body>
-              <Stack gap={3}>
-                <Text fontSize="sm" color="fg.muted">
-                  {intro}
-                </Text>
-                <Switch.Root size="sm" checked={includePhoto && hasPhoto} disabled={!hasPhoto} onCheckedChange={(e) => setIncludePhoto(e.checked)}>
-                  <Switch.HiddenInput />
-                  <Switch.Control />
-                  <Switch.Label>
-                    {photoLabel}
-                    {measured && !hasPhoto ? ` (${noPhotoLabel})` : ""}
-                  </Switch.Label>
-                </Switch.Root>
-                {error ? (
-                  <Text fontSize="sm" color="fg.error">
-                    {error}
-                  </Text>
-                ) : (
-                  <Text fontSize="sm">Mida del fitxer: {measured === null ? "calculant…" : fmtBytes(measured.bytes)}</Text>
-                )}
-                {measured?.notes?.map((n) => (
-                  <Text key={n} fontSize="sm" color="fg.warning">
-                    {n}
-                  </Text>
-                ))}
-              </Stack>
-            </Dialog.Body>
-            <Dialog.Footer>
-              <Button variant="outline" onClick={onClose}>
-                Cancel·lar
-              </Button>
-              <Button colorPalette="wood" onClick={() => void doSave()} loading={busy} disabled={!!error || measured === null}>
-                <LuSave /> Desar
-              </Button>
-            </Dialog.Footer>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Portal>
-    </Dialog.Root>
+    <FloatingWindow
+      id="save-file"
+      open={open}
+      onClose={onClose}
+      title={`Desar «${name}» com a fitxer`}
+      width={520}
+      height={380}
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>
+            Cancel·lar
+          </Button>
+          <Button colorPalette="wood" onClick={() => void doSave()} loading={busy} disabled={!!error || measured === null}>
+            <LuSave /> Desar
+          </Button>
+        </>
+      }
+    >
+      <Stack gap={3}>
+        <Text fontSize="sm" color="fg.muted">
+          {intro}
+        </Text>
+        <Switch.Root size="sm" checked={includePhoto && hasPhoto} disabled={!hasPhoto} onCheckedChange={(e) => setIncludePhoto(e.checked)}>
+          <Switch.HiddenInput />
+          <Switch.Control />
+          <Switch.Label>
+            {photoLabel}
+            {measured && !hasPhoto ? ` (${noPhotoLabel})` : ""}
+          </Switch.Label>
+        </Switch.Root>
+        {error ? (
+          <Text fontSize="sm" color="fg.error">
+            {error}
+          </Text>
+        ) : (
+          <Text fontSize="sm">Mida del fitxer: {measured === null ? "calculant…" : fmtBytes(measured.bytes)}</Text>
+        )}
+        {measured?.notes?.map((n) => (
+          <Text key={n} fontSize="sm" color="fg.warning">
+            {n}
+          </Text>
+        ))}
+      </Stack>
+    </FloatingWindow>
   )
 }
 
