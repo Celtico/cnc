@@ -51,7 +51,7 @@ a **«només 3D»** (motor `model`): el model (GLB) i el volum, **mai cap forat*
 Sense STEP però amb IGES o 3DS, entra «només 3D» amb aquest 3D (la caixa surt de la malla). Només el 3D DWG/DXF, el SAT
 o el MAX sols no es poden importar.
 
-**Carpetes i nom** (`core/import/hettichNames.ts`, sense dependències del model: també el fa servir la lectura de les
+**Carpetes i nom** (`core/model/makers/hettichNames.ts`, sense dependències del model: també el fa servir la lectura de les
 preferències). De cada camí només compten les carpetes de l'article (`cleanFolders`): fora la carpeta de l'usuari
 («ferratges», on hi ha els ZIP), la del ZIP o de format (`STEP_…`, `DWG_DXF_…`, `3DS_…`, `dxf_einbau`) i tot el que hi ha
 abans de la família; el mateix article des del STEP i des del DWG/DXF dona les mateixes carpetes. Nom
@@ -61,7 +61,7 @@ diu el nom ni les etiquetes (recobrent, encastat), la sèrie en alemany com al c
 `itemSeries`): la carpeta de després de la família («Sensys», «Classic», «SlideLine 55», «System 8099»; les genèriques
 en català: «Acer», «D'angle», «Accessoris»…), per agrupar la biblioteca (§7).
 
-Carpetes → categories de l'app (`classifyHettich`, `core/import/hettichNames.ts`):
+Carpetes → categories de l'app (`classifyHettich`, `core/model/makers/hettichNames.ts`):
 
 | Carpeta | Categoria | Etiquetes / nom |
 |---|---|---|
@@ -167,7 +167,7 @@ queden només 3D (perfils de 5–20 cargols, perfils de 3,5 m, fitxers que el le
 estructures de 32 forats (70147, 70202) queden només 3D. Cadro (70), portes corredisses (~940) i plegables (~170): tot
 només 3D.
 
-El 3D: **OpenCascade** (`occt-import-js`, WASM de ~7,6 MB) en un worker (`components/viewer/occtWorker.ts`), només en
+El 3D: **OpenCascade** (`occt-import-js`, WASM de ~7,6 MB) en un worker (`components/viewer/occtWorker.ts`, **tret el 2026-10-15** amb la neteja: la importació és adormida), només en
 importar; `stepMesh.ts` passa la malla al marc del ferratge (m) i en fa un GLB (`GLTFExporter`, normals de les cares).
 Una frontissa Sensys són ~1.800 triangles (~70 kB de GLB).
 
@@ -560,7 +560,7 @@ Es baixen com a fitxers solts `<article>_<id del document de 8 xifres>[_R|_L].<e
 Versión corta, recto, Tornillos.zip», amb els fitxers a dins amb un espai al davant). Es deixen anar tal qual (fitxers,
 carpeta o ZIP, també barrejats amb els de Hettich) a «Importar del fabricant».
 
-### Com es fa servir (`core/import/blum.ts`, `makers.ts`, `xilogPgm.ts`)
+### Com es fa servir (`core/model/makers/blum.ts`, `makers.ts`, `xilogPgm.ts`)
 
 - **Fabricant** (`detectMaker`): un nom `<article>_<8 xifres>` amb alguna lletra o punt a l'article és de Blum (els de
   Hettich són només xifres). **Article** (`blumFileInfo`): sense l'id del document ni la mà; el ZIP repetit del

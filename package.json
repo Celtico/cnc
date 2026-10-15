@@ -10,8 +10,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -b --noEmit",
-    "lint": "oxlint",
-    "audit": "pnpm audit --audit-level high"
+    "lint": "oxlint --deny-warnings src",
+    "audit": "pnpm audit --audit-level high",
+    "deadcode": "knip",
+    "cycles": "madge --circular src",
+    "check": "pnpm typecheck && pnpm lint && pnpm deadcode && pnpm cycles && pnpm test"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.132.1",

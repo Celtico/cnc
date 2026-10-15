@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from "node:fs"
 import { dirname, join, relative, resolve } from "node:path"
+import ts from "typescript"
 import { describe, expect, it } from "vitest"
 
 /**
@@ -42,5 +43,41 @@ describe("arquitectura", () => {
   })
   it("`lib/` és d'ús general: no importa de `features/`, `components/` ni `core/`", () => {
     expect(violations((f) => f.startsWith("lib/"), (i) => !!i.path && /^(features|components|core)\//.test(i.path))).toEqual([])
+  })
+})
+
+/**
+ * Mides màximes (`docs/convencions.md` §Mida): un fitxer o una funció que creix més enllà és senyal que hi ha dues coses
+ * barrejades. Les dades (catàlegs, plantilles) i el traçador de camins (bucle calent, shader) en queden fora.
+ */
+const MAX_FILE_LINES = 700
+const MAX_FUNCTION_LINES = 350
+const SIZE_EXEMPT = new Set([
+  "core/model/collections.ts",
+  "core/model/ambientTemplates.ts",
+  "core/model/storeCatalog.ts",
+  "components/viewer/render/gpuTracer.wgsl.ts",
+  "components/viewer/render/pathWorker.ts",
+])
+
+describe("mida", () => {
+  const sized = files(SRC).map((f) => ({ file: relative(SRC, f).replaceAll("\\", "/"), text: readFileSync(f, "utf8") })).filter((x) => !SIZE_EXEMPT.has(x.file))
+  it(`cap fitxer passa de ${MAX_FILE_LINES} línies`, () => {
+    expect(sized.filter((x) => x.text.split("\n").length > MAX_FILE_LINES).map((x) => `${x.file}: ${x.text.split("\n").length}`)).toEqual([])
+  })
+  it(`cap funció passa de ${MAX_FUNCTION_LINES} línies`, () => {
+    const long: string[] = []
+    for (const { file, text } of sized) {
+      const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, file.endsWith("x") ? ts.ScriptKind.TSX : ts.ScriptKind.TS)
+      const visit = (n: ts.Node) => {
+        if ((ts.isFunctionDeclaration(n) || ts.isArrowFunction(n) || ts.isFunctionExpression(n) || ts.isMethodDeclaration(n)) && n.body) {
+          const lines = sf.getLineAndCharacterOfPosition(n.end).line - sf.getLineAndCharacterOfPosition(n.getStart()).line
+          if (lines > MAX_FUNCTION_LINES) long.push(`${file}:${sf.getLineAndCharacterOfPosition(n.getStart()).line + 1}: ${lines}`)
+        }
+        ts.forEachChild(n, visit)
+      }
+      visit(sf)
+    }
+    expect(long).toEqual([])
   })
 })

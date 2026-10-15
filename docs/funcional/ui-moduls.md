@@ -1,0 +1,112 @@
+# UI: mòduls compartits, navegació i mides tàctils
+
+> Tret del `CLAUDE.md` (2026-10-15) perquè no es carregui sencer a cada sessió. Llegeix-lo abans de tocar aquesta part.
+
+#### Mòduls compartits (com les apps professionals)
+Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat nova d'un editor es fa al mòdul compartit:
+- **`Workspace`** + `useWorkspace(id)` (`components/`): estructura · visor · propietats, vores arrossegables, plegar amb els
+  botons de les cantonades, pestanyes Estructura · Propietats al mòbil, amplades recordades; a l'Editor i als Ambients.
+  `extra` (l'Assistent de l'Editor i dels Ambients): un segon panell a la columna de la dreta, pestanyes Propietats · <extra> a dalt
+  a l'ordinador i una tercera pestanya al mòbil; es munta el primer cop i es queda muntat.
+- **`shrinkImage`** (`lib/imageShrink.ts`): l'única funció per reduir imatges (foto del lloc, plànol de fons dels
+  ambients, fotos per a l'assistent; `jpeg` = sempre JPEG sobre blanc).
+- **`SceneHelpers`** (`StudioEnvironment`, `SceneAccess`) als visors 3D; **`RenderDialog`** a l'editor i als ambients;
+  **`MoveGizmo`**, **`BoxFrame`**; **`ViewOptions`** / **`ViewTile`**.
+- **`TreeRow`** · `TreeRowMenu` · `TreeSection` (`components/TreeRow.tsx`): fila d'arbre (sagnat, triada `wood.muted`,
+  fletxa de plegar, menú ⋯, arrossegar), menú ⋯ i títol de grup amb el + (o un menú, `menu`). Estructura de l'editor i arbre
+  dels Ambients.
+- **Desfer/refer comú** (`features/history/`): `history.ts` (pur, test: límit, ajuntar per temps `coalesceMs` o per
+  `group`, canvis en viu `commit: false` + `commitHistory` en deixar anar, refer que es buida) i `useHistory` (React:
+  `value`, `set`, `commit`, `undo`, `redo`, `reset`, `state`/`restore`); `useUndoKeys` amb `undoKeyAction` (`undoKeys.ts`,
+  test; `scope` = un diàleg amb desfer propi) i els botons `components/UndoRedo` (`LuUndo2` · `LuRedo2`). Editor de
+  mobles, Ambients i editor de perfils. Un editor nou amb desfer fa servir aquest, no un de propi.
+- **`NameDialog`** (`components/`): posar un nom (grup nou, canviar el nom, mòdul nou), amb un nom per defecte seleccionat.
+- **`PickerDrawer`** (`components/PickerDrawer.tsx`: `PickerDrawer`, `PickerButton`, `PickerRow`): el calaix dels
+  selectors (dreta a l'ordinador, de baix al mòbil, cercador a dalt). El fan servir el `MaterialSelect` i el
+  **`HardwareSelect`** (tria d'un ferratge al moble, vegeu Preferències › Ferratges).
+- **Plànols acotats** (`components/dims.ts` + `components/DimLine.tsx`): totes les cotes dels dibuixos 2D (pla del
+  muntatge, generador, vistes DXF, peça d'exemple, col·locació). **`StepRuleRows`** (`components/StepRuleRows.tsx`): les
+  regles de graons (frontisses per alçada, distància del tirador, còpies d'un col·locat per mida).
+- **`MaterialSelect`** (`settings/MaterialSelect.tsx`) a tot arreu on es tria un material (amb **cercador** a dalt del calaix,
+  pel nom i sense accents, que obre les categories amb resultats): un **botó** (fons suau, a tota
+  l'amplada, sense fletxa ni icona: no ha de semblar un desplegable) amb la mostra i el nom que obre un calaix (a la dreta a
+  l'ordinador, de baix al mòbil) amb un acordió per categoria i les mostres (només de la categoria oberta); en tocar-ne una es
+  tria i es tanca. `emptyLabel` per a «Com el cos», «Com a Preferències», «Tots els altres», «Cap (fantasma)».
+- **`FormRow`** (`components/FormRow`): **tots els camps de l'app són files etiqueta · control** (Preferències, inspectors,
+  diàlegs de render, textura, foto i nesting): etiqueta a l'esquerra (min(150 px, 36 %)), control amb `maxW` i l'ajuda a
+  sota; **consulta de contenidor**: amb menys de 300 px l'etiqueta va a sobre. `NumRow` (`components/NumRow`, 180 px, amb
+  `ariaLabel`), `IconChoice hideLabel` i `MaterialSelect hideLabel` dins un `FormRow`; `FormSection` per a seccions dins una
+  targeta (títol petit en majúscules = `components/SectionLabel`, també als grups de les llistes i a Opcions de vista);
+  `ChoiceChips` per a opcions que han de saltar de línia.
+- **Opcions amb icona** (`components/IconChoice.tsx`): poques opcions → botons d'icona amb el nom al tooltip i l'opció triada
+  al costat del títol (o a sota, `hideLabel`). **Estil discret i comú** (`components/segmented.ts`, `segGroup` + `segItem(on)`):
+  control segmentat petit (botons xs, fons suau, la triada amb fons clar, ombra i icona del color principal), **sense ocupar
+  tota l'amplada** i sense botons plens; el fan servir IconChoice, el tipus de front, la «Fila» del mòdul, `ChoiceChips`,
+  `ViewTile`, Forma, «Al terra / A la paret» i les eines de la Foto. Base, Fons, Tapa, Patró de reixeta, Direcció dels
+  objectes són només icona; Efecte i Forma dels objectes, portes (una/dues, frontisses), abatible i muntatge de la reixeta,
+  segments amb icona i text.
+- **Un sol acordió** (`components/Fold.tsx`, `FoldGroup` + `FoldItem`, sobre `Accordion` de Chakra; context i tipus a
+  `foldContext.ts`, estat de sessió a `sessionState.ts`): inspectors, Render, Foto, Exportar, galeries, calaix de materials,
+  taulells i forats (`RunsForm`) i eines de la màquina. Res d'`Accordion`/`Collapsible` de Chakra ni de plegables propis fora
+  d'aquí. `FoldItem`: `id`, `icon` (del catàleg, obligatòria a les seccions), `title`, `badge`/`badgePalette`, `count`,
+  `description` (sempre), `summary` (tancat), `actions` (al costat de la capçalera, mai a dins), `header` (fila de taula).
+  Variants: `section` (inspectors i Render: icona + títol + insígnia + fletxa, sense fons; `size="sm"` per a subseccions),
+  `gallery` (`.gallery-accordion`), `nested` (`.inner-accordion`, categories), `card` (vora i resum: taulells, forats) i
+  `row` (fila de taula desplegable: eines).
+  - **Una sola oberta alhora a tota l'app** (per decisió de l'usuari, 2026-10-14: «a tots els acordions el mateix»).
+  - **Sol** (sense `FoldGroup`): **comença tancat** (llevat de `defaultOpen`, p. ex. els xocs amb l'obertura actual), es
+    recorda durant la sessió (`mobles:section:<id>`) i, en obrir-lo, tanca els sols germans del mateix nivell (`SoloScope`:
+    l'arrel o el contingut d'una mateixa secció; les subseccions no tanquen la seva secció).
+  - **`FoldGroup`**: un acordió compartit; per defecte un obert alhora (`multiple` per a diversos); estat controlat
+    (`value`), de la sessió (`storageKey`) o intern; `forceOpen` = la cerca de les galeries (n'obre les que calgui).
+  - **Totes les variants s'obren i es tanquen amb animació** (200 ms `ease`, com les galeries; res amb
+    `prefers-reduced-motion`) amb el contingut propi `FoldContent` (no l'`ItemContent` de Chakra): una graella d'una fila
+    que passa de `grid-template-rows: 0fr` a `1fr` (+ opacitat), **sense mesurar l'alçada**, així el contingut que arriba
+    tard o canvia amb la secció oberta mai es queda a alçada 0 (el `Collapsible` de Chakra sí). Porta els atributs de
+    l'acordió (`role="region"`, ids, `data-part="item-content"`, `data-state`); estructura `item-content` › `.fold-clip`
+    › `ItemBody` (selectors de `layout.css`). El contingut es munta en obrir (`lazyMount`); `section`, `card` i `row` el
+    desmunten quan s'acaba d'animar el tancament (`transitionend` o un temporitzador) i, oberts i quiets, no retallen
+    (`overflow: visible`; només mentre s'anima); les galeries el conserven amagat (`visibility: hidden`). Comprovat
+    recarregant amb seccions obertes, Peça → Talla amb seccions obertes i l'alçada fotograma a fotograma.
+  - Les pàgines de Preferències no en fan servir (`SettingsGroup`, sempre obert); l'editor de materials sí (Aspecte ·
+    Fabricació · Per defecte) i el de ferratges també (General · Importat del fabricant (només els importats) · Plànols i
+    documents · Placa · Mides · Quantitat · Distància · Mecanitzats · als jocs, les seves seccions). El contingut és
+    una graella d'una columna `minmax(0, 1fr)`: una taula ampla es desplaça a dins (`overflowX`), no eixampla la secció.
+- **`PageHeader`** (`components/PageHeader`, Mobles · Ambients · Objectes · Preferències): títol gran i l'explicació
+  (`actions` opcional, a sota del títol).
+- **`SearchBar`** (`components/SearchBar`): **tots els cercadors** (galeries, `MasterDetail`, Materials, Ferratges, calaix
+  del `MaterialSelect`) amb el «+» al costat (`add`: `wood`, text a l'ordinador i icona al mòbil, `iconOnly` per a columnes
+  estretes) i `extra` per a més accions a la fila. **Primer els botons i després el cercador** (per decisió de l'usuari, a
+  tot arreu igual: galeries, llistes de Preferències i Materials): «+» · `extra` · cercador, que s'estira (el menú del
+  «+» s'obre cap a la dreta, `bottom-start`). **Seccions de les galeries sense marge** (`.gallery-accordion`, `layout.css`): barra d'eines i acordions de
+  dins **a sang**; la resta amb `--gallery-px`. Res de marges negatius.
+
+#### Navegació i barres
+- **Menú global sempre igual** (`App.tsx`, `GLOBAL_NAV`, com Figma o Linear): **Mobles · Ambients · Objectes** i, a baix de
+  tot, Preferències (igual a la barra de baix del mòbil); l'apartat del document obert queda marcat (`section`). L'app s'obre
+  a Mobles (el primer del menú) si no hi havia res obert. **Cada apartat recorda l'últim obert** (`mobles:last-object`, `mobles:last-moble`): clicar
+  Objectes o Mobles hi torna si encara existeix; tornar a la llista («Mobles ›», la fletxa o clicar l'apartat del document
+  obert) el deixa d'obrir. **Les accions d'un apartat van a la seva pàgina** (el botó principal, al costat del cercador), mai
+  al menú.
+- **Barra superior del document** (`components/TopBar.tsx`, `DocBar` per a moble, objecte i ambient —`AmbientTopBar`—, com
+  Figma/Onshape/Notion): `Mobles › Nom` a l'esquerra (nom editable) i les accions del document a la dreta, que cada pàgina hi
+  posa amb `<TopBarActions>` (desar, desfer, refer). Les pàgines **no porten títol propi** ni capçaleres pròpies. Les pàgines
+  d'un moble (`PROJECT_NAV`) són **pestanyes al mig de la barra** (`TopBar tabs`); al mòbil, en una **franja a sang sota la
+  barra de dalt** (`mobileProjectTabs`: icona a sobre i nom a sota, la triada amb el color principal i una ratlla): la barra
+  de baix és **sempre el menú general** (com les apps de l'iPhone).
+- **Mòbil sense títols repetits**: les pàgines d'inici porten el seu títol gran (com iOS) i no hi ha barra de dalt; només n'hi
+  ha quan cal tornar enrere. **Un sol «‹ Tornar» a la vista** («‹ nom del moble», «‹ Preferències», «‹ Màquines CNC»;
+  `useSessionString` es manté igual entre components amb la mateixa clau; `DETAIL_KEYS`). Diàlegs i calaixos a pantalla
+  completa respecten la zona segura (`env(safe-area-inset-top)`), també el botó de tancar; el Render (i l'editor de
+  materials, la Vista CAM), els quatre costats i el botó a `calc(env(…) + 8px)`, també a l'ordinador i a l'iPad.
+
+#### Mides d'iOS a les pantalles tàctils
+- `src/theme/layout.css`, `@media (pointer: coarse)` (CSS sense capa: guanya a les de Chakra): es canvien les variables dels
+  tokens. Text `sm`/`md` 17, `xs` 13, `2xs` 11, `lg` 20, `xl` 22; controls (`sizes` 8–11) 40 / 44 / 44 / 48 (mínim tàctil
+  d'Apple: 44); interlineat 1,3; camps on s'escriu a 17 (amb menys de 16, Safari fa zoom). `FormRow` centra l'etiqueta amb
+  `--form-row-label-pt`. Barra de baix com la d'iOS (icona 24, nom 2xs). Al tàctil també: noms de les targetes (`.card-title`)
+  a 15 en dues línies, capçaleres d'acordió de 48, opcions dels controls segmentats (`.seg-item`) de 44 × 44 i camps numèrics
+  **sense les fletxetes + −** (es fa servir el teclat numèric, `inputMode`). A l'ordinador, les mides de Chakra (sm = 14).
+- **La mateixa estructura a l'ordinador i al mòbil** (per decisió de l'usuari), com la Configuració d'iOS/macOS: files de
+  formulari (`.form-row`) enganxades amb una línia fina, marges de les targetes de Preferències i de les seccions
+  (`.settings-group-*`, `.form-section`: 20, al tàctil 16) i 32 entre grups (`.settings-stack`). **Només canvien les mides.**
