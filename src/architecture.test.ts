@@ -27,6 +27,17 @@ const violations = (from: (f: string) => boolean, bad: (i: { spec: string; path?
   all.filter((x) => from(x.file)).flatMap((x) => x.imports.filter(bad).map((i) => `${x.file} → ${i.spec}`))
 
 describe("arquitectura", () => {
+  it("cap fitxer es diu igual que un altre de la mateixa carpeta canviant només majúscules (al Mac obre el que no toca)", () => {
+    const seen = new Map<string, string>()
+    const clash: string[] = []
+    for (const f of files(SRC)) {
+      const key = f.replace(/\.(test\.)?tsx?$/, "").toLowerCase()
+      const prev = seen.get(key)
+      if (prev && prev !== f.replace(/\.(test\.)?tsx?$/, "")) clash.push(`${relative(SRC, prev)} ↔ ${relative(SRC, f)}`)
+      seen.set(key, f.replace(/\.(test\.)?tsx?$/, ""))
+    }
+    expect(clash).toEqual([])
+  })
   it("`core/` és lògica pura: sense React, Chakra, three ni Dexie", () => {
     expect(violations((f) => f.startsWith("core/"), (i) => /^(react|react-dom|@chakra-ui|three|@react-three|dexie)(\/|$)/.test(i.spec))).toEqual([])
   })

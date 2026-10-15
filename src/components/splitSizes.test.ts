@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { splitterPanels, splitterSizes, widthUpdates, type SplitPanelSpec } from "./panelSplit"
+import { splitterPanels, splitterSizes, widthUpdates, type SplitPanelSpec } from "./splitSizes"
 
 const workspace = (over: Partial<SplitPanelSpec> = {}): SplitPanelSpec[] => [
   { id: "tree", width: 280, setWidth: vi.fn(), min: 48, max: 900, hidden: false, onHide: vi.fn(), ...over },

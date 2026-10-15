@@ -1,2 +1,6 @@
 overrides:
   source-map-js: ^1.2.2
+auditConfig:
+  ignoreGhsas:
+    # braces (fast-glob > micromatch): no hi ha versió arreglada; només el fa servir knip (desenvolupament), no arriba a l'app.
+    - GHSA-vfj7-8cjw-p6xm

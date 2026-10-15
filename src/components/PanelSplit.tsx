@@ -1,6 +1,6 @@
 import { Box, Splitter, type SplitterRootProps } from "@chakra-ui/react"
 import { useRef } from "react"
-import { splitterPanels, splitterSizes, widthUpdates, type SplitPanelSpec } from "./panelSplit"
+import { splitterPanels, splitterSizes, widthUpdates, type SplitPanelSpec } from "./splitSizes"
 
 /**
  * Panells amb vores arrossegables, sobre el **`Splitter` de Chakra** (per decisió de l'usuari, 2026-10-15: «si Chakra ja
