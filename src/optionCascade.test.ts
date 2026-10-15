@@ -15,6 +15,8 @@ const SRC = resolve(__dirname)
 const INSPECTOR_FILES = [
   "features/editor/EditorInspector.tsx",
   "features/editor/InspectorSections.tsx",
+  "features/editor/ModuleTypeSection.tsx",
+  "features/composition/SupportForm.tsx",
   "features/composition/CarcassForm.tsx",
   "features/composition/BaseFields.tsx",
   "features/composition/HardwarePick.tsx",

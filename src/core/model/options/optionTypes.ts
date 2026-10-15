@@ -23,7 +23,7 @@ export const OPTION_ICON_IDS = [
   "structure", "moble", "module", "zone", "part", "ref", "multi",
   "summary", "joinery", "scene", "materials", "position", "dims", "appliance", "carcass", "doors", "joint",
   "front", "shelves", "divide", "split", "subsection", "effect", "orient", "shape", "cnc", "group", "attach",
-  "hardware", "align", "items",
+  "hardware", "align", "items", "type", "support",
 ] as const
 export type OptionIcon = (typeof OPTION_ICON_IDS)[number]
 
@@ -92,6 +92,8 @@ export const UI = {
   shelves: "features/composition/zone/ShelvesSection.tsx",
   split: "features/composition/zone/SplitSizes.tsx",
   appliance: "features/composition/zone/ApplianceSection.tsx",
+  type: "features/editor/ModuleTypeSection.tsx",
+  support: "features/composition/SupportForm.tsx",
   part: "features/composition/PartInspector.tsx",
   multi: "features/composition/PartInspector.tsx",
   ref: "features/composition/RefInspector.tsx",

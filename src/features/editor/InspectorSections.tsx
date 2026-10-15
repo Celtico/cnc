@@ -1,12 +1,12 @@
 import { Stack, Switch } from "@chakra-ui/react"
-import { LuArrowDownToLine, LuBolt, LuBrickWall, LuFrame, LuPalette, LuPanelTop } from "react-icons/lu"
+import { LuArrowDownToLine, LuBolt, LuBrickWall, LuFrame, LuPalette } from "react-icons/lu"
 import { FoldItem } from "../../components/Fold"
 import { FormRow } from "../../components/FormRow"
 import { IconChoice } from "../../components/IconChoice"
 import { NumRow } from "../../components/NumRow"
 import type { ModuleBuild } from "../../core/build/buildModule"
 import { splitChildSizes } from "../../core/build/layout"
-import { applianceDefaults, carcassBounds, coveringZone, freeX, hasDrawers, moduleHasInnerPieces, moduleRows, moduleSlotItem, mountOf, rowOf, setModuleMount, system32RowPlace, visibleModule, zoneAppliance, zoneBounds, type Composition, type Module, type Settings, type Zone } from "../../core/model"
+import { carcassBounds, coveringZone, moduleApplianceCarcass, freeX, hasDrawers, moduleHasInnerPieces, moduleRows, moduleSlotItem, moduleType, mountOf, rowOf, setModuleMount, system32RowPlace, visibleModule, zoneBounds, type Composition, type FloorSupport, type Module, type Settings, type Zone } from "../../core/model"
 import { CarcassForm, InnerClearanceRow, JointForm, MaterialsForm } from "../composition/CarcassForm"
 import { System32Pick } from "../composition/HardwarePick"
 import { ModuleDoorsSection, ZonePanel } from "../composition/ZonePanel"
@@ -15,7 +15,7 @@ import { zoneLabel } from "../composition/zoneLabel"
 import { MaterialSelect } from "../settings/MaterialSelect"
 import type { SetComp } from "./useEditorDoc"
 
-/** Els camps de la secció «Posició» d'un mòdul: fila, alçada, separacions, girat i X. */
+/** On va el mòdul (a sota del Tipus): arrambat o lliure al terra, l'alçada del penjat, les separacions, girat i X. */
 export function ModulePositionFields({ comp, module, moduleX, updateModule }: { comp: Composition; module: Module; moduleX: number | undefined; updateModule: (m: Module) => void }) {
   // Posició dins de la seva fila (a terra o penjats) i el mòdul anterior de la fila.
   const rowMates = comp.modules.filter((m) => rowOf(m) === rowOf(module) && !freeX(m))
@@ -23,34 +23,32 @@ export function ModulePositionFields({ comp, module, moduleX, updateModule }: { 
   const rowPrev = rowIndex > 0 ? rowMates[rowIndex - 1] : undefined
   return (
     <>
-      {/* Dues files, com les cuines: a terra (baixos) i penjats (alts). Dins de cada
-          fila, l'ordre és el de l'arbre (d'esquerra a dreta) i cada mòdul va al costat
-          de l'anterior de la seva fila. */}
-      <FormRow
-        optionId="module.position.mount"
-        label="Fila"
-        help={
-          mountOf(module) === "hung"
-            ? "Al 3D, arrossega la maneta del mòdul: es mou per la paret, de costat i amunt/avall (Maj: tot el moble)."
-            : mountOf(module) === "floor"
+      {/* Dues files, com les cuines: a terra (baixos) i penjats (alts); el penjat es tria al Tipus. Dins de cada fila,
+          l'ordre és el de l'arbre (d'esquerra a dreta) i cada mòdul va al costat de l'anterior de la seva fila. A terra:
+          arrambat a la paret (a la fila) o lliure al terra (X pròpia). */}
+      {mountOf(module) === "hung" ? null : (
+        <FormRow
+          optionId="module.position.mount"
+          label="Lloc"
+          help={
+            mountOf(module) === "floor"
               ? "Al 3D, arrossega la maneta del mòdul: es mou pel terra, de costat i endavant/enrere (Maj: tot el moble)."
               : "Al 3D, arrossega la maneta del mòdul: llisca de costat tocant la paret (Maj: tot el moble)."
-        }
-      >
-        {/* Com els altres botons d'opció: només la icona, el nom al tooltip i la triada a sota. */}
-        <IconChoice
-          label="Fila"
-          hideLabel
-          value={mountOf(module)}
-          options={[
-            { value: "wall", label: "Arrambat a la paret", icon: LuBrickWall, hint: "Arrambat a la paret: a terra; es mou de costat" },
-            { value: "hung", label: "Penjat", icon: LuPanelTop, hint: "Penjat a la paret: es mou de costat i amunt/avall" },
-            { value: "floor", label: "Lliure al terra", icon: LuArrowDownToLine, hint: "Lliure al terra: es mou pel terra, també separat de la paret" },
-          ]}
-          // Al terra: surt de la fila i es queda on és (X pròpia). El mateix camí que l'assistent (`setModuleMount`).
-          onChange={(v) => updateModule(setModuleMount(module, v, Math.round(moduleX ?? 0)))}
-        />
-      </FormRow>
+          }
+        >
+          <IconChoice
+            label="Lloc"
+            hideLabel
+            value={mountOf(module) as "wall" | "floor"}
+            options={[
+              { value: "wall", label: "Arrambat a la paret", icon: LuBrickWall, hint: "Arrambat a la paret: a la fila; es mou de costat" },
+              { value: "floor", label: "Lliure al terra", icon: LuArrowDownToLine, hint: "Lliure al terra: es mou pel terra, també separat de la paret (una illa)" },
+            ]}
+            // Al terra: surt de la fila i es queda on és (X pròpia). El mateix camí que l'assistent (`setModuleMount`).
+            onChange={(v) => updateModule(setModuleMount(module, v, Math.round(moduleX ?? 0)))}
+          />
+        </FormRow>
+      )}
       {module.carcass.base.kind === "wall" && (
         <NumRow
           optionId="module.position.height"
@@ -120,16 +118,15 @@ export function ModulePositionFields({ comp, module, moduleX, updateModule }: { 
  * retranqueig a la Caixa; el material dels fronts a Materials; l'espiga a Unió. Els ferratges per defecte del
  * mòdul no surten: cada compartiment tria el seu (o «Com el mòdul»).
  */
-export function ModuleSections({ module, updateModule }: { module: Module; updateModule: (m: Module) => void }) {
+export function ModuleSections({ module, updateModule, support }: { module: Module; updateModule: (m: Module) => void; /** El suport dels mòduls de terra (Moble › Sòcol i potes): la Caixa el diu. */ support?: FloorSupport }) {
   const rows = moduleRows(module)
+  const type = moduleType(module)
   return (
     <>
-      {/* Electrodomèstic d'un mòdul sense dividir (per decisió de l'usuari, 2026-10-15: «ja és l'electrodomèstic»; «les
-          opcions depenen de l'electrodomèstic seleccionat»): el de l'arrel (`root.appliance`), **a dalt de la Caixa**:
-          l'aparell decideix la caixa (`applianceCarcass`: la Caixa només ofereix les parts de fusta que admet), no al
-          revés. Si l'ocupa, l'arbre no ensenya l'«Interior» (`isApplianceModule`); amb la placa o la campana, l'«Interior»
-          conserva el seu contingut. Un mòdul dividit el tria a cada compartiment. Mai amb les Portes (dividit). */}
-      {!module.root.split && (
+      {/* La placa (Baix) i la campana (Penjat) van al moble sense ser-ne l'aparell: Electrodomèstic a sobre de la Caixa (el
+          de l'arrel, `root.appliance`; l'«Interior» conserva el contingut). El mòdul que **és** l'aparell (rentaplats,
+          frigorífic…) el tria a Tipus i en porta les opcions a la Caixa. Un mòdul dividit el tria a cada compartiment. */}
+      {!module.root.split && (type === "base" || type === "wall") && (
         <ApplianceSection
           module
           root={module.root}
@@ -137,17 +134,12 @@ export function ModuleSections({ module, updateModule }: { module: Module; updat
           bounds={zoneBounds(visibleModule(module), module.root.id) ?? carcassBounds(module.carcass)}
           hardware={module.hardware}
           noHandles={module.fronts.handles === "none"}
-          onChange={(root) => {
-            // Un aparell nou porta la caixa estàndard que es pot triar (el nínxol de terra, sense laterals).
-            const a = zoneAppliance(root)
-            const was = module.root.appliance?.hardware.id
-            const carcass = a && root.appliance?.hardware.id !== was ? applianceDefaults(a, module.carcass) : module.carcass
-            updateModule({ ...module, root, carcass })
-          }}
+          only={(a) => (type === "wall" ? a.kind === "hood" : a.kind === "hob")}
+          onChange={(root) => updateModule({ ...module, root })}
         />
       )}
-      <FoldItem optionId="module.carcass" id="mod-structure" title="Caixa" icon={LuFrame} badge={rows.style ? (module.fronts.style === "inset" ? "Encastats" : "Recobrents") : undefined}>
-        <CarcassForm module={module} onChange={updateModule} section="structure" rows={rows} />
+      <FoldItem optionId="module.carcass" id="mod-structure" title="Caixa" icon={LuFrame} badge={rows.style && !moduleApplianceCarcass(module)?.rule.niche ? (module.fronts.style === "inset" ? "Encastats" : "Recobrents") : undefined}>
+        <CarcassForm module={module} onChange={updateModule} section="structure" rows={rows} support={support} />
       </FoldItem>
       {/* Portes de dalt a baix de tot el mòdul (armari), només amb l'Interior dividit: sense dividir, el Front és el
           del compartiment. Després de la Caixa (els laterals diuen on hi caben) i abans dels Materials (Fronts). */}

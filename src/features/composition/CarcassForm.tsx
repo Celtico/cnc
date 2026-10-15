@@ -1,5 +1,5 @@
 import { Button, HStack, Stack, Switch, Text } from "@chakra-ui/react"
-import { DEFAULT_GRILLE, UI_PATHS, applianceCarcassText, backChoices, hasBottom, moduleApplianceCarcass, visibleModule, boardChoices, hardwareSummary, jointApplies, materialByName, moduleRows, moduleSlotItem, type Base, type Carcass, type HardwareItem, type Module, type ModuleRows, type Top } from "../../core/model"
+import { DEFAULT_GRILLE, UI_PATHS, applianceCarcassText, carcassBounds, zoneBounds, type FloorSupport, backChoices, hasBottom, moduleApplianceCarcass, visibleModule, boardChoices, hardwareSummary, jointApplies, materialByName, moduleRows, moduleSlotItem, type Base, type Carcass, type Module, type ModuleRows, type Top } from "../../core/model"
 import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { IconChoice } from "../../components/IconChoice"
@@ -7,11 +7,12 @@ import { useState } from "react"
 import { ProfileEditor } from "./ProfileEditor"
 import { PRESETS, matchPreset } from "./profilePresets"
 import { LuCircle, LuPencilRuler, LuRectangleHorizontal, LuSquircle } from "react-icons/lu"
-import { LuArrowDownToLine, LuDrill, LuFootprints, LuGrid3X3, LuInspectionPanel, LuLayers2, LuPanelBottom, LuPanelTop, LuSquareDashed, LuSquare, LuSquareDashedBottom, LuSquareSquare, LuSquareStack, LuTriangleRight, LuWind } from "react-icons/lu"
+import { LuDrill, LuGrid3X3, LuInspectionPanel, LuLayers2, LuPanelBottom, LuPanelTop, LuSquareDashed, LuSquare, LuSquareDashedBottom, LuSquareSquare, LuSquareStack, LuTriangleRight, LuWind } from "react-icons/lu"
 import { useSettings } from "../settings/SettingsContext"
 import { MaterialSelect } from "../settings/MaterialSelect"
 import { HardwarePick } from "./HardwarePick"
-import { HangerFields, PlinthFields } from "./BaseFields"
+import { HangerFields } from "./BaseFields"
+import { ApplianceFields } from "./zone/ApplianceSection"
 
 type CarcassSection = "dims" | "structure"
 
@@ -22,14 +23,15 @@ type CarcassSection = "dims" | "structure"
  * decisió de l'usuari, 2026-10-08: «l'Estil també a la Caixa»; abans eren a «Acabats»). Només el que la construcció
  * llegeix (`moduleRows`, `core/model/usedHardware.ts`). Els passacables són a `CableHolesForm`.
  */
-export function CarcassForm({ module, onChange, section, rows = moduleRows(module) }: { module: Module; onChange: (m: Module) => void; section: CarcassSection; rows?: ModuleRows }) {
+export function CarcassForm({ module, onChange, section, rows = moduleRows(module), support }: { module: Module; onChange: (m: Module) => void; section: CarcassSection; rows?: ModuleRows; /** El suport dels mòduls de terra (Moble › Sòcol i potes). */ support?: FloorSupport }) {
   const c = module.carcass
   const { gaps } = useSettings().settings
   const set = (patch: Partial<Carcass>) => onChange({ ...module, carcass: { ...c, ...patch } })
   const setFronts = (patch: Partial<Module["fronts"]>) => onChange({ ...module, fronts: { ...module.fronts, ...patch } })
   // La caixa tal com es construeix (`visibleModule`): el `open` d'abans com a «Sense base» i les parts que fixa
   // l'electrodomèstic que és el mòdul (`moduleApplianceCarcass`). Es mostra aquesta; s'escriu a la de l'usuari.
-  const vc = visibleModule(module).carcass
+  const vm = visibleModule(module)
+  const vc = vm.carcass
   const fixed = moduleApplianceCarcass(module)
   const rule = fixed?.rule
   const ruleHelp = fixed ? applianceCarcassText(fixed.appliance, fixed.rule) : undefined
@@ -45,42 +47,41 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
   if (section === "structure")
     return (
       <Stack gap={4}>
-        {/* Suport (on seu el mòdul) i Base (la peça de baix) són dues decisions (per decisió de l'usuari, 2026-10-15: «la
-            base que es pugui treure»). «Penjat a la paret» és una posició: es tria a la secció Posició. Un electrodomèstic
-            que és el mòdul fixa les parts que demana (`applianceCarcass`): surten com a text, amb el perquè a l'ajuda. */}
+        {/* Electrodomèstic (el Tipus del mòdul, per decisió de l'usuari, 2026-10-15: «a dins la Caixa les opcions de
+            l'electrodomèstic»): el que fixa l'aparell en una sola nota (no a cada fila) i, a sota, les opcions del front de
+            moble. Només surten les parts de la caixa que l'aparell deixa triar (`applianceCarcass`). */}
+        {ruleHelp && (
+          <Text fontSize="sm" color="fg.muted">
+            {ruleHelp}
+          </Text>
+        )}
+        {fixed && module.root.appliance && (
+          <ApplianceFields
+            module
+            root={module.root}
+            zone={module.root}
+            bounds={zoneBounds(vm, module.root.id) ?? carcassBounds(module.carcass)}
+            hardware={module.hardware}
+            noHandles={module.fronts.handles === "none"}
+            onChange={(root) => onChange({ ...module, root })}
+          />
+        )}
+        {/* Suport: el penjat, aquí (els penjadors); els de terra, el del moble (Moble › Sòcol i potes, per decisió de
+            l'usuari, 2026-10-15: «és un sòcol per a tots els mòduls i no un per a cada un»). La Base (la peça de baix), a
+            sota: «la base que es pugui treure». */}
         {c.base.kind === "wall" ? (
           <>
-            <FixedRow optionId="module.carcass.support" label="Suport" text={`Penjat a la paret, a ${c.base.height} mm del terra`} help="Es canvia a Posició." />
+            <FixedRow optionId="module.carcass.support" label="Suport" text={`Penjat a la paret, a ${c.base.height} mm del terra`} help="Es canvia a Tipus." />
             <HangerFields module={module} base={c.base} onChange={(base) => set({ base })} />
           </>
-        ) : rule?.support === false ? (
-          <FixedRow optionId="module.carcass.support" label="Suport" text="Directe a terra" help={ruleHelp} />
-        ) : (
-          <FormRow optionId="module.carcass.support" label="Suport">
-            <IconChoice
-              hideLabel
-              label="Suport"
-              value={vc.base.kind as "none" | "plinth" | "legs"}
-              options={[
-                { value: "none", label: "Directe a terra", icon: LuArrowDownToLine, hint: "Directe a terra, sense sòcol ni potes" },
-                { value: "plinth", label: "Sòcol", icon: LuPanelBottom, hint: "Sòcol retranquejat a sota" },
-                { value: "legs", label: "Potes", icon: LuFootprints, hint: "Potes regulables" },
-              ]}
-              onChange={(k) => {
-                const base: Base = k === "plinth" ? { kind: "plinth", height: 60, setback: 30 } : k === "legs" ? { kind: "legs", height: 100 } : { kind: k }
-                // El «Sense base» d'abans (`open`) es conserva com a `noBottom`.
-                set(c.base.kind === "open" ? { base, noBottom: true } : { base })
-              }}
-            />
-          </FormRow>
+        ) : rule?.support === false ? null : (
+          <FixedRow optionId="module.carcass.support" label="Suport" text={supportText(support, vc.base)} help="El de tots els mòduls de terra: es canvia al Moble › Sòcol i potes." />
         )}
         {/* La Base, sota el Suport (en depèn): amb potes hi és sempre (s'hi cargolen). */}
-        {vc.base.kind === "legs" ? (
+        {rule?.bottom !== undefined ? null : vc.base.kind === "legs" ? (
           <FixedRow optionId="module.carcass.bottom" label="Base" text="Sencera" help="Les potes es cargolen a la cara de sota de la base: amb potes, la base hi és sempre." />
-        ) : rule?.bottom !== undefined ? (
-          <FixedRow optionId="module.carcass.bottom" label="Base" text={rule.bottom ? "Sencera" : "Sense base"} help={ruleHelp} />
         ) : (
-          <FormRow optionId="module.carcass.bottom" label="Base" help={vc.base.kind === "plinth" ? "Sense base, el mòdul queda obert per sota fins al sòcol." : undefined}>
+          <FormRow optionId="module.carcass.bottom" label="Base" help={support && support.kind !== "floor" ? "Sense base, el mòdul no pot anar sobre potes: va directe a terra." : undefined}>
             <IconChoice
               hideLabel
               label="Base"
@@ -96,39 +97,6 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
               }}
             />
           </FormRow>
-        )}
-        {/* Base a tota l'amplada i les seves mides a sota, una fila per camp. */}
-        {vc.base.kind === "plinth" && c.base.kind === "plinth" && (
-          <>
-            <NumRow optionId="module.carcass.plinthHeight" label="Alçada sòcol" value={c.base.height} min={20} max={300} step={5} onChange={(height) => set({ base: { kind: "plinth", height, setback: (c.base as { setback: number }).setback } })} />
-            <NumRow optionId="module.carcass.plinthSetback" label="Retranqueig" value={c.base.setback} min={0} max={100} step={5} onChange={(setback) => set({ base: { kind: "plinth", height: (c.base as { height: number }).height, setback } })} />
-          </>
-        )}
-        {vc.base.kind === "legs" && c.base.kind === "legs" && (
-          <>
-            <NumRow optionId="module.carcass.legHeight" label="Alçada potes" value={c.base.height} min={20} max={400} step={5} onChange={(height) => set({ base: { ...(c.base as Extract<Base, { kind: "legs" }>), height } })} />
-            <LegPick base={c.base} onChange={(base) => set({ base })} />
-            <FormRow optionId="module.carcass.legPlinth" label="Sòcol" help="Davant de les potes, de tota l'amplada (i, si es tria, també als laterals i al darrere): de fusta, un tauler de terra fins a 5 mm sota la base, o d'alumini. Es fixa a les potes amb els clips de sòcol (Häfele 637.38.054, per cargolar: a mà).">
-              <Switch.Root size="sm" pt="6px" checked={!!c.base.plinth} onCheckedChange={(e) => {
-                const b = c.base as Extract<Base, { kind: "legs" }>
-                if (!e.checked) {
-                  const { plinth: _p, ...rest } = b
-                  return set({ base: rest })
-                }
-                // Per defecte, el peu de la pota del davant (Ø78) just darrere del sòcol amb 5 mm de joc.
-                const front = b.hardware?.params.insetFront ?? b.hardware?.params.inset ?? 50
-                set({ base: { ...b, plinth: { setback: Math.max(0, Math.round(front - 39 - 5 - c.thickness)) } } })
-              }}>
-                <Switch.HiddenInput />
-                <Switch.Control />
-                <Switch.Label fontSize="sm">Davant de les potes</Switch.Label>
-              </Switch.Root>
-            </FormRow>
-            {c.base.plinth && (
-              <NumRow optionId="module.carcass.legPlinthSetback" label="Retirada del sòcol" help="Del davant del mòdul a la cara de davant del sòcol." value={c.base.plinth.setback} min={0} max={200} step={1} onChange={(setback) => setback >= 0 && setback <= 200 && c.base.kind === "legs" && c.base.plinth && set({ base: { ...c.base, plinth: { ...c.base.plinth, setback } } })} />
-            )}
-            <PlinthFields base={c.base} onChange={(base) => set({ base })} />
-          </>
         )}
 
         {/* Llum a sota del moble: només amb la base a l'aire (penjat o amb potes) i si hi ha base (va a la seva cara de sota). */}
@@ -149,7 +117,7 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
           </>
         )}
 
-        {rule?.back !== undefined ? <FixedRow optionId="module.carcass.back" label="Fons" text={rule.back ? "Amb fons" : "Sense fons"} help={ruleHelp} /> : <FormRow optionId="module.carcass.back" label="Fons">
+        {rule?.back !== undefined ? null : <FormRow optionId="module.carcass.back" label="Fons">
           <IconChoice
             hideLabel
             label="Fons"
@@ -173,7 +141,7 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
           </>
         )}
         {rows.back === "inset" && <NumRow optionId="module.carcass.backInsetSetback" label="Retirada del fons" value={c.backInsetSetback ?? 0} min={0} max={60} step={1} onChange={(backInsetSetback) => set({ backInsetSetback })} help="Distància del fons encastat al cantell posterior (0 = enrasat)" />}
-        {rule?.top !== undefined ? <FixedRow optionId="module.carcass.top" label="Tapa" text={rule.top ? (vc.top.kind === "full" ? "Sencera" : vc.top.kind === "ventSlot" ? "Ranura d'aire" : "Reixeta") : "Sense tapa"} help={ruleHelp} /> : <FormRow optionId="module.carcass.top" label="Tapa">
+        {rule?.top !== undefined ? null : <FormRow optionId="module.carcass.top" label="Tapa">
           <IconChoice
             hideLabel
             label="Tapa"
@@ -198,7 +166,7 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
         {/* Laterals abans de Parets i Cantonades: totes dues en depenen (opcions en cascada: cada una només mira les de més amunt). */}
         {/* No dins d'un Field.Root: el Field dona el mateix id als dos interruptors i els dos
             rètols activaven el mateix (no es podia treure el lateral dret). */}
-        {rule?.sides ? <FixedRow optionId="module.carcass.sides" label="Laterals" text="Els dos" help={ruleHelp} /> : <FormRow optionId="module.carcass.sides" label="Laterals">
+        {rule?.sides ? <FixedRow optionId="module.carcass.sides" label="Laterals" text="Els dos" /> : <FormRow optionId="module.carcass.sides" label={rule?.niche ? "Laterals de remat" : "Laterals"} help={rule?.niche ? "Una peça sola a l'extrem de la cuina (sense parets buides): l'aparell va entre els mòduls del costat." : undefined}>
           <HStack gap={4} wrap="wrap" pt="6px">
             <Switch.Root size="sm" checked={c.sides.left} onCheckedChange={(e) => set({ sides: { ...c.sides, left: e.checked } })}>
               <Switch.HiddenInput />
@@ -213,8 +181,8 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
           </HStack>
         </FormRow>}
 
-        {/* Parets buides: caixa de dues pells que fa el moble com si fos de fusta gruixuda. */}
-        <FormRow optionId="module.carcass.hollow" label="Parets">
+        {/* Parets buides: caixa de dues pells que fa el moble com si fos de fusta gruixuda (al nínxol d'un aparell, no). */}
+        {!rule?.niche && <FormRow optionId="module.carcass.hollow" label="Parets">
           <Switch.Root
             size="sm"
             pt="6px"
@@ -225,8 +193,8 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
             <Switch.Control />
             <Switch.Label fontSize="sm">Buides (gruix aparent)</Switch.Label>
           </Switch.Root>
-        </FormRow>
-        {c.hollow && (
+        </FormRow>}
+        {c.hollow && !rule?.niche && (
           <NumRow
             optionId="module.carcass.hollowThickness"
             label="Gruix aparent"
@@ -243,7 +211,7 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
         {/* Sense laterals, o sense tapa ni base a baix dels laterals (amb sòcol la base queda
             entre els laterals), no hi ha cantonades a unir a inglet. */}
         {/* La mateixa condició que fa servir la construcció (`jointApplies`): si el control no surt, `joint` no compta. */}
-        {c.hollow && (vc.sides.left || vc.sides.right) ? (
+        {c.hollow && !rule?.niche && (vc.sides.left || vc.sides.right) ? (
           // Amb parets buides les cantonades són sempre a inglet (com un bloc massís).
           <FormRow optionId="module.carcass.joint" label="Cantonades" help="Amb parets buides, sempre a inglet: pells de fora a 45° i tires del davant en marc.">
             <Text fontSize="sm" pt="7px">
@@ -268,7 +236,7 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
         {/* Tots els fronts del mòdul, al final de la Caixa (en depenen: el davant de la caixa, la llum). Només si es
             llegeixen (`frontOptionsUse`): sense cap front que es fa, ni estil ni folgances. El tirador i els ferratges
             de cada front es trien al seu compartiment. */}
-        {rows.style && (
+        {rows.style && !rule?.niche && (
           <FormRow optionId="module.carcass.frontStyle" label="Estil dels fronts">
             <IconChoice
               hideLabel
@@ -401,6 +369,13 @@ const prefHint = (value: number, pref: number): string => (value === pref ? "Com
 
 /** Botó per tornar al valor de Preferències quan el mòdul en té un altre. */
 /** Una part de la caixa que no es tria aquí (penjat, potes, l'electrodomèstic): el que és, i el perquè a l'ajuda. */
+/** El suport d'un mòdul de terra en una línia: el del moble (o directe a terra, si no té base). */
+function supportText(s: FloorSupport | undefined, base: Base): string {
+  if (base.kind === "legs") return s?.kind === "plinth" ? `Sòcol del tram, sobre potes de ${base.height} mm` : `Potes vistes de ${base.height} mm`
+  if (s && s.kind !== "floor") return "Directe a terra (sense base, no pot anar sobre potes)"
+  return "Directe a terra"
+}
+
 function FixedRow({ label, text, help, optionId }: { label: string; text: string; help?: string; optionId: string }) {
   return (
     <FormRow label={label} help={help} optionId={optionId}>
@@ -514,41 +489,3 @@ function thicknessOptions(list: number[], current: number): { id: string; label:
   return (list.includes(current) ? list : [current, ...list]).map((t) => ({ id: String(t), label: `${t} mm` }))
 }
 
-/**
- * La pota de la base «Potes» (`Base.hardware`): les genèriques (només es veuen, cap forat) o una pota importada de la
- * biblioteca (Preferències › Ferratges, una **còpia**): un cop confirmada, els forats de la placa a la cara de sota de la
- * base, a cada pota. El mateix `HardwarePick` que la resta de ferratges del moble (motor `leg`, sense lloc al mòdul).
- */
-function LegPick({ base, onChange }: { base: Extract<Base, { kind: "legs" }>; onChange: (b: Base) => void }) {
-  const { settings } = useSettings()
-  const legs = settings.hardwareLibrary.filter((x) => x.engine === "leg")
-  const cur = base.hardware
-  if (!legs.length && !cur) return null
-  const pick = (item: HardwareItem | undefined) => {
-    if (!item) {
-      const { hardware: _h, ...rest } = base
-      return onChange(rest)
-    }
-    onChange({ ...base, hardware: item })
-  }
-  // Una pota amb distància pròpia al davant (la AXILO 78): es pot canviar per a aquest mòdul (on va el sòcol); la còpia del
-  // mòdul passa a ser pròpia.
-  const front = cur?.engine === "leg" && "insetFront" in cur.params ? cur.params.insetFront : undefined
-  return (
-    <>
-      <HardwarePick optionId="module.carcass.leg" engine="leg" label="Pota" current={cur} emptyLabel="Genèriques" help={cur ? undefined : "Genèriques: només es veuen al 3D (cap forat). Les potes importades (Preferències › Ferratges) fan els forats de la placa a la cara de sota de la base."} onPick={pick} />
-      {cur && front !== undefined && (
-        <NumRow
-          optionId="module.carcass.legInset"
-          label="Potes al davant"
-          help="Del cantell de davant de la base a l'eix de les potes del davant: deixa lloc al sòcol. Només en aquest mòdul (el de tots, a Preferències › Ferratges)."
-          value={front}
-          min={20}
-          max={300}
-          step={1}
-          onChange={(v) => v >= 20 && v <= 300 && onChange({ ...base, hardware: { ...cur, params: { ...cur.params, insetFront: v } } })}
-        />
-      )}
-    </>
-  )
-}

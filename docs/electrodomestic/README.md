@@ -241,13 +241,13 @@ cap).
    sortida ≥ 200 cm² per dalt al darrere; Bosch p404-405, Balay p105; el mateix a les instruccions BSH dels forns en
    columna, media3.bosch-home.com/Documents/9001638623_C.pdf, «ventilation opening of at least 200 cm² in the base area… trim the base panel or fit a
    ventilation grille», p. 38 del PDF). **Decisió**: **reixeta al sòcol** (l'opció que no depèn de com és la cuina): retall al
-   sòcol de fusta del mòdul davant del compartiment (ample del compartiment − 60, prou alt per als 200 cm²) i la
-   «Reixeta de ventilació de sòcol» a la comanda; sense sòcol al mòdul (el corregut), la nota diu la mida. La
+   sòcol de fusta del tram davant del compartiment (ample del compartiment − 60, prou alt per als 200 cm²) i la
+   «Reixeta de ventilació de sòcol» a la comanda; sense sòcol (directe a terra o potes vistes), la nota diu la mida. La
    **sortida**, el retall a la peça de sobre arran del fons (ja es feia).
 4. **Valors S i A** (frigorífics): el gruix real de la peça de sobre i de la de sota del compartiment (ja es feia).
 5. **Cotes 53 / 89 / 100 (BSH) i 110 / 48 / 115 (Teka) dels rentaplats** i **sòcol de davant dels aparells de terra**:
-   l'estàndard és el **sòcol corregut** de la cuina passant per davant de l'aparell (el dels mòduls del costat, tallat a
-   mida); la retirada és la del sòcol corregut. Nota a la comanda, cap avís.
+   l'estàndard és el **sòcol del tram** passant per davant de l'aparell (una sola peça amb els mòduls del costat, des
+   del 2026-10-15); la retirada és la del sòcol del moble. Nota a la comanda, cap avís.
 6. **Rentadores**: el nínxol de les **fitxes de producte BSH** (media3.bsh-group.com/Documents/specsheet/es-ES/):
    WIW24307ES (p. 2) ample ≥ 600, alt ≥ 818 (aparell 818 + 12 de potes), fons ≥ 555 (544 + frontissa); WKD28490ES (p. 3)
    ≥ 600 × ≥ 820 × ≥ 551 (540 + frontissa). Frontisses: la segona de la WKD és a **+420** (no a +338,6) i la cassoleta,

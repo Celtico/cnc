@@ -61,7 +61,36 @@ function dataHelp(a: Appliance): string {
  * seu material (v47, «Com els fronts» = el dels fronts del mòdul), el costat on obre, el sòcol (aparells de terra sense
  * peça a sota) i el tirador.
  */
-export function ApplianceSection({ root, zone, onChange, hardware, noHandles, bounds, module = false }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; hardware: ModuleHardware; noHandles: boolean; bounds: ZoneBounds; /** A l'inspector del mòdul (l'arrel d'un mòdul sense dividir): els textos parlen del mòdul. */ module?: boolean }) {
+interface ApplianceProps {
+  root: Zone
+  zone: Zone
+  onChange: (root: Zone) => void
+  hardware: ModuleHardware
+  noHandles: boolean
+  bounds: ZoneBounds
+  /** A l'inspector del mòdul (l'arrel d'un mòdul sense dividir): els textos parlen del mòdul. */
+  module?: boolean
+  /** Els aparells que es poden triar aquí (al mòdul Baix, la placa; al Penjat, la campana). */
+  only?: (a: Appliance) => boolean
+}
+
+/** La secció plegable «Electrodomèstic» (compartiment, o la placa i la campana d'un mòdul Baix o Penjat). */
+export function ApplianceSection(props: ApplianceProps) {
+  const za = props.zone.appliance
+  const a = za && isAppliance(za.hardware) ? za.hardware.appliance : undefined
+  return (
+    <FoldItem optionId={props.module ? "module.appliance" : "zone.appliance"} id={props.module ? "mod-appliance" : "zone-appliance"} title="Electrodomèstic" icon={LuRefrigerator} badge={a ? APPLIANCE_LABELS[a.kind] : undefined} defaultOpen={!!za}>
+      <ApplianceFields {...props} picker />
+    </FoldItem>
+  )
+}
+
+/**
+ * Les opcions de l'electrodomèstic: l'aparell (`picker`) i, en cascada, el front de moble, el material, on obre, el sòcol i
+ * el tirador. Sense `picker`, només les opcions: el mòdul Electrodomèstic tria l'aparell a Tipus i les opcions surten a la
+ * Caixa (per decisió de l'usuari, 2026-10-15).
+ */
+export function ApplianceFields({ root, zone, onChange, hardware, noHandles, bounds, module = false, only, picker = false }: ApplianceProps & { picker?: boolean }) {
   const { settings } = useSettings()
   const za = zone.appliance
   const a = za && isAppliance(za.hardware) ? za.hardware.appliance : undefined
@@ -81,17 +110,17 @@ export function ApplianceSection({ root, zone, onChange, hardware, noHandles, bo
     set(h ? { ...rest, handle: h } : rest)
   }
   return (
-    <FoldItem optionId={module ? "module.appliance" : "zone.appliance"} id={module ? "mod-appliance" : "zone-appliance"} title="Electrodomèstic" icon={LuRefrigerator} badge={a ? APPLIANCE_LABELS[a.kind] : undefined} defaultOpen={!!za}>
       <Stack gap={3}>
-        <HardwarePick
+        {picker && <HardwarePick
           optionId={module ? "module.appliance.hardware" : "zone.appliance.hardware"}
           engine="appliance"
           label="Aparell"
           current={za?.hardware}
           emptyLabel="Cap"
           help={a ? dataHelp(a) : `Rentaplats, frigorífic, rentadora, forn, microones, placa o campana del catàleg: ${module ? "el mòdul" : "el compartiment"} en fa el nínxol (es comprova amb les mides del fabricant) i, si en porta, el front de moble.${module ? " En un mòdul dividit (una columna amb forn i microones), es tria a cada compartiment." : ""}`}
+          only={only ? (x) => isAppliance(x) && only(x.appliance) : undefined}
           onPick={(item) => set(item ? { ...(za ?? {}), hardware: item } : undefined)}
-        />
+        />}
         {a && !fillsNiche(a) && (
           <Text fontSize="xs" color="fg.muted">
             {a.kind === "hob" ? `La placa va al taulell (el retall, a la peça de sobre): ${keeps} (els calaixos de sota).` : `La campana va al moble penjat (el retall, a la base): ${keeps} (la porta del moble).`}
@@ -135,7 +164,7 @@ export function ApplianceSection({ root, zone, onChange, hardware, noHandles, bo
             min={0}
             max={400}
             step={1}
-            help={`Del terra al cantell de baix del front${a.plinth ? ` (el fabricant: ${rangeText(a.plinth)})` : ""}. El sòcol de davant no el fa aquest mòdul: és el dels mòduls del costat.`}
+            help={`Del terra al cantell de baix del front${a.plinth ? ` (el fabricant: ${rangeText(a.plinth)})` : ""}. El sòcol de davant no el fa aquest mòdul: és el del tram (Moble › Sòcol i potes).`}
             onChange={(plinth) => Number.isFinite(plinth) && set({ ...za!, plinth })}
           />
         )}
@@ -152,6 +181,5 @@ export function ApplianceSection({ root, zone, onChange, hardware, noHandles, bo
           />
         )}
       </Stack>
-    </FoldItem>
   )
 }

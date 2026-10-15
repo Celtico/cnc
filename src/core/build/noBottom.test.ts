@@ -45,7 +45,7 @@ describe("la caixa que demana l'electrodomèstic (mòdul sense dividir)", () => 
   it("rentaplats en un mòdul sencer: només el nínxol (sense base, tapa, fons, sòcol ni potes); els valors es conserven", () => {
     const m = withAppliance({ base: { kind: "legs", height: 100 }, sides: { left: false, right: false } }, "appliance-bosch-smh6ycx02e")
     expect(isApplianceModule(m)).toBe(true)
-    expect(moduleApplianceCarcass(m)!.rule).toEqual({ support: false, bottom: false, top: false, back: false })
+    expect(moduleApplianceCarcass(m)!.rule).toEqual({ support: false, bottom: false, top: false, back: false, niche: true })
     const v = visibleModule(m).carcass
     expect(v.base).toEqual({ kind: "none" })
     expect(v.noBottom).toBe(true)

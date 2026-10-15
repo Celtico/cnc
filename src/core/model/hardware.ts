@@ -162,6 +162,20 @@ function eachHardware(comp: unknown, visit: (item: HardwareItem) => HardwareItem
       changed = true
     }
   }
+  // La pota i el sòcol d'alumini del suport del moble (`Composition.support`: els de tots els mòduls de terra).
+  let support = comp.support as unknown
+  if (isRecord(support)) {
+    const s0 = support
+    let next = visitKeys(s0, ["leg"], visit)
+    if (isRecord(s0.plinth)) {
+      const pl = visitKeys(s0.plinth, ["hardware"], visit)
+      if (pl !== s0.plinth) next = { ...next, plinth: pl }
+    }
+    if (next !== s0) {
+      support = next
+      changed = true
+    }
+  }
   // Ferratges col·locats a mà (`hardwarePlacements`): la còpia de cada un.
   let placements = comp.hardwarePlacements
   if (Array.isArray(placements)) {
@@ -177,7 +191,7 @@ function eachHardware(comp: unknown, visit: (item: HardwareItem) => HardwareItem
       changed = true
     }
   }
-  return changed ? { ...comp, modules, ...(placements !== comp.hardwarePlacements ? { hardwarePlacements: placements } : {}), ...(runs !== comp.runs ? { runs } : {}) } : comp
+  return changed ? { ...comp, modules, ...(placements !== comp.hardwarePlacements ? { hardwarePlacements: placements } : {}), ...(runs !== comp.runs ? { runs } : {}), ...(support !== comp.support ? { support: support as typeof comp.support } : {}) } : comp
 }
 
 /** Els ferratges d'un objecte als camps `keys` (una còpia de la biblioteca; «none» i res, no). */

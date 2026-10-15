@@ -160,7 +160,9 @@ Les etiquetes i les ajudes de la UI fan servir sempre aquestes paraules (auditor
 |---|---|
 | **Cos** | la caixa del mòdul (laterals, base, tapa, fons) i el seu material («Com el cos») |
 | **Fons** | la peça del darrere del mòdul (el `trassera` del taller); **Fons del calaix**, la del calaix (fila del joc, avís `drawer-bottom`, material propi a Materials; el nom de peça `fons calaix` i l'etiqueta `Fons calaix n` no canvien: són els dels fitxers del taller) |
-| **Suport** / **Base** | Suport: on seu el mòdul (directe a terra, sòcol, potes; penjat, des de Posició). Base: la peça de baix de la caixa (Sencera · Sense base) |
+| **Tipus** | el del mòdul: Baix · Penjat · Columna · Electrodomèstic (Mòdul › Tipus); el del moble (Moble · Cuina · Armari · Taula) es tria en crear-lo |
+| **Suport** / **Base** | Suport: on seu el mòdul, **el mateix per a tots els mòduls de terra** (Moble › Sòcol i potes: directe a terra, sòcol sobre potes, potes vistes); el penjat, des de Tipus. Base: la peça de baix de la caixa (Sencera · Sense base) |
+| **Tram** | els mòduls de terra que es toquen; el sòcol és una peça per tram, mai una per mòdul |
 | **Fondària** | l'eix Z i la mida en Z (mai «Fons Z») |
 | **Portes** | la secció del mòdul amb les portes de dalt a baix de tot el mòdul (Interior dividit; Cap · Una · Dues, `LuDoorClosed`); al Front d'una porta, la fila Una · Dues |
 | **Front** | porta, front de calaix, abatible, reixeta, front fix; d'un compartiment sense dividir (les zones dividides no en tenen: les portes de tot el mòdul són a Mòdul › **Portes**) (l'estil i les folgances de tots els fronts del mòdul són a Mòdul › **Caixa**; el material, a Mòdul › **Materials**) |

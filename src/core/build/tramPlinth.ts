@@ -8,7 +8,7 @@ const VENT_MARGIN = 30
 const r1 = (v: number) => Math.round(v * 10) / 10
 const num = (n: number): string => String(r1(n)).replace(".", ",")
 
-export interface TramPlinthBuild {
+interface TramPlinthBuild {
   panels: Panel[]
   extras: Panel[]
   linear: LinearPiece[]
@@ -26,7 +26,7 @@ export interface TramPlinthBuild {
  * composició; `moduleNumber`: el «mòdul» de les refs del taller (com les peces corregudes).
  */
 /** Una entrada d'aire d'un electrodomèstic: el mòdul (índex) i el compartiment (x del mòdul). */
-export interface TramVent extends VentInlet {
+interface TramVent extends VentInlet {
   module: number
 }
 

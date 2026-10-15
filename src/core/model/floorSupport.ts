@@ -2,35 +2,15 @@ import { activeRuns, compositionKind, freeX, isTurned, modulePlacements, partsOn
 import type { Composition, PlinthRun } from "./compositionSchema"
 import type { Base, Module } from "./moduleSchema"
 import { isApplianceModule, moduleApplianceCarcass, visibleModule } from "./moduleVisible"
+import { moduleType } from "./moduleType"
 import type { FloorSupport, TramSides } from "./supportSchema"
 
 /**
  * El **suport dels mòduls de terra** i els **trams** (per decisió de l'usuari, 2026-10-15: «és un sòcol per a tots els
  * mòduls i no un per a cada un»; «el sòcol no pot anar per cada mòdul, és una peça global»). Un sol suport per a tot el
  * moble (`Composition.support`): `withSupport` l'escriu a la base de cada mòdul de terra i la construcció fa **un sòcol per
- * tram** (`core/build/tramPlinth.ts`). I el **tipus** del mòdul (Baix · Penjat · Columna · Electrodomèstic). Pur.
+ * tram** (`core/build/tramPlinth.ts`). Pur.
  */
-
-// --- Tipus del mòdul ---------------------------------------------------------------------------------------------------
-
-export type ModuleType = "base" | "wall" | "tall" | "appliance"
-
-export const MODULE_TYPE_LABELS: Record<ModuleType, string> = { base: "Baix", wall: "Penjat", tall: "Columna", appliance: "Electrodomèstic" }
-
-/** Alçada a partir de la qual un mòdul sense tipus és una columna. */
-export const TALL_FROM = 1200
-
-/**
- * El tipus d'un mòdul: Electrodomèstic si ho és (o s'ha triat i encara no té l'aparell), Penjat si penja de la paret,
- * i Baix o Columna (el triat o, sense, per l'alçada).
- */
-export function moduleType(m: Module): ModuleType {
-  if (m.type === "appliance" || isApplianceModule(m)) return "appliance"
-  if (m.carcass.base.kind === "wall") return "wall"
-  if (m.type === "tall") return "tall"
-  if (m.type === "base") return "base"
-  return m.carcass.height >= TALL_FROM ? "tall" : "base"
-}
 
 // --- Trams -------------------------------------------------------------------------------------------------------------
 
@@ -114,7 +94,7 @@ export function setTramSides(support: FloorSupport, tram: FloorTram, comp: Pick<
 // --- El suport a cada mòdul --------------------------------------------------------------------------------------------
 
 /** La base que el suport posa a cada mòdul de terra. */
-export function supportBase(s: FloorSupport): Base {
+function supportBase(s: FloorSupport): Base {
   if (s.kind === "floor") return { kind: "none" }
   return { kind: "legs", height: s.height, ...(s.leg ? { hardware: s.leg } : {}) }
 }
@@ -135,7 +115,7 @@ export function defaultPlinthSetback(s: Pick<FloorSupport, "leg">, m?: Module): 
  * caixa d'abans (laterals fins a terra), un sòcol amb la mateixa alçada i retirada. Els costats de cada tram, els dels
  * sòcols dels mòduls dels extrems. `undefined` si no té cap mòdul de terra.
  */
-export function deriveSupport(comp: Composition): FloorSupport | undefined {
+function deriveSupport(comp: Composition): FloorSupport | undefined {
   const floor = comp.modules.filter((m) => m.carcass.base.kind !== "wall")
   if (!floor.length) return undefined
   const pool = floor.filter((m) => !isApplianceModule(m))

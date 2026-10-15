@@ -203,14 +203,15 @@
 - **Com s'aguanta el mòdul** (v45, `build/module/mounting.ts`, capa `MountingBuilder` entre la carcassa i els llums):
   **penjadors** dels mòduls penjats (l'estàndard, Libra H2: 4 × Ø10 × 13 en columna a cada lateral, cara de dins, sota la
   tapa i darrere del fons; la ranura de 12 × 54,5 al fons per regular-los; regleta de paret darrere del fons; el fons dels
-  penjats nous, en ranura retirat 20; avís `hanging` si el fons no deixa 15 mm) i **sòcol** de la base «Potes» al davant,
-  als laterals i al darrere, de fusta (a tope o a inglet) o d'alumini (ferratge per metres: un clip a cada pota per
-  tram). Detall a [`model.md`](model.md) › Carcassa › Penjadors i Base, i › Ferratges per metres.
+  penjats nous, en ranura retirat 20; avís `hanging` si el fons no deixa 15 mm). El **sòcol** no és del mòdul: és una peça
+  per tram del moble (`build/tramPlinth.ts`: al davant i, si es tria, als costats i al darrere, de fusta —a tope o a
+  inglet, a trossos de 2400 com a molt amb les juntes entre mòduls— o d'alumini —per metres, un clip a cada pota—).
+  Detall a [`model.md`](model.md) › Carcassa › Suport, Trams, Penjadors, i › Ferratges per metres.
 - **Electrodomèstics** (v46, `build/module/appliances.ts`, capa `AppliancesBuilder` entre els calaixos i les zones; el model
   a [`model.md`](model.md) › Electrodomèstic del compartiment; les dades, les fonts i les **decisions estàndard** a
   [`docs/electrodomestic/README.md`](../electrodomestic/README.md)). Per decisió de l'usuari (2026-10-15: «fem-ho tot el
   més estàndard possible»), **avisos** (`appliance`, amb la pàgina del catàleg) **només del que no lliga amb el
-  fabricant**; el que és com ha de ser (com es munta el front, què s'ha mecanitzat, el sòcol corregut de davant) va a la
+  fabricant**; el que és com ha de ser (com es munta el front, què s'ha mecanitzat, el sòcol del tram de davant) va a la
   **nota de la comanda** de l'aparell (Peces › Ferratges, LLEGEIX-ME: «electrodomèstic: no es fabrica · …»). Una
   plantilla amb electrodomèstics surt sense avisos.
   - **El nínxol**: la llum del compartiment (ample, alt i fons fins al fons o la columna) amb els rangs del catàleg o de
@@ -242,10 +243,9 @@
       ≥ 12 de fons), tag `hinge`.
   - **El que cal mecanitzar al moble** (el que dona el catàleg): la **sortida d'aire** dels frigorífics de columna
     (≥ 200 cm²) com a retall a la peça de sobre del compartiment, de lateral a lateral menys 30 i arran del fons (tag
-    `vent`); l'**entrada d'aire** (≥ 200 cm²) com a **reixeta al sòcol**: el retall al sòcol de fusta del mòdul, centrat
-    davant del compartiment (a l'ample del compartiment menys 60, prou alt per a l'àrea; tag `vent`) i la «Reixeta de
-    ventilació de sòcol» a la comanda (sense sòcol al mòdul —el corregut de la cuina—, la nota diu la mida; si no hi cap,
-    avís); el **retall de la placa** a la peça de sobre (560 × 490, a 50 del davant; avís si queda a menys de 40 del
+    `vent`); l'**entrada d'aire** (≥ 200 cm²) com a **reixeta al sòcol**: el retall al sòcol de fusta del tram, centrat
+    davant del compartiment (a l'ample del compartiment menys 60, prou alt per a l'àrea; tag `vent`; `ModuleBuild.ventInlets`
+    → `tramPlinth.ts`) i la «Reixeta de ventilació de sòcol» a la comanda (la nota diu la mida; si no hi cap, avís); el **retall de la placa** a la peça de sobre (560 × 490, a 50 del davant; avís si queda a menys de 40 del
     darrere o el tauler és prim) i el del **grup filtrant** a la base del moble penjat (496 × 264 a 25 del davant, tauler
     de 16–19), tag `appliance`. Sense la peça (taulell de pedra, mòdul sense tapa), la nota diu el retall i on fer-lo.
   - Tests `build/appliances.test.ts`.

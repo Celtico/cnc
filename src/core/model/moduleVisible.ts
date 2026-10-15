@@ -69,7 +69,8 @@ export function visibleModule(m: Module): Module {
   if (!carcass.innerClearance || !hasInnerPieces(root)) delete carcass.innerClearance
   const fronts = { ...m.fronts }
   // L'estil (recobrents / encastats) només compta si hi ha algun front que es construeix (la fila «Estil» no surt sense).
-  if (fronts.style === "overlay" || !hasBuiltFronts(root)) delete fronts.style
+  // El front de moble del nínxol de terra va per davant, com els del costat (`ApplianceCarcass.niche`).
+  if (fronts.style === "overlay" || !hasBuiltFronts(root) || rule?.rule.niche) delete fronts.style
   if (fronts.handles === "bar") delete fronts.handles
   return { ...m, carcass, fronts, root }
 }

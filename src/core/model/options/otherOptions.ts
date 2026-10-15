@@ -13,6 +13,51 @@ const JOINERY_ISSUE = "Mateixa decisió (joc, fresa, pestanya i dogbones de TOTE
 
 export const MOBLE = group("moble", "Moble", { icon: "moble", code: UI.inspector, showIf: "Res seleccionat (el moble sencer), fora de la pestanya Foto" }, [
   section("moble.summary", "Resum", { icon: "summary", code: UI.inspector, note: "Mòduls i mides, peces, forats, objectes i models 3D." }),
+  section("moble.support", "Sòcol i potes", { icon: "support", code: UI.inspector, showIf: "Algun mòdul de terra", note: "Per decisió de l'usuari, 2026-10-15: «és un sòcol per a tots els mòduls i no un per a cada un»; «el sòcol no pot anar per cada mòdul, és una peça global». Un sol suport per a tots els mòduls de terra; el sòcol, una peça per tram (els mòduls de terra que es toquen)." }, [
+    field("moble.support.kind", "Suport", {
+      code: UI.support,
+      control: "choice",
+      default: "floor",
+      choices: [
+        { value: "floor", label: "Directe a terra", hides: ["moble.support.height", "moble.support.leg", "moble.support.setback"] },
+        { value: "plinth", label: "Sòcol", reveals: ["moble.support.height", "moble.support.leg", "moble.support.setback", "moble.support.type", "moble.support.trams"], note: "sobre potes, amb un sòcol continu per tram" },
+        { value: "legs", label: "Potes vistes", reveals: ["moble.support.height", "moble.support.leg"], hides: ["moble.support.setback"] },
+      ],
+    }),
+    field("moble.support.height", "Alçada", { code: UI.support, control: "number", showIf: "Suport ≠ Directe a terra", range: { min: 20, max: 400, step: 5, suffix: "mm" }, default: 100 }),
+    field("moble.support.leg", "Pota", { code: UI.support, control: "hardware", showIf: "Suport ≠ Directe a terra, i hi ha potes a la biblioteca o el moble en porta una", defaultText: "Genèriques" }, [
+      field("moble.support.legInset", "Potes al davant", { code: UI.support, control: "number", showIf: "Una pota amb distància pròpia al davant (AXILO 78)" }),
+    ]),
+    field("moble.support.setback", "Retirada", { code: UI.support, control: "number", showIf: "Suport = Sòcol", defaultText: "Calculada: el peu de la pota del davant just darrere del sòcol" }),
+    field("moble.support.type", "Sòcol", {
+      code: UI.support,
+      control: "hardware",
+      showIf: "Suport = Sòcol",
+      defaultText: "Fusta",
+      choices: [
+        { value: "wood", label: "Fusta", reveals: ["moble.support.material", "moble.support.corners"] },
+        { value: "alu", label: "Un sòcol d'alumini de la biblioteca", hides: ["moble.support.material", "moble.support.corners"] },
+      ],
+    }),
+    field("moble.support.material", "Material", { code: UI.support, control: "material", showIf: "Sòcol de fusta", defaultText: "Com el cos" }),
+    field("moble.support.trams", "Trams", {
+      code: UI.support,
+      control: "choice",
+      showIf: "Suport = Sòcol: una fila per tram",
+      default: "front",
+      choices: [
+        { value: "front", label: "Davant", hides: ["moble.support.sideSetback", "moble.support.corners"] },
+        { value: "left", label: "+ esquerre", reveals: ["moble.support.sideSetback", "moble.support.corners"] },
+        { value: "right", label: "+ dret", reveals: ["moble.support.sideSetback", "moble.support.corners"] },
+        { value: "sides", label: "+ laterals", reveals: ["moble.support.sideSetback", "moble.support.corners"] },
+        { value: "all", label: "Tot el voltant", reveals: ["moble.support.sideSetback", "moble.support.corners"] },
+      ],
+      note: "Per defecte, només el davant; un tram lliure al terra (una illa), tot el voltant.",
+    }, [
+      field("moble.support.sideSetback", "Retirada dels costats", { code: UI.support, control: "number", showIf: "Algun tram amb costats", defaultText: "La retirada del sòcol" }),
+      field("moble.support.corners", "Cantonades", { code: UI.support, control: "choice", showIf: "Algun tram amb costats i sòcol de fusta", default: "butt", choices: [{ value: "butt", label: "A tope" }, { value: "mitre", label: "A inglet" }] }),
+    ]),
+  ]),
   section("moble.joinery", "Encaixos", { icon: "joinery", code: UI.inspector, showIf: "Alguna peça lliure fa encaixos" }, [
     field("moble.joinery.clearance", "Joc", { code: UI.part, control: "number", default: 0.2 }),
     field("moble.joinery.tool", "Diàmetre fresa (Ø)", { code: UI.part, control: "number", default: 6 }),

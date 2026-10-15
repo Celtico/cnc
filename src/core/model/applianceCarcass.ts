@@ -18,7 +18,13 @@ import type { Carcass } from "./moduleSchema"
  *   la **paret del darrere oberta** (Bosch p60): sense fons. La resta es tria.
  */
 export type CarcassPart = "support" | "bottom" | "top" | "back" | "sides"
-export type ApplianceCarcass = Partial<Record<CarcassPart, boolean>>
+export type ApplianceCarcass = Partial<Record<CarcassPart, boolean>> & {
+  /**
+   * El nínxol de terra (rentaplats, rentadora, frigorífic sota taulell): els laterals, si n'hi ha, són de remat (una peça
+   * sola, sense parets buides) i el front de moble va per davant, enrasat amb els fronts del costat (recobrent).
+   */
+  niche?: true
+}
 
 /** L'aparell de terra que fa del mòdul el nínxol (rentaplats, rentadora, frigorífic sota taulell). */
 const floorNiche = (a: Appliance): boolean => a.mount === "base" && takesFront(a)
@@ -26,7 +32,7 @@ const floorNiche = (a: Appliance): boolean => a.mount === "base" && takesFront(a
 /** Les parts de la caixa que l'aparell fixa (vegeu el comentari de dalt); `hung`: el mòdul és penjat (Posició). */
 export function applianceCarcass(a: Appliance, hung: boolean): ApplianceCarcass {
   if (a.kind === "hob" || a.kind === "hood") return {}
-  if (floorNiche(a)) return { support: false, bottom: false, top: false, back: false }
+  if (floorNiche(a)) return { support: false, bottom: false, top: false, back: false, niche: true }
   if (a.kind === "fridge") return { sides: true, bottom: true, top: true }
   if (a.kind === "microwave" && hung && a.wallNiche) return { sides: true, bottom: true, back: false }
   return { sides: true, bottom: true }
@@ -53,6 +59,7 @@ export function applyApplianceCarcass(c: Carcass, rule: ApplianceCarcass): Carca
   if (rule.top === true && c.top.kind === "none") out.top = { kind: "full" }
   if (rule.back === false) out.back = "none"
   if (rule.sides === true) out.sides = { left: true, right: true }
+  if (rule.niche) delete out.hollow
   return out
 }
 
@@ -68,5 +75,5 @@ const PART_LABELS: Record<CarcassPart, [string, string]> = {
 export function applianceCarcassText(a: Appliance, rule: ApplianceCarcass): string {
   const parts = (Object.keys(PART_LABELS) as CarcassPart[]).filter((k) => rule[k] !== undefined).map((k) => PART_LABELS[k][rule[k] ? 0 : 1])
   const list = parts.length > 1 ? `${parts.slice(0, -1).join(", ")} i ${parts[parts.length - 1]}` : (parts[0] ?? "")
-  return `${APPLIANCE_LABELS[a.kind]}: ${list}. Ho demana l'aparell (Mòdul › Electrodomèstic).`
+  return `${APPLIANCE_LABELS[a.kind]}: ${list}. Ho demana l'aparell.`
 }

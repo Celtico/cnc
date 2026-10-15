@@ -23,41 +23,51 @@
   `core/model/modulePresets.ts` (`modulePresetsFor`: cuina —baixos de calaixos, porta, fregadera, fogons, forn; columnes forn i rebost; alts porta i
   abatible—, armari —prestatges, penjador amb maleter, calaixos i prestatges—, taula —consola, menjador, centre, banc, «Taula
   oval»—; al Moble, les plantilles d'un sol mòdul).
-- **Posició: dues files, com a les cuines** — *A terra* (baixos) i *Penjats a la paret* (`base.kind = "wall"` amb l'alçada
+- **Tipus** (`Module.type`, `moduleType`, `core/model/moduleType.ts`; per decisió de l'usuari, 2026-10-15: «canviem Posició
+  per tipus de moble, i allà seleccionem electrodomèstic, i a dins la Caixa les opcions de l'electrodomèstic»): el primer del
+  mòdul, **Baix · Penjat · Columna · Electrodomèstic** (`setModuleType`). Penjat és la base `wall`; Baix i Columna, el
+  triat o, sense, per l'alçada (≥ 1200, columna; en canviar-ne, 770 o 2100 si la que té no hi escau); Electrodomèstic, el
+  mòdul que **és** l'aparell (`isApplianceModule`) o el triat encara sense aparell. L'aparell es tria a Tipus
+  (`setModuleAppliance`: només els que ocupen el nínxol —rentaplats, rentadora, frigorífics, forns, microones—; un de
+  penjat penja el mòdul; el nínxol de terra, sense laterals; l'amplada, la del nínxol si no hi entra) i les opcions del
+  front de moble surten a la Caixa. La placa (Baix) i la campana (Penjat) continuen a Mòdul › Electrodomèstic. Un mòdul
+  dividit no pot ser Electrodomèstic (l'aparell, a cada compartiment). Test `model/moduleType.test.ts`.
+- **On va: dues files, com a les cuines** — *A terra* (baixos) i *Penjats a la paret* (`base.kind = "wall"` amb l'alçada
   des del terra). Dins de cada fila l'ordre és el de l'arbre i cada mòdul va al costat de l'anterior amb `gapBefore`. Posició
   sempre amb `modulePlacements()` / `compositionWidth/Height`, mai a mà. Els `anchor` antics es converteixen en carregar
   (`normalizeComposition`). Tres muntatges (`mountOf`): **Arrambat a la paret**, **Penjat** i **Lliure al terra** (`Module.wallGap`
   = separació de la paret, i **X pròpia** `Module.x`/`freeX`: surt de la fila i no empeny els altres, p. ex. una illa; camp
-  «De costat (X)»). Els antics «Al terra» sense `x` continuen a la fila. **Girat 180°** (`Module.turned`, `isTurned`; només lliure al terra; Mòdul › Posició «Girat»; per decisió de l'usuari, 2026-10-13, per fer una illa amb dos mòduls d'esquena): el mòdul es construeix igual i `buildComposition` el gira al voltant del centre de la caixa de les seves peces (ocupa el mateix lloc; `CompositionBuild.modules[].mirrorX`, `moduleWorldX` per al clic i el ressaltat dels compartiments); l'obertura del 3D surt enrere (`opening.ts`, per l'`explodeDir`). Tests `build/turnedModule.test.ts`, `viewer/openingTurned.test.ts`. Taulell i sòcol correguts no tenen en compte `wallGap`.
+  «De costat (X)»). Els antics «Al terra» sense `x` continuen a la fila. **Girat 180°** (`Module.turned`, `isTurned`; només lliure al terra; Mòdul › Tipus «Girat»; per decisió de l'usuari, 2026-10-13, per fer una illa amb dos mòduls d'esquena): el mòdul es construeix igual i `buildComposition` el gira al voltant del centre de la caixa de les seves peces (ocupa el mateix lloc; `CompositionBuild.modules[].mirrorX`, `moduleWorldX` per al clic i el ressaltat dels compartiments); l'obertura del 3D surt enrere (`opening.ts`, per l'`explodeDir`). Tests `build/turnedModule.test.ts`, `viewer/openingTurned.test.ts`. El taulell corregut no té en compte `wallGap`.
 - **Carcassa** (inspector del mòdul, secció Caixa):
-  - **Suport** (`Carcass.base`): directe a terra · sòcol · potes (penjat, des de Posició). **Base** (la peça de baix,
+  - **Suport: un per a tot el moble** (`Composition.support`, `supportSchema.ts`, `floorSupport.ts`; per decisió de
+    l'usuari, 2026-10-15: «és un sòcol per a tots els mòduls i no un per a cada un»; «el sòcol no pot anar per cada mòdul,
+    és una peça global»): Moble › **Sòcol i potes** (`SupportForm`) tria **Directe a terra · Sòcol · Potes vistes**,
+    l'alçada de les potes, la pota i el sòcol. `withSupport` (en obrir el moble, a cada canvi de l'Editor i a
+    `buildComposition`) l'escriu a la base de cada mòdul de terra (`{ kind: "none" }` o `{ kind: "legs", height, hardware }`):
+    al mòdul, el Suport és un text. Un mòdul **sense base** no pot anar sobre potes (s'hi cargolen): va directe a terra i
+    no és del tram (un cobreradiador). Els mobles d'abans el prenen dels seus mòduls (`deriveSupport`: el suport més
+    repetit; el sòcol de les potes de cada mòdul o el sòcol corregut, amb els costats dels extrems; el **sòcol de caixa**
+    d'abans —laterals fins a terra— passa a potes de la mateixa alçada amb el mòdul més baix, a dalt queda on era, i
+    retorns a ras dels laterals) i els sòcols correguts (`runs` de tipus `plinth`) es treuen. **Base** (la peça de baix,
     `Carcass.noBottom`; per decisió de l'usuari, 2026-10-15: «la base que es pugui treure, perquè igual no necessita la
-    base»): **Sencera · Sense base**, com «Sense tapa» i «Sense fons», a qualsevol suport menys les **potes** (s'hi
-    cargolen: la base hi és sempre i el «Sense base» es conserva sense comptar). `hasBottom` (`zoneSupport.ts`) és l'única
-    pregunta («Sense base» = `noBottom` o el `{ kind: "open" }` d'abans, que `visibleModule` passa a `none` + `noBottom`:
-    mateixes peces, cap migració). Sense base: amb sòcol, l'interior comença a dalt del sòcol; la **Llum a sota** no surt
-    (va a la cara de sota de la base); els compartiments de baix compten la base que no hi és com a aguantada (`noBase`).
-    Test `build/noBottom.test.ts`. Avís `hanging` si un penjat sense penjadors té el fons prim. Amb potes, **«Sòcol ·
-    Davant de les potes»** (`Base.plinth.setback`, per decisió de l'usuari, 2026-10-14; `MountingBuilder.buildLegPlinth`,
-    `build/module/mounting.ts`): un tauler del
-    gruix i material del cos, de tota l'amplada del mòdul, de terra fins a 5 mm sota la base (l'alçada del sòcol AXILO =
-    H − 5), a «Retirada del sòcol» del davant (en encendre'l: el peu de la pota del davant just darrere amb 5 mm de joc);
-    avís `hardware` si toca el peu; es fixa amb els clips de sòcol a mà (sense mecanitzat). Test `build/legPlinth.test.ts`.
-    **Sòcol al voltant i d'alumini** (per petició de l'usuari, 2026-10-15: «poder ficar sòcol als laterals» de l'illa;
-    «sòcols d'alumini amb grapes que aniran per metres»; `PlinthSidesSchema`, `core/build/plinth.ts`): a sota de la
-    retirada, en cascada, **«Tipus de sòcol»** (`plinth.hardware`: «Fusta (el tauler del cos)», sense, o un sòcol
-    d'alumini de la biblioteca, motor `plinthProfile`, vegeu Ferratges per metres), **«Costats»** (`ChoiceChips`: Davant ·
-    + esquerre · + dret · + laterals · Tot el voltant → `back`/`left`/`right`) i, amb més d'un costat, **«Retirada dels
-    costats»** (`sideSetback`, de la cara del lateral o del darrere a la cara de fora del sòcol; sense, la del davant) i,
-    a la fusta, **«Cantonades»** (`corners`: A tope —el davant i el darrere passen per davant dels laterals, amb cantell
-    a l'extrem vist— · A inglet —tots de fora a fora, `Panel.mitres`, avís informatiu `mitre`—). `plinthPieces` fa els
-    trams (`plinth`, `plinth-back`, `plinth-left`, `plinth-right`, rol `plinth`, «Sòcol esquerre»…; la cara de fora a
-    z = 0 local per a l'inglet) i l'avís `hardware` es mira a cada costat (el peu de les potes darrere de cada tram).
-    D'alumini: cap peça de CNC; els trams (a tope, del gruix i l'alçada del perfil) van a `extras` (rol `hardware`, del
-    material de l'item, «Alumini anoditzat plata»), un tros de la comanda per tram, **un clip a cada pota de cada tram**
-    (l'estàndard: el clip es fixa a la pota), una cantonera per cantonada i una unió lineal on un tram passa de la barra; avís
-    `hardware` si el perfil no hi cap sota la base o hi deixa més de 20 mm. Només el davant i de fusta: la peça de sempre
-    (proves d'or idèntiques). Tests `build/plinthSides.test.ts`. Amb potes, «Pota»:
+    base»): **Sencera · Sense base**, com «Sense tapa» i «Sense fons»; amb potes la base hi és sempre. `hasBottom`
+    (`zoneSupport.ts`) és l'única pregunta. Sense base, la **Llum a sota** no surt i els compartiments de baix compten la
+    base que no hi és com a aguantada (`noBase`). Test `build/noBottom.test.ts`. Avís `hanging` si un penjat sense
+    penjadors té el fons prim.
+  - **Trams i el sòcol de cada tram** (`floorTrams`, `core/build/tramPlinth.ts`): un tram són els mòduls de terra que es
+    toquen (de costat, ≤ 1 mm, o d'esquena, ≤ 50 mm: les dues files d'una illa; els penjats no). Amb «Sòcol», **una sola
+    peça per costat de cada tram**, de punta a punta: al davant sempre, a «Retirada» de la cara dels fronts; als costats
+    triats per a cada tram (`tramSides`, `support.trams` per l'id d'un mòdul del tram: Davant · + esquerre · + dret ·
+    + laterals · Tot el voltant; per defecte només el davant, i un tram lliure al terra —una illa— tot el voltant), a
+    «Retirada dels costats» de la cara del lateral o del darrere. De **fusta**: de terra fins a 5 mm sota la base (l'alçada
+    del sòcol AXILO = H − 5), del material i gruix del cos del primer mòdul (o els triats), cantonades a tope o a inglet
+    (`plinthPieces`, `Panel.mitres`, avís `mitre`); un tram més llarg que un tauler (2400) es fa **a trossos**, amb les
+    juntes on es toquen dos mòduls. D'**alumini** (`plinthProfile`): cap peça de CNC, els perfils a `extras`, la comanda
+    per metres amb un clip a cada pota i les cantoneres; avís si el perfil no hi cap sota la base o hi deixa més de 20 mm.
+    Les peces són un «mòdul» més per a les refs (n + 1, com el taulell). L'**entrada d'aire** dels electrodomèstics
+    (`ModuleBuild.ventInlets`) és un retall al sòcol del tram davant del compartiment. Avisos: el sòcol que toca el peu
+    de la pota triada (`hardware`) i el mòdul del tram que no arriba a l'alçada dels baixos (`layout`: el taulell no
+    quedaria pla; les columnes no compten). Tests `build/tramPlinth.test.ts`, `build/linearOrders.test.ts`. Amb potes, «Pota»:
     les genèriques (només es veuen) o una pota de la biblioteca (`Base.hardware`, còpia): forats de la placa a la cara de
     sota de la base a cada pota (`buildLegs`; una d'importada, només confirmada). Del catàleg: **Häfele AXILO 78 amb la
     placa rectangular per cargolar** (`core/model/hafele/hafeleLegs.ts`, 637.76.333, p. FF 11.79; preferències v34, i v37
@@ -362,14 +372,13 @@
   «Illes» del moble (amb ≥ 2 mòduls). Davant · Darrere (tots dos
   «Lliure al terra»; «Afegir illa» els hi posa), «Pas de cables» (`gap`), Remat esquerre / dret, gruix (19) i material
   («Com els fronts»). El de darrere es gira 180° i es posa sol a la mateixa X, enganxat al darrere del de davant
-  (`buildComposition`; la seva Posició no compta i ho diu); avís `layout` si passaria per darrere de la paret. Els
+  (`buildComposition`; on va no compta i el Tipus ho diu); avís `layout` si passaria per darrere de la paret. Els
   **panells de remat** (`islandEndPanels`, rol `side`, «remat e/d») són d'una sola peça de dalt a baix i del darrere al
   davant de les dues files, amb cantell als tres costats vistos; un «mòdul» més per a les refs (després de taulell i
   sòcol). Avís informatiu `island` (es cargolen entre elles, sense forats automàtics). Una illa amb un mòdul que no hi és
   o que no és lliure al terra no es fa. Pendent (part 2): un sol taulell i la base comuna. Test `build/islands.test.ts`.
-  Les illes que es fan ara amb un mòdul «Lliure al terra» porten el sòcol al voltant amb les opcions del sòcol de la base
-  «Potes» (Costats, Cantonades, alumini): la plantilla «Cuina greige amb illa» (`mag:greige-kitchen`) en porta a tot el
-  voltant, a inglet, a 5 mm de les cares (les potes genèriques queden a dins; `kitchen({ island: { plinth: true } })`).
+  Les illes que es fan ara amb mòduls «Lliure al terra» són un tram: el sòcol del moble hi va a tot el voltant (per
+  defecte; la plantilla «Cuina greige amb illa», `mag:greige-kitchen`, a inglet).
 - **Peces corregudes** (`comp.runs`, `core/build/runs.ts`, `activeRuns`; **sense UI des del 2026-10-13**, per decisió de
   l'usuari: la secció «Taulell i sòcol» del moble ja no surt; treure ≠ esborrar: les que hi ha es conserven i es fabriquen
   igual, i `RunsForm` es queda sense ús; per decisió de l'usuari no es converteixen en peces lliures: es perdria el llarg, el voladís i els forats
@@ -377,12 +386,10 @@
   apagats en llegir (`migrateRuns`, a `normalizeComposition` i al `.moble`; els nous porten `off: false`); `RunsForm`: cada peça és un
   plegable (`FoldItem` variant `card`) amb un resum —de → fins a · gruix · forats—, dins del taulell cada forat també; una oberta alhora, la nova
   s'obre sola):
-  **taulell** d'una peça sobre els baixos de la fila (voladís, forats d'encastar de placa, pica o a mida → talls passants) i
-  **sòcol corregut** (davant de les potes, retranquejat). Es numeren com un mòdul més (n + 1) per a les refs. No arriben a
-  les illes (`freeX`) llevat que la peça sigui només de l'illa; un forat que travessa el contorn no es fa i s'avisa. El
-  sòcol corregut té les mateixes opcions que el de la base «Potes» (v45, sense UI com la resta; `buildPlinthRun` amb
-  `plinthPieces`): **retorns** als extrems vistos (`left`, `right`: de la cara dels fronts fins a la paret, a
-  `sideSetback` del lateral), `corners` i el sòcol d'alumini (`hardware`); sense cap opció, la peça de sempre.
+  **taulell** d'una peça sobre els baixos de la fila (voladís, forats d'encastar de placa, pica o a mida → talls passants).
+  Es numera com un mòdul més (n + 1) per a les refs. No arriba a les illes (`freeX`) llevat que la peça sigui només de
+  l'illa; un forat que travessa el contorn no es fa i s'avisa. Els **sòcols correguts** d'abans passen al sòcol de cada
+  tram (`withSupport`): ja no es construeixen.
 - **Ferratges per metres** (v45; per petició de l'usuari, 2026-10-15: «es tindran de poder ficar ferratges com si fossin
   mobles… gestionar tota l'app amb coherència»): **un sol concepte** per als perfils que es compren en barres (o per
   metres) i es tallen a mida. És un `HardwareItem` com els altres (biblioteca, Preferències › Ferratges, còpia al moble,
@@ -390,7 +397,7 @@
   (editables com tots), la secció `height` × `depth`, la barra `stock` (0 = per metres), `clipSpacing` i `clipEnd` (el
   sòcol, `clipSpacing` 0: un clip a cada pota de cada tram, `LinearPiece.clips`), i `linear.joint` (la unió lineal). **Una
   regla el posa** al moble, com la resta de motors: la regleta de paret (`wallRail`) al llarg de cada mòdul penjat amb
-  penjadors; el sòcol d'alumini (`plinthProfile`) als costats triats del sòcol de la base «Potes» o del sòcol corregut.
+  penjadors; el sòcol d'alumini (`plinthProfile`) als costats triats del sòcol de cada tram.
   Es **dibuixa** (`extras`, rol `hardware`: no surt a «Elements sense nesting») i cada regla en deixa un **tros**
   (`LinearPiece`, `ModuleBuild.linear`). La **comanda** (`buildLinearOrders`, `core/build/linearOrders.ts`,
   `CompositionBuild.linearOrders`): per item, els trossos per tallar (les regletes de penjats seguits —mateix item,
@@ -403,7 +410,7 @@
   (a sota, `linearCsvRows`) i a la fitxa «Ferratges» del mòdul (`ruleHardwareCounts`: penjadors, regleta i sòcol
   d'alumini amb els metres). Els **perfils LED** ja es tallen a mida per un altre camí (el perfil de l'app a «Elements
   sense nesting»; la barra Loox, a la comanda dels llums amb `cutLength`): no s'hi han passat (un ferratge nou per metres
-  només cal que porti `linear` i la regla que el posa). Test `build/plinthSides.test.ts` (clips, barres, trossos).
+  només cal que porti `linear` i la regla que el posa). Test `build/linearOrders.test.ts` (clips, barres, trossos).
 - **Objectes de referència** (`RefObject`): caixa, cilindre o **perfil 2D**, per veure mides i, amb efecte:
   **Obstacle** (avisa si xoca; el cilindre amb la seva secció, `refTouchesBox`; sobre els mòduls d'una fila, «Fer-li lloc» l'hi posa entre ells, `model/refRow.ts`, vegeu Editor › Moure) o **Talla** (`build/refCuts.ts`,
   `applyRefCuts`): forat passant a cada peça perpendicular a la seva direcció (z: fons i portes; y: base, tapa, prestatges;

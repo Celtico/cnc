@@ -53,7 +53,6 @@ export const PlinthSidesSchema = z.object({
   corners: z.enum(["butt", "mitre"]).optional(),
   hardware: FrontHardwareSchema.optional(),
 })
-export type PlinthSides = z.infer<typeof PlinthSidesSchema>
 
 export const BaseSchema = z.discriminatedUnion("kind", [
   /** Base a terra (com el mòdul de caixa actual). */

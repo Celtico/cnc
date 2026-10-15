@@ -74,24 +74,27 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   «Treure del grup» surt **just a sota del grup** mentre se n'arrossega un element (peces, models i mòduls; el mòdul queda
   solt al mateix lloc). També «Treure del grup» al menú ⋯ de cada element.
 - **Propietats** del que hi ha seleccionat i **només d'això**, en seccions plegables amb **una sola oberta alhora** (per decisió de l'usuari, 2026-10-13, i a tota l'app des del 2026-10-14: `FoldGroup` a l'inspector, recordada a la sessió `mobles:inspector-open`; les subseccions `size="sm"` de dins, una oberta entre elles; vegeu UI):
-  - Moble: Resum (i avisos de fusteria), Encaixos (si alguna peça en fa),
+  - Moble: Resum (i avisos de fusteria), **Sòcol i potes** (si hi ha mòduls de terra; `SupportForm`: el suport de tots
+    els mòduls de terra —Directe a terra · Sòcol · Potes vistes—, l'alçada, la pota, la retirada, fusta o alumini, el
+    material i, per a cada tram, on porta sòcol; vegeu Model › Suport), Encaixos (si alguna peça en fa),
     Materials de tot el moble (aplica a tots els mòduls), Acabats de l'escena (`Composition.scene`: `floor`, `wall` per a Presentació i miniatura; buit = «Com a
     Preferències»; `CabinetViewer sceneFinish`, `renderThumb(…, finish)`).
-  - Mòdul: Posició · Mides · **Electrodomèstic** (només sense dividir; des del 2026-10-15, a dalt de la Caixa: l'aparell
-    decideix la caixa) · **Caixa** · **Portes** (només amb l'Interior dividit) · **Unió** (si la caixa en fa) ·
+  - Mòdul: **Tipus** (`ModuleTypeSection`: Baix · Penjat · Columna · Electrodomèstic, l'aparell de l'Electrodomèstic i on
+    va: Lloc —arrambat o lliure al terra—, l'alçada del penjat, separacions, girat, X) · Mides · **Electrodomèstic** (la
+    placa del Baix o la campana del Penjat, sense dividir) · **Caixa** · **Portes** (només amb l'Interior dividit) · **Unió** (si la caixa en fa) ·
     **Materials** (en aquest ordre per decisió de l'usuari, 2026-10-13). **Sense «Acabats»** (per decisió de l'usuari,
     2026-10-08: «això dels acabats no està bé»; abans una secció `mod-joinery`, `LuHammer`): cada fila és a la secció del
     que toca, **un sol lloc per decisió i només el que la construcció llegeix** (`moduleRows` a
     `core/model/usedHardware.ts`, `frontsInspector.test.ts`), en cascada:
     - **Caixa** (`mod-structure`, `LuFrame`; abans «Estructura», es confonia amb la pestanya de l'arbre; `CarcassForm`):
-      **Suport** (Directe a terra · Sòcol · Potes; penjat: el text «Penjat a la paret, a … mm del terra», es canvia a
-      Posició) i, sota, **Base** (Sencera · Sense base, com la Tapa i el Fons; per decisió de l'usuari, 2026-10-15; amb
-      potes, el text «Sencera»: s'hi cargolen). Les parts que fixa l'electrodomèstic que és el mòdul (`applianceCarcass`;
-      vegeu Model › Electrodomèstic › La caixa que demana) surten com a **text** a la seva fila (Suport, Base, Fons, Tapa,
-      Laterals: «Sense base», «Els dos»…; l'ajuda diu «Rentaplats: directe a terra, sense base, sense tapa i sense fons. Ho
-      demana l'aparell»), com el penjat; les que es trien, amb el seu control. La resta, com sempre:
-      suport —amb la «Pota» pel mateix `HardwarePick`; amb el sòcol de les potes, «Tipus de sòcol», «Costats», «Retirada
-      dels costats» i «Cantonades»; penjat, «Penjadors» i «Regleta» amb «Com el mòdul» i «Cap» (`BaseFields.tsx`)—, fons i, just a sota, **Ranura del fons** (en ranura) o **Retirada
+      a dalt, si el mòdul és un electrodomèstic, **una nota** amb el que fixa l'aparell (`applianceCarcass`, «Rentaplats:
+      directe a terra, sense base, sense tapa i sense fons. Ho demana l'aparell»; les files fixes no surten) i les opcions
+      del front de moble (`ApplianceFields`: Front, Material del front, Obre, Sòcol, Tirador); al nínxol de terra, els
+      laterals són «Laterals de remat» (una peça sola, sense Parets ni Estil dels fronts: `ApplianceCarcass.niche`).
+      **Suport**: un text (el del moble, Moble › Sòcol i potes; penjat: «Penjat a la paret, a … mm del terra», es canvia
+      a Tipus) i, sota, **Base** (Sencera · Sense base, com la Tapa i el Fons; per decisió de l'usuari, 2026-10-15; amb
+      potes, el text «Sencera»: s'hi cargolen; sense base, el mòdul va directe a terra). La resta, com sempre:
+      penjat, «Penjadors» i «Regleta» amb «Com el mòdul» i «Cap» (`BaseFields.tsx`)—, fons i, just a sota, **Ranura del fons** (en ranura) o **Retirada
       del fons** (encastat), tapa, laterals, parets, cantonades i, al final, el que és de tots els fronts del mòdul:
       **Estil dels fronts** (Recobrents / Encastats) i Folgança front–cos si hi ha algun front que es fa (un front fix
       també) · Folgança entre fronts amb dues portes, dos calaixos o un front recobrent al costat d'un divisor ·
@@ -336,7 +339,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   amb la signatura; si l'API els rebutja perquè l'app ha canviat d'eines o d'instruccions, `stripThinking` els treu i es torna a provar un cop); instruccions i eines a la memòria cau (`cache_control`). **Eines** = `core/assistant/tools.ts`,
   pures, entrada validada amb zod (el mateix esquema fa el JSON Schema, `z.toJSONSchema`): `get_moble`, `add_module`,
   `remove_module`, `rename_module`, `set_module_size`, `set_module_position` (`setModuleMount`, el mateix camí que la
-  «Fila» de Mòdul › Posició), `set_carcass`, `split_zone`, `unsplit_zone`, `set_zone_size` (`setSplitSize`: l'última
+  «Lloc» de Mòdul › Tipus), `set_carcass` (el suport és el de tot el moble: `setSupport`), `split_zone`, `unsplit_zone`, `set_zone_size` (`setSplitSize`: l'última
   zona és el que sobra), `set_front` (`switchFront`/`setFront`; portes de tot el mòdul només a l'Interior dividit; un
   compartiment tapat no en porta), `set_shelves`, `set_material` (només els de Preferències). Les mateixes regles que la
   UI (`zoneSupport.ts`: què aguanta cada compartiment); el resultat porta el resum del moble (`summary.ts`: mòduls,

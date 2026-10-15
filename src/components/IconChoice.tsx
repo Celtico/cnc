@@ -9,6 +9,8 @@ export interface IconOption<T extends string> {
   icon: IconType
   /** Explicació més llarga per al tooltip (si no, el nom). */
   hint?: string
+  /** No es pot triar ara (el tooltip diu per què). */
+  disabled?: boolean
 }
 
 /**
@@ -36,7 +38,8 @@ export function IconChoice<T extends string>({ label, value, options, onChange, 
                 role="radio"
                 aria-checked={on}
                 aria-label={o.label}
-                onClick={() => !on && onChange(o.value)}
+                disabled={o.disabled}
+                onClick={() => !on && !o.disabled && onChange(o.value)}
               >
                 <Icon />
               </IconButton>

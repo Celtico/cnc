@@ -1,10 +1,10 @@
 import { Badge, Box, Button, HStack, Stack, Text } from "@chakra-ui/react"
-import { LuBox, LuCamera, LuLampFloor, LuMove, LuMoveDiagonal, LuPalette, LuPuzzle, LuWrench } from "react-icons/lu"
+import { LuBox, LuCamera, LuLampFloor, LuMoveDiagonal, LuPalette, LuPanelBottom, LuPuzzle, LuWrench } from "react-icons/lu"
 import { FoldGroup, FoldItem } from "../../components/Fold"
 import type { CompositionBuild } from "../../core/build/buildComposition"
 import type { ModuleBuild } from "../../core/build/buildModule"
 import { activeIslands } from "../../core/build/islands"
-import { groupItems, groupMulti, hasDrawers, mountOf, moveMultiBy, newGroupName, partJoinery, partsOnlyKind, removeGroup, removeMulti, visibleModule, type Composition, type compositionKind, type Module, type MultiItem, type Settings, type Zone } from "../../core/model"
+import { groupItems, groupMulti, hasDrawers, moveMultiBy, newGroupName, partJoinery, partsOnlyKind, removeGroup, removeMulti, visibleModule, type Composition, type compositionKind, type Module, type MultiItem, type Settings, type Zone } from "../../core/model"
 import type { Project } from "../../db/db"
 import { CarcassForm, MaterialsForm } from "../composition/CarcassForm"
 import { HardwarePlacements, PlacementInspector, type PlacementActions } from "../composition/HardwarePlacements"
@@ -16,7 +16,9 @@ import type { Selection } from "../composition/StructureTree"
 import type { CompositionEdits } from "./editorCommands"
 import { InspectorAlerts } from "./InspectorAlerts"
 import { InspectorHeader } from "./InspectorHeader"
-import { ModulePositionFields, ModuleSections, SceneFinishFields, ZoneSection } from "./InspectorSections"
+import { ModuleSections, SceneFinishFields, ZoneSection } from "./InspectorSections"
+import { ModuleTypeSection } from "./ModuleTypeSection"
+import { SupportForm } from "../composition/SupportForm"
 import type { SetComp } from "./useEditorDoc"
 import { clipOf, pasteClip } from "./pasteClip"
 import type { SceneData } from "./useSceneData"
@@ -115,6 +117,13 @@ export function EditorInspector({
               Selecciona un mòdul, un compartiment o un objecte a l'estructura (o clica'l al 3D) per editar-lo.
             </Text>
           </FoldItem>
+          {/* Sòcol i potes: un sol suport per a tots els mòduls de terra i un sòcol per tram (per decisió de l'usuari,
+              2026-10-15: «és un sòcol per a tots els mòduls i no un per a cada un»). */}
+          {!partsOnlyKind(kind) && comp.support && (
+            <FoldItem optionId="moble.support" id="moble-support" title="Sòcol i potes" icon={LuPanelBottom} badge={comp.support.kind === "plinth" ? `Sòcol ${comp.support.height}` : comp.support.kind === "legs" ? `Potes ${comp.support.height}` : "A terra"}>
+              <SupportForm comp={comp} setComp={setComp} />
+            </FoldItem>
+          )}
           {/* Sense «Tipus» (es tria en crear el moble). Els documents només de peces ho diuen aquí. */}
           {kind === "objecte" ? (
             <Text fontSize="xs" color="fg.muted" px={1} py={2}>
@@ -218,25 +227,14 @@ export function EditorInspector({
       ) : module ? (
         // Seccions plegables independents (com Figma o Fusion): es poden tenir diverses
         // obertes i cada una recorda el seu estat.
-        // Ordre (per decisió de l'usuari, 2026-10-13): Posició · Mides · Electrodomèstic (sense dividir, 2026-10-15: decideix
-        // la caixa) · Caixa · Portes (dividit) · Unió · Materials.
+        // Ordre (per decisió de l'usuari, 2026-10-13; el Tipus, 2026-10-15): Tipus (on va i, l'electrodomèstic, l'aparell) ·
+        // Mides · Electrodomèstic (la placa o la campana) · Caixa · Portes (dividit) · Unió · Materials.
         <Stack gap={0}>
-            {islandBack ? (
-              // El de darrere d'una illa es col·loca sol (girat i enganxat al de davant): la seva posició no compta.
-              <FoldItem optionId="module.position" id="mod-position" title="Posició" icon={LuMove} badge="Illa · darrere">
-                <Text fontSize="sm" color="fg.muted">
-                  És el mòdul de darrere de l'illa amb «{comp.modules.find((m) => m.id === islandBack.front)?.name}»: es gira 180° i es col·loca sol, enganxat al seu darrere. Es canvia al moble, a «Illes».
-                </Text>
-              </FoldItem>
-            ) : (
-            <FoldItem optionId="module.position" id="mod-position" title="Posició" icon={LuMove} badge={module.carcass.base.kind === "wall" ? `Penjat a ${module.carcass.base.height}` : mountOf(module) === "floor" ? `Lliure al terra · ${module.wallGap ?? 0} de la paret` : "Arrambat a la paret"}>
-              <ModulePositionFields comp={comp} module={module} moduleX={build?.modules[moduleIndex]?.x} updateModule={updateModule} />
-            </FoldItem>
-            )}
+            <ModuleTypeSection comp={comp} module={module} moduleX={build?.modules[moduleIndex]?.x} updateModule={updateModule} islandFront={islandBack ? comp.modules.find((m) => m.id === islandBack.front)?.name : undefined} />
           <FoldItem optionId="module.dims" id="mod-dims" title="Mides" icon={LuMoveDiagonal} badge={`${module.carcass.width} × ${module.carcass.height}`}>
             <CarcassForm module={module} onChange={updateModule} section="dims" />
           </FoldItem>
-          <ModuleSections module={module} updateModule={updateModule} />
+          <ModuleSections module={module} updateModule={updateModule} support={comp.support} />
           {/* «Ferratges» (col·locats a mà i els de les regles) no surt a l'inspector del mòdul (per decisió de l'usuari,
               2026-10-08): els col·locats es conserven, es fabriquen i es veuen al 3D (on es trien i s'editen). */}
         </Stack>

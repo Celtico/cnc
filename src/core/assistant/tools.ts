@@ -2,6 +2,7 @@ import { z } from "zod"
 import { buildComposition } from "../build/buildComposition"
 import { splitChildSizes } from "../build/layout"
 import {
+  setSupport,
   applySettingsToModule,
   backChoices,
   boardChoices,
@@ -93,7 +94,7 @@ const TOOL_INPUTS = {
           z.object({ kind: z.literal("open") }).describe("Directe a terra i sense base (com none + bottom false): laterals fins a terra (cobreradiador)."),
         ])
         .optional()
-        .describe("Suport de terra (per penjar-lo, set_module_position mount=hung)."),
+        .describe("Suport de terra de TOTS els mòduls de terra del moble (és un de sol; el sòcol és una peça per tram, sobre potes). Per penjar-lo, set_module_position mount=hung."),
       bottom: z.boolean().optional().describe("Base (la peça de baix de la caixa): false = sense base (també als penjats i amb sòcol); amb potes sempre hi és (s'hi cargolen)."),
       back: z.enum(["groove", "screwed", "inset", "none"]).optional().describe("Fons: en ranura, cargolat darrere, encastat o sense."),
       top: z
@@ -296,11 +297,13 @@ function apply(comp: Composition, name: ToolName, input: never, ctx: ToolContext
       const i = input as In<"set_carcass">
       const m = findModule(comp, i.module)
       const c = { ...m.carcass }
+      let support: { kind: "floor" | "plinth" | "legs"; height?: number; setback?: number } | undefined
       if (i.base) {
         if (c.base.kind === "wall") fail("El mòdul és penjat: no té base de terra. Primer set_module_position mount=wall o floor.")
         // «open» (sense base, d'abans) és directe a terra amb `noBottom` (la forma d'ara, com la UI).
         if (c.base.kind === "open" && !c.noBottom) c.noBottom = true
-        c.base = i.base.kind === "legs" ? { kind: "legs", height: i.base.height } : i.base.kind === "plinth" ? { kind: "plinth", height: i.base.height, setback: i.base.setback } : { kind: "none" }
+        // El suport és el de tots els mòduls de terra (Moble › Sòcol i potes): es canvia al moble i el sòcol és per tram.
+        support = i.base.kind === "legs" ? { kind: "legs", height: i.base.height } : i.base.kind === "plinth" ? { kind: "plinth", height: i.base.height, setback: i.base.setback } : { kind: "floor" }
         if (i.base.kind === "open") c.noBottom = true
       }
       if (i.bottom !== undefined) {
@@ -322,7 +325,11 @@ function apply(comp: Composition, name: ToolName, input: never, ctx: ToolContext
         else delete c.joint
       }
       const fronts = i.front_style ? { ...m.fronts, style: i.front_style } : m.fronts
-      return { comp: replaceModule(comp, { ...m, carcass: c, fronts }), result: { module_id: m.id } }
+      const next = replaceModule(comp, { ...m, carcass: c, fronts })
+      if (!support) return { comp: next, result: { module_id: m.id } }
+      const cur = next.support ?? { kind: "floor" as const, height: 100, plinth: { setback: 20 } }
+      const s = support
+      return { comp: setSupport(next, { ...cur, kind: s.kind, ...(s.height ? { height: s.height } : {}), ...(s.setback !== undefined ? { plinth: { ...cur.plinth, setback: s.setback } } : {}) }), result: { module_id: m.id, support: "el de tots els mòduls de terra" } }
     }
     case "split_zone": {
       const i = input as In<"split_zone">
