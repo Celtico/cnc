@@ -1,0 +1,102 @@
+import { CabinetViewer } from "../../components/viewer/CabinetViewer"
+import type { SceneGetter } from "../../components/viewer/render/RenderDialog"
+import { groupItems, moveAllBy, moveModuleBy, moveMultiBy, type Composition, type Module, type Settings } from "../../core/model"
+import type { Selection } from "../composition/StructureTree"
+import type { CompositionEdits } from "./editorCommands"
+import type { EditorCamera } from "./useEditorCamera"
+import type { SetComp } from "./useEditorDoc"
+import type { SceneData } from "./useSceneData"
+import type { ViewerOptions } from "./useViewerOptions"
+import type { viewerPicks } from "./viewerPicks"
+
+/** El visor 3D de l'editor: el moble amb la selecció, els gizmos per moure i la càmera. */
+export function SceneView({
+  comp,
+  setComp,
+  materials,
+  scene,
+  opts,
+  camera,
+  selection,
+  module,
+  selectionLocked,
+  select,
+  pick,
+  picks,
+  edits,
+  onCapture,
+  onSceneAccess,
+}: {
+  comp: Composition
+  setComp: SetComp
+  materials: Settings["materials"]
+  scene: SceneData
+  opts: Pick<ViewerOptions, "exploded" | "showHoles" | "viewer" | "viewerState" | "quality" | "hardware">
+  camera: EditorCamera
+  selection: Selection
+  module: Module | undefined
+  selectionLocked: boolean
+  select: (s: Selection) => void
+  pick: (s: Selection) => void
+  picks: ReturnType<typeof viewerPicks>
+  edits: Pick<CompositionEdits, "moveGroup" | "movePart" | "moveModel" | "moveRef">
+  onCapture: (fn: () => Promise<Blob>) => void
+  onSceneAccess: (g: SceneGetter) => void
+}) {
+  const { shownPanels, frameSize, viewerModules, ghosts, openOnly, cutPartIds, collidingRefs, cuttingRefs, highlightZone, solidParts } = scene
+  const { exploded, showHoles, viewer, viewerState, quality, hardware } = opts
+  const { viewDir, fitKey, setFramed, cameraRef, saveCamera, cameraGoto } = camera
+  const { selectFrom3D, selectPartFrom3D, selectModelFrom3D } = picks
+  const { moveGroup, movePart, moveModel, moveRef } = edits
+  return (
+    <CabinetViewer
+      sceneFinish={comp.scene}
+      panels={shownPanels}
+      size={frameSize}
+      exploded={exploded}
+      // A la vista explosionada i amb les peces translúcides els forats i les ranures sempre es veuen.
+      showHoles={showHoles || exploded || viewer.opacity < 1}
+      seeThrough={viewer.opacity < 1 ? viewer.opacity : undefined}
+      modules={viewerModules.filter((v) => !comp.modules.find((m) => m.id === v.id)?.hidden)}
+      selectedModuleId={(selection.kind === "module" || selection.kind === "zone") && module ? module.id : null}
+      onSelectModule={selectFrom3D}
+      ghosts={ghosts}
+      viewDir={viewDir}
+      opening={viewer.opening}
+      openOnly={openOnly}
+      materialMode={viewerState.materialMode}
+      materials={materials}
+      onCapture={onCapture}
+      quality={quality}
+      onDeselect={() => select({ kind: "moble" })}
+      selectedRefId={selection.kind === "ref" ? selection.id : selection.kind === "part" && cutPartIds.has(selection.id) ? `part:${selection.id}` : null}
+      collidingRefIds={collidingRefs}
+      cuttingRefIds={cuttingRefs}
+      highlightZone={highlightZone}
+      onSelectRef={(id) => pick(id.startsWith("part:") ? { kind: "part", id: id.slice(5) } : { kind: "ref", id })}
+      fitKey={fitKey}
+      onFramedChange={setFramed}
+      initialCamera={cameraRef.current}
+      onCameraChange={saveCamera}
+      cameraGoto={cameraGoto}
+      onMoveRef={selectionLocked ? undefined : (id, pos) => (id.startsWith("part:") ? movePart(id.slice(5), pos) : moveRef(id, pos))}
+      hardware={hardware}
+      onSceneAccess={onSceneAccess}
+      parts={solidParts}
+      selectedPartId={selection.kind === "part" ? selection.id : null}
+      onSelectPart={selectPartFrom3D}
+      selectedGroup={null}
+      onMoveGroup={selectionLocked ? undefined : (g, dx, dy, dz) => moveGroup(g, dx, dy, dz)}
+      selectedSet={selection.kind === "multi" ? selection.items : selection.kind === "group" ? groupItems(comp, selection.id) : undefined}
+      onMoveSet={selectionLocked ? undefined : selection.kind === "multi" ? (dx, dy, dz) => setComp((c) => moveMultiBy(c, selection.items, dx, dy, dz)) : selection.kind === "group" ? (dx, dy, dz) => moveGroup(selection.id, dx, dy, dz) : undefined}
+      onMovePart={selectionLocked ? undefined : movePart}
+      models={comp.models?.filter((g) => !g.hidden)}
+      selectedModelId={selection.kind === "model" ? selection.id : null}
+      onSelectModel={selectModelFrom3D}
+      selectedHardwareId={selection.kind === "hardware" ? selection.id : null}
+      onSelectHardware={(id) => select({ kind: "hardware", id })}
+      onMoveModel={selectionLocked ? undefined : moveModel}
+      onMoveModule={selectionLocked ? undefined : (id, dx, dy, all, dz) => setComp((c) => (all ? moveAllBy(c, dx) : moveModuleBy(c, id, dx, dy, dz)))}
+    />
+  )
+}
