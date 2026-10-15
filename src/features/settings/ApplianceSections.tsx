@@ -29,7 +29,7 @@ export function ApplianceSections({ item, appliance: a }: { item: HardwareItem; 
           {APPLIANCE_LABELS[a.kind]} ({a.family}) · aparell {a.size.w} × {a.size.h} × {a.size.d} mm
         </Text>
       </FormRow>
-      <FormRow label="Front de moble" help="Es tria a cada compartiment (Electrodomèstic › Front de moble); el material, per defecte el dels fronts del mòdul, també («Material del front»).">
+      <FormRow label="Front de moble" help="Es tria al mòdul (o al compartiment d'un mòdul dividit): Electrodomèstic › Front de moble; el material, per defecte el dels fronts del mòdul, també («Material del front»).">
         <Text fontSize="sm" pt="6px">
           {mountText(a)}
         </Text>
