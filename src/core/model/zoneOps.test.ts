@@ -86,7 +86,8 @@ describe("plantilles", () => {
     expect(tv.filter((p) => p.role === "door")).toHaveLength(3)
     expect(tv.filter((p) => p.role === "shelf")).toHaveLength(3)
     expect(tv.filter((p) => p.role === "divider")).toHaveLength(2)
-    expect(tv.find((p) => p.role === "plinth")).toBeDefined()
+    // El sòcol és el del tram (el del moble TV: el cobreradiador va directe a terra, sense base).
+    expect(panels.find((p) => p.role === "plinth")).toBeDefined()
     expect(tv.find((p) => p.role === "back")!.cutouts?.[0]).toMatchObject({ kind: "circle", diameter: 60 })
     const rad = panels.filter((p) => p.module === 2)
     expect(rad.find((p) => p.role === "grille")).toBeDefined()

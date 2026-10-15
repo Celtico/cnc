@@ -31,6 +31,8 @@ const ModuleHardwareSchema = z.preprocess(migrateModuleHardware, ModuleHardwareK
  * mòdul; reparat camp a camp en quedaria mig (menys mecanitzats) i el front es fabricaria diferent sense dir-ho.
  */
 const FrontHardwareSchema = repairAtomically(z.preprocess(sanitizeImportedHardware, HardwareItemObjectSchema))
+/** Una còpia d'un ferratge de la biblioteca, llegida sencera o res (la pota i el sòcol del suport del moble). */
+export const HardwareCopySchema = FrontHardwareSchema
 
 /** Un ferratge triat o «Cap» (`"none"`): sense, el del mòdul («Com el mòdul»). */
 const HardwareOrNoneSchema = z.union([FrontHardwareSchema, z.literal("none")])
@@ -395,6 +397,12 @@ export const ModuleSchema = z.object({
   ...VIEW_FLAGS,
   /** Grup (nom), el mateix espai de noms que el de les peces lliures i els models: es mouen, s'amaguen i es bloquegen junts. */
   group: z.string().optional(),
+  /**
+   * **Tipus** (per decisió de l'usuari, 2026-10-15: «canviem Posició per tipus de moble»): Baix, Columna o Electrodomèstic
+   * triats a mà; el Penjat és el de la base «wall». Sense, es dedueix (`moduleType`): electrodomèstic si el mòdul ho és,
+   * columna si fa 1.200 mm o més d'alçada, baix si no.
+   */
+  type: z.enum(["base", "tall", "appliance"]).optional(),
   /** Separació respecte al mòdul anterior de la seva fila (o a l'origen si és el primer). */
   gapBefore: mm.min(0),
   /**

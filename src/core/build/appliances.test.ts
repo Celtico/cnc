@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { APPLIANCE_ITEMS, DEFAULT_HARDWARE_LIBRARY, boardDensity, DEFAULT_SETTINGS, V46_ITEMS, applianceById, defaultModule, dishwasherModule, fridgeColumn, isApplianceModule, nicheAppliance, zoneAppliance, nicheModule, ovenColumn, parseSettings, usedHardwareSlots, visibleModule, type Module, type Zone } from "../model"
+import { buildComposition } from "./buildComposition"
 import { buildModule } from "./buildModule"
 import { hardwarePreview } from "./hardwarePreview"
 import { hardwareMount } from "./hardwareMount"
@@ -85,13 +86,13 @@ describe("electrodomèstics (v46)", () => {
     expect(b.fittingOrders.find((l) => l.component === "appliance-bosch-kin86add0:vent")).toMatchObject({ qty: 1, name: "Reixeta de ventilació de sòcol" })
   })
 
-  it("combi amb el sòcol de fusta del mòdul: l'entrada d'aire és un retall de ≥ 200 cm² al sòcol, davant del frigorífic", () => {
+  it("combi amb el sòcol de fusta del tram: l'entrada d'aire és un retall de ≥ 200 cm² al sòcol, davant del frigorífic", () => {
     const m = fridgeColumn()
-    const b = buildModule({ ...m, carcass: { ...m.carcass, base: { kind: "legs", height: 100, plinth: { setback: 5 } } } })
-    const plinth = b.panels.find((p) => p.id === "plinth")!
+    const b = buildComposition({ modules: [m], references: [], support: { kind: "plinth", height: 100, plinth: { setback: 24 } } })
+    const plinth = b.panels.find((p) => p.role === "plinth")!
     const vent = plinth.cutouts?.find((c) => c.tag === "vent")
     expect(vent && vent.kind === "rect" ? vent.w * vent.h : 0).toBeGreaterThanOrEqual(20000)
-    expect(b.warnings.filter((w) => w.code === "appliance")).toEqual([])
+    expect(b.warnings.filter((w) => w.code === "appliance" || w.code === "layout")).toEqual([])
   })
 
   it("frigorífic de porta lliscant: frontisses de moble (la filera i les plaques al lateral) i la guia lliscant", () => {

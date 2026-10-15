@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { HAFELE_LEGS } from "../model/hafele/hafeleLegs"
 import { DEFAULT_SETTINGS, HardwareItemSchema, defaultModule, parseSettings, type Module } from "../model"
+import { buildComposition } from "./buildComposition"
 import { buildModule } from "./buildModule"
 import { toWorld } from "./geometry"
 import { hardwareMount } from "./hardwareMount"
@@ -59,21 +60,17 @@ describe("pota AXILO 78 (placa rectangular per cargolar)", () => {
     expect(moble.targets).toEqual(axilo.targets)
   })
 
-  it("sòcol davant de les potes: de tota l'amplada, de terra fins a 5 mm sota la base, sense tocar el peu", () => {
+  it("sòcol del tram davant de les potes: de terra fins a 5 mm sota la base, sense tocar el peu", () => {
     const m = onLegs()
-    const b = buildModule({ ...m, carcass: { ...m.carcass, base: { kind: "legs", height: 100, hardware: structuredClone(axilo), plinth: { setback: 20 } } } })
+    const at = (setback: number) => buildComposition({ modules: [m], references: [], support: { kind: "plinth", height: 100, leg: structuredClone(axilo), plinth: { setback } } })
+    // 20 del davant de la caixa = 39 de la cara del front recobrent.
+    const b = at(20 + m.carcass.thickness)
     const plinth = b.panels.find((p) => p.role === "plinth")!
-    expect(plinth).toBeDefined()
     expect(plinth.length).toBe(m.carcass.width)
     expect(plinth.width).toBe(95)
-    expect(plinth.placement.origin[1]).toBe(-100)
-    expect(plinth.placement.origin[2]).toBe(m.carcass.depth - 20 - m.carcass.thickness)
     expect(b.warnings.filter((w) => w.code === "hardware")).toEqual([])
     // Massa endavant les potes (o massa enrere el sòcol): avís.
-    const near = buildModule({ ...m, carcass: { ...m.carcass, base: { kind: "legs", height: 100, hardware: structuredClone(axilo), plinth: { setback: 60 } } } })
-    expect(near.warnings.some((w) => w.code === "hardware" && /sòcol/.test(w.message))).toBe(true)
-    // Sense sòcol, cap peça de sòcol.
-    expect(buildModule(m).panels.some((p) => p.role === "plinth")).toBe(false)
+    expect(at(60 + m.carcass.thickness).warnings.some((w) => w.code === "hardware" && /sòcol/.test(w.message))).toBe(true)
   })
 
   it("el dibuix de Preferències (peça d'exemple) posa els forats com el moble: davant, darrere i mirall", () => {

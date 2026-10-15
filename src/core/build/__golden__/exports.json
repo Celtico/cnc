@@ -165,14 +165,14 @@
   ]
  },
  "modern-kitchen": {
-  "boards": 7,
+  "boards": 8,
   "csv": {
-   "rows": 89,
-   "unplaced": 2,
-   "hash": "bfb2e106"
+   "rows": 90,
+   "unplaced": 1,
+   "hash": "da99c191"
   },
   "xcs": {
-   "warnings": 66,
+   "warnings": 65,
    "sheets": [
     "T01_Melamina_blanca_19.xcs parts:16 drill:drill=202 outer:contour=48 #7c1d6e8d",
     "T02_Melamina_blanca_19.xcs parts:17 drill:drill=248 outer:contour=51 #28e05527",
@@ -180,11 +180,12 @@
     "T04_DM_fons_10.xcs parts:13 outer:contour=39 #d38ab6a6",
     "T05_DM_fons_10.xcs parts:2 outer:contour=6 #35f16eba",
     "T06_Melamina_roure_19.xcs parts:13 drill:drill=64 outer:contour=39 #e1adbb2b",
-    "T07_Melamina_blanca_16.xcs parts:18 drill:drill=24 outer:contour=54 #8d5a7400"
+    "T07_Melamina_blanca_16.xcs parts:18 drill:drill=24 outer:contour=54 #8d5a7400",
+    "T08_Melamina_roure_16.xcs parts:2 outer:contour=6 #9ff5510c"
    ]
   },
   "dxf": [
-   "BLOCK@0=89",
+   "BLOCK@0=90",
    "CIRCLE@CUT_THROUGH=26",
    "CIRCLE@DRILL_B_D4_P7=24",
    "CIRCLE@DRILL_D10_P13=32",
@@ -193,16 +194,16 @@
    "CIRCLE@DRILL_D8_P10=48",
    "CIRCLE@DRILL_D8_P12=104",
    "CIRCLE@DRILL_H_D8_P20=150",
-   "ENDBLK@0=89",
-   "INSERT@0=89",
-   "POLYLINE@CONTOUR=89",
+   "ENDBLK@0=90",
+   "INSERT@0=90",
+   "POLYLINE@CONTOUR=90",
    "POLYLINE@CUT_THROUGH=10",
    "POLYLINE@GROOVE_W10_P8=52",
-   "SEQEND@CONTOUR=89",
+   "SEQEND@CONTOUR=90",
    "SEQEND@CUT_THROUGH=10",
    "SEQEND@GROOVE_W10_P8=52",
-   "TEXT@LABEL=89",
-   "VERTEX@CONTOUR=356",
+   "TEXT@LABEL=90",
+   "VERTEX@CONTOUR=360",
    "VERTEX@CUT_THROUGH=40",
    "VERTEX@GROOVE_W10_P8=208"
   ]
@@ -314,24 +315,24 @@
  "store-dormitori-armari-1": {
   "boards": 7,
   "csv": {
-   "rows": 36,
+   "rows": 37,
    "unplaced": 0,
-   "hash": "973ba2bc"
+   "hash": "22afd76c"
   },
   "xcs": {
    "warnings": 12,
    "sheets": [
-    "T01_Melamina_blanca_19.xcs parts:3 drill:drill=359 outer:contour=3 #ac6884a4",
-    "T02_Melamina_blanca_19.xcs parts:7 drill:drill=97 outer:contour=19 #bb01f48d",
-    "T03_Melamina_blanca_19.xcs parts:7 drill:drill=25 outer:contour=17 #e4cf5eab",
-    "T04_Melamina_blanca_19.xcs parts:5 drill:drill=17 outer:contour=15 #81dfc3f2",
-    "T05_DM_fons_10.xcs parts:4 outer:contour=8 #f80809f5",
-    "T06_DM_fons_10.xcs parts:1 outer:contour=3 #a1a52196",
-    "T07_Melamina_blanca_16.xcs parts:9 drill:drill=12 outer:contour=27 #1bdaf90a"
+    "T01_Melamina_blanca_19.xcs parts:3 drill:drill=359 outer:contour=3 #26f15a6e",
+    "T02_Melamina_blanca_19.xcs parts:7 drill:drill=97 outer:contour=19 #721bf068",
+    "T03_Melamina_blanca_19.xcs parts:9 drill:drill=25 outer:contour=23 #8abfdab2",
+    "T04_Melamina_blanca_19.xcs parts:4 drill:drill=17 outer:contour=12 #6ee52d40",
+    "T05_DM_fons_10.xcs parts:4 outer:contour=8 #df9bf3da",
+    "T06_DM_fons_10.xcs parts:1 outer:contour=3 #861f7def",
+    "T07_Melamina_blanca_16.xcs parts:9 drill:drill=12 outer:contour=27 #a17e9dad"
    ]
   },
   "dxf": [
-   "BLOCK@0=36",
+   "BLOCK@0=37",
    "CIRCLE@CUT_THROUGH=14",
    "CIRCLE@DRILL_B_D4_P7=12",
    "CIRCLE@DRILL_D35_P13=16",
@@ -339,14 +340,14 @@
    "CIRCLE@DRILL_D8_P10=24",
    "CIRCLE@DRILL_D8_P12=36",
    "CIRCLE@DRILL_H_D8_P20=60",
-   "ENDBLK@0=36",
-   "INSERT@0=36",
-   "POLYLINE@CONTOUR=36",
+   "ENDBLK@0=37",
+   "INSERT@0=37",
+   "POLYLINE@CONTOUR=37",
    "POLYLINE@GROOVE_W10_P8=9",
-   "SEQEND@CONTOUR=36",
+   "SEQEND@CONTOUR=37",
    "SEQEND@GROOVE_W10_P8=9",
-   "TEXT@LABEL=36",
-   "VERTEX@CONTOUR=144",
+   "TEXT@LABEL=37",
+   "VERTEX@CONTOUR=148",
    "VERTEX@GROOVE_W10_P8=36"
   ]
  },

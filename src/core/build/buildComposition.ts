@@ -1,11 +1,12 @@
 import type { KitOrderLine } from "./drawerKit"
-import { activeRuns, compositionKind, isSolidMaterial, isTurned, modelFootprint, modulePlacements, NO_EDGES, partsOnlyKind, partCutters, type Composition, type ModelObject, type Module, type Panel, type Vec3 } from "../model"
+import { activeRuns, compositionKind, withSupport, isSolidMaterial, isTurned, modelFootprint, modulePlacements, NO_EDGES, partsOnlyKind, partCutters, type Composition, type ModelObject, type Module, type Panel, type Vec3 } from "../model"
 import { applyRefCuts, migrateCableHoles, refTouchesBox } from "./refCuts"
 import { columnRearLimits, columnWalls, relayLegs } from "./columnWalls"
 import { buildModule, type BuildWarning, type KitOrder, type ModuleBuild, type Wiring } from "./buildModule"
 import type { LightOrder } from "./lightOrders"
 import { normalizePanel } from "./buildCabinet"
-import { buildPlinthRun, buildWorktop, type RunWarning } from "./runs"
+import { buildWorktop, type RunWarning } from "./runs"
+import { buildTramPlinths } from "./tramPlinth"
 import { buildLinearOrders, type LinearOrder, type LinearPiece } from "./linearOrders"
 import { buildFreeParts, type PartJoint } from "./freeParts"
 import { resolveHoleClashes } from "./holeClash"
@@ -105,8 +106,9 @@ export function panelBox(p: Panel): { min: Vec3; max: Vec3 } {
  * mòdul a cada peça per a les refs del taller.
  */
 export function buildComposition(input: Composition): CompositionBuild {
-  // Passacables de la versió anterior → objectes que tallen.
-  const migrated = migrateCableHoles(input, panelBox)
+  // Passacables de la versió anterior → objectes que tallen. Un sol suport per als mòduls de terra (`withSupport`: els
+  // mobles d'abans el prenen dels seus mòduls) i el sòcol de cada tram.
+  const migrated = withSupport(migrateCableHoles(input, panelBox))
   // Objecte: les peces només es veuen (mai van al nesting ni fan encaixos).
   const comp = compositionKind(migrated) === "objecte" ? { ...migrated, parts: migrated.parts?.map((p) => ({ ...p, nest: false, joinery: false })) } : migrated
   // Còpia: el mòdul de darrere de cada illa es recol·loca (`islands.ts`).
@@ -224,27 +226,31 @@ export function buildComposition(input: Composition): CompositionBuild {
       }
   }
 
-  // Peces corregudes (taulell, sòcol): numerades com un «mòdul» més per a les refs del taller.
+  // Peces corregudes (el taulell; el sòcol és el de cada tram) i el sòcol de cada tram: numerats com un «mòdul» més per
+  // a les refs del taller.
   const runWarnings: RunWarning[] = []
   // A qualsevol moble amb mòduls; els apagats (`off`, els d'un moble que no era cuina) es conserven però no es fan.
   const runs = activeRuns(comp)
+  const n = comp.modules.length + 1
   for (const run of runs) {
-    const n = comp.modules.length + 1
     // Com totes les peces: llarg ≥ ample (un taulell sobre un sol mòdul estret sortia girat).
-    if (run.kind === "worktop") {
-      const p = buildWorktop(comp, run, places, n, runWarnings)
-      if (p) panels.push(normalizePanel(p))
-      continue
-    }
-    const pr = buildPlinthRun(comp, run, places, n, runWarnings)
-    for (const p of pr.panels) panels.push(normalizePanel(p))
-    moduleExtras.push(...pr.extras)
-    linear.push(...pr.linear)
+    if (run.kind !== "worktop") continue
+    const p = buildWorktop(comp, run, places, n, runWarnings)
+    if (p) panels.push(normalizePanel(p))
   }
   for (const w of runWarnings) warnings.push({ code: "layout", message: w.message })
+  const vents = builds.flatMap((b, i) => b.ventInlets.map((v) => ({ ...v, module: i })))
+  const trams = onlyParts ? undefined : buildTramPlinths(comp, places, n, vents)
+  if (trams) {
+    for (const p of trams.panels) panels.push(normalizePanel(p))
+    moduleExtras.push(...trams.extras)
+    linear.push(...trams.linear)
+    warnings.push(...trams.warnings)
+  }
+  const runPieces = runs.length > 0 || !!trams?.panels.length || !!trams?.extras.length
 
   // Panells de remat de les illes: un «mòdul» més per a les refs del taller (després del taulell i el sòcol).
-  const islandN = comp.modules.length + (runs.length ? 1 : 0) + 1
+  const islandN = comp.modules.length + (runPieces ? 1 : 0) + 1
   for (const isl of islands) {
     const own = panels.filter((p) => p.module === comp.modules.findIndex((m) => m.id === isl.front) + 1 || p.module === comp.modules.findIndex((m) => m.id === isl.back) + 1)
     for (const p of islandEndPanels(isl, comp, localBox(own), islandN)) panels.push(normalizePanel(p))
@@ -253,7 +259,7 @@ export function buildComposition(input: Composition): CompositionBuild {
     warnings.push({ code: "island", message: "Illa: les dues files de mòduls es cargolen entre elles pel darrere (sense forats automàtics), amb els fronts enrasats; els panells de remat es fixen als laterals." })
 
   // Peces lliures, amb els encaixos entre elles: un «mòdul» més per a les refs del taller.
-  const free = buildFreeParts(comp, onlyParts ? 1 : comp.modules.length + (runs.length ? 1 : 0) + (islands.some((i) => i.left || i.right) ? 1 : 0) + 1)
+  const free = buildFreeParts(comp, onlyParts ? 1 : comp.modules.length + (runPieces ? 1 : 0) + (islands.some((i) => i.left || i.right) ? 1 : 0) + 1)
   panels.push(...free.panels)
   for (const w of free.warnings) warnings.push({ code: w.code ?? "layout", message: w.message, partId: w.partId })
 

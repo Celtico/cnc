@@ -21,7 +21,7 @@ import { resolveKit, slotSpec, type ResolvedKit, type SlotSpec } from "../hardwa
 import type { LightOrder } from "../lightOrders"
 import type { LinearPiece } from "../linearOrders"
 import { type Derived, derive } from "./derive"
-import type { BuildWarning, KitOrder, Wiring, RearLimit, VerticalRef, HorizontalRef } from "./types"
+import type { BuildWarning, KitOrder, Wiring, RearLimit, VerticalRef, HorizontalRef, VentInlet } from "./types"
 
 /** Estat i utilitats comunes del constructor d'un mòdul: les capes (`carcass`, `lights`… `zones`) l'estenen. */
 export class BuilderBase {
@@ -44,6 +44,8 @@ export class BuilderBase {
   readonly hardwareKits: KitOrder[] = []
   readonly lightKits: LightOrder[] = []
   readonly fittingOrders: KitOrderLine[] = []
+  /** Entrades d'aire pel sòcol dels electrodomèstics: el sòcol és del tram (`tramPlinth.ts`), que hi fa el retall. */
+  readonly ventInlets: VentInlet[] = []
   /** Ferratges per metres (la regleta dels penjadors, el sòcol d'alumini): els trossos per a la comanda (`buildLinearOrders`). */
   readonly linear: LinearPiece[] = []
   /** On és cada làmpada d'un joc de llum (el punt del forat del cable) i la peça que la porta: el recorregut del cable (`buildWiring`). */

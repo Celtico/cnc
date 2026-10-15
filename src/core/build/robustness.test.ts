@@ -135,7 +135,7 @@ describe("mòduls que es trepitgen", () => {
   })
 })
 
-describe("taulell i sòcol correguts", () => {
+describe("taulell corregut i sòcol del tram", () => {
   const legs = { kind: "legs" as const, height: 100 }
   it("no arriben a l'illa (Al terra amb X pròpia)", () => {
     const a = mod({ width: 600, height: 720, depth: 560, base: legs }, { id: "ra" }, { id: "a" })
@@ -152,7 +152,9 @@ describe("taulell i sòcol correguts", () => {
     }
     const bld = buildComposition(c)
     expect(bld.panels.find((p) => p.id === "run:wt")!.length).toBe(1200)
-    expect(Math.max(bld.panels.find((p) => p.id === "run:pl")!.length, bld.panels.find((p) => p.id === "run:pl")!.width)).toBe(1200)
+    // El sòcol: el del tram de la fila (els dos baixos), sense arribar a l'illa (que en fa un altre, tot el voltant).
+    expect(bld.panels.find((p) => p.id === "tram:a:plinth")!.length).toBe(1200)
+    expect(bld.panels.filter((p) => p.id.startsWith("tram:isl:")).length).toBe(4)
   })
   it("un forat que travessa el contorn no es fa i s'avisa", () => {
     const s = mod({ width: 400, height: 720, depth: 560, base: legs }, { id: "rs" }, { id: "s" })

@@ -67,6 +67,16 @@ export interface KitOrder {
   syncRod?: number
 }
 
+/** L'entrada d'aire d'un electrodomèstic pel sòcol de davant (x del mòdul: el compartiment). */
+export interface VentInlet {
+  x0: number
+  x1: number
+  cm2: number
+  /** L'aparell i la font, per a l'avís. */
+  name: string
+  src: string
+}
+
 export interface ModuleBuild {
   panels: Panel[]
   /** Elements que no són de CNC (barres de penjar; components dels jocs de calaix, rol `hardware`): 3D i llista, sense nesting. */
@@ -77,7 +87,9 @@ export interface ModuleBuild {
   lightKits: LightOrder[]
   /** La comanda dels ferratges col·locats (frontisses, tiradors, pistons, potes): una línia per item (Peces › «Ferratges», LLEGEIX-ME). */
   fittingOrders: KitOrderLine[]
-  /** Ferratges per metres del mòdul (regleta dels penjadors, sòcol d'alumini): els trossos (`buildLinearOrders`). */
+  /** Entrades d'aire pel sòcol (el sòcol és del tram, que hi fa el retall). */
+  ventInlets: VentInlet[]
+  /** Ferratges per metres del mòdul (regleta dels penjadors): els trossos (`buildLinearOrders`). */
   linear: LinearPiece[]
   /** La instal·lació dels llums del mòdul (alimentador, recorreguts dels cables, sortida a l'endoll) per al plànol de Peces. */
   wiring?: Wiring

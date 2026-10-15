@@ -63,7 +63,8 @@ export function resizeComposition(comp: Composition, cur: { w: number; h: number
     return { ...o, x: r(o.x * sx), y: r(o.y * sy), z: r(o.z * sz), w: r(o.w * kw), h: r(o.h * sy), d: r(o.d * kd) }
   })
   const runs = comp.runs?.map((run) => (run.kind === "worktop" ? { ...run, cutouts: run.cutouts.map((c) => ({ ...c, dx: r(c.dx * sx) })) } : run))
-  return { ...comp, modules, references, ...(parts ? { parts } : {}), ...(models ? { models } : {}), ...(runs ? { runs } : {}) }
+  const support = comp.support && { ...comp.support, height: r(comp.support.height * sy) }
+  return { ...comp, modules, references, ...(parts ? { parts } : {}), ...(models ? { models } : {}), ...(runs ? { runs } : {}), ...(support ? { support } : {}) }
 }
 
 // --- Grups d'elements (com les peces lliures de l'editor) -----------------------------------

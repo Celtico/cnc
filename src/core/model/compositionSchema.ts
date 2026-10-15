@@ -6,6 +6,7 @@ import { VIEW_FLAGS } from "./viewFlags"
 import { FreePartSchema, JoinerySchema } from "./freePart"
 import { HardwarePlacementSchema } from "./hardware"
 import { ModuleSchema, PlinthSidesSchema } from "./moduleSchema"
+import { FloorSupportSchema } from "./supportSchema"
 
 /** Model de composició (vegeu `moduleSchema.ts`): objectes, peces corregudes, models 3D, illes i la composició. */
 
@@ -226,7 +227,12 @@ export const CompositionSchema = z.object({
   kind: CompositionKindSchema.optional(),
   modules: z.array(ModuleSchema),
   references: z.array(RefObjectSchema),
-  /** Taulells i sòcols correguts. Opcional (els mobles antics no en tenen). */
+  /**
+   * Suport de tots els mòduls de terra i el sòcol de cada tram (`supportSchema.ts`, `floorSupport.ts`). Sense (els mobles
+   * d'abans), es dedueix dels mòduls en obrir-los (`withSupport`).
+   */
+  support: FloorSupportSchema.optional(),
+  /** Taulells i sòcols correguts. Opcional (els mobles antics no en tenen). Els sòcols passen al suport (`withSupport`). */
   runs: z.array(RunSchema).optional(),
   /** Peces lliures (flat-pack, encaixos). Opcional. */
   parts: z.array(FreePartSchema).optional(),

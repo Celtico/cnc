@@ -33,6 +33,7 @@ const LABELS: Record<string, string> = {
   camera: "Càmera",
   hardwarePlacements: "Ferratge col·locat",
   islands: "Illa",
+  support: "Sòcol i potes",
 }
 
 /** Nom llegible d'un element per a l'avís: «Mòdul «Baix»», «Peça lliure «Tauler» (2)»… */

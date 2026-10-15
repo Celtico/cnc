@@ -5,6 +5,7 @@ import { r, toWorld } from "./geometry"
 import { HardwareError } from "./hardware"
 import { holeEntry, mountHoles, worldDir } from "./mount/box"
 import { unit3 } from "./mount/camera"
+import { aluPlinth } from "./plinth"
 import { hostHinge, isLeftSide, itemTags, mountRegion, recipe } from "./mount/recipe"
 import type { HardwareMount } from "./mount/types"
 
@@ -58,6 +59,16 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
   try {
     // Amb el recorregut dels cables (un joc de llum es veu com al moble: el cable per dins del tauler, no cap amunt).
     build = buildModule(module)
+    // El sòcol d'alumini no és del mòdul (és el del tram del moble): a l'exemple, el del davant i els laterals de la base.
+    const lb = module.carcass.base
+    if (lb.kind === "legs" && lb.plinth?.hardware) {
+      const pl = lb.plinth
+      const ss = pl.sideSetback ?? pl.setback
+      const sides = { front: true, back: !!pl.back, left: !!pl.left, right: !!pl.right }
+      const W = module.carcass.width, D = module.carcass.depth
+      const alu = aluPlinth({ x0: sides.left ? ss : 0, x1: sides.right ? W - ss : W, zBack: sides.back ? ss : 0, zFront: D - pl.setback, y0: -lb.height, sides }, pl.hardware!)
+      build = { ...build, extras: [...build.extras, ...alu.extras] }
+    }
   } catch (err) {
     return { ...empty, error: err instanceof HardwareError ? err.message : String(err) }
   }

@@ -4,7 +4,7 @@ import { buildComposition, panelBox } from "./buildComposition"
 
 const kitchen = (): Composition => BUILTIN_TEMPLATES.find((t) => t.id === "modern-kitchen")!.make()
 
-describe("peces corregudes (taulell i sòcol)", () => {
+describe("taulell corregut", () => {
   it("el taulell és una sola peça de punta a punta sobre els baixos, amb els forats", () => {
     const c = kitchen()
     const b = buildComposition(c)
@@ -24,25 +24,6 @@ describe("peces corregudes (taulell i sòcol)", () => {
     if (hob.kind === "rect") expect(hob.x + hob.w / 2).toBeCloseTo(1700)
     // Només el dels penjadors dels alts (fons cargolat: la regleta no hi cap darrere, v45).
     expect(b.warnings.filter((w) => w.code !== "hanging")).toEqual([])
-  })
-
-  it("el sòcol corregut va de punta a punta, amb l'alçada de les potes i retranquejat", () => {
-    const b = buildComposition(kitchen())
-    const socols = b.panels.filter((p) => p.id.startsWith("run:") && p.role === "plinth")
-    expect(socols).toHaveLength(1)
-    const s = socols[0]!
-    expect(s.length).toBe(3000)
-    expect(s.width).toBe(100)
-    const box = panelBox(s)
-    expect(box.max[2]).toBeCloseTo(579 - 50)
-  })
-
-  it("sense potes, el sòcol corregut no es construeix i avisa", () => {
-    const c = kitchen()
-    for (const m of c.modules) if (m.carcass.base.kind === "legs") m.carcass.base = { kind: "none" }
-    const b = buildComposition(c)
-    expect(b.panels.some((p) => p.id.startsWith("run:") && p.role === "plinth")).toBe(false)
-    expect(b.warnings.some((w) => /sòcol corregut/.test(w.message))).toBe(true)
   })
 })
 

@@ -76,7 +76,7 @@ export abstract class AppliancesBuilder extends DrawersBuilder {
     // Ventilació i retalls del moble: el que el catàleg dona.
     const vent = a.ventilation
     if (vent?.outletCm2 && fillsNiche(a)) this.ventOutlet(vent.outletCm2, rect, above, src, warn, note)
-    if (vent?.inletCm2 && fillsNiche(a)) this.ventInlet(item, vent.inletCm2, rect, src, warn, note)
+    if (vent?.inletCm2 && fillsNiche(a)) this.ventInlet(item, vent.inletCm2, rect, src, note)
     if (a.cutout) this.applianceCutout(a, rect, a.cutout.at === "top" ? above : below, name, src, warn, note)
     if (a.kind === "hob" && zone.front?.kind === "drawers") note("amb calaixos a sota: 65 mm com a mínim entre el taulell i el calaix i 20 mm de ventilació al darrere (Bosch p. 144)")
     this.order(item, 1, ["electrodomèstic: no es fabrica", ...notes].join(" · "))
@@ -306,21 +306,14 @@ export abstract class AppliancesBuilder extends DrawersBuilder {
    * la base «Potes» o «Sòcol»), centrat sota el compartiment, a l'ample del compartiment (menys `VENT_MARGIN`) i prou alt
    * per a l'àrea, i la reixeta a la comanda. Sense sòcol al mòdul (el corregut de la cuina), la nota diu on fer-lo.
    */
-  protected ventInlet(item: HardwareItem, cm2: number, rect: ZoneRect, src: string, warn: (m: string) => void, note: (m: string) => void): void {
+  protected ventInlet(item: HardwareItem, cm2: number, rect: ZoneRect, src: string, note: (m: string) => void): void {
     const w = Math.floor(rect.x1 - rect.x0 - 2 * VENT_MARGIN)
     const h = Math.ceil((cm2 * 100) / Math.max(1, w))
     const size = `${num(w)} × ${num(h)} mm`
     this.fittingOrders.push({ component: `${item.id}:vent`, name: "Reixeta de ventilació de sòcol", qty: 1, note: `≥ ${num(cm2)} cm², ${size}` })
-    const plinth = this.panels.find((p) => p.id === "plinth")
-    if (!plinth) {
-      note(`entrada d'aire (≥ ${num(cm2)} cm²): reixeta de ${size} al sòcol de davant de l'aparell`)
-      return
-    }
-    const z = plinth.placement.origin[2]
-    const yMid = plinth.placement.origin[1] + plinth.width / 2
-    const cx = (rect.x0 + rect.x1) / 2
-    if (h <= plinth.width - 2 * 10 && this.cutRect(plinth, [cx - w / 2, yMid - h / 2, z], [cx + w / 2, yMid + h / 2, z], "vent")) note(`entrada d'aire (≥ ${num(cm2)} cm²): retall de ${size} al sòcol per a la reixeta`)
-    else warn(`Cal una entrada d'aire de ${num(cm2)} cm² pel sòcol (${size}) i no cap al sòcol del mòdul («${plinth.label}», ${num(plinth.width)} mm): retira el sòcol o fes-lo més alt (${src}).`)
+    // El sòcol és el del tram (`tramPlinth.ts`): hi fa el retall o, si no n'hi ha, ho diu la nota.
+    this.ventInlets.push({ x0: rect.x0, x1: rect.x1, cm2, name: item.name, src })
+    note(`entrada d'aire (≥ ${num(cm2)} cm²): reixeta de ${size} al sòcol de davant de l'aparell`)
   }
 
   /**
