@@ -1,5 +1,5 @@
 import type { PickedFile } from "../../components/pickedFiles"
-import { polyHavenTitle, textureTileMm, type PolyHavenInfo } from "../../core/import"
+import { polyHavenTitle, textureTileMm, type PolyHavenInfo } from "../../core/assets"
 import { newId, pbrSetMaterial, uniqueMaterialName, type MaterialPref } from "../../core/model"
 import { groupTextureSets } from "../../core/photo/pbrMaps"
 import { fetchPolyHavenInfo } from "../file/polyHavenApi"

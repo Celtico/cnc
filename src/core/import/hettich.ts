@@ -1,8 +1,8 @@
 import { HARDWARE_CATEGORIES, type HardwareCategory } from "../model"
-import { classifyHettich, cleanFolders, FAMILY_DIRS, hettichLabel, tr, type ImportKind } from "./hettichNames"
+import { classifyHettich, cleanFolders, FAMILY_DIRS, hettichLabel, tr, type ImportKind } from "../model/makers/hettichNames"
 import { importFormatOf } from "./formats"
 
-export { classifyHettich, cleanFolders,  hettichSeries, itemSeries,   type ImportKind } from "./hettichNames"
+export { classifyHettich, cleanFolders,  hettichSeries, itemSeries,   type ImportKind } from "../model/makers/hettichNames"
 
 /**
  * Descàrregues CAD de Hettich (`hettich.com › Hettich CAD › Descàrregues CAD`): un ZIP per família i format

@@ -1,4 +1,4 @@
-import { parsePolyHavenInfo, POLYHAVEN_API, type PolyHavenInfo, type RemoteFile } from "../../core/import"
+import { parsePolyHavenInfo, POLYHAVEN_API, type PolyHavenInfo, type RemoteFile } from "../../core/assets"
 
 /**
  * API de Poly Haven (CORS obert): `/files/<id>`, `/info/<id>` i els fitxers de `dl.polyhaven.org`. No passen pel service

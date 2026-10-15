@@ -1,6 +1,6 @@
 import { partKindOf } from "../model/hardwareOps"
 import { MODEL_3D_KINDS } from "./formats"
-import { BLUM, blumFileInfo, blumLabel, blumProduct, classifyBlum, isBlumProductName } from "./blum"
+import { BLUM, blumFileInfo, blumLabel, blumProduct, classifyBlum, isBlumProductName } from "../model/makers/blum"
 import { groupHettich, hettichCandidate, hettichFileKind, type HettichArticle, type HettichFile, type HettichFileKind } from "./hettich"
 
 /**

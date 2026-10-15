@@ -16,7 +16,7 @@ import { DEFAULT_CABINET, newId, type RefPreset, type Settings } from "../../cor
 import { readComposition } from "../../db/compositionStore"
 import { addPhoto, createProject, db, keepProject, safeNestOptions, updateProjectPhoto, type Photo, type Project } from "../../db/db"
 import { ensureUserModel, getUserModel } from "../../db/userModels"
-import { downloadBlob } from "../download"
+import { downloadBlob } from "../../lib/download"
 
 /** Blob → base64 (sense prefix). */
 export async function blobToBase64(blob: Blob): Promise<string> {

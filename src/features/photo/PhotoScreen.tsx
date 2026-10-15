@@ -1,4 +1,4 @@
-import { shrinkImage } from "../imageShrink"
+import { shrinkImage } from "../../lib/imageShrink"
 import {
   Alert,
   Box,
@@ -71,14 +71,14 @@ import { addPhoto, db, removeProjectPhoto, updateProjectPhoto, type Photo, type 
 import { useLiveQuery } from "../../db/useLiveQuery"
 import { ResizeHandle } from "../../components/ResizeHandle"
 import { NumRow } from "../../components/NumRow"
-import { downloadBlob, slugify } from "../download"
+import { downloadBlob, slugify } from "../../lib/download"
 import { useSettings } from "../settings/SettingsContext"
-import { usePersistentNumber } from "../usePersistentNumber"
+import { usePersistentNumber } from "../../lib/usePersistentNumber"
 import { useCabinet, useProject } from "../useProject"
 import { ESTIMATED_WARNING, estimatedApplied } from "./appliedState"
 import { MeasureTable } from "./MeasureTable"
 import { applyTargets, type ApplyTarget } from "./applyTargets"
-import { useDebouncedSave } from "../useDebouncedSave"
+import { useDebouncedSave } from "../../lib/useDebouncedSave"
 
 const POINT_NAMES = ["baix-esquerra", "baix-dreta", "dalt-dreta", "dalt-esquerra"]
 

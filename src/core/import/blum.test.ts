@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
-import { blumFileInfo, blumLabel, blumProduct, blumSeries, classifyBlum, isBlumProductName, migrateBlumItem } from "./blum"
+import { blumFileInfo, blumLabel, blumProduct, blumSeries, classifyBlum, isBlumProductName, migrateBlumItem } from "../model/makers/blum"
 import { detectMaker, groupImport, importCandidate, importFileKind } from "./makers"
-import { itemSeries, migrateImportedNames } from "./hettichNames"
+import { itemSeries, migrateImportedNames } from "../model/makers/hettichNames"
 import type { HettichFile } from "./hettich"
 import type { HardwareItem } from "../model"
 
@@ -151,7 +151,7 @@ describe("Blum: agrupar per article", () => {
 
 describe("Sense assignar", () => {
   it("un importat amb mecanitzats sense assignar no es confirma fins que s'assignen a una peça", async () => {
-    const { confirmProblem } = await import("./importItem")
+    const { confirmProblem } = await import("../model")
     const { reassignMachining } = await import("../model")
     const op = { id: "a", part: "any" as const, kind: "drill" as const, face: "A" as const, p: { from: "ref" as const, at: 0 }, q: { from: "ref" as const, at: 0 }, d: 2.5, depth: 3 }
     const item = { id: "hw", name: "x", category: "misc", engine: "model", params: {}, targets: [{ key: "model", label: "Només 3D", ops: [] }], version: 1, machining: [op], imported: { maker: "Blum", article: "48N0510.02", folders: [], files: [], proposed: [], confirmed: false } } as HardwareItem

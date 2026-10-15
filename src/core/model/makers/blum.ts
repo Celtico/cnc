@@ -1,5 +1,5 @@
-import type { HardwareCategory, HardwareItem } from "../model/hardware"
-import type { PartKind } from "../model/hardwareOps"
+import type { HardwareCategory, HardwareItem } from "../hardware"
+import type { PartKind } from "../hardwareOps"
 
 /**
  * Descàrregues de **Blum** (E-SERVICES › cerca de producte; `docs/ferratges-import.md` §10): per article, el 3D

@@ -1,51 +1,15 @@
-import { Badge, SimpleGrid, Stack, Text } from "@chakra-ui/react"
-import { useEffect, useMemo, useState, type ReactNode } from "react"
+import { SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { useState, type ReactNode } from "react"
 import { LuFolders, LuHistory } from "react-icons/lu"
 import { SearchBar } from "../../components/SearchBar"
-import { SnapshotThumb } from "../../components/SnapshotThumb"
+import { FURNITURE_COLLECTIONS, STORE_CATALOG, withInnerClearance, type Composition, type Template } from "../../core/model"
 import { useSettings } from "../settings/SettingsContext"
-import { requestTemplateThumb, templateThumb } from "./projectThumbs"
-import { FURNITURE_COLLECTIONS, STORE_CATALOG, withInnerClearance, type Composition, type CompositionKind, type Template } from "../../core/model"
-import { KINDS } from "../composition/kinds"
+import { kindLabel } from "./kindLabel"
+import { TemplateCard } from "./TemplateCard"
 import { FoldGroup, FoldItem } from "../../components/Fold"
-import { GalleryCard } from "./GalleryCard"
 import { GALLERY_COLS, fold, useSessionList } from "./galleryGrid"
 import { CatalogSection } from "./CatalogSection"
 import { CollectionsSection } from "./CollectionsSection"
-
-const kindLabel = (k: CompositionKind) => KINDS.find((x) => x.value === k)!.label
-const euros = (n: number) => `${n.toLocaleString("ca-ES")} €`
-
-/** Targeta d'una plantilla (catàleg, col·leccions, objectes): la miniatura es calcula en muntar-la (al catàleg, en obrir la categoria). */
-export function TemplateCard({ t, title, kicker, onPick }: { t: Template; title?: string; kicker?: string; onPick: (t: Template) => void }) {
-  const comp = useMemo(() => t.make(), [t])
-  // Foto 3D feta fora de pantalla (desada entre sessions); mentrestant, el dibuix.
-  const { settings } = useSettings()
-  const [thumb, setThumb] = useState(() => templateThumb(t.id, comp, settings.materials))
-  useEffect(() => (thumb ? undefined : requestTemplateThumb(t.id, () => comp, settings.materials, setThumb)), [t.id, comp, settings.materials, thumb])
-  return (
-    <GalleryCard
-      thumb={<SnapshotThumb src={thumb} />}
-      title={title ?? t.name}
-      kicker={kicker}
-      description={t.description}
-      tags={
-        <Badge size="xs" variant="subtle" colorPalette="wood">
-          {kindLabel(t.kind)}
-        </Badge>
-      }
-      aside={
-        t.price !== undefined && (
-          <Text fontSize="xs" fontWeight="semibold" color="wood.fg" truncate>
-            {euros(t.price)}
-          </Text>
-        )
-      }
-      onClick={() => onPick(t)}
-    />
-  )
-}
-
 
 const COLS = GALLERY_COLS
 

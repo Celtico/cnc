@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { HettichArticle } from "../import/hettich"
-import { handleItem, hingeItem, legItem, pairPlate, plateItem, setConfirmed } from "../import/importItem"
+import { handleItem, hingeItem, legItem, plateItem } from "../import/importItem"
+import { pairPlate, setConfirmed } from "../model/hardwareEdit"
 import type { HardwareProposal } from "../import/proposal"
 import { DEFAULT_HARDWARE_LIBRARY, DEFAULT_MODULE_HARDWARE, type Vec3 } from "../model"
 import { expectFramed } from "./mountCameraCheck"

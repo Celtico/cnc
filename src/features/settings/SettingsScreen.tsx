@@ -50,11 +50,11 @@ import {
   type RefPreset,
   type Settings,
 } from "../../core/model"
-import { downloadText } from "../download"
+import { downloadText } from "../../lib/download"
 import { NumberField, NumRow } from "../../components/NumRow"
 import { useSettings } from "./SettingsContext"
 import { fileAccept } from "../file/fileAccept"
-import { useDebouncedSave } from "../useDebouncedSave"
+import { useDebouncedSave } from "../../lib/useDebouncedSave"
 import { PageHeader } from "../../components/PageHeader"
 import { MaterialSelect } from "./MaterialSelect"
 import { SectionLabel } from "../../components/SectionLabel"

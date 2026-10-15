@@ -1,4 +1,4 @@
-import type { HardwareCategory, HardwareItem } from "../model/hardware"
+import type { HardwareCategory, HardwareItem } from "../hardware"
 import { blumSeries, migrateBlumItem } from "./blum"
 
 /**

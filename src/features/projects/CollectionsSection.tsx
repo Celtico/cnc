@@ -4,7 +4,7 @@ import { LuExternalLink, LuLibrary, LuPlus } from "react-icons/lu"
 import type { CollectionPiece, FurnitureCollection, Grade, PieceStudy } from "../../core/model"
 import { FoldGroup, FoldItem } from "../../components/Fold"
 import { GALLERY_COLS } from "./galleryGrid"
-import { TemplateCard } from "./NewMobleGallery"
+import { TemplateCard } from "./TemplateCard"
 
 /** Files de la fitxa d'estudi, en l'ordre dels criteris de la biblioteca. */
 const ROWS: [keyof PieceStudy, string][] = [

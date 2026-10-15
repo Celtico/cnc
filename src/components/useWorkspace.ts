@@ -1,6 +1,6 @@
 import { useState } from "react"
-import { usePersistentFlag } from "../features/usePersistentFlag"
-import { usePersistentNumber } from "../features/usePersistentNumber"
+import { usePersistentFlag } from "../lib/usePersistentFlag"
+import { usePersistentNumber } from "../lib/usePersistentNumber"
 
 /**
  * Estat de l'espai de treball d'un editor (`Workspace`): amplades i panells plegats, recordats

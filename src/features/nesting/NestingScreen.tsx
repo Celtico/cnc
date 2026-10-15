@@ -22,7 +22,7 @@ import { NumRow } from "../../components/NumRow"
 import { useSettings } from "../settings/SettingsContext"
 import { useCompositionPanels, useCompositionRead, useNesting, useProject } from "../useProject"
 import { UnreadableAlert } from "../../components/UnreadableAlert"
-import { useDebouncedSave } from "../useDebouncedSave"
+import { useDebouncedSave } from "../../lib/useDebouncedSave"
 
 export function NestingScreen({ projectId }: { projectId: number }) {
   const project = useProject(projectId)

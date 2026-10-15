@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { confirmProblem, hingeItem, pairImportedBatch, pairPlate, plateItem, setConfirmed, setHardwareParam, syncPairedPlates } from "../import/importItem"
+import { hingeItem, pairImportedBatch, plateItem } from "../import/importItem"
+import { confirmProblem, pairPlate, setConfirmed, setHardwareParam, syncPairedPlates } from "../model/hardwareEdit"
 import type { HettichArticle } from "../import/hettich"
 import type { HardwareProposal } from "../import/proposal"
 import {

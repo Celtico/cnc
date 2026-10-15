@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { hingeItem, pairPlate, plateItem, setConfirmed } from "../import/importItem"
+import { hingeItem, plateItem } from "../import/importItem"
+import { pairPlate, setConfirmed } from "../model/hardwareEdit"
 import type { HettichArticle } from "../import/hettich"
 import type { HardwareProposal } from "../import/proposal"
 import { ACCESSORY_ITEMS, DEFAULT_MODULE_HARDWARE, DEFAULT_HARDWARE_LIBRARY, defaultModule, type Module, type Zone } from "../model"

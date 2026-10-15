@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react"
 import { Field, NumberInput, Text } from "@chakra-ui/react"
 import { FormRow } from "./FormRow"
-import { useUnit } from "../features/units"
+import { useUnit } from "../lib/units"
 
 interface NumberFieldProps {
   /** Text o, si cal, icona + text (p. ex. la direcció d'un moviment). */

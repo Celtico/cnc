@@ -1,4 +1,4 @@
-import { pairPlate, setConfirmed } from "../import/importItem"
+import { pairPlate, setConfirmed } from "../model/hardwareEdit"
 import { DEFAULT_GRILLE, DEFAULT_MODULE_HARDWARE, defaultModule, isPendingImport, slotForEngine, type Front, type HardwareItem, type Hole, type Module, type Panel, type PanelFitting, type Vec3 } from "../model"
 import { buildModule } from "./buildModule"
 import { kitHeight } from "./drawerKit"

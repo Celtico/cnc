@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { confirmProblem, handleItem, legItem, modelItem, setConfirmed, setHandleDistance, setHardwareParam } from "../import/importItem"
+import { handleItem, legItem, modelItem } from "../import/importItem"
+import { confirmProblem, setConfirmed, setHandleDistance, setHardwareParam } from "../model/hardwareEdit"
 import type { HettichArticle } from "../import/hettich"
 import { modelProposal, type HardwareProposal } from "../import/proposal"
 import { DEFAULT_MODULE_HARDWARE, HardwareItemSchema, ModuleSchema, defaultModule, usesImportedHardware, visibleModule, type HardwareItem, type Module, type Panel, type Zone } from "../model"

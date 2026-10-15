@@ -15,7 +15,7 @@ import {
   type ModelFormat,
   type PolyHavenInfo,
   type PolyHavenRef,
-} from "../../core/import"
+} from "../../core/assets"
 import { groupTextureSets, isTextureFile } from "../../core/photo/pbrMaps"
 import { downloadPolyHaven, fetchPolyHavenFiles, fetchPolyHavenInfo, isOffline, OfflineError } from "../file/polyHavenApi"
 import { expandPicked } from "../settings/textureImport"

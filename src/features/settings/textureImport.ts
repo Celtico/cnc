@@ -1,6 +1,6 @@
 import { exrToCanvas, isExrBlob } from "../../components/viewer/exrImage"
 import { unzip } from "../../core/file/zip"
-import { isJunkPath, polyHavenRefOf, type PolyHavenRef } from "../../core/import"
+import { isJunkPath, polyHavenRefOf, type PolyHavenRef } from "../../core/assets"
 import type { Finish } from "../../core/model"
 import { averageColor, fitSize, flipGreen, isTextureFile, isZipFile, planTextureSet, textureSetKey, toGrayscale, type PbrSlot } from "../../core/photo/pbrMaps"
 import { pickedFromList, type PickedFile } from "./machineImport"

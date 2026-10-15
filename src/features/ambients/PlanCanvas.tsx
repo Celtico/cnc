@@ -3,7 +3,7 @@ import { LuMinus, LuPlus } from "react-icons/lu"
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as RPointerEvent } from "react"
 import { expandWalls, footprintBox, moveWalls, roofBox, newId, wallPoints, roomWalls, snapToWalls, wallCorners, wallLength, addOpening, clampOpening, nearestWall, setWallEnds, type Ambient, type AmbientItem, type PlanPt, type Wall } from "../../core/model"
 import { toaster } from "../../components/ui/toaster"
-import { formatLength, useUnit } from "../units"
+import { formatLength, useUnit } from "../../lib/units"
 import { isEmptyGeometry, type ItemGeometry } from "./ambientData"
 import { ambientBox, fitView, nearestEndpoint, samePt, snapAngle, snapGrid, type Selection, type Tool, type View } from "./planGeom"
 
