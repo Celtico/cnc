@@ -53,7 +53,7 @@ export function App() {
   const assistant = useAssistantDrawer()
   useHubNav(nav)
   // A l'ordinador, l'assistent és una columna a la dreta: la vora esquerra canvia l'amplada (sense cap barra a la vista, per
-  // decisió de l'usuari, 2026-10-14; 48–900 px, doble clic torna a 400).
+  // decisió de l'usuari, 2026-10-14; 320–720 px, arrossegar-la fins a la vora el tanca, doble clic torna a 400).
   const [assistantWidth, setAssistantWidth] = usePersistentNumber("mobles:assistant-width", 400)
 
   return (
@@ -70,7 +70,7 @@ export function App() {
         onSettings={() => go("settings")}
       />
 
-      <PanelSplit flex={1} minW={0} panels={[{ id: "main" }, { id: "assistant", width: assistantWidth, setWidth: setAssistantWidth, min: 48, max: 900, hidden: !assistant.open }]}>
+      <PanelSplit flex={1} minW={0} panels={[{ id: "main" }, { id: "assistant", width: assistantWidth, setWidth: setAssistantWidth, min: 320, max: 720, hidden: !assistant.open, onHide: assistant.close }]}>
       {/* A l'ordinador, l'app ocupa just la finestra: cada zona fa el seu propi desplaçament
           (llista, preferències, i a l'editor l'arbre i les propietats per separat). */}
       <Splitter.Panel id="main" display="flex" flexDirection="column" minW={0} h={{ md: "100dvh" }}>

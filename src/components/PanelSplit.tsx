@@ -1,5 +1,5 @@
 import { Box, Splitter, type SplitterRootProps } from "@chakra-ui/react"
-import { useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { splitterPanels, splitterSizes, widthUpdates, type SplitPanelSpec } from "./splitSizes"
 
 /**
@@ -15,11 +15,20 @@ import { splitterPanels, splitterSizes, widthUpdates, type SplitPanelSpec } from
  */
 export function PanelSplit({ panels, from = "md", children, ...rest }: { panels: SplitPanelSpec[]; from?: "md" | "lg" } & Omit<SplitterRootProps, "panels" | "size" | "onResize">) {
   const root = useRef<HTMLDivElement>(null)
+  // L'amplada del grup: si la finestra és estreta, els laterals s'encongeixen abans que el visor (`splitterSizes`).
+  const [groupPx, setGroupPx] = useState(0)
+  useEffect(() => {
+    const el = root.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setGroupPx(el.getBoundingClientRect().width))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
   return (
     <Splitter.Root
       ref={root}
       panels={splitterPanels(panels)}
-      size={splitterSizes(panels)}
+      size={splitterSizes(panels, groupPx)}
       onResize={(e) => {
         const groupPx = root.current?.getBoundingClientRect().width ?? 0
         for (const u of widthUpdates(panels, e.size, groupPx, e.resizeTriggerId)) {

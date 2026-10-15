@@ -55,7 +55,7 @@ export function Workspace({ ws, left, right, center, extra, gap = 1.5 }: { ws: W
       panels={[
         // L'amplada desada és la de sempre (sense l'espai entre columnes, que ara és farciment del panell).
         { id: "tree", width: ws.treeWidth + g, setWidth: (w) => ws.setTreeWidth(w - g), min: 48 + g, max: 900 + g, hidden: ws.treeHidden, onHide: () => ws.setTreeHidden(true) },
-        { id: "center" },
+        { id: "center", min: 300 + 2 * g },
         { id: "props", width: ws.formWidth + g, setWidth: (w) => ws.setFormWidth(w - g), min: 48 + g, max: 900 + g, hidden: ws.propsHidden, onHide: () => ws.setPropsHidden(true) },
       ]}
     >

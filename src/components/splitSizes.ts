@@ -23,7 +23,8 @@ type PanelSize = NonNullable<SplitterRootProps["size"]>[number]
 export function splitterPanels(panels: SplitPanelSpec[]): SplitterPanelData[] {
   return panels.map((p) =>
     p.width === undefined
-      ? { id: p.id }
+      ? // El flexible (el visor): amb `min`, no es fa més estret; si no hi cap, s'encongeixen els laterals.
+        { id: p.id, minSize: p.min !== undefined ? `${p.min}px` : undefined }
       : {
           id: p.id,
           minSize: p.min !== undefined ? `${p.min}px` : undefined,
@@ -39,12 +40,23 @@ export function splitterPanels(panels: SplitPanelSpec[]): SplitterPanelData[] {
 
 /**
  * Mida controlada del Splitter: els laterals en px (0 si són plegats) i el flexible sense mida (un forat a la llista: el
- * Splitter li dona la resta).
+ * Splitter li dona la resta). Amb l'amplada del grup (`groupPx`): si els laterals no hi caben deixant el mínim del
+ * flexible (el visor), s'encongeixen tots en proporció fins al seu mínim, com abans (sense desar-ho: l'amplada desada
+ * torna quan la finestra es fa gran).
  */
-export function splitterSizes(panels: SplitPanelSpec[]): PanelSize[] {
+export function splitterSizes(panels: SplitPanelSpec[], groupPx = 0): PanelSize[] {
+  // L'amplada desada, dins del mínim i el màxim d'ara (un valor d'abans pot quedar-ne fora).
+  const clamp = (p: SplitPanelSpec) => Math.min(p.max ?? Infinity, Math.max(p.min ?? 0, p.width ?? 0))
+  const sides = panels.map((p) => (p.width === undefined || p.hidden ? 0 : clamp(p)))
+  const flexMin = panels.reduce((a, p) => a + (p.width === undefined ? (p.min ?? 0) : 0), 0)
+  const total = sides.reduce((a, b) => a + b, 0)
+  const room = groupPx - flexMin
+  const scale = groupPx > 0 && total > room ? Math.max(0, room) / total : 1
   const size: PanelSize[] = []
   panels.forEach((p, i) => {
-    if (p.width !== undefined) size[i] = p.hidden ? 0 : `${p.width}px`
+    if (p.width === undefined) return
+    if (p.hidden) size[i] = 0
+    else size[i] = `${Math.round(scale < 1 ? Math.max(p.min ?? 0, sides[i]! * scale) : sides[i]!)}px`
   })
   return size
 }
@@ -56,12 +68,13 @@ export function splitterSizes(panels: SplitPanelSpec[]): PanelSize[] {
  * hi cabia (finestra estreta) no perd l'amplada desada.
  */
 export function widthUpdates(panels: SplitPanelSpec[], size: number[], groupPx: number, trigger?: string | null): { panel: SplitPanelSpec; width: number | null }[] {
-  if (groupPx <= 0) return []
-  const near = trigger ? new Set(trigger.split(":")) : null
+  // Només el que fa l'usuari (arrossegar o el teclat a una vora): un canvi de finestra no es desa.
+  if (groupPx <= 0 || !trigger) return []
+  const near = new Set(trigger.split(":"))
   const out: { panel: SplitPanelSpec; width: number | null }[] = []
   panels.forEach((p, i) => {
     const pct = size[i]
-    if (p.width === undefined || p.hidden || pct === undefined || (near && !near.has(p.id))) return
+    if (p.width === undefined || p.hidden || pct === undefined || !near.has(p.id)) return
     if (pct < 0.01) {
       if (p.onHide) out.push({ panel: p, width: null })
       return
