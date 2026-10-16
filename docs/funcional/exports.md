@@ -141,6 +141,25 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   dibuix, i al revés la fila s'il·lumina (i la llista s'hi desplaça si té barra pròpia). Al mòbil, **tocar** fixa la
   inspecció (i marca la fila de l'operació); tornar a tocar o tocar el tauler la treu. Càlcul pur a
   `features/export/camInspect.ts` (`camInspect.test.ts`).
+- **Simulació 3D** (per decisió de l'usuari, 2026-10-16: «veure en 3D el que fa la màquina i com va quedant»): `ChoiceChips`
+  «Vista» 2D · 3D (recordada al navegador). El 3D (`CamSim3D.tsx`, `React.lazy`: three no entra al bloc d'Exportar) mostra
+  el tauler amb el seu gruix, l'origen de la màquina (eixos X/Y/Z a la cantonada de baix a l'esquerra), el martiri a sota i
+  l'eina (fresa del Ø de l'eina, pinça i capçal translúcid) que fa el programa **en l'ordre del fitxer**; el que treu es va
+  veient: forats i fresats a la seva fondària, els passants deixen veure el martiri, i una peça es tenyeix quan el seu
+  contorn passant per fora l'acaba de deixar solta. Controls: començament, operació anterior, jugar/pausa, operació
+  següent, final (el tauler acabat), temps, velocitat ×1 · ×5 · ×20 · ×100 i un lliscador de tot el programa;
+  interruptors «Recorreguts» (els talls, fins) i «Desplaçaments» (els ràpids, discontinus a la seva alçada). L'operació en
+  curs surt a sota (número, ref, tipus, eina), en rosa al 3D i il·luminada a la llista (que la segueix); tocar una fila hi
+  porta la simulació. **Aproximat**: el .xcs no porta velocitats (les posa el Maestro), es fan servir tall 10 m/min,
+  baixada 3 m/min i ràpids 40 m/min; el centre de l'eina és el de `camDraw` (Ø per defecte 10 mm si la màquina no té
+  l'eina); les passades (`maxPass`) d'anada i tornada; les caixeres, un buidat en zig-zag inventat i el contorn; les
+  rampes, la d'`approachSegment`. Només el pla `Top`: les operacions de cantell es diuen («n operacions de cantell no es
+  veuen al 3D»). Lògica pura a `features/export/camSim.ts` (moviments en el temps, operació en curs, salts) i
+  `camHeightfield.ts` (mapa d'alçades de la cara de dalt: cel·la ≈ màx(1 mm, costat llarg / 1200), com a molt 1,5 M
+  cel·les —600 k i / 800 a l'iPhone—; cada tram de la fresa baixa les cel·les que toca el disc; endavant només es talla el
+  que s'ha fet des de l'últim fotograma, enrere es refà de zero), amb `camSim.test.ts`. El 3D (`camSimScene.ts`) puja a la
+  GPU només les files canviades (textura RGBA: R = alçada, G = peça acabada); la malla de dalt és més baixa (720 / 320
+  segments) i el color, la llum i els forats surten del mapa sencer a cada píxel. Pinta contínuament només mentre juga.
 - Tests (`xcsPreview.test.ts`): mobles del catàleg amb el context real (el que es llegeix = el que s'ha escrit),
   `nesting_T01.xcs`, el programa real del taller i els per peça.
 

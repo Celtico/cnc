@@ -1,13 +1,21 @@
-import { Box, HStack, Stack, Switch, Text } from "@chakra-ui/react"
-import { useMemo, useState } from "react"
+import { Box, HStack, Spinner, Stack, Switch, Text } from "@chakra-ui/react"
+import { Suspense, lazy, useMemo, useState } from "react"
+import { LuMap, LuRotate3D } from "react-icons/lu"
 import { ChoiceChips } from "../../components/FormRow"
 import type { Machine } from "../../core/model"
+import { usePersistentFlag } from "../../lib/usePersistentFlag"
 import { camSheetView, fmtMm } from "./camDrawing"
 import { camInspect, type CamInspection, type CamTarget } from "./camInspect"
 import { CamOpList } from "./CamOpList"
 import { CamSheetSvg, type Zoom } from "./CamSheetSvg"
+import { buildSimProgram } from "./camSim"
+import { CamSimControls } from "./CamSimControls"
 import { CamToolLegend } from "./CamToolLegend"
+import { useCamSim } from "./useCamSim"
 import { useElementWidth } from "./useElementWidth"
+
+/** La simulació 3D (three) es carrega en triar «3D»: no és al bloc d'Exportar. */
+const CamSim3D = lazy(() => import("./CamSim3D"))
 
 interface CamSheet {
   file: string
@@ -31,6 +39,11 @@ export function CamPreview({ sheets, machine }: { sheets: CamSheet[]; machine?: 
   const sheet = sheets[Math.min(tab, sheets.length - 1)]
   const view = useMemo(() => (sheet ? camSheetView(sheet.text, machine) : null), [sheet, machine])
   const [wrap, cw] = useElementWidth<HTMLDivElement>(360)
+  const [is3d, set3d] = usePersistentFlag("mobles:cam-3d")
+  const [paths, setPaths] = useState(true)
+  const [rapids, setRapids] = useState(false)
+  const prog = useMemo(() => (is3d && view ? buildSimProgram(view) : null), [is3d, view])
+  const clock = useCamSim(prog)
 
   if (!sheet || !view) return <Text color="fg.muted">Cap programa per veure.</Text>
   const { preview: p } = view
@@ -41,7 +54,8 @@ export function CamPreview({ sheets, machine }: { sheets: CamSheet[]; machine?: 
   const rowOf = (n: number) => view.rows.find((r) => r.ops.some((o) => o.n === n))
   const target = hover?.t ?? pin
   const insp = camInspect(view, target)
-  const hot = target?.kind === "op" ? (rowOf(target.n)?.from ?? null) : null
+  const simOp = clock && clock.op >= 0 ? clock.prog.ops[clock.op] : undefined
+  const hot = clock ? (simOp ? (rowOf(simOp.n)?.from ?? null) : null) : target?.kind === "op" ? (rowOf(target.n)?.from ?? null) : null
   const same = (a: CamTarget | null, b: CamTarget | null) => !!a && !!b && (a.kind === "part" ? b.kind === "part" && a.ref === b.ref : b.kind === "op" && a.n === b.n)
   /** Tocar (o clicar) al dibuix: fixa la inspecció i, si és una operació, en marca la fila; tornar-hi la treu. */
   const pick = (t: CamTarget | null) => {
@@ -51,6 +65,9 @@ export function CamPreview({ sheets, machine }: { sheets: CamSheet[]; machine?: 
   }
   const select = (from: number | null) => {
     setSel(from)
+    // 3D: tocar una operació hi porta la simulació (al seu començament).
+    const so = clock && from !== null ? clock.prog.ops.find((o) => o.n === from) : undefined
+    if (clock && so) clock.seek(so.t0)
     const o = from === null ? undefined : view.rows.find((r) => r.from === from)?.ops[0]
     setPin(o ? { kind: "op", n: o.n } : null)
   }
@@ -82,48 +99,75 @@ export function CamPreview({ sheets, machine }: { sheets: CamSheet[]; machine?: 
           </Text>
         </Stack>
         <HStack gap={4} wrap="wrap" rowGap={2}>
-          <Switch.Root size="sm" checked={order} onCheckedChange={(e) => setOrder(e.checked)}>
-            <Switch.HiddenInput />
-            <Switch.Control />
-            <Switch.Label fontSize="sm">Ordre</Switch.Label>
-          </Switch.Root>
-          <Switch.Root size="sm" checked={band} onCheckedChange={(e) => setBand(e.checked)}>
-            <Switch.HiddenInput />
-            <Switch.Control />
-            <Switch.Label fontSize="sm">Amplada de l'eina</Switch.Label>
-          </Switch.Root>
-          <ChoiceChips<Zoom>
-            label="Zoom"
+          <ChoiceChips
+            label="Vista"
             options={[
-              { id: "1", label: "1×" },
-              { id: "2", label: "2×" },
-              { id: "4", label: "4×" },
+              { id: "2d", label: <HStack gap={1.5}><LuMap /> 2D</HStack> },
+              { id: "3d", label: <HStack gap={1.5}><LuRotate3D /> 3D</HStack> },
             ]}
-            value={zoom}
-            onChange={setZoom}
+            value={is3d ? "3d" : "2d"}
+            onChange={(v) => set3d(v === "3d")}
           />
+          {clock ? (
+            <>
+              <Toggle label="Recorreguts" checked={paths} onChange={setPaths} />
+              <Toggle label="Desplaçaments" checked={rapids} onChange={setRapids} />
+            </>
+          ) : (
+            <>
+              <Toggle label="Ordre" checked={order} onChange={setOrder} />
+              <Toggle label="Amplada de l'eina" checked={band} onChange={setBand} />
+              <ChoiceChips<Zoom>
+                label="Zoom"
+                options={[
+                  { id: "1", label: "1×" },
+                  { id: "2", label: "2×" },
+                  { id: "4", label: "4×" },
+                ]}
+                value={zoom}
+                onChange={setZoom}
+              />
+            </>
+          )}
         </HStack>
-        <Box position="relative" flexShrink={0}>
-          <Box ref={wrap} w="full" overflow="auto" borderWidth="1px" rounded="md" bg="bg.subtle" maxH={{ base: "70vh", lg: "none" }}>
-            <CamSheetSvg
-              view={view}
-              file={sheet.file}
-              cw={cw}
-              zoom={zoom}
-              band={band}
-              order={order}
-              selRow={selRow}
-              target={target}
-              insp={insp}
-              onHover={(t) => setHover(t ? { t, from: "svg" } : null)}
-              onPick={pick}
-            />
-          </Box>
-          {insp && <InspectBox insp={insp} left={insp.focus[0] > L / 2} />}
-        </Box>
-        <Text fontSize="xs" color="fg.muted">
-          Passa el ratolí (o toca) una peça, un forat o un fresat per veure'n les cotes.
-        </Text>
+        {clock ? (
+          <Stack gap={2} flexShrink={0}>
+            <Box h={{ base: "55vh", lg: "min(620px, 60dvh)" }} borderWidth="1px" rounded="md" overflow="hidden" bg="bg.subtle">
+              <Suspense fallback={<Spinner size="sm" color="wood.solid" m={3} />}>
+                <CamSim3D clock={clock} paths={paths} rapids={rapids} />
+              </Suspense>
+            </Box>
+            <CamSimControls clock={clock} view={view} />
+            <Text fontSize="xs" color="fg.muted">
+              Arrossega per girar-lo; amb dos dits o la roda, més a prop. Aproximat: velocitats fixes (tall 10 m/min, ràpids 40 m/min) i, a les caixeres, un buidat en zig-zag.
+              {clock.prog.side ? ` ${clock.prog.side} ${clock.prog.side === 1 ? "operació" : "operacions"} de cantell (o sense geometria) no es veuen al 3D.` : ""}
+            </Text>
+          </Stack>
+        ) : (
+          <>
+            <Box position="relative" flexShrink={0}>
+              <Box ref={wrap} w="full" overflow="auto" borderWidth="1px" rounded="md" bg="bg.subtle" maxH={{ base: "70vh", lg: "none" }}>
+                <CamSheetSvg
+                  view={view}
+                  file={sheet.file}
+                  cw={cw}
+                  zoom={zoom}
+                  band={band}
+                  order={order}
+                  selRow={selRow}
+                  target={target}
+                  insp={insp}
+                  onHover={(t) => setHover(t ? { t, from: "svg" } : null)}
+                  onPick={pick}
+                />
+              </Box>
+              {insp && <InspectBox insp={insp} left={insp.focus[0] > L / 2} />}
+            </Box>
+            <Text fontSize="xs" color="fg.muted">
+              Passa el ratolí (o toca) una peça, un forat o un fresat per veure'n les cotes.
+            </Text>
+          </>
+        )}
         <CamToolLegend view={view} />
       </Stack>
 
@@ -132,7 +176,7 @@ export function CamPreview({ sheets, machine }: { sheets: CamSheet[]; machine?: 
         sel={sel}
         onSelect={select}
         hot={hot}
-        follow={hover?.from === "svg"}
+        follow={!!clock || hover?.from === "svg"}
         onHover={(from) => {
           const o = from === null ? undefined : view.rows.find((r) => r.from === from)?.ops[0]
           setHover(o ? { t: { kind: "op", n: o.n }, from: "list" } : null)
@@ -153,5 +197,15 @@ function InspectBox({ insp, left }: { insp: CamInspection; left: boolean }) {
         </Text>
       ))}
     </Stack>
+  )
+}
+
+function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (on: boolean) => void }) {
+  return (
+    <Switch.Root size="sm" checked={checked} onCheckedChange={(e) => onChange(e.checked)}>
+      <Switch.HiddenInput />
+      <Switch.Control />
+      <Switch.Label fontSize="sm">{label}</Switch.Label>
+    </Switch.Root>
   )
 }
