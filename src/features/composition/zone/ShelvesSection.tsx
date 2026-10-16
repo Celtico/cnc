@@ -6,11 +6,17 @@ import { canHoldAccessories, canHoldShelves, moduleSlotItem, setShelves, slotOf,
 import { NumRow } from "../../../components/NumRow"
 import { FormRow } from "../../../components/FormRow"
 import { HardwarePick } from "../HardwarePick"
+import { useSettings } from "../../settings/SettingsContext"
 
-/** «Prestatges i accessoris» d'un compartiment sense dividir: quantitat, regulació, a ras, gruix i els accessoris. */
-export function ZoneShelvesSection({ root, zone, onChange, hardware, bounds, system32 }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; hardware: ModuleHardware; bounds: ZoneBounds; system32?: { at: "shelves" | "front"; row: ReactNode } }) {
+/**
+ * **«Opcions de l'interior»** d'un compartiment sense dividir (per decisió de l'usuari, 2026-10-16; abans «Prestatges i
+ * accessoris»; surt sempre menys amb un front fix o amb calaixos): prestatges (quantitat, regulació, a ras, gruix), els
+ * accessoris i, darrere d'una porta, els **calaixos interiors** (`behindDoor`).
+ */
+export function ZoneShelvesSection({ root, zone, onChange, hardware, bounds, system32, behindDoor = false, bodyThickness = 19 }: { /** El gruix del cos (el suplement per defecte). */ bodyThickness?: number; root: Zone; zone: Zone; onChange: (root: Zone) => void; hardware: ModuleHardware; bounds: ZoneBounds; system32?: { at: "shelves" | "front"; row: ReactNode }; /** Hi ha una porta davant (la seva o la d'una zona de més amunt): hi poden anar calaixos interiors. */ behindDoor?: boolean }) {
+  const { settings } = useSettings()
   return (
-    <FoldItem optionId="zone.shelves" id="zone-shelves" title="Prestatges i accessoris" badge={shelvesBadge(zone)} icon={LuRows3}>
+    <FoldItem optionId="zone.shelves" id="zone-shelves" title="Opcions de l'interior" badge={shelvesBadge(zone, behindDoor)} icon={LuRows3}>
       {canHoldShelves(bounds) && <>
       <NumRow
         optionId="zone.shelves.count"
@@ -72,6 +78,8 @@ export function ZoneShelvesSection({ root, zone, onChange, hardware, bounds, sys
       {/* Accessoris del compartiment: ferratges (barra de penjar, tira LED), no fusta; a sota dels prestatges (la tira
           LED va sota cada prestatge). */}
       {canHoldAccessories(bounds) && <AccessoryRows root={root} zone={zone} hardware={hardware} onChange={onChange} />}
+      {/* Calaixos interiors: darrere d'una porta, a baix de tot (els prestatges es reparteixen per sobre). */}
+      {behindDoor && canHoldShelves(bounds) && <InnerDrawerRows root={root} zone={zone} hardware={hardware} setback={settings.gaps.innerDrawerSetback ?? 25} body={bodyThickness} onChange={onChange} />}
     </FoldItem>
   )
 }
@@ -79,16 +87,16 @@ export function ZoneShelvesSection({ root, zone, onChange, hardware, bounds, sys
 /** Resum d'un accessori per a la insígnia. */
 const ACCESSORY_LABELS = { rail: "Barra", led: "LED" } as const
 
-/** Insígnia de «Prestatges i accessoris»: el nombre de prestatges i els accessoris que hi ha («3 · Barra · LED»). */
-function shelvesBadge(zone: Zone): string | undefined {
-  const parts = [...(zone.shelves?.n ? [String(zone.shelves.n)] : []), ...(["rail", "led"] as const).filter((k) => zone[k]).map((k) => ACCESSORY_LABELS[k])]
+/** Insígnia d'«Opcions de l'interior»: prestatges, accessoris i calaixos interiors que hi ha («3 · Barra · 2 calaixos»). */
+function shelvesBadge(zone: Zone, behindDoor: boolean): string | undefined {
+  const parts = [...(zone.shelves?.n ? [String(zone.shelves.n)] : []), ...(["rail", "led"] as const).filter((k) => zone[k]).map((k) => ACCESSORY_LABELS[k]), ...(behindDoor && zone.innerDrawers ? [`${zone.innerDrawers.n} ${zone.innerDrawers.n === 1 ? "calaix" : "calaixos"}`] : [])]
   return parts.length ? parts.join(" · ") : undefined
 }
 
 /**
  * **Accessoris** d'un compartiment (auditoria B): barra de penjar i tira LED, ferratges de la biblioteca (motors `rail` i
  * `ledProfile`) triats amb el mateix `HardwarePick` que la frontissa; sense còpia pròpia, el del mòdul («Com el mòdul»).
- * Van a la secció «Prestatges i accessoris», a sota dels prestatges (per decisió de l'usuari, 2026-10-13). No són de CNC:
+ * Van a la secció «Opcions de l'interior», a sota dels prestatges (per decisió de l'usuari, 2026-10-13). No són de CNC:
  * surten a Peces, a «Elements sense nesting».
  */
 function AccessoryRows({ root, zone, hardware, onChange }: { root: Zone; zone: Zone; hardware: ModuleHardware; onChange: (root: Zone) => void }) {
@@ -113,6 +121,42 @@ function AccessoryRows({ root, zone, hardware, onChange }: { root: Zone; zone: Z
     <>
       {row("rail", "rail", "Penjar", "Tub de lateral a lateral sota el sostre del compartiment. Surt a Peces, a «Elements sense nesting».")}
       {row("led", "led", "Llum", "Perfil amb tira LED càlida sota el sostre i sota cada prestatge, a prop del davant. Fa llum al render i surt a Peces, a «Elements sense nesting», amb el llarg per tallar el perfil.")}
+    </>
+  )
+}
+
+/**
+ * **Calaixos interiors** (`Zone.innerDrawers`, per decisió de l'usuari, 2026-10-16): quants, l'alçada de cada un, la guia
+ * (o el joc), la retirada del front interior i el suplement al costat de les frontisses. 0 els treu.
+ */
+function InnerDrawerRows({ root, zone, hardware, setback, body, onChange }: { root: Zone; zone: Zone; hardware: ModuleHardware; setback: number; body: number; onChange: (root: Zone) => void }) {
+  const d = zone.innerDrawers
+  const set = (next: Zone["innerDrawers"]) =>
+    onChange(updateZone(root, zone.id, (z) => {
+      const { innerDrawers: _old, ...rest } = z
+      return next ? { ...rest, innerDrawers: next } : rest
+    }))
+  return (
+    <>
+      <NumRow
+        optionId="zone.shelves.innerDrawers"
+        label="Calaixos interiors"
+        suffix="u"
+        value={d?.n ?? 0}
+        min={0}
+        max={10}
+        step={1}
+        help={d ? "A baix de tot, darrere de la porta: front interior baix (sense tirador), retirat del davant; els prestatges es reparteixen per sobre." : "Calaixos darrere de la porta, a baix de tot del compartiment."}
+        onChange={(n) => Number.isFinite(n) && set(n > 0 ? { ...(d ?? { height: 180, setback }), n: Math.round(n) } : undefined)}
+      />
+      {d && (
+        <>
+          <NumRow optionId="zone.shelves.innerDrawers.height" label="Alçada de cada calaix" value={d.height} min={60} max={1000} step={10} onChange={(height) => Number.isFinite(height) && height >= 60 && set({ ...d, height })} />
+          <HardwarePick optionId="zone.shelves.innerDrawers.slide" slot="slide" current={d.hardware ?? moduleSlotItem(hardware, "slide")} inherited={moduleSlotItem(hardware, "slide")} onPick={(item) => set(item ? { ...d, hardware: item } : (({ hardware: _h, ...rest }) => rest)(d))} />
+          <NumRow optionId="zone.shelves.innerDrawers.setback" label="Retirada del front" value={d.setback ?? 25} min={0} max={100} step={1} help="Del davant de la caixa al davant del front interior." onChange={(v) => Number.isFinite(v) && set({ ...d, setback: v })} />
+          <NumRow optionId="zone.shelves.innerDrawers.shim" label="Suplement" value={d.shim ?? body} min={0} max={60} step={1} help={d.shim === undefined ? "Com el gruix del cos. Al costat de les frontisses: la guia s'hi cargola perquè el calaix no topi amb la frontissa (0 = sense)." : "Al costat de les frontisses: la guia s'hi cargola perquè el calaix no topi amb la frontissa (0 = sense)."} onChange={(v) => Number.isFinite(v) && v >= 0 && set({ ...d, shim: v })} />
+        </>
+      )}
     </>
   )
 }

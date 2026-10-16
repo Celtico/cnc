@@ -276,6 +276,18 @@ function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: Zon
     if (!z.rail) delete out.rail
     if (!z.led) delete out.led
   }
+  // Calaixos interiors: només en un compartiment sense dividir, amb una peça a cada costat i darrere d'una porta (la seva
+  // o la d'una zona de més amunt; no un front fix ni calaixos). Si no, es conserven i no es fan (res amagat compta).
+  if (out.innerDrawers) {
+    const behindDoor = (covered && !fixedCover) || out.front?.kind === "door" || out.front?.kind === "flap"
+    if (z.split || !canHoldShelves(bounds) || !behindDoor) delete out.innerDrawers
+    else {
+      const d = { ...out.innerDrawers }
+      const kit = d.hardware ? d.hardware.engine === "drawerKit" : kitDefault
+      if (!kit || !d.kit || !Object.keys(d.kit).length) delete d.kit
+      out.innerDrawers = d
+    }
+  }
   const f = out.front
   if (f?.kind === "panel" || fixedCover) {
     // Front fix, el seu o el de tota una zona de més amunt que el tapa (per decisió de l'usuari): darrere no hi ha res a

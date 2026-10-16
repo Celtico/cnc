@@ -95,6 +95,8 @@ export function ZonePanel({
   splitExtra,
   coveredBy,
   coveredByFixed = false,
+  coveredByDoor = false,
+  bodyThickness,
   bounds,
   system32,
   onSelect,
@@ -108,6 +110,10 @@ export function ZonePanel({
    * fronts que no s'hi poden fixar).
    */
   bounds: ZoneBounds
+  /** El front que el tapa és una porta (o un abatible): hi poden anar calaixos interiors. */
+  coveredByDoor?: boolean
+  /** El gruix del cos del mòdul (el suplement per defecte dels calaixos interiors). */
+  bodyThickness?: number
   /** % d'àrea oberta si la zona té reixeta. */
   openRatio?: number
   /** Alçades reals dels fronts dels calaixos (mm), de la construcció: les de les «Auto» i el que sobra. */
@@ -181,7 +187,7 @@ export function ZonePanel({
           {/* Tapat: el seu front (es conserva) no es fa i el compartiment és com obert (`visibleZone`). Sense una peça a
               cada costat (lateral o divisor), cap prestatge: no surt (es conserva i torna amb els laterals). Amb calaixos
               o un front fix (darrere no hi ha res a fer servir), tampoc; ni tapat per un front fix de tota la zona. */}
-          {!niche && shelvesBehind && (canHoldShelves(bounds) || canHoldAccessories(bounds)) && <ZoneShelvesSection root={root} zone={zone} onChange={onChange} hardware={hardware} bounds={bounds} system32={system32} />}
+          {!niche && shelvesBehind && (canHoldShelves(bounds) || canHoldAccessories(bounds)) && <ZoneShelvesSection root={root} zone={zone} onChange={onChange} hardware={hardware} bounds={bounds} system32={system32} behindDoor={coveredBy ? coveredByDoor : zone.front?.kind === "door" || zone.front?.kind === "flap"} {...(bodyThickness ? { bodyThickness } : {})} />}
 
           {/* Només les direccions on el divisor té on unir-se (`splitDirsFor`): el vertical, a sota i a sobre; el
               travesser, als dos costats. Sense cap, o darrere d'un front fix, la secció no surt. */}

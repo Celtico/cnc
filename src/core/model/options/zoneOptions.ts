@@ -151,7 +151,7 @@ const front = section("zone.front", "Front", {
   grille,
 ])
 
-const shelves = section("zone.shelves", "Prestatges i accessoris", {
+const shelves = section("zone.shelves", "Opcions de l'interior", {
   icon: "shelves",
   code: UI.shelves,
   showIf: "Compartiment sense dividir, sense aparell que l'ocupi, amb lateral o divisor als dos costats; ni amb Calaixos ni Front fix",
@@ -201,6 +201,19 @@ const shelves = section("zone.shelves", "Prestatges i accessoris", {
     defaultEditable: true,
     choices: [{ value: "on", label: "Tira LED", reveals: ["zone.shelves.ledHardware"] }],
   }, [field("zone.shelves.ledHardware", "Ferratge", { code: UI.shelves, control: "hardware", defaultText: AS_MODULE })]),
+  field("zone.shelves.innerDrawers", "Calaixos interiors", {
+    code: UI.shelves,
+    control: "number",
+    showIf: "Darrere d'una porta (la del compartiment o la d'una zona de més amunt)",
+    default: 0,
+    choices: [{ value: ">0", label: "1 o més", reveals: ["zone.shelves.innerDrawers.height", "zone.shelves.innerDrawers.slide", "zone.shelves.innerDrawers.setback", "zone.shelves.innerDrawers.shim"] }],
+    note: "Per decisió de l'usuari, 2026-10-16: «posar calaixos darrere una porta», a la secció de l'interior. A baix de tot; front interior baix, sense tirador, retirat; suplement al costat de les frontisses (`Zone.innerDrawers`).",
+  }, [
+    field("zone.shelves.innerDrawers.height", "Alçada de cada calaix", { code: UI.shelves, control: "number", default: 180 }),
+    field("zone.shelves.innerDrawers.slide", "Guia", { code: UI.shelves, control: "hardware", defaultText: AS_MODULE }),
+    field("zone.shelves.innerDrawers.setback", "Retirada del front", { code: UI.shelves, control: "number", defaultText: "Preferències › Folgances per defecte (25)" }),
+    field("zone.shelves.innerDrawers.shim", "Suplement", { code: UI.shelves, control: "number", defaultText: "El gruix del cos" }),
+  ]),
 ])
 
 /** Compartiment (l'«Interior» o una zona d'una divisió). */

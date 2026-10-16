@@ -355,6 +355,8 @@ export const GapsPrefSchema = z.object({
    * (la meitat a cada cap). Es copia a cada mòdul nou (`Carcass.innerClearance`).
    */
   innerClearance: mm.min(0).max(3),
+  /** Retirada del front dels calaixos interiors (mm) des del davant de la caixa: la dels nous (sense: 25). */
+  innerDrawerSetback: mm.min(0).max(100).optional(),
 })
 
 const LabelPrefSchema = z.object({ w: mm.min(10).max(300), h: mm.min(10).max(300) })

@@ -22,6 +22,7 @@ export function GapsFields({ gaps, onChange }: { gaps: Settings["gaps"]; onChang
     </SettingsGroup>
     <SettingsGroup icon={<LuColumns2 />} title="Divisions" summary={`peces de dins ${String(gaps.innerClearance).replace(".", ",")}`}>
     <NumRow label="Peces de dins" help="Amb el mòdul dividit, tots els divisors i prestatges fixos, de qualsevol nivell (horitzontal o vertical): tant menys de llarg, la meitat a cada cap. Sense dividir, els prestatges fixos van sencers; la caixa, mai." value={gaps.innerClearance} min={0} max={3} step={0.5} onChange={(innerClearance) => onChange({ ...gaps, innerClearance })} />
+    <NumRow label="Retirada dels calaixos interiors" help="Del davant de la caixa al davant del front dels calaixos interiors (darrere de la porta). Als calaixos interiors nous." value={gaps.innerDrawerSetback ?? 25} min={0} max={100} step={1} onChange={(innerDrawerSetback) => onChange({ ...gaps, innerDrawerSetback })} />
     </SettingsGroup>
     </FoldGrid>
   )

@@ -47,6 +47,7 @@ export interface BuildWarning {
     // Materials que no lliguen amb Preferències (`materialIssues`, fora del build: el build no llegeix preferències).
     | "unknown-material"
     | "thickness-not-listed"
+    | "inner-drawers"
   message: string
   zoneId?: string
   panelId?: string

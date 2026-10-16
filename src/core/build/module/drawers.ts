@@ -17,8 +17,79 @@ import { FrontsBuilder } from "./fronts"
 import { num, edges, frontMaterialOf, drawerBottomMaterial, snapAutoHeights } from "./helpers"
 import type { VerticalRef, HandleChoice } from "./types"
 
+/** On comencen els suplements dels calaixos interiors, des del davant de la caixa (mm): darrere de la placa de la frontissa. */
+const SHIM_FROM_FRONT = 60
+
 /** Calaixos: fronts, caixes de fusta i jocs paramètrics. */
 export class DrawersBuilder extends FrontsBuilder {
+  /** Calaixos interiors en construcció (`buildInnerDrawers`): on és la cara dels seus fronts (Z del mòdul). */
+  private inner: { faceZ: number } | null = null
+  private innerShims = 0
+
+  /**
+   * **Calaixos interiors** (`Zone.innerDrawers`): a baix de tot del compartiment, darrere de la porta. Els calaixos de
+   * sempre (caixa de fusta o joc) amb un **front interior baix** (el cos, de l'amplada i l'alçada de la caixa; sense
+   * tirador) retirat `setback` del davant de la caixa i, a cada costat amb frontisses, un **suplement** (tira del cos de
+   * `shim` mm, de l'alçada dels calaixos, cargolada al lateral) on van els forats de la guia. Torna on acaben (Y), per
+   * repartir-hi els prestatges per sobre.
+   */
+  protected buildInnerDrawers(zone: Zone, inner: NonNullable<Zone["innerDrawers"]>, rect: ZoneRect, left: VerticalRef | undefined, right: VerticalRef | undefined, hinges: ReadonlySet<"left" | "right">): number {
+    const { m, d } = this
+    const c = m.carcass
+    const bg = m.fronts.betweenGap
+    const want = r(inner.n * inner.height + (inner.n - 1) * bg)
+    if (want > rect.y1 - rect.y0 + 0.5)
+      this.warnings.push({ code: "layout", message: `Els ${inner.n} calaixos interiors fan ${num(want)} mm i el compartiment ${num(rect.y1 - rect.y0)}: l'últim es fa més baix. Posa'n menys o fes-los més baixos.`, zoneId: zone.id })
+    const y1 = r(Math.min(rect.y1, rect.y0 + want))
+    const faceZ = r(d.D - (inner.setback ?? 25))
+    const S = inner.shim ?? c.thickness
+    // Suplements al costat de les frontisses: la guia s'hi cargola (el calaix és més estret i no topa amb la frontissa).
+    // Comencen a `SHIM_FROM_FRONT` del davant de la caixa: davant hi ha la placa de la frontissa (hipòtesi: placa a 37 mm
+    // i cargols a ±16, fins a uns 55 mm del cantell).
+    const zRear = this.rearAt(rect.x0, rect.x1)
+    const shimFront = r(Math.min(faceZ, d.D - SHIM_FROM_FRONT))
+    const shim = (side: "left" | "right", ref: VerticalRef): VerticalRef => {
+      this.innerShims += 1
+      const x = side === "left" ? ref.xR : ref.xL - S
+      const panel = this.add(
+        this.basePanel(`inner-shim-${this.innerShims}-${side}`, "suplement", `Suplement dels calaixos interiors (${side === "left" ? "esquerre" : "dret"})`, "spacer", r(shimFront - zRear), r(y1 - rect.y0), S, c.material, "x", edges("top"), placement([x, rect.y0, zRear], Z, Y, X, side === "left" ? X : neg(X))),
+      )
+      return { panel, xL: x, xR: r(x + S), yB: rect.y0, yT: y1, zRear, zFront: shimFront, outer: false }
+    }
+    const L = S > 0 && hinges.has("left") && left ? shim("left", left) : left
+    const R = S > 0 && hinges.has("right") && right ? shim("right", right) : right
+    if (L !== left || R !== right)
+      if (!this.warnings.some((w) => w.code === "inner-drawers"))
+        this.warnings.push({ code: "inner-drawers", message: `Calaixos interiors: el suplement (${num(S)} mm, del cos) es cargola al lateral pel costat de dins abans de posar-hi la guia.`, zoneId: zone.id })
+    const box: ZoneRect = { ...rect, x0: L !== left ? L!.xR : rect.x0, x1: R !== right ? R!.xL : rect.x1, y1 }
+    const front: Extract<Front, { kind: "drawers" }> = {
+      kind: "drawers",
+      n: inner.n,
+      heights: [...Array.from({ length: inner.n - 1 }, () => inner.height), "auto"],
+      ...(inner.hardware ? { hardware: inner.hardware } : {}),
+      ...(inner.kit ? { kit: inner.kit } : {}),
+    }
+    const own = this.drawerHeights[zone.id]
+    this.inner = { faceZ }
+    try {
+      this.buildDrawers(zone, front, box, box, L, R)
+    } finally {
+      this.inner = null
+      // Les alçades «Auto» de l'inspector són les dels calaixos de fora, no les d'aquests.
+      if (own) this.drawerHeights[zone.id] = own
+      else delete this.drawerHeights[zone.id]
+    }
+    return y1
+  }
+
+  /** El front interior d'un calaix interior: del cos, de l'amplada i l'alçada de la caixa, sense tirador. */
+  private addInnerFront(k: number, x0: number, y0: number, w: number, h: number): Panel {
+    const { d } = this
+    return this.add(
+      this.basePanel(`drawer-${k}-front`, "frontal interior", `Front interior calaix ${k}`, "drawerFront", r(w), r(h), d.t, this.m.carcass.material, "x", edges("bottom", "top", "left", "right"), placement([r(x0), r(y0 + h), this.inner!.faceZ], X, neg(Y), neg(Z), Z)),
+    )
+  }
+
   /** Alçades i Y de baix de cada front d'una pila de calaixos (l'últim «auto» es queda el que sobra; iguals a mig mm). */
   protected drawerLayout(zone: Zone, front: Extract<Front, { kind: "drawers" }>, ter: ZoneRect): { heights: number[]; ys: number[] } {
     const n = front.n
@@ -79,11 +150,11 @@ export class DrawersBuilder extends FrontsBuilder {
     if (isDrawerKit(slideHw.item)) {
       // El tancament del joc mana: push-open ⇒ cap tirador (el push el posa el joc).
       const kitPush = isPushClosing(kitOptionsOf(slideHw.item.kit, front.kit).closing)
-      this.buildKitDrawers(zone, front, slideHw.item, rect, ter, left, right, this.frontHandle(front.handle, zone.id, kitPush))
+      this.buildKitDrawers(zone, front, slideHw.item, rect, ter, left, right, this.inner ? null : this.frontHandle(front.handle, zone.id, kitPush))
       return
     }
     // El tirador triat al calaix (si no, el del mòdul).
-    const handleHw = this.frontHandle(front.handle, zone.id)
+    const handleHw = this.inner ? null : this.frontHandle(front.handle, zone.id)
     // Llargades, jocs, caixa i forats de la guia.
     const hw = slideHw.spec
     const n = front.n
@@ -92,7 +163,8 @@ export class DrawersBuilder extends FrontsBuilder {
     const boxW = r(rect.x1 - rect.x0 - 2 * hw.sideClearance)
     // Amb el front encastat, la caixa del calaix comença un gruix més endins.
     // Una columna pel darrere: la fondària que queda davant del seu fons.
-    const maxLen = d.availDepth - (this.rearAt(rect.x0, rect.x1) - d.backInnerZ) - hw.backClearance - (d.inset ? d.t : 0)
+    // Un calaix interior: des de la cara de darrere del seu front interior (retirat).
+    const maxLen = d.availDepth - (this.rearAt(rect.x0, rect.x1) - d.backInnerZ) - hw.backClearance - (this.inner ? d.D - this.inner.faceZ + d.t : d.inset ? d.t : 0)
     const slide = [...hw.slideLengths].sort((a, b) => b - a).find((l) => l <= maxLen)
     if (slide === undefined) {
       this.warnings.push({ code: "drawer-no-slide", message: `Cap guia de calaix (${hw.slideLengths.join(", ")}) cap en ${r(maxLen)} mm de fondària útil.`, zoneId: zone.id })
@@ -136,7 +208,9 @@ export class DrawersBuilder extends FrontsBuilder {
       const k = this.drawerCount
       const fh = heights[i]!
       const y = ys[i]!
-      const frontPanel = this.addDrawerFront(k, ter, y, fh, handleHw, zone)
+      // El front de sempre (el territori, amb el tirador), també si la caixa no s'hi pot fer; el d'un calaix interior,
+      // de la mida de la caixa (més avall).
+      const outerFront = handleHw ? this.addDrawerFront(k, ter, y, fh, handleHw, zone) : null
       const sb = shared.get(groupOf(fh))!
       const boxH = r(sb.hi - sb.lo)
       if (boxH < minBox) {
@@ -146,7 +220,10 @@ export class DrawersBuilder extends FrontsBuilder {
       if (narrowBox) continue
       const boxY0 = r(y + sb.lo)
       const boxX0 = r(rect.x0 + hw.sideClearance)
-      const zFront = d.frontZ - d.t // cara posterior del front
+      const frontPanel = outerFront ?? this.addInnerFront(k, boxX0, boxY0, boxW, boxH)
+      const fx0 = handleHw ? ter.x0 : boxX0
+      const fTop = handleHw ? y + fh : boxY0 + boxH
+      const zFront = (this.inner ? this.inner.faceZ : d.frontZ) - d.t // cara posterior del front
       const zBack = r(zFront - boxL)
       // Laterals de la caixa (cara A cap a dins de la caixa), amb ranura per al fons.
       const sideGroove = { x: 0, y: hw.bottomOffset, w: boxL, h: tbb, depth: g, face: "A" as const, tag: "drawer-bottom" }
@@ -171,7 +248,7 @@ export class DrawersBuilder extends FrontsBuilder {
         this.basePanel(`drawer-${k}-bottom`, "fons calaix", `Fons calaix ${k}`, "drawerBottom", bottomW, bottomL, tbb, bottomMat.name, "none", { ...NO_EDGES }, placement([boxX0 + bt - g + 0.5, boxY0 + hw.bottomOffset, zFront + g - 0.5], X, neg(Z), Y, neg(Y))),
       )
       // Ranura al front per al fons (cara A = darrere del front).
-      frontPanel.grooves.push({ x: r(boxX0 + bt - g - ter.x0), y: r(y + fh - (boxY0 + hw.bottomOffset + tbb)), w: r(boxW - 2 * bt + 2 * g), h: tbb, depth: g, face: "A", tag: "drawer-bottom" })
+      frontPanel.grooves.push({ x: r(boxX0 + bt - g - fx0), y: r(fTop - (boxY0 + hw.bottomOffset + tbb)), w: r(boxW - 2 * bt + 2 * g), h: tbb, depth: g, face: "A", tag: "drawer-bottom" })
       // Espigues: laterals → front (topen), darrere → laterals (topa). Dues a 30 / 20 mm dels extrems si hi caben; si
       // la caixa és baixa, una al mig (`dowelsAlong`).
       const dowel = { diameter: hw.boxThickness >= 16 ? 8 : 6, faceDepth: 10, edgeDepth: 20 }
@@ -227,13 +304,14 @@ export class DrawersBuilder extends FrontsBuilder {
     ter: ZoneRect,
     left: VerticalRef | undefined,
     right: VerticalRef | undefined,
-    handleHw: HandleChoice,
+    /** `null`: calaixos interiors (front interior, sense tirador). */
+    handleHw: HandleChoice | null,
   ): void {
     const { m, d } = this
     const c = m.carcass
     const { heights, ys } = this.drawerLayout(zone, front, ter)
     const LW = r(rect.x1 - rect.x0)
-    const zFront = d.frontZ - d.t // cara posterior del front
+    const zFront = (this.inner ? this.inner.faceZ : d.frontZ) - d.t // cara posterior del front
     // Fondària darrere del front fins al fons del moble (encastat: el front ja és dins de la llum).
     const depth = r(zFront - this.rearAt(rect.x0, rect.x1))
     const TB = kitBottomThickness(item)
@@ -285,7 +363,8 @@ export class DrawersBuilder extends FrontsBuilder {
       const k = this.drawerCount
       const fh = heights[i]!
       const y = ys[i]!
-      const frontPanel = this.addDrawerFront(k, ter, y, fh, handleHw, zone)
+      // El front de sempre ara; el front interior, quan se sap el joc (fa l'alçada del joc).
+      const outerFront = handleHw ? this.addDrawerFront(k, ter, y, fh, handleHw, zone) : null
       const chosen = slideOf[i]!
       const { plan: own, lower } = planOf(chosen)
       if (!own || !left || !right) continue
@@ -299,6 +378,8 @@ export class DrawersBuilder extends FrontsBuilder {
       const kitPlan = pick.plan
       const kit = kitPlan.kit
       const y0 = slideBase(i, kit)
+      // Calaix interior: el front interior entre els laterals del joc (2 mm de joc a cada costat), fins a dalt del joc.
+      const frontPanel = outerFront ?? this.addInnerFront(k, rect.x0 + 2, y, LW - 4, y0 - y + kitHeight(kit))
       const at = { x0: rect.x0, y0, zFront }
       const pilot = kitPlan.pilot
       // Prebroques dels cargols de la guia als dos laterals del moble (el dret, mirall): z des del cantell de davant del

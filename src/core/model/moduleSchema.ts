@@ -3,7 +3,7 @@ import { ProfileNodeSchema } from "./panel"
 import { VIEW_FLAGS } from "./viewFlags"
 import { HardwareItemObjectSchema, ModuleHardwareKitSchema, sanitizeImportedHardware, migrateModuleHardware, type HardwareItem } from "./hardware"
 import { repairAtomically } from "./repair"
-import { KitOptionsSchema } from "./hardwareKit"
+import { KitOptionsSchema, type KitOptions } from "./hardwareKit"
 import type { RefObject } from "./compositionSchema"
 
 /**
@@ -310,6 +310,28 @@ export interface Zone {
   led?: ZoneAccessory
   /** Electrodomèstic (v46): l'aparell que hi va i, si en porta, el front de moble muntat com diu el fabricant. */
   appliance?: ZoneAppliance
+  /** Calaixos interiors, darrere de la porta (`InnerDrawers`). */
+  innerDrawers?: InnerDrawers
+}
+
+/**
+ * **Calaixos interiors** (per decisió de l'usuari, 2026-10-16: «posar calaixos darrere una porta»): contingut del
+ * compartiment, com els prestatges, a baix de tot (els prestatges es reparteixen per sobre). Només es fan darrere d'una
+ * porta (la del compartiment o la d'una zona de més amunt). Cada calaix porta un **front interior baix** (encastat entre
+ * els suplements, de l'alçada de la caixa) **retirat** `setback` mm del davant de la caixa i, al costat de les
+ * frontisses, un **suplement** de `shim` mm al lateral (la guia s'hi cargola: el calaix no topa amb la frontissa).
+ */
+export interface InnerDrawers {
+  n: number
+  /** Alçada de cada calaix (mm, el lloc que ocupa: la caixa és una mica més baixa, com els calaixos de sempre). */
+  height: number
+  /** La guia o el joc (sense: la del mòdul). */
+  hardware?: HardwareItem
+  kit?: Partial<KitOptions>
+  /** Retirada del front interior des del davant de la caixa (mm; sense: 25, Preferències › Folgances per defecte). */
+  setback?: number
+  /** Gruix del suplement al costat de les frontisses (mm; sense: el gruix del cos; 0 = sense suplements). */
+  shim?: number
 }
 
 export const ZoneSchema: z.ZodType<Zone> = z.lazy(() =>
@@ -340,6 +362,16 @@ export const ZoneSchema: z.ZodType<Zone> = z.lazy(() =>
     rail: ZoneAccessorySchema,
     led: ZoneAccessorySchema,
     appliance: ZoneApplianceSchema.optional(),
+    innerDrawers: z
+      .object({
+        n: z.number().int().min(1).max(10),
+        height: mm.min(60).max(1000),
+        hardware: FrontHardwareSchema.optional(),
+        kit: KitOptionsSchema.partial().optional(),
+        setback: mm.min(0).max(100).optional(),
+        shim: mm.min(0).max(60).optional(),
+      })
+      .optional(),
   }),
 )
 

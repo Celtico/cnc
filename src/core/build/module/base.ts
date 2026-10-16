@@ -3,6 +3,7 @@ import {
   NO_EDGES,
   type EdgeBanding,
   type EdgeSide,
+  type Front,
   type HardwareItem,
   type ModuleHardware,
   type HardwareSlot,
@@ -67,6 +68,8 @@ export class BuilderBase {
   protected lightMaker?: string
   /** Zones que queden darrere del front d'una zona pare. */
   readonly covered = new Set<string>()
+  /** El front que tapa cada zona de `covered` (el de la zona de més amunt): els calaixos interiors hi miren les frontisses. */
+  readonly coverFront = new Map<string, Front>()
   /** Totes les zones per id. */
   protected readonly zones = new Map<string, Zone>()
   readonly verticals: VerticalRef[] = []

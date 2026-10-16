@@ -200,7 +200,7 @@
     Portes surt «Cap»). Cap plantilla del catàleg no en tenia (proves d'or del catàleg idèntiques); al corpus aleatori, 11
     llavors amb portes en una divisió de dins canvien (`UPDATE_GOLDEN=1` revisat: sense aquella porta, es fan els fronts de
     dins). Tests `build/hiddenState.test.ts`, `composition/zoneLabel.test.ts`.
-  - **Accessoris del compartiment** (a la secció «Prestatges i accessoris» del compartiment, a sota dels prestatges: per
+  - **Accessoris del compartiment** (a la secció «Opcions de l'interior» del compartiment, a sota dels prestatges: per
     decisió de l'usuari, 2026-10-13, abans una secció pròpia «Accessoris» amb `LuShirt`; auditoria de coherència B,
     `docs/millores-v1/coherencia-editor.md`): la barra i la llum són **ferratges** de la biblioteca (motors `rail` i
     `ledProfile`, categories «Penjar» i «Llums» —els perfils de LED, a «Llums» des de la v40, no a «Perfils i marcs»—), no interruptors de fusta. `Zone.rail` / `Zone.led` =
@@ -453,3 +453,16 @@
   eliminar, però sense + ni Duplicar ni enganxar). A l'editor: grup «Models 3D» a l'arbre (⋯ Duplicar · Eliminar, `insertModelCopy`; **grups i arrossegar**, per decisió de l'usuari, 2026-10-14: `ModelObject.group`, el mateix nom de grup que les peces lliures —un grup pot tenir peces i models, es mou, es duplica, es desagrupa i s'esborra sencer: `groupBox`, `groupNames`, `moveGroupBy`, `duplicateGroup`, `renameGroup`, `removeGroup`, `reorderModel`, `setModelGroup` a `editOps.ts`—; al 3D el primer clic tria el grup), clic al 3D per triar-lo (`ModelMesh` a
   `CabinetViewer`), contorn i gizmo (`RefGhost outline`, es mou en viu), fletxes, Supr, Ctrl/⌘ C · V · D, i `ModelInspector`
   (Model · **Material** —un material de Preferències per a tot el model, `ModelObject.material`, o «Com el fitxer»; `modelInstance(m, materials)` el posa a totes les malles amb `finishMaterial` (el camí de les peces: el vidre, translúcid i de dues cares), propi de la instància, `userData.ownMaterial`, que `disposeTree`/`disposeModelInstance` alliberen; 3D, Presentació, render, miniatures, ambients i GLB/USDZ— · Mides amb «Mida original» · Posició amb el Gir a passos de 15°). Compten per enquadrar la càmera.
+
+### Calaixos interiors
+Per decisió de l'usuari, 2026-10-16 («posar calaixos darrere una porta»): `Zone.innerDrawers` (`n`, `height`, `hardware`,
+`kit`, `setback`, `shim`), contingut del compartiment com els prestatges (Opcions de l'interior). Només es fan darrere
+d'una porta o un abatible (el del compartiment o, `coverFront`, el d'una zona de més amunt), en un compartiment sense
+dividir amb una peça a cada costat (`visibleZone`; si no, es conserven). Construcció (`DrawersBuilder.buildInnerDrawers`):
+a baix de tot del compartiment, `n` × `height` + la folgança entre fronts; els prestatges es reparteixen per sobre. Els
+calaixos de sempre (caixa de fusta o joc) amb un **front interior** del cos, de l'amplada i l'alçada de la caixa (amb un
+joc: entre els laterals del joc, 2 mm de joc a cada costat, fins a dalt del joc), **sense tirador**, amb la cara a
+`setback` (25) del davant de la caixa; al costat de les frontisses (els dos amb dues portes), un **suplement** del cos de
+`shim` mm (sense: el gruix del cos; 0 = cap) de l'alçada dels calaixos, des de 60 mm del davant (`SHIM_FROM_FRONT`:
+darrere de la placa de la frontissa, hipòtesi) fins al darrere: els forats de la guia hi van i el calaix és més estret.
+Avís `inner-drawers` (el suplement es cargola al lateral). Test `build/innerDrawers.test.ts`.

@@ -173,7 +173,7 @@ Les etiquetes i les ajudes de la UI fan servir sempre aquestes paraules (auditor
 | **Unió** | la secció del mòdul amb l'espiga de les unions de la caixa (`LuBolt`) |
 | **Com el mòdul** / **Com el cos** / **Com a Preferències** | heretat; **Còpia pròpia**, la còpia d'un ferratge que ja no és a la biblioteca tal qual |
 | **Electrodomèstic** | l'aparell del catàleg del fabricant (ferratge de la categoria «Electrodomèstics», motor `appliance`) que es tria a Mòdul › Electrodomèstic (mòdul sense dividir: si l'ocupa, el mòdul és l'aparell i no hi ha «Interior») o al compartiment d'un mòdul dividit; el seu front és el **Front de moble** (muntat com diu el fabricant), no el Front del compartiment |
-| **Accessoris** | barra de penjar, tira LED (ferratges del compartiment, a la secció «Prestatges i accessoris»); el marc de vitrina va amb la porta de vidre |
+| **Accessoris** | barra de penjar, tira LED (ferratges del compartiment, a la secció «Opcions de l'interior»); el marc de vitrina va amb la porta de vidre |
 | **Cap (push)** | el tirador que no hi és: obertura per pressió |
 
 ## Com treballar

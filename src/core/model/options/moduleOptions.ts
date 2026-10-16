@@ -89,7 +89,7 @@ export function applianceNodes(): OptionNode {
     icon: "appliance",
     code: UI.appliance,
     showIf: "Compartiment d'un mòdul dividit, sense dividir i no tapat per les portes del mòdul",
-    note: "Si l'aparell ocupa el compartiment (no placa ni campana), no surten Front, Prestatges i accessoris ni Dividir.",
+    note: "Si l'aparell ocupa el compartiment (no placa ni campana), no surten Front, Opcions de l'interior ni Dividir.",
   }, [
     field(id("hardware"), "Aparell", {
       code: UI.appliance,

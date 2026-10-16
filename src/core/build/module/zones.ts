@@ -15,12 +15,15 @@ export class Builder extends AppliancesBuilder {
     for (const p of layout.problems) this.warnings.push({ code: "layout", message: p })
 
     // Zones que queden darrere del front d'una zona pare (portes d'armari de dalt a baix).
-    const walk = (z: Zone, covered: boolean) => {
+    const walk = (z: Zone, cover: Front | undefined) => {
       this.zones.set(z.id, z)
-      if (covered) this.covered.add(z.id)
-      if (z.split) for (const c of z.split.children) walk(c, covered || !!z.front)
+      if (cover) {
+        this.covered.add(z.id)
+        this.coverFront.set(z.id, cover)
+      }
+      if (z.split) for (const c of z.split.children) walk(c, cover ?? z.front)
     }
-    walk(m.root, false)
+    walk(m.root, undefined)
 
     // 1) Divisors i prestatges fixos de totes les divisions, amb la folgança de les peces de dins: més curts, centrats.
     layout.dividers.forEach((div, i) => {
@@ -177,8 +180,20 @@ export class Builder extends AppliancesBuilder {
     const needsRows = (zone.shelves?.adjustable ?? false) || woodDoor || (front?.kind === "grille" && front.mount === "hinged")
     const rowYs = ysLeft.length ? ysLeft : ysRight.length ? ysRight : needsRows ? system32Ys(rect.y0, rect.y1, this.hw.system32.edgeOffset, this.hw.system32.pitch) : []
 
+    // Calaixos interiors (a baix de tot, darrere de la porta): els prestatges es reparteixen per sobre.
+    let shelfRect = rect
+    if (zone.innerDrawers) {
+      const cover = front ?? this.coverFront.get(zone.id)
+      const hinges = new Set<"left" | "right">()
+      if (cover?.kind === "door") {
+        if (cover.mode === "double") hinges.add("left").add("right")
+        else hinges.add(cover.hinge)
+      }
+      const top = this.buildInnerDrawers(zone, zone.innerDrawers, rect, left, right, hinges)
+      shelfRect = { ...rect, y0: Math.min(rect.y1, top) }
+    }
     // Prestatges.
-    const shelfYs = zone.shelves && zone.shelves.n > 0 ? this.buildShelves(zone, rect, rowYs) : []
+    const shelfYs = zone.shelves && zone.shelves.n > 0 ? this.buildShelves(zone, shelfRect, rowYs.filter((y) => y >= shelfRect.y0)) : []
     if (zone.rail) this.buildRail(zone, rect)
     if (zone.led) this.buildLed(zone, rect, shelfYs)
     // Electrodomèstic (v46): el nínxol, l'aparell i el seu front de moble (o, la placa i la campana, el retall).
