@@ -14,9 +14,9 @@ export const sheetFile = (tab: number, material: string, thickness: number): str
 const dist = (a: [number, number], b: [number, number]) => Math.hypot(a[0] - b[0], a[1] - b[1])
 
 /** Veí més proper des de `pos`: retorna l'ordre i la posició final. */
-function nearest(feats: Feat[], pos: [number, number]): { out: Feat[]; pos: [number, number] } {
+function nearest<T extends Pick<Feat, "start" | "end">>(feats: T[], pos: [number, number]): { out: T[]; pos: [number, number] } {
   const left = [...feats]
-  const out: Feat[] = []
+  const out: T[] = []
   let p = pos
   while (left.length) {
     let k = 0
@@ -56,8 +56,8 @@ export function orderFeats<F extends Pick<Feat, "stage" | "key" | "start" | "end
       for (const f of of) groups.set(f.key, [...(groups.get(f.key) ?? []), f])
     }
     for (const g of groups.values()) {
-      const r = nearest(g as unknown as Feat[], pos)
-      out.push(...(r.out as unknown as F[]))
+      const r = nearest(g, pos)
+      out.push(...r.out)
       pos = r.pos
     }
   }

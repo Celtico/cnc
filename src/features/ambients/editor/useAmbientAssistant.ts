@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, type RefObject } from "react"
 import type { Ambient, Settings } from "../../../core/model"
 import { registerDoc } from "../../assistant/assistantHub"
-import type { ChatTarget } from "../../assistant/chatTarget"
+import { chatTarget, type ChatTarget } from "../../assistant/chatTarget"
 import type { Selection } from "../planGeom"
 
 /** Xat de l'assistent IA (docs/xat-ia.md): a demanda, el primer cop que s'obre la pestanya «Assistent». */
@@ -46,7 +46,7 @@ export function useAmbientAssistant({
       intro: "Demana-li que faci o canviï l'ambient obert: parets, finestres i portes, col·locar mobles i objectes (els teus o del catàleg), grups i materials (mides en mm). Pots adjuntar un plànol o una foto: llegirà les cotes i demanarà les que no es vegin.",
       suggestions: AMBIENT_SUGGESTIONS,
     }
-    return target as unknown as ChatTarget<unknown>
+    return chatTarget(target)
   }, [settings, getAmb, applyLive, commitLive])
   // Assistent personal: aquest ambient s'hi registra amb les seves eines i què hi ha seleccionat (llegit en el moment).
   const describeSel = useRef<() => string | undefined>(() => undefined)

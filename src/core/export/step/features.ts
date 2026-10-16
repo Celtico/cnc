@@ -1,10 +1,7 @@
 import { arcOf, bulgeOf, ccwB, flatten, type EdgeSide, type Panel } from "../../model"
-import * as pcNs from "polygon-clipping"
+import { pc } from "../../build/polygonClip"
 import { signedArea, type Poly2, type Pt2, type Rect2 } from "../region2d"
 import { add, cross, frameFor, len, mul, neg, sub, to2D, unit, X, Z, type CylFace, type Face, type Frame, type Loop, type V3 } from "./vec"
-
-// El paquet només té export per defecte (el .d.ts declara els noms): acceptem les dues formes.
-const pc = ((pcNs as unknown as { default?: typeof pcNs }).default ?? pcNs) as typeof pcNs
 
 /** Mecanitzats rodons (forats, ranures i talls passants) com a bucles i cares, i retalls de regions 2D. */
 

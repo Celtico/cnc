@@ -80,7 +80,7 @@ export function mulMat3(a: Mat3, b: Mat3): Mat3 {
   for (let i = 0; i < 3; i++)
     for (let j = 0; j < 3; j++)
       r.push(a[i * 3]! * b[j]! + a[i * 3 + 1]! * b[3 + j]! + a[i * 3 + 2]! * b[6 + j]!)
-  return r as unknown as Mat3
+  return r as readonly number[] as Mat3
 }
 
 /** Punts (mm) del rectangle de referència en l'ordre: baix-esquerra, baix-dreta, dalt-dreta, dalt-esquerra. */

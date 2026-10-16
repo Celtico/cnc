@@ -1,7 +1,8 @@
 import { useFrame, useThree } from "@react-three/fiber"
 import { OrbitControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei"
-import { useEffect, useRef, type ComponentRef } from "react"
-import { Vector3 } from "three"
+import { useEffect, useRef } from "react"
+import { Vector3, type OrthographicCamera as OrthoCam, type PerspectiveCamera as PerspCam } from "three"
+import type { OrbitControlsImpl } from "../orbitControls"
 import type { CameraPose } from "../../../core/model"
 import { useLatest } from "../../../lib/useLatest"
 import type { ViewName } from "../viewNames"
@@ -9,7 +10,6 @@ import { S } from "./constants"
 import { animStep } from "./anim"
 import type { CabinetViewerProps } from "./types"
 
-type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
 
 /** Distància màxima de la càmera de l'editor (m). */
 // Zoom amb més marge (per decisió de l'usuari, 2026-10-14): de 2 cm fins a 60 m.
@@ -110,7 +110,7 @@ export function CameraRig({ size, viewDir, fitKey, onFramedChange, initialCamera
     const side = viewDir === "left" || viewDir === "right"
     const ew = side ? d : w
     const eh = top ? d : h
-    const cam = camera as unknown as { zoom: number; updateProjectionMatrix: () => void }
+    const cam = camera as OrthoCam | PerspCam
     cam.zoom = Math.max(1, Math.min(viewport.width / (ew * 1.2), viewport.height / (eh * 1.2)))
     cam.updateProjectionMatrix()
     controls.current?.target.set(0, targetY, 0)

@@ -3,10 +3,7 @@ import { buildModule } from "./buildModule"
 import { normalizePanel } from "./buildCabinet"
 import { toLocal } from "./geometry"
 import { modulePlacements, refOnPanel } from "../model"
-import * as pcNs from "polygon-clipping"
-
-// El paquet només té export per defecte (el .d.ts declara els noms): acceptem les dues formes.
-const pc = ((pcNs as unknown as { default?: typeof pcNs }).default ?? pcNs) as typeof pcNs
+import { pc } from "./polygonClip"
 
 type Box = { min: Vec3; max: Vec3 }
 

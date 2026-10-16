@@ -5,13 +5,15 @@ import type { Axis } from "../../../components/viewer/pixelScale"
 import { expandWalls, rad, snapToWalls, type Ambient } from "../../../core/model"
 import type { ItemGeometry } from "../ambientData"
 import { snapGrid } from "../planGeom"
+import { useOrbitControls } from "../../../components/viewer/orbitControls"
 
 /** El gizmo per moure la selecció al 3D: on va (al centre de la selecció) i l'arrossegament de cada fletxa. */
 export function useGizmoDrag({ ambient, geos, selectedIds, onChange, snap, cameraLocked }: { ambient: Ambient; geos: Map<string, ItemGeometry | null>; selectedIds: string[]; onChange?: (a: Ambient, commit: boolean) => void; snap: boolean; cameraLocked: boolean }) {
   // Moure amb el gizmo: cada fletxa en la seva direcció (X o Z del plànol, i la verda en alçada, «Del terra») sobre un pla que conté l'eix i mira a la
   // càmera; la resta, com al plànol (quadrícula, imant a les parets per a un sol element, Alt sense imant, un sol pas
   // de desfer en deixar-lo anar).
-  const { camera, controls } = useThree()
+  const camera = useThree((st) => st.camera)
+  const orbit = useOrbitControls()
   const sel = useMemo(() => ambient.items.filter((it) => selectedIds.includes(it.id) && geos.get(it.id)), [ambient.items, selectedIds, geos])
   // Al centre de la selecció (també en alçada: un moble penjat el porta a la seva altura).
   const gizmoAt = useMemo((): [number, number, number] | null => {
@@ -38,7 +40,6 @@ export function useGizmoDrag({ ambient, geos, selectedIds, onChange, snap, camer
     return { x0: it.x - hw, x1: it.x + hw, y0: it.y - hd, y1: it.y + hd, h: g.max[1] }
   }
   const [activeAxis, setActiveAxis] = useState<Axis | null>(null)
-  const orbit = controls as unknown as { enabled: boolean } | null
   const startAxis = (a: Axis, e: ThreeEvent<PointerEvent>) => {
     if (!onChange || e.button !== 0) return
     e.stopPropagation()

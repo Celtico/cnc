@@ -1,4 +1,4 @@
-import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber"
+import { useFrame, type ThreeEvent } from "@react-three/fiber"
 import { Billboard, Html } from "@react-three/drei"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Plane, Vector3, type Group } from "three"
@@ -6,6 +6,7 @@ import { useViewerCursor } from "../cursor"
 import { usePixelScale } from "../pixelScale"
 import { S } from "./constants"
 import type { ViewerModule } from "./types"
+import { useOrbitControls } from "../orbitControls"
 
 /** Elements d'edició (botons +, nanses, gizmo): la imatge del visor per al render no els porta (`SceneAccess`). */
 const EDITOR_ONLY = { editorOnly: true }
@@ -30,7 +31,7 @@ export function MoveHandle({
   onDrag: (d: { index: number; dx: number; dy: number; dz: number; all: boolean } | null) => void
   onDrop: (dx: number, dy: number, dz: number, all: boolean) => void
 }) {
-  const controls = useThree((st) => st.controls) as unknown as { enabled: boolean } | null
+  const controls = useOrbitControls()
   const start = useRef<{ p: Vector3; plane: Plane; all: boolean } | null>(null)
   const latest = useRef<{ dx: number; dy: number; dz: number; all: boolean } | null>(null)
   const [live, setLive] = useState<{ dx: number; dy: number; dz: number; all: boolean } | null>(null)

@@ -1,4 +1,4 @@
-import * as pcNs from "polygon-clipping"
+import { pc } from "./polygonClip"
 import {
   DEFAULT_JOINERY,
   NO_EDGES,
@@ -26,9 +26,6 @@ import {
 import { slotSpec } from "./hardware"
 import { normalizePanel } from "./buildCabinet"
 import { shapeOutline } from "./buildModule"
-
-// El paquet només té export per defecte (el .d.ts declara els noms): acceptem les dues formes.
-const pc = ((pcNs as unknown as { default?: typeof pcNs }).default ?? pcNs) as typeof pcNs
 
 /**
  * Encaixos entre peces lliures, calculats per geometria (com els generadors de «slot and

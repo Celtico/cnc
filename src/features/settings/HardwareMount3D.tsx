@@ -1,7 +1,7 @@
 import { OrbitControls } from "@react-three/drei"
 import { Canvas, useThree } from "@react-three/fiber"
 import { useEffect, useMemo, useRef, useState } from "react"
-import { NeutralToneMapping, Vector3, type WebGLRenderer } from "three"
+import { NeutralToneMapping, type WebGLRenderer } from "three"
 import { mountCamera, type HardwareMount } from "../../core/build/hardwareMount"
 import { fixedSolids, shelfPins } from "../../core/build/hardwareSolids"
 import type { MaterialPref, Panel } from "../../core/model"
@@ -11,6 +11,7 @@ import { PanelFittings } from "../../components/viewer/Hardware"
 import { releaseModelGpu } from "../../components/viewer/models3d"
 import { movingGroups, transformAt } from "../../components/viewer/opening"
 import { StudioEnvironment, TextureRefresh } from "../../components/viewer/SceneHelpers"
+import { useOrbitControls } from "../../components/viewer/orbitControls"
 
 const S = 0.001
 
@@ -108,7 +109,7 @@ function MountScene({ mount, materials, open, frameKey }: { mount: HardwareMount
 /** Càmera de «Com va muntat» (`mountCamera`): es torna a posar quan canvia el ferratge (no quan s'obre la porta). */
 function Framing({ dir, dist, frameKey }: { dir: [number, number, number]; dist: number; frameKey?: string }) {
   const camera = useThree((s) => s.camera)
-  const controls = useThree((s) => s.controls) as unknown as { target: Vector3; update: () => void } | null
+  const controls = useOrbitControls()
   const invalidate = useThree((s) => s.invalidate)
   const [dx, dy, dz] = dir
   // Només en obrir-lo i en canviar de ferratge (`frameKey`): editar-ne una mida no torna a moure la càmera que l'usuari ha posat.

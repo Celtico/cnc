@@ -1,6 +1,7 @@
 import { OrbitControls } from "@react-three/drei"
 import { Canvas, useThree, type ThreeEvent } from "@react-three/fiber"
-import { useEffect, useRef, useState, type ComponentRef } from "react"
+import { useEffect, useRef, useState } from "react"
+import type { OrbitControlsImpl } from "../../components/viewer/orbitControls"
 import { Color, NeutralToneMapping, type PerspectiveCamera } from "three"
 import { BoxFrame } from "../../components/viewer/BoxFrame"
 import { MoveGizmo } from "../../components/viewer/MoveGizmo"
@@ -120,7 +121,6 @@ export function Ambient3D({
 /** Fons del render dels ambients (el clar de sempre; el visor és transparent). */
 const RENDER_BG = "#e9e6e1"
 
-type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
 
 function Controls({ target, home, fitSignal, eye, eyeSignal, maxDistance, onPoseChange, initialCamera, onCameraChange, locked, goto }: { target: [number, number, number]; home: [number, number, number]; fitSignal: number; eye: ReturnType<typeof eyePose>; eyeSignal: number; maxDistance: number; onPoseChange?: (pose: "home" | "eye" | null) => void; initialCamera?: CameraPose; onCameraChange?: (camera: CameraPose) => void; locked: boolean; goto?: { pose: CameraPose; n: number } }) {
   const ref = useRef<OrbitControlsImpl>(null)

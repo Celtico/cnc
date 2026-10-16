@@ -12,6 +12,7 @@ import { profileGeometry } from "../refGeometry"
 import { surfaceMaterial } from "../surfaceMaterial"
 import { disposeMaterial } from "../textures"
 import { S, SELECT_COLOR } from "./constants"
+import { useOrbitControls } from "../orbitControls"
 
 export interface SnapTargets {
   x: number[]
@@ -90,7 +91,7 @@ export function RefGhost({
   onSelect?: (id: string) => void
   onMove?: (id: string, pos: { x: number; y: number; z: number }) => void
 }) {
-  const controls = useThree((st) => st.controls) as unknown as { enabled: boolean } | null
+  const controls = useOrbitControls()
   const [drag, setDrag] = useState<{ x: number; y: number; z: number; axes: Axis[]; snapped: Axis[] } | null>(null)
   const latest = useLatest(drag)
   const state = useRef<{ plane: Plane; grab: Vector3; axes: Axis[]; start: [number, number]; moved: boolean } | null>(null)

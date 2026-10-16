@@ -129,8 +129,8 @@ export function reorientPart(p: FreePart, orient: PartOrient): FreePart {
 /** Caixa que engloba unes quantes peces (un grup). */
 export function partsBox(parts: FreePart[]): { min: Vec3; max: Vec3 } {
   const bs = parts.map(partBox)
-  const min = [0, 1, 2].map((a) => Math.min(...bs.map((b) => b.min[a]!))) as unknown as Vec3
-  const max = [0, 1, 2].map((a) => Math.max(...bs.map((b) => b.max[a]!))) as unknown as Vec3
+  const min = [0, 1, 2].map((a) => Math.min(...bs.map((b) => b.min[a]!))) as Vec3
+  const max = [0, 1, 2].map((a) => Math.max(...bs.map((b) => b.max[a]!))) as Vec3
   return { min, max }
 }
 
