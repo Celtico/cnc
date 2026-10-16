@@ -1,5 +1,6 @@
 import { useMemo } from "react"
-import { buildBounds, buildComposition, panelBox, type CompositionBuild } from "../../core/build/buildComposition"
+import { panelBox } from "../../core/build/geometry"
+import { buildBounds, buildComposition, type CompositionBuild } from "../../core/build/buildComposition"
 import { blockComposition, modelFootprint, type AmbientItem, type BlockItem } from "../../core/model"
 import type { Composition } from "../../core/model"
 import { compositionOf } from "../../db/compositionStore"

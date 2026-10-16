@@ -26,7 +26,7 @@ import {
   type Vec3,
   type WorldAxis,
 } from "../model"
-import { edgeAt, r, toLocal } from "./geometry"
+import { edgeAt, panelBox, r, toLocal } from "./geometry"
 
 /**
  * Ferratges **col·locats a mà** (`Composition.hardwarePlacements`, millores v1 F4): les operacions del generador de
@@ -50,22 +50,6 @@ interface PlacementWarning {
 const AXIS_INDEX: Record<WorldAxis, number> = { x: 0, y: 1, z: 2 }
 const EPS = 0.01
 
-/** Caixa d'una peça al moble. */
-function boxOf(p: Panel): { min: Vec3; max: Vec3 } {
-  const { origin: o, xAxis: x, yAxis: y, zAxis: z } = p.placement
-  const min: [number, number, number] = [Infinity, Infinity, Infinity]
-  const max: [number, number, number] = [-Infinity, -Infinity, -Infinity]
-  for (const cx of [0, p.length])
-    for (const cy of [0, p.width])
-      for (const cz of [0, p.thickness])
-        for (let i = 0; i < 3; i++) {
-          const v = o[i]! + cx * x[i]! + cy * y[i]! + cz * z[i]!
-          min[i] = Math.min(min[i]!, v)
-          max[i] = Math.max(max[i]!, v)
-        }
-  return { min, max }
-}
-
 /** Eix del moble més proper a un vector (la normal d'una peça). */
 function axisOf(v: Vec3): WorldAxis {
   const a = v.map(Math.abs)
@@ -88,7 +72,7 @@ interface PartFrame {
 export function partFrame(panel: Panel): PartFrame {
   const n = axisOf(panel.placement.zAxis)
   const [p, q] = planeAxes(n)
-  const box = boxOf(panel)
+  const box = panelBox(panel)
   const ip = AXIS_INDEX[p], iq = AXIS_INDEX[q], iN = AXIS_INDEX[n]
   const mid = (box.min[iN]! + box.max[iN]!) / 2
   const local = (pw: number, qw: number): Pt => {

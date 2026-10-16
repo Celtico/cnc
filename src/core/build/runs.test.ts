@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { BUILTIN_TEMPLATES, type Composition } from "../model"
-import { buildComposition, panelBox } from "./buildComposition"
+import { buildComposition } from "./buildComposition"
+import { panelBox } from "./geometry"
 
 const kitchen = (): Composition => BUILTIN_TEMPLATES.find((t) => t.id === "modern-kitchen")!.make()
 

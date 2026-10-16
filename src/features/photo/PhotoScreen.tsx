@@ -6,6 +6,7 @@ import { LuCamera, LuImagePlus, LuTrash2 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
 import { usePresentationScene } from "../../components/viewer/presentationScene"
 import { PhotoRender } from "./PhotoRender"
+import { panelBox } from "../../core/build/geometry"
 import { visibleReferences, type Composition, type Panel } from "../../core/model"
 import { DEFAULT_FOCAL_35 } from "../../core/photo/camera"
 import { readExif } from "../../core/photo/exif"
@@ -168,12 +169,7 @@ function Controls({ embedded, target, children }: { embedded: boolean; target: H
 
 function totalDepthOf(panels: Panel[]): number {
   let max = 0
-  for (const p of panels) {
-    const { origin, xAxis, yAxis, zAxis } = p.placement
-    for (const cx of [0, p.length])
-      for (const cy of [0, p.width])
-        for (const cz of [0, p.thickness]) max = Math.max(max, origin[2] + cx * xAxis[2] + cy * yAxis[2] + cz * zAxis[2])
-  }
+  for (const p of panels) max = Math.max(max, panelBox(p).max[2])
   return max
 }
 

@@ -14,6 +14,16 @@ const SRC = (page: string) => `Catàleg general Häfele, p. FF ${page}`
 /** Quantitat de frontisses per alçada (la de les frontisses de cassoleta de l'app). */
 const HINGES_BY_HEIGHT: StepRule = { steps: [{ upTo: 900, n: 2 }, { upTo: 1600, n: 3 }, { upTo: 2100, n: 4 }], else: 5 }
 
+/** Lateral de les frontisses Duomatic: la placa A als dos forats Ø5 × 12 de la filera System 32, a 16 per sobre i per sota. */
+const duomaticPlateTarget = (): NonNullable<HardwareItem["targets"]>[number] => ({
+  key: "side",
+  label: "Lateral: placa Duomatic A, a la filera System 32",
+  ops: [
+    { kind: "drill", face: "A", u: -16, v: 0, d: 5, depth: 12, tag: "plate" },
+    { kind: "drill", face: "A", u: 16, v: 0, d: 5, depth: 12, tag: "plate" },
+  ],
+})
+
 /** Els perfils de les referències de la biblioteca (.902 / .922) són de plata anoditzat (el «color inox», .002, també es ven). */
 const FRAME_MATERIAL = "Alumini anoditzat plata"
 
@@ -95,10 +105,7 @@ export const HAFELE_DUOMATIC_ALU: HardwareItem[] = [
     count: structuredClone(HINGES_BY_HEIGHT),
     targets: [
       { key: "door", label: "Porta (en una de fusta; al perfil d'alumini es veu però no es mecanitza)", ops: [{ kind: "drill", face: "A", u: 0, v: "cupOffset", d: "cupDiameter", depth: "cupDepth", tag: "hinge" }] },
-      { key: "side", label: "Lateral: placa Duomatic A, a la filera System 32", ops: [
-        { kind: "drill", face: "A", u: -16, v: 0, d: 5, depth: 12, tag: "plate" },
-        { kind: "drill", face: "A", u: 16, v: 0, d: 5, depth: 12, tag: "plate" },
-      ] },
+      duomaticPlateTarget(),
     ],
     version: 1,
     builtin: true,
@@ -125,10 +132,7 @@ export const HAFELE_DUOMATIC_ALU_NARROW: HardwareItem[] = [
     count: structuredClone(HINGES_BY_HEIGHT),
     targets: [
       { key: "door", label: "Perfil del marc (no és de la CNC de fusta)", ops: [{ kind: "drill", face: "A", u: 0, v: "cupOffset", d: "cupDiameter", depth: "cupDepth", tag: "hinge" }] },
-      { key: "side", label: "Lateral: placa Duomatic A, a la filera System 32", ops: [
-        { kind: "drill", face: "A", u: -16, v: 0, d: 5, depth: 12, tag: "plate" },
-        { kind: "drill", face: "A", u: 16, v: 0, d: 5, depth: 12, tag: "plate" },
-      ] },
+      duomaticPlateTarget(),
     ],
     version: 1,
     builtin: true,

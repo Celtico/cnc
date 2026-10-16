@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { defaultModule, type Module } from "../model"
 import { buildModule } from "./buildModule"
-import { panelBox } from "./buildComposition"
+import { panelBox } from "./geometry"
 import { buildComposition } from "./buildComposition"
 
 const mod = (): Module => {

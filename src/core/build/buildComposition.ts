@@ -5,6 +5,7 @@ import { columnRearLimits, columnWalls, relayLegs } from "./columnWalls"
 import { buildModule, type BuildWarning, type KitOrder, type ModuleBuild, type Wiring } from "./buildModule"
 import type { LightOrder } from "./lightOrders"
 import { normalizePanel } from "./buildCabinet"
+import { panelBox } from "./geometry"
 import { buildWorktop, type RunWarning } from "./runs"
 import { buildTramPlinths } from "./tramPlinth"
 import { buildLinearOrders, type LinearOrder, type LinearPiece } from "./linearOrders"
@@ -84,21 +85,6 @@ export function moduleWorldX(mb: { x: number; mirrorX?: number }, xl: number): n
   return mb.mirrorX !== undefined ? mb.x + mb.mirrorX - xl : mb.x + xl
 }
 
-/** Caixa englobant d'una peça (coordenades de la composició). */
-export function panelBox(p: Panel): { min: Vec3; max: Vec3 } {
-  const { origin: o, xAxis: x, yAxis: y, zAxis: z } = p.placement
-  const min: [number, number, number] = [Infinity, Infinity, Infinity]
-  const max: [number, number, number] = [-Infinity, -Infinity, -Infinity]
-  for (const cx of [0, p.length])
-    for (const cy of [0, p.width])
-      for (const cz of [0, p.thickness])
-        for (let i = 0; i < 3; i++) {
-          const v = o[i]! + cx * x[i]! + cy * y[i]! + cz * z[i]!
-          min[i] = Math.min(min[i]!, v)
-          max[i] = Math.max(max[i]!, v)
-        }
-  return { min, max }
-}
 
 /**
  * Construeix tota la composició: cada mòdul al seu lloc (`modulePlacements`: fila,

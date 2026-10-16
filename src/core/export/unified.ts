@@ -1,4 +1,5 @@
 import { EDGE_NUMBER, EDGE_SIDES, flatten, type Cutout, type Panel, type PanelRole } from "../model"
+import { panelBox } from "../build/geometry"
 import type { Nesting } from "../nesting/nest"
 import { pieceRefs } from "./refs"
 import type { Board, Join, Piece, Role, Side, Solid, UnifiedData } from "./unified.types"
@@ -67,17 +68,7 @@ function sideOf(p: Panel): Side {
 
 /** Caixa englobant de la peça en coordenades del moble. */
 export function panelAabb(p: Panel): { min: [number, number, number]; size: [number, number, number] } {
-  const { origin: o, xAxis: x, yAxis: y, zAxis: z } = p.placement
-  const min: [number, number, number] = [Infinity, Infinity, Infinity]
-  const max: [number, number, number] = [-Infinity, -Infinity, -Infinity]
-  for (const cx of [0, p.length])
-    for (const cy of [0, p.width])
-      for (const cz of [0, p.thickness])
-        for (let i = 0; i < 3; i++) {
-          const v = o[i]! + cx * x[i]! + cy * y[i]! + cz * z[i]!
-          min[i] = Math.min(min[i]!, v)
-          max[i] = Math.max(max[i]!, v)
-        }
+  const { min, max } = panelBox(p)
   const r = (v: number) => Math.round(v * 100) / 100
   return {
     min: [r(min[0]), r(min[1]), r(min[2])],

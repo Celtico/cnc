@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { defaultModule, STORE_TEMPLATES, type Composition, type Module, type Panel, type Zone } from "../model"
-import { buildComposition, panelBox } from "./buildComposition"
+import { buildComposition } from "./buildComposition"
+import { panelBox } from "./geometry"
 import { dowelsAlong, toWorld } from "./geometry"
 import { fitSizes } from "./layout"
 import { sameMachining } from "./sameSize"

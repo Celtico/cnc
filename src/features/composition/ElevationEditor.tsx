@@ -1,5 +1,6 @@
 import { Box } from "@chakra-ui/react"
 import type { ModuleBuild } from "../../core/build/buildModule"
+import { panelBox, type Placed } from "../../core/build/geometry"
 import type { ZoneRect } from "../../core/build/layout"
 import { moduleElevation, walkZones, type Module, type RefObject, type Zone } from "../../core/model"
 
@@ -206,24 +207,10 @@ interface Rect {
 }
 
 /** Projecció frontal (XY) d'una peça, a partir de la seva col·locació. */
-function frontFootprint(p: { placement: { origin: readonly number[]; xAxis: readonly number[]; yAxis: readonly number[]; zAxis: readonly number[] }; length: number; width: number; thickness: number }): Rect | null {
-  const { origin: o, xAxis: x, yAxis: y, zAxis: z } = p.placement
-  let minX = Infinity
-  let maxX = -Infinity
-  let minY = Infinity
-  let maxY = -Infinity
-  for (const cx of [0, p.length])
-    for (const cy of [0, p.width])
-      for (const cz of [0, p.thickness]) {
-        const px = o[0]! + cx * x[0]! + cy * y[0]! + cz * z[0]!
-        const py = o[1]! + cx * x[1]! + cy * y[1]! + cz * z[1]!
-        minX = Math.min(minX, px)
-        maxX = Math.max(maxX, px)
-        minY = Math.min(minY, py)
-        maxY = Math.max(maxY, py)
-      }
-  if (!Number.isFinite(minX)) return null
-  return { x: minX, y: minY, w: maxX - minX, h: maxY - minY }
+function frontFootprint(p: Placed): Rect | null {
+  const { min, max } = panelBox(p)
+  if (!Number.isFinite(min[0])) return null
+  return { x: min[0], y: min[1], w: max[0] - min[0], h: max[1] - min[1] }
 }
 
 function describeZone(z: Zone): string {

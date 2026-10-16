@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { defaultModule, type Composition, type Island, type Module } from "../model"
-import { buildComposition, panelBox } from "./buildComposition"
+import { buildComposition } from "./buildComposition"
+import { panelBox } from "./geometry"
 
 const mod = (id: string, wallGap: number, x = 0): Module => {
   const m = defaultModule(id, id)

@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react"
-import { panelBox } from "../../core/build/buildComposition"
+import { panelBox } from "../../core/build/geometry"
 import type { Panel } from "../../core/model"
 import { DEFAULT_FOCAL_35, cameraFromHomography, focalPx, imageToPlane, imageToPlaneAt, project, projectPanels } from "../../core/photo/camera"
 import { applyHomography, planeToImage, rectanglePoints, type Pt } from "../../core/photo/homography"

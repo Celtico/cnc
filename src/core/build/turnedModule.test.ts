@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { defaultModule, type Composition, type Module } from "../model"
-import { buildComposition, moduleWorldX, panelBox } from "./buildComposition"
+import { buildComposition, moduleWorldX } from "./buildComposition"
+import { panelBox } from "./geometry"
 
 const drawers = (turned: boolean, wallGap: number | null = 0): Composition => {
   const m: Module = defaultModule("m1", "M")

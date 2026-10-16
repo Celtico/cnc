@@ -12,6 +12,30 @@ export function placement(origin: Vec3, xAxis: Vec3, yAxis: Vec3, zAxis: Vec3, e
   return { origin: origin.map(r) as Vec3, xAxis, yAxis, zAxis, explodeDir }
 }
 
+/** Caixa englobant d'una peça (coordenades de la composició). */
+/** El mínim d'una peça per saber-ne la caixa: col·locació i mides. */
+export interface Placed {
+  placement: { origin: readonly number[]; xAxis: readonly number[]; yAxis: readonly number[]; zAxis: readonly number[] }
+  length: number
+  width: number
+  thickness: number
+}
+
+export function panelBox(p: Placed): { min: Vec3; max: Vec3 } {
+  const { origin: o, xAxis: x, yAxis: y, zAxis: z } = p.placement
+  const min: [number, number, number] = [Infinity, Infinity, Infinity]
+  const max: [number, number, number] = [-Infinity, -Infinity, -Infinity]
+  for (const cx of [0, p.length])
+    for (const cy of [0, p.width])
+      for (const cz of [0, p.thickness])
+        for (let i = 0; i < 3; i++) {
+          const v = o[i]! + cx * x[i]! + cy * y[i]! + cz * z[i]!
+          min[i] = Math.min(min[i]!, v)
+          max[i] = Math.max(max[i]!, v)
+        }
+  return { min, max }
+}
+
 const dot = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 
 /** Punt del moble → coordenades locals de la peça (abans de normalitzar). */

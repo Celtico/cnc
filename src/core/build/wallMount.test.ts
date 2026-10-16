@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { BUILTIN_TEMPLATES, compositionHeight, compositionWidth, moduleElevation, modulePlacements, normalizeComposition } from "../model"
-import { buildComposition, panelBox } from "./buildComposition"
+import { buildComposition } from "./buildComposition"
+import { panelBox } from "./geometry"
 
 describe("mòdul penjat a la paret", () => {
   const comp = () => BUILTIN_TEMPLATES.find((t) => t.id === "wardrobe-2-doors")!.make()

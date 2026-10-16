@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { BUILTIN_TEMPLATES, DEFAULT_GRILLE, STORE_TEMPLATES, defaultModule, tableModule, type Module, type Panel, type Zone } from "../model"
-import { buildComposition, panelBox } from "./buildComposition"
+import { buildComposition } from "./buildComposition"
+import { panelBox } from "./geometry"
 import { buildModule, drawerBottomMaterial } from "./buildModule"
 import { toWorld } from "./geometry"
 import { layoutZones, resolveSizes } from "./layout"

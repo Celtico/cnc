@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { defaultModule, type Composition, type RefObject } from "../model"
-import { buildComposition, panelBox } from "./buildComposition"
+import { buildComposition } from "./buildComposition"
+import { panelBox } from "./geometry"
 import { legPoints } from "./columnWalls"
 
 const mod = (back: "groove" | "screwed" = "groove") => ({ ...defaultModule("m", "x", { width: 1000, height: 800, depth: 500, back }), gapBefore: 0 })

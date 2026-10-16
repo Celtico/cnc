@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { defaultModule, setSplitSize, type Module, type Zone } from "../model"
 import { buildModule } from "./buildModule"
-import { panelBox } from "./buildComposition"
+import { panelBox } from "./geometry"
 import { splitChildSizes } from "./layout"
 
 /** Les mides de la «Divisió» de l'editor: les reals (com es construeix) i l'última, el que sobra. */

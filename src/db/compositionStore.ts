@@ -1,5 +1,5 @@
 import { CompositionSchema, cabinetToComposition, normalizeComposition, parseCameraPose, repairComposition, withSupport, type CameraPose, type Composition } from "../core/model"
-import { panelBox } from "../core/build/buildComposition"
+import { panelBox } from "../core/build/geometry"
 import { migrateCableHoles } from "../core/build/refCuts"
 import { db, safeParams, type Project } from "./db"
 

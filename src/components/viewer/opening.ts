@@ -1,3 +1,4 @@
+import { panelBox } from "../../core/build/geometry"
 import type { Panel, RefObject, Vec3 } from "../../core/model"
 
 /**
@@ -23,21 +24,6 @@ export interface MovingGroup {
   motion: Motion
 }
 
-const box = (p: Panel): { min: Vec3; max: Vec3 } => {
-  const { origin: o, xAxis: x, yAxis: y, zAxis: z } = p.placement
-  const min: [number, number, number] = [Infinity, Infinity, Infinity]
-  const max: [number, number, number] = [-Infinity, -Infinity, -Infinity]
-  for (const cx of [0, p.length])
-    for (const cy of [0, p.width])
-      for (const cz of [0, p.thickness])
-        for (let i = 0; i < 3; i++) {
-          const v = o[i]! + cx * x[i]! + cy * y[i]! + cz * z[i]!
-          min[i] = Math.min(min[i]!, v)
-          max[i] = Math.max(max[i]!, v)
-        }
-  return { min, max }
-}
-
 /** Cap on obre un front: +1 endavant (+Z), −1 enrere (mòdul girat 180°), per l'`explodeDir` de la peça. */
 const outSign = (p: Panel): 1 | -1 => (p.placement.explodeDir[2] < 0 ? -1 : 1)
 
@@ -60,7 +46,7 @@ export function movingGroups(panels: Panel[]): MovingGroup[] {
       // Una reixeta sense cassoletes és desmuntable (no s'obre); una porta sí, encara que no en tingui (una frontissa
       // que no hi cap o sense confirmar): el costat, el del nom de la porta («door-right» a la dreta).
       if (!cups.length && p.role !== "door") continue
-      const b = box(p)
+      const b = panelBox(p)
       // Cassoletes a y local petita → frontissa al costat de y = 0 (esquerra en X del mòdul). Un mòdul girat 180°
       // (`explodeDir` cap enrere) obre cap a −Z: la frontissa queda a l'altre costat en X i el pivot, al darrere.
       const out = outSign(p)
@@ -74,7 +60,7 @@ export function movingGroups(panels: Panel[]): MovingGroup[] {
       continue
     }
     if (p.role === "flap") {
-      const b = box(p)
+      const b = panelBox(p)
       const holes = p.holes.filter((h) => h.tag === "flap")
       // Forats a x local petita (baix) → gira cap avall sobre el cantell inferior.
       const down = holes.length ? holes.every((h) => h.x < p.length / 2) : true
@@ -99,7 +85,7 @@ export function movingGroups(panels: Panel[]): MovingGroup[] {
     const bars = parts.filter((q) => q.name === "perfil vitrina")
     const hinged = bars.find((q) => q.holes.some((h) => h.tag === "hinge"))
     const where = hinged ? /-(left|right|top|bottom)$/.exec(hinged.id)?.[1] : undefined
-    const bs = parts.map(box)
+    const bs = parts.map(panelBox)
     const b = { min: [0, 1, 2].map((k) => Math.min(...bs.map((x) => x.min[k]!))) as Vec3, max: [0, 1, 2].map((k) => Math.max(...bs.map((x) => x.max[k]!))) as Vec3 }
     const out = outSign(bars[0]!)
     const label = bars[0]!.label.replace(/ \(.*\)$/, "")
@@ -197,7 +183,7 @@ export function openingCollisions(panels: Panel[], groups: MovingGroup[], t: num
   const out: OpeningCollision[] = []
   const moving = new Set(groups.filter((g) => !only || only.has(g.id)).flatMap((g) => g.panelIds))
   const byId = new Map(panels.map((p) => [p.id, p]))
-  const staticBoxes = panels.filter((p) => !moving.has(p.id)).map((p) => ({ p, b: box(p) }))
+  const staticBoxes = panels.filter((p) => !moving.has(p.id)).map((p) => ({ p, b: panelBox(p) }))
   for (const g of groups) {
     if (only && !only.has(g.id)) continue
     const tr = transformAt(g.motion, t)

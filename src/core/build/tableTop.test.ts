@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { tableModule, type PNode } from "../model"
 import { buildModule } from "./buildModule"
-import { panelBox } from "./buildComposition"
+import { panelBox } from "./geometry"
 import { toStep } from "../export/step"
 import { stepSolids } from "../export/stepRead"
 import { toDxf } from "../export/dxf"

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { CarcassSchema, defaultModule, type Carcass, type Module, type Panel, type Zone } from "../model"
-import { buildComposition, panelBox } from "./buildComposition"
+import { buildComposition } from "./buildComposition"
+import { panelBox } from "./geometry"
 import { buildModule } from "./buildModule"
 import { toWorld } from "./geometry"
 import { toCutList } from "../cutlist/toCutList"

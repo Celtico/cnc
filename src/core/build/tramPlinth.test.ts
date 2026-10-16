@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest"
 import { BUILTIN_TEMPLATES, PLINTH_PROFILE_ITEMS, defaultModule, dishwasherModule, floorTrams, setTramSides, withSupport, type Composition, type FloorSupport, type Module } from "../model"
 import { HAFELE_LEGS } from "../model/hafele/hafeleLegs"
 import { MAG_FURNITURE } from "../model/magFurniture"
-import { buildComposition, panelBox } from "./buildComposition"
+import { buildComposition } from "./buildComposition"
+import { panelBox } from "./geometry"
 import { PLINTH_MAX_LENGTH } from "./tramPlinth"
 
 /** El suport «Sòcol»: potes genèriques de 100 i el sòcol a `setback` de la cara dels fronts. */
