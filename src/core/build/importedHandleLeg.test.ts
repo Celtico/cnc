@@ -204,12 +204,12 @@ describe("pota importada", () => {
     expect(b.warnings.some((w) => w.code === "hardware" && /pota importada i encara no està confirmada/.test(w.message))).toBe(true)
   })
 
-  it("totes o cap: si la placa no hi cap a la base (sota els laterals), cap forat i avís", () => {
+  it("una placa que no hi cap just a la seva distància (sota els laterals) es mou cap a dins i avisa", () => {
     const tight = setHardwareParam(legOk, "inset", 20)
     expect(tight.imported!.confirmed).toBe(false)
     const b = buildModule(withLegs(setConfirmed(tight, true)))
-    expect(b.panels.find((p) => p.role === "bottom")!.holes.some((h) => h.tag === "leg")).toBe(false)
-    expect(b.warnings.some((w) => /no hi cap sencera/.test(w.message))).toBe(true)
+    expect(b.panels.find((p) => p.role === "bottom")!.holes.filter((h) => h.tag === "leg").length).toBeGreaterThan(0)
+    expect(b.warnings.some((w) => /s'ha mogut/.test(w.message))).toBe(true)
   })
 
   it("una pota d'una altra alçada que la base avisa; al .moble és v2", () => {

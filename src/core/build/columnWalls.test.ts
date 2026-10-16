@@ -245,3 +245,28 @@ describe("potes AXILO d'una base retallada per una columna", () => {
     expect(legsOf("b:bottom")).toEqual(shifted)
   })
 })
+
+describe("potes AXILO que no hi caben just a la seva distància (per decisió de l'usuari, 2026-10-16: «l'illa no respecta les potes»)", () => {
+  const axiloModule = async (id: string, size: { width: number; height: number; depth: number; back?: "groove" | "screwed" }) => {
+    const { HAFELE_LEGS } = await import("../model/hafele/hafeleLegs")
+    const b = defaultModule(id, id, size)
+    return { ...b, gapBefore: 0, carcass: { ...b.carcass, backThickness: 19, base: { kind: "legs" as const, height: 100, hardware: HAFELE_LEGS[0]! } } }
+  }
+  it("fons cargolat de 19 (l'illa): les quatre plaques, la del darrere moguda cap a dins", async () => {
+    const m = await axiloModule("m", { width: 550, height: 770, depth: 450, back: "screwed" })
+    const b = buildComposition({ modules: [m], references: [] })
+    const base = b.panels.find((q) => q.id === "m:bottom")!
+    expect(base.fittings!.filter((f) => f.kind === "leg")).toHaveLength(4)
+    expect(base.holes.filter((h) => h.tag === "leg")).toHaveLength(16)
+    expect(b.warnings.some((w) => /s'ha mogut/.test(w.message))).toBe(true)
+    expect(b.warnings.some((w) => /no hi cap sencera/.test(w.message))).toBe(false)
+  })
+  it("una pota que cau a l'osca d'una columna (darrere a la dreta): les altres i les de l'osca, cap avís de «no hi cap»", async () => {
+    const m = await axiloModule("m", { width: 800, height: 770, depth: 580 })
+    const b = buildComposition({ modules: [m], references: [col(400, -60, 500, 250)] })
+    const base = b.panels.find((q) => q.id === "m:bottom")!
+    expect(base.outline).toBeDefined()
+    expect(base.fittings!.filter((f) => f.kind === "leg").length).toBeGreaterThanOrEqual(4)
+    expect(b.warnings.some((w) => /no hi cap sencera/.test(w.message))).toBe(false)
+  })
+})

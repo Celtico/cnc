@@ -17,6 +17,9 @@ import { LightsBuilder } from "./lights"
 import type { VerticalRef, HandleChoice } from "./types"
 
 /** Ferratges col·locats: tiradors, frontisses (cassoletes i plaques) i potes. */
+/** Fins on es mou cap a dins una placa de pota que no hi cap just a la seva distància dels cantells (`buildLegs`). */
+const LEG_NUDGE = 40
+
 export class FittingsBuilder extends LightsBuilder {
   /**
    * El tirador d'un front: el triat a la porta, el calaix o l'abatible (`front.handle`) o, si no, el del mòdul. Un que no
@@ -269,7 +272,7 @@ export class FittingsBuilder extends LightsBuilder {
     const inset = spec.inset
     // Una distància per a cada costat (la que l'item no porta és `inset`): esquerra, dreta, darrere i davant.
     const { insetLeft: left, insetRight: right, insetBack: back, insetFront: front } = spec
-    const legs: [number, number][] = [
+    const nominal: [number, number][] = [
       [left, back],
       [d.W - right, back],
       [left, d.D - front],
@@ -277,9 +280,11 @@ export class FittingsBuilder extends LightsBuilder {
     ]
     const T = bottom.thickness
     const margin = 3
-    const holes: Hole[] = []
     let deep = false
-    for (const [lx, lz] of legs)
+    // Els forats d'una pota a (lx, lz), o `null` si la placa no hi cap sencera (fora de la base, massa a prop d'un cantell
+    // o trepitjant un altre forat).
+    const platesAt = (lx: number, lz: number): Hole[] | null => {
+      const out: Hole[] = []
       for (const h of spec.holes) {
         const u = spec.mirror && lx > d.W / 2 ? -h.u : h.u
         const l = toLocal(bottom, [r(lx + u), d.baseY, r(lz + h.v)])
@@ -292,14 +297,43 @@ export class FittingsBuilder extends LightsBuilder {
           l[1] - R >= margin &&
           l[1] + R <= bottom.width - margin &&
           bottom.holes.every((e) => e.face === "edge" || e.face !== face || Math.hypot(e.x - l[0], e.y - l[1]) >= e.diameter / 2 + R + 1)
-        if (!fits || !face) {
-          this.hardwareWarning(`«${item.name}»: la placa d'alguna pota no hi cap sencera a la base (a ${num(inset)} mm dels cantells, amb ${margin} mm de marge i sense trepitjar altres forats). No es fa cap forat de les potes: canvia «Als cantells» de la pota.`)
-          return
-        }
-        const depth = Math.min(h.depth, T - 1)
-        if (depth < h.depth) deep = true
-        holes.push({ x: l[0], y: l[1], diameter: h.d, depth: r(depth), face, tag: h.tag })
+        if (!fits || !face) return null
+        out.push({ x: l[0], y: l[1], diameter: h.d, depth: r(Math.min(h.depth, T - 1)), face, tag: h.tag })
+        if (Math.min(h.depth, T - 1) < h.depth) deep = true
       }
+      return out
+    }
+    // Per decisió de l'usuari, 2026-10-16 («l'illa no respecta les potes»): una placa que no hi cap just a la seva distància
+    // (un fons cargolat de 19 que es menja el darrere de la base, un forat a prop) es mou cap a dins el mínim que cal, fins a
+    // `LEG_NUDGE` mm, i es diu; abans no es feia cap pota. Una pota que cau a l'osca d'una columna (la base amb `outline`) no
+    // es fa aquí: `relayLegs` les torna a posar a les cantonades del contorn.
+    const legs: [number, number][] = []
+    const holes: Hole[] = []
+    let moved = 0
+    for (const [lx, lz] of nominal) {
+      if (bottom.outline && faceAt(bottom, toLocal(bottom, [lx, d.baseY, lz])) === null) continue
+      const ix = lx < d.W / 2 ? 1 : -1, iz = lz < d.D / 2 ? 1 : -1
+      let found: { at: [number, number]; holes: Hole[] } | null = null
+      for (let k = 0; k <= LEG_NUDGE && !found; k++)
+        for (let a = 0; a <= k && !found; a++)
+          for (const [dx, dz] of a === k ? [[k, k]] : [[a, k], [k, a]]) {
+            const at: [number, number] = [lx + ix * dx!, lz + iz * dz!]
+            const hs = platesAt(at[0], at[1])
+            if (hs) {
+              found = { at, holes: hs }
+              break
+            }
+          }
+      if (!found) {
+        this.hardwareWarning(`«${item.name}»: la placa d'alguna pota no hi cap sencera a la base (a ${num(inset)} mm dels cantells, amb ${margin} mm de marge i sense trepitjar altres forats, ni movent-la ${LEG_NUDGE} mm cap a dins). No es fa cap forat de les potes: canvia «Als cantells» de la pota.`)
+        return
+      }
+      if (found.at[0] !== lx || found.at[1] !== lz) moved = Math.max(moved, Math.abs(found.at[0] - lx), Math.abs(found.at[1] - lz))
+      legs.push(found.at)
+      holes.push(...found.holes)
+    }
+    if (!legs.length) return
+    if (moved) this.hardwareWarning(`«${item.name}»: alguna placa no hi cabia just a la seva distància dels cantells (el fons o un altre forat hi tocava) i s'ha mogut ${num(moved)} mm cap a dins.`)
     bottom.holes.push(...holes)
     this.order(item, legs.length, item.tags?.some((t) => t.startsWith("Tub")) ? "el tub amb el peu es demana a part per l'alçada (notes del ferratge)" : undefined)
     if (deep) this.hardwareWarning(`«${item.name}»: els forats de les potes són més fondos que la base: es fan a ${num(T - 1)} mm (1 mm de pell).`)
