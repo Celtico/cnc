@@ -80,6 +80,7 @@ export function StructureTree({
   const selGroup =
     selection.kind === "part" ? parts.find((q) => q.id === selection.id)?.group
     : selection.kind === "model" ? models.find((q) => q.id === selection.id)?.group
+    : selection.kind === "ref" ? comp.references.find((q) => q.id === selection.id)?.group
     : selModuleId ? comp.modules.find((m) => m.id === selModuleId)?.group
     : undefined
   const { openGroups, toggleGroup, openGroup } = useOpenGroups(selGroup, JSON.stringify(selection))

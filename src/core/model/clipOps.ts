@@ -89,7 +89,6 @@ function copyGroupName(comp: Composition, group: string): string {
  *
  * Grup de les còpies: un grup copiat sencer (`clip.group`) fa **un grup nou** («G (còpia)»); si no, `group` diu on van:
  * `undefined` = cadascú al seu grup (duplicar), un nom = en aquell grup (enganxar dins d'un grup), `null` = sense grup.
- * Els objectes de referència no fan grups.
  */
 export function insertItemsCopy(
   comp: Composition,
@@ -140,7 +139,7 @@ export function insertItemsCopy(
     return m
   })
   const refs = clip.refs.map((src) => {
-    const r: RefObject = anchorRef({ ...structuredClone(src), id: newId("r"), x: src.x + dx })
+    const r: RefObject = anchorRef({ ...groupOf(structuredClone(src)), id: newId("r"), x: src.x + dx })
     items.push({ kind: "ref", id: r.id })
     return r
   })

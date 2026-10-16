@@ -16,6 +16,8 @@ const mm = z.number().finite()
 export const RefObjectSchema = z.object({
   id: z.string(),
   name: z.string(),
+  /** Grup (com les peces i els models; per decisió de l'usuari, 2026-10-16). Opcional. */
+  group: z.string().optional(),
   ...VIEW_FLAGS,
   w: mm.positive(),
   h: mm.positive(),

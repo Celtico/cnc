@@ -34,13 +34,13 @@ export function treeFlags(comp: Composition, onChange: (c: Composition) => void)
     onLock: () => flip(list, (y) => y.id === x.id, "locked", !x.locked),
   })
   const groupFlags = (g: string): TreeRowFlags => {
-    const members = [...comp.modules, ...parts, ...models].filter((q) => q.group === g)
+    const members = [...comp.modules, ...parts, ...models, ...comp.references].filter((q) => q.group === g)
     const hidden = members.every((q) => q.hidden)
     const locked = members.every((q) => q.locked)
     // Peces i models del grup alhora.
     const both = (flag: keyof ViewFlags, on: boolean) => {
       const set = <T extends { group?: string } & ViewFlags>(x: T): T => (x.group === g ? withFlag(x, flag, on) : x)
-      onChange({ ...comp, modules: comp.modules.map(set), parts: parts.map(set), ...(comp.models ? { models: comp.models.map(set) } : {}) })
+      onChange({ ...comp, modules: comp.modules.map(set), parts: parts.map(set), references: comp.references.map(set), ...(comp.models ? { models: comp.models.map(set) } : {}) })
     }
     return { hidden, locked, onHide: () => both("hidden", !hidden), onLock: () => both("locked", !locked) }
   }

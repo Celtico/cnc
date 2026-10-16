@@ -428,9 +428,9 @@ export function MultiInspector({ comp, items, onChange, onSelect, onMove, onGrou
   }
   const size = [0, 1, 2].map((a) => Math.round(b.max[a]! - b.min[a]!))
   const nameOf = (x: MultiItem) => (x.kind === "part" ? comp.parts?.find((p) => p.id === x.id)?.name : x.kind === "model" ? comp.models?.find((m) => m.id === x.id)?.name : x.kind === "module" ? comp.modules.find((m) => m.id === x.id)?.name : comp.references.find((r) => r.id === x.id)?.name) ?? "?"
-  const groupable = items.some((x) => x.kind !== "ref")
+  const groupable = items.length > 0
   // El grup dels mòduls és el del mòdul (no el de l'objecte de mides que se'n fa a `objs`).
-  const group = common(items.filter((x) => x.kind !== "ref").map((x) => (x.kind === "module" ? comp.modules.find((m) => m.id === x.id)?.group : x.kind === "part" ? comp.parts?.find((p) => p.id === x.id)?.group : comp.models?.find((m) => m.id === x.id)?.group) ?? ""))
+  const group = common(items.map((x) => (x.kind === "module" ? comp.modules.find((m) => m.id === x.id)?.group : x.kind === "part" ? comp.parts?.find((p) => p.id === x.id)?.group : x.kind === "ref" ? comp.references.find((r) => r.id === x.id)?.group : comp.models?.find((m) => m.id === x.id)?.group) ?? ""))
   return (
     <Stack gap={0}>
       <FoldItem optionId="multi.position" id="multi-position" title="Posició" icon={LuMove} badge={size.join(" × ")}>
@@ -493,7 +493,7 @@ export function MultiInspector({ comp, items, onChange, onSelect, onMove, onGrou
       {/* El grup de tots (com el Grup d'una peça): posar-los en un grup, en un de nou o treure'ls del seu. */}
       {groupable && (
         <FoldItem optionId="multi.group" id="multi-group" title="Grup" icon={LuGroup} badge={group === undefined ? "Diversos" : group || "Sense grup"} badgePalette={group ? "wood" : "gray"}>
-          <FormRow optionId="multi.group" label="Grup" help={`${group === undefined ? "Diversos: el grup que triïs va a tots." : "El grup de tots els triats."} Drecera: ⌘G (Ctrl+G) en fa un de nou; ⇧⌘G els treu del grup.${items.some((x) => x.kind === "ref") ? " Els objectes de referència no fan grups." : ""}`}>
+          <FormRow optionId="multi.group" label="Grup" help={`${group === undefined ? "Diversos: el grup que triïs va a tots." : "El grup de tots els triats."} Drecera: ⌘G (Ctrl+G) en fa un de nou; ⇧⌘G els treu del grup.`}>
             <ChoiceChips
               label="Grup"
               options={[{ id: "", label: "Sense grup" }, ...groupNames(comp).map((g) => ({ id: g, label: g })), { id: NEW_GROUP, label: "+ Grup nou" }]}

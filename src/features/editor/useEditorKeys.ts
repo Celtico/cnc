@@ -51,7 +51,7 @@ export function useEditorKeys({
     const mod = e.metaKey || e.ctrlKey
     const key = e.key.toLowerCase()
     // ⌘G / Ctrl+G: els triats en un grup nou; ⇧⌘G: fora del grup (com Figma). Peces lliures i models 3D.
-    if (mod && key === "g" && (selection.kind === "multi" || selection.kind === "part" || selection.kind === "model" || selection.kind === "module" || selection.kind === "group")) {
+    if (mod && key === "g" && (selection.kind === "multi" || selection.kind === "part" || selection.kind === "ref" || selection.kind === "model" || selection.kind === "module" || selection.kind === "group")) {
       e.preventDefault()
       const items: MultiItem[] = selection.kind === "multi" ? selection.items : selection.kind === "group" ? groupItems(comp, selection.id) : [{ kind: selection.kind, id: selection.id }]
       if (e.shiftKey) {

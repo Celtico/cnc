@@ -17,6 +17,9 @@ export function useTreeDnd({ comp, selection, onChange, openGroup }: { comp: Com
   // Arrossegar una fila de la selecció múltiple arrossega tots els triats (`multi`).
   const [drag, setDrag] = useState<TreeDrag | null>(null)
   const [over, setOver] = useState<{ id: string; after: boolean } | null>(null)
+  // El grup d'un element de l'arbre (mòdul, peça, model o objecte de referència).
+  const groupOf = (kind: DragKind, id: string): string | undefined =>
+    (kind === "part" ? parts : kind === "model" ? models : kind === "module" ? comp.modules : comp.references).find((q) => q.id === id)?.group
   const inDrag = (kind: DragKind, id: string) => (drag?.multi ? drag.multi.some((x) => x.kind === kind && x.id === id) : drag?.id === id)
   const canDrop = (kind: DragKind, id: string) => {
     if (drag?.multi) return kind !== "module" && !inDrag(kind, id)
@@ -31,8 +34,8 @@ export function useTreeDnd({ comp, selection, onChange, openGroup }: { comp: Com
     let c = comp
     const same = items.filter((x) => x.kind === kind)
     for (const x of after ? [...same].reverse() : same) c = kind === "part" ? reorderPart(c, x.id, id, after) : kind === "model" ? reorderModel(c, x.id, id, after) : reorderRef(c, x.id, id, after)
-    const target = kind === "part" ? parts.find((q) => q.id === id) : kind === "model" ? models.find((q) => q.id === id) : undefined
-    const others = items.filter((x) => x.kind !== kind && x.kind !== "ref")
+    const target = kind === "part" ? parts.find((q) => q.id === id) : kind === "model" ? models.find((q) => q.id === id) : kind === "ref" ? comp.references.find((q) => q.id === id) : undefined
+    const others = items.filter((x) => x.kind !== kind)
     if (others.length) c = target?.group ? groupMulti(c, others, target.group) : ungroupMulti(c, others)
     return c
   }
@@ -61,8 +64,8 @@ export function useTreeDnd({ comp, selection, onChange, openGroup }: { comp: Com
   })
   // La fila d'un grup: s'hi pot deixar una peça (entra al grup).
   const groupDnd = (g: string): TreeRowDnd => {
-    const grouped = (x: MultiItem) => (x.kind === "part" ? parts.find((q) => q.id === x.id)?.group : x.kind === "model" ? models.find((q) => q.id === x.id)?.group : x.kind === "module" ? comp.modules.find((q) => q.id === x.id)?.group : g)
-    const ok = () => (drag?.multi ? drag.multi.some((x) => x.kind !== "ref" && grouped(x) !== g) : (drag?.kind === "part" && (comp.parts ?? []).find((q) => q.id === drag.id)?.group !== g) || (drag?.kind === "model" && (comp.models ?? []).find((q) => q.id === drag.id)?.group !== g) || (drag?.kind === "module" && comp.modules.find((q) => q.id === drag.id)?.group !== g))
+    const grouped = (x: MultiItem) => groupOf(x.kind, x.id)
+    const ok = () => (drag?.multi ? drag.multi.some((x) => grouped(x) !== g) : !!drag && groupOf(drag.kind, drag.id) !== g)
     return {
       noDrag: true,
       dragging: false,
@@ -75,7 +78,7 @@ export function useTreeDnd({ comp, selection, onChange, openGroup }: { comp: Com
       },
       onDrop: () => {
         if (drag && ok()) {
-          onChange(drag.multi ? groupMulti(comp, drag.multi, g) : drag.kind === "model" ? setModelGroup(comp, drag.id, g) : drag.kind === "module" ? groupMulti(comp, [{ kind: "module", id: drag.id }], g) : movePartToGroup(comp, drag.id, g))
+          onChange(drag.multi ? groupMulti(comp, drag.multi, g) : drag.kind === "model" ? setModelGroup(comp, drag.id, g) : drag.kind === "module" || drag.kind === "ref" ? groupMulti(comp, [{ kind: drag.kind, id: drag.id }], g) : movePartToGroup(comp, drag.id, g))
           openGroup(g)
         }
         setDrag(null)
@@ -88,7 +91,7 @@ export function useTreeDnd({ comp, selection, onChange, openGroup }: { comp: Com
     }
   }
   // El grup de la fila que s'arrossega: a sota dels seus elements surt la zona «Treure del grup» (`UngroupDropZone`).
-  const dragGroup = !drag ? undefined : drag.kind === "part" ? parts.find((q) => q.id === drag.id)?.group : drag.kind === "model" ? models.find((q) => q.id === drag.id)?.group : drag.kind === "module" ? comp.modules.find((q) => q.id === drag.id)?.group : undefined
+  const dragGroup = drag ? groupOf(drag.kind, drag.id) : undefined
   // La zona per treure del grup l'element arrossegat (`UngroupDropZone`): `result`, la composició en deixar-l'hi.
   const ungroupZone = (result: () => Composition) => ({
     active: over?.id === "ungroup",

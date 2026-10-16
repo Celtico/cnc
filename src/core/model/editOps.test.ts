@@ -332,3 +332,18 @@ describe("moure un grup de mòduls seguits de la fila", async () => {
     expect(l.modules.map((x) => x.gapBefore)).toEqual([0, 70, 0, 20, 30])
   })
 })
+
+describe("grups d'objectes de referència", async () => {
+  const { groupMulti, groupItems, groupNames, moveGroupBy, ungroupMulti, reorderRef } = await import("./editOps")
+  const ref = (id: string, x: number) => ({ id, name: id, w: 100, h: 100, d: 100, x, y: 0, z: 0 })
+  it("s'agrupen, el grup es mou sencer, i deixar-ne un al costat d'un altre n'agafa el grup", () => {
+    const comp = { kind: "moble", modules: [], references: [ref("a", 0), ref("b", 500), ref("c", 900)] } as never
+    const g = groupMulti(comp, [{ kind: "ref", id: "a" }, { kind: "ref", id: "b" }], "Columnes")
+    expect(groupNames(g)).toEqual(["Columnes"])
+    expect(groupItems(g, "Columnes").map((x) => x.id)).toEqual(["a", "b"])
+    const m = moveGroupBy(g, "Columnes", 10, 0, 0)
+    expect(m.references.map((r) => r.x)).toEqual([10, 510, 900])
+    expect(reorderRef(g, "c", "a", true).references.find((r) => r.id === "c")?.group).toBe("Columnes")
+    expect(ungroupMulti(g, [{ kind: "ref", id: "a" }]).references.find((r) => r.id === "a")?.group).toBeUndefined()
+  })
+})

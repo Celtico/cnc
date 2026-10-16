@@ -185,7 +185,11 @@ export function reorderRef(comp: Composition, id: string, targetId: string, afte
   if (!r || !t) return comp
   const rest = comp.references.filter((x) => x.id !== id)
   const at = rest.indexOf(t) + (after ? 1 : 0)
-  return { ...comp, references: [...rest.slice(0, at), r, ...rest.slice(at)] }
+  // Agafa el grup de l'objecte on es deixa (com les peces i els models).
+  const { group: _g, ...plain } = r
+  void _g
+  const moved = t.group ? { ...plain, group: t.group } : plain
+  return { ...comp, references: [...rest.slice(0, at), moved, ...rest.slice(at)] }
 }
 
 /**
@@ -247,13 +251,14 @@ export function groupItems(comp: Composition, group: string): MultiItem[] {
     ...comp.modules.filter((m) => m.group === group).map((m) => ({ kind: "module" as const, id: m.id })),
     ...(comp.parts ?? []).filter((p) => p.group === group).map((p) => ({ kind: "part" as const, id: p.id })),
     ...(comp.models ?? []).filter((m) => m.group === group).map((m) => ({ kind: "model" as const, id: m.id })),
+    ...comp.references.filter((r) => r.group === group).map((r) => ({ kind: "ref" as const, id: r.id })),
   ]
 }
 
 /** Els grups del document (peces lliures i models 3D), en l'ordre en què surten. */
 export function groupNames(comp: Composition): string[] {
   const out: string[] = []
-  for (const x of [...comp.modules, ...(comp.parts ?? []), ...(comp.models ?? [])]) if (x.group && !out.includes(x.group)) out.push(x.group)
+  for (const x of [...comp.modules, ...(comp.parts ?? []), ...(comp.models ?? []), ...comp.references]) if (x.group && !out.includes(x.group)) out.push(x.group)
   return out
 }
 
@@ -278,7 +283,7 @@ export function renameGroup(comp: Composition, group: string, next: string | und
     void _g
     return (next ? { ...rest, group: next } : rest) as T
   }
-  return { ...comp, modules: comp.modules.map(re), parts: (comp.parts ?? []).map(re), ...(comp.models ? { models: comp.models.map(re) } : {}) }
+  return { ...comp, modules: comp.modules.map(re), parts: (comp.parts ?? []).map(re), references: comp.references.map(re), ...(comp.models ? { models: comp.models.map(re) } : {}) }
 }
 
 /** Treu tot un grup (peces i models). */
@@ -436,12 +441,13 @@ export function removeMulti(comp: Composition, items: readonly MultiItem[]): Com
   }
 }
 
-/** Posa les peces i els models triats en un grup (els objectes de referència no en fan). */
+/** Posa els elements triats en un grup (mòduls, peces, models i objectes de referència). */
 export function groupMulti(comp: Composition, items: readonly MultiItem[], group: string): Composition {
   return {
     ...comp,
     modules: comp.modules.map((m) => (inMulti(items, "module", m.id) ? { ...m, group } : m)),
     parts: (comp.parts ?? []).map((p) => (inMulti(items, "part", p.id) ? { ...p, group } : p)),
+    references: comp.references.map((r) => (inMulti(items, "ref", r.id) ? { ...r, group } : r)),
     ...(comp.models ? { models: comp.models.map((m) => (inMulti(items, "model", m.id) ? { ...m, group } : m)) } : {}),
   }
 }
@@ -547,7 +553,7 @@ export function ungroupMulti(comp: Composition, items: readonly MultiItem[]): Co
     void _g
     return rest as T
   }
-  return { ...comp, modules: comp.modules.map(out("module")), parts: (comp.parts ?? []).map(out("part")), ...(comp.models ? { models: comp.models.map(out("model")) } : {}) }
+  return { ...comp, modules: comp.modules.map(out("module")), parts: (comp.parts ?? []).map(out("part")), references: comp.references.map(out("ref")), ...(comp.models ? { models: comp.models.map(out("model")) } : {}) }
 }
 
 /**
