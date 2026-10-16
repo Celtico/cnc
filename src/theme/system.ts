@@ -64,6 +64,8 @@ const config = defineConfig({
     },
   },
   theme: {
+    // Pampallugues (el render que calcula, a la barra lateral): més marcat que el `pulse` de Chakra.
+    keyframes: { blink: { "50%": { opacity: "0.15" } } },
     tokens: {
       // Mà = es pot clicar (Chakra hi posa la fletxa als ítems de menú, caselles, opcions i ràdios).
       cursor: {

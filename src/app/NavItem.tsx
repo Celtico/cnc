@@ -1,4 +1,4 @@
-import { HStack, Stack, Text } from "@chakra-ui/react"
+import { Box, HStack, Stack, Text } from "@chakra-ui/react"
 import type { IconType } from "react-icons"
 import { Tooltip } from "../components/ui/tooltip"
 
@@ -11,6 +11,7 @@ export function NavItem({
   active,
   disabled,
   onClick,
+  alert = false,
 }: {
   icon: IconType
   label: string
@@ -20,6 +21,8 @@ export function NavItem({
   active: boolean
   disabled: boolean
   onClick: () => void
+  /** La icona en vermell i fent pampallugues (p. ex. un render que calcula). */
+  alert?: boolean
 }) {
   return (
     <Tooltip content={detail ? `${label} · ${detail}` : label} disabled={!collapsed} positioning={{ placement: "right" }}>
@@ -41,7 +44,13 @@ export function NavItem({
           aria-current={active ? "page" : undefined}
           aria-label={collapsed ? label : undefined}
         >
-          <Icon />
+          {alert ? (
+            <Box as="span" display="inline-flex" color="red.solid" animation="blink 1s steps(2, jump-none) infinite" _motionReduce={{ animation: "none" }}>
+              <Icon />
+            </Box>
+          ) : (
+            <Icon />
+          )}
           {!collapsed &&
             (detail ? (
               <Stack gap={0} minW={0} align="start" textAlign="start">
