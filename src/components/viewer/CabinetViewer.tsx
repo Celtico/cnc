@@ -7,7 +7,7 @@ import { Grid } from "@react-three/drei"
 import { useEffect, useRef, useState } from "react"
 import { ContactShadow } from "./ContactShadow"
 import { BoxFrame } from "./BoxFrame"
-import { NeutralToneMapping, type Object3D } from "three"
+import { NeutralToneMapping } from "three"
 import { releaseModelGpu } from "./models3d"
 import { transformAt } from "./opening"
 import { S } from "./cabinet/constants"
@@ -23,7 +23,6 @@ import { ModelMesh } from "./cabinet/ModelMesh"
 import { MoveHandle } from "./cabinet/MoveHandle"
 import { CableMarks, HoverCursor, ZoneHighlight } from "./cabinet/Highlights"
 import { CameraRig } from "./cabinet/CameraRig"
-import { Capture } from "./cabinet/Capture"
 
 // Peces que fan servir altres pantalles (Preferències › Ferratges, la foto realista).
 export { MovingPanel } from "./cabinet/motion"
@@ -45,7 +44,6 @@ export function CabinetViewer({
   openOnly = null,
   materialMode = "material",
   materials = [],
-  onCapture,
   quality = "fast",
   hardware = true,
   onSceneAccess,
@@ -91,7 +89,6 @@ export function CabinetViewer({
   const holesShown = showHoles || wire
   const holesDrawn = holesShown || hardware
   const { groupOf, panelKeys, pinsOf, fixedOf } = usePanelVisuals(panels, holesDrawn, hardware)
-  const gridRef = useRef<Object3D>(null)
   // Mòdul (o moble sencer) que s'està arrossegant amb la nansa: desplaçament en viu.
   // Mòdul sota el ratolí: contorn suau, perquè es vegi què se seleccionarà en clicar.
   const [hoverModule, setHoverModule] = useState<number | null>(null)
@@ -306,7 +303,7 @@ export function CabinetViewer({
         )}
       </group>
 
-      <group ref={gridRef} visible={q.guides}>
+      <group visible={q.guides}>
         <Grid position={[0, -0.001, 0]} args={[10, 10]} cellSize={0.1} sectionSize={0.5} cellColor={gridCell} sectionColor={gridSection} fadeDistance={6} infiniteGrid />
       </group>
       {q.contactResolution > 0 && (
@@ -321,7 +318,6 @@ export function CabinetViewer({
         />
       )}
       <CameraRig size={size} viewDir={viewDir} fitKey={fitKey} onFramedChange={onFramedChange} initialCamera={initialCamera} onCameraChange={onCameraChange} cameraGoto={cameraGoto} />
-      {onCapture && <Capture onCapture={onCapture} gridRef={gridRef} />}
       {onSceneAccess && <SceneAccess onAccess={onSceneAccess} />}
     </Canvas>
   )

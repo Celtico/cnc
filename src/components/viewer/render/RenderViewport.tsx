@@ -11,6 +11,8 @@ export function RenderViewport({ canvas, engine, background, preview, notice, st
   const { begun, running, preparing, passes, error, begin, toggle, startOver } = engine
 
   const save = () => {
+    // Desar el PNG mentre calcula l'atura (per decisió de l'usuari, 2026-10-16): la imatge desada és la final.
+    if (running) toggle()
     canvas.current?.toBlob((b) => {
       if (!b) return
       const a = document.createElement("a")

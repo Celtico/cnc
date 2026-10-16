@@ -9,6 +9,9 @@ import { snapToleranceMm } from "../snapTolerance"
 import type { ViewerModule } from "./types"
 import { useOrbitControls } from "../orbitControls"
 
+/** L'eix d'una nansa: al llarg de la fila, o l'altre (amunt i avall si és penjat; endavant i enrere si és al terra). */
+type Axis = "x" | "v"
+
 /** Elements d'edició (botons +, nanses, gizmo): la imatge del visor per al render no els porta (`SceneAccess`). */
 const EDITOR_ONLY = { editorOnly: true }
 
@@ -35,10 +38,11 @@ export function MoveHandle({
   const controls = useOrbitControls()
   // La càmera i la mida d'ara (l'imant va en píxels de pantalla).
   const getThree = useThree((st) => st.get)
-  const start = useRef<{ p: Vector3; plane: Plane; all: boolean } | null>(null)
+  const start = useRef<{ p: Vector3; plane: Plane; all: boolean; axis: Axis } | null>(null)
   const latest = useRef<{ dx: number; dy: number; dz: number; all: boolean } | null>(null)
   const [live, setLive] = useState<{ dx: number; dy: number; dz: number; all: boolean } | null>(null)
-  const [hover, setHover] = useState(false)
+  const [hover, setHover] = useState<Axis | null>(null)
+  const [dragAxis, setDragAxis] = useState<Axis | null>(null)
   const cursor = useViewerCursor()
   // Al mig de l'aresta de dalt de davant; el cercle va uns píxels més amunt (a la pantalla, `HANDLE_LIFT`).
   const top: [number, number, number] = [(m.x + m.width / 2) * S, (m.y + m.height) * S, ((m.z ?? 0) + m.depth) * S]
@@ -95,11 +99,13 @@ export function MoveHandle({
     const s0 = start.current
     const p = s0 && e.ray.intersectPlane(s0.plane, new Vector3())
     if (!s0 || !p) return null
-    let dx = (p.x - s0.p.x) / S
-    const dy = m.wall && !s0.all ? Math.round((p.y - s0.p.y) / S) : 0
+    // Cada nansa mou en un sol eix (per decisió de l'usuari, 2026-10-16: «dos marcadors, un per la x i un per la y»).
+    const vertical = s0.axis === "v" && !s0.all
+    let dx = vertical ? 0 : (p.x - s0.p.x) / S
+    const dy = m.wall && vertical ? Math.round((p.y - s0.p.y) / S) : 0
     // «Al terra»: endavant i enrere, sense passar la paret.
-    const dz = m.free && !s0.all ? Math.max(-(m.z ?? 0), Math.round((p.z - s0.p.z) / S)) : 0
-    if (!e.altKey) {
+    const dz = m.free && vertical ? Math.max(-(m.z ?? 0), Math.round((p.z - s0.p.z) / S)) : 0
+    if (!e.altKey && !vertical) {
       const three = getThree()
       const tol = snapToleranceMm(three.camera, three.size.height, p, S)
       let best: number | null = null
@@ -121,11 +127,14 @@ export function MoveHandle({
     const d = latest.current
     latest.current = null
     setLive(null)
+    setDragAxis(null)
     onDrop(d?.dx ?? 0, d?.dy ?? 0, d?.dz ?? 0, d?.all ?? false)
   }
   useEffect(() => {
     endRef.current = end
   })
+  // Al llarg de la fila (x) i, si es pot, amunt i avall (penjat) o endavant i enrere (al terra): una nansa per a cada eix.
+  const axes: Axis[] = m.wall || m.free ? ["x", "v"] : ["x"]
   const sign = (v: number) => `${v > 0 ? "+" : ""}${v}`
   const label = live ? (live.all ? `Tot el moble ${sign(live.dx)} mm` : `${sign(live.dx)} mm${live.dy ? ` · ${sign(live.dy)} mm` : ""}${live.dz ? ` · paret ${(m.z ?? 0) + live.dz} mm` : ""}`) : null
 
@@ -134,60 +143,63 @@ export function MoveHandle({
       <Billboard>
         <group ref={scaler}>
         <group position={[0, HANDLE_LIFT, 0]}>
-        <mesh
-          onPointerOver={(e) => {
-            e.stopPropagation()
-            setHover(true)
-            cursor.hover("grab")
-          }}
-          onPointerOut={() => {
-            setHover(false)
-            cursor.hover(null)
-          }}
-          onPointerDown={(e) => {
-            e.stopPropagation()
-            ;(e.target as Element | null)?.setPointerCapture?.(e.pointerId)
-            // «Al terra»: arrossega sobre un pla horitzontal (pel terra); la resta, pel pla de la paret.
-            const plane = new Plane().setFromNormalAndCoplanarPoint(m.free && !e.shiftKey ? new Vector3(0, 1, 0) : new Vector3(0, 0, 1), e.point)
-            start.current = { p: e.point.clone(), plane, all: e.shiftKey }
-            if (controls) controls.enabled = false
-            cursor.drag("grabbing")
-            listenEnd(e.pointerId)
-          }}
-          onPointerMove={(e) => {
-            if (!start.current) return
-            e.stopPropagation()
-            const d = compute(e)
-            if (!d) return
-            latest.current = d
-            setLive(d)
-            onDrag({ index: m.index, ...d })
-          }}
-          onPointerUp={end}
-          onPointerCancel={end}
-          onClick={(e) => e.stopPropagation()}
-          renderOrder={20}
-        >
-          <circleGeometry args={[1, 40]} />
-          <meshBasicMaterial color={hover || live ? "#98602c" : "#b57a37"} depthTest={false} depthWrite={false} transparent />
-        </mesh>
-        {/* Fletxes blanques ←→ (i ↑↓ als penjats): barres i triangles plans. */}
-        {(m.wall || m.free ? [0, Math.PI / 2] : [0]).map((rot) => (
-          <group key={rot} rotation={[0, 0, rot]}>
-            <mesh position={[0, 0, 0.01]} renderOrder={21}>
-              <planeGeometry args={[0.9, 0.13]} />
-              <meshBasicMaterial color="white" depthTest={false} depthWrite={false} transparent />
-            </mesh>
-            <mesh position={[0.5, 0, 0.01]} renderOrder={21}>
-              <circleGeometry args={[0.26, 3]} />
-              <meshBasicMaterial color="white" depthTest={false} depthWrite={false} transparent />
-            </mesh>
-            <mesh position={[-0.5, 0, 0.01]} rotation={[0, 0, Math.PI]} renderOrder={21}>
-              <circleGeometry args={[0.26, 3]} />
-              <meshBasicMaterial color="white" depthTest={false} depthWrite={false} transparent />
-            </mesh>
-          </group>
-        ))}
+          {axes.map((axis, i) => (
+            <group key={axis} position={[axes.length > 1 ? (i === 0 ? -1.15 : 1.15) : 0, 0, 0]}>
+              <mesh
+                onPointerOver={(e) => {
+                  e.stopPropagation()
+                  setHover(axis)
+                  cursor.hover("grab")
+                }}
+                onPointerOut={() => {
+                  setHover(null)
+                  cursor.hover(null)
+                }}
+                onPointerDown={(e) => {
+                  e.stopPropagation()
+                  ;(e.target as Element | null)?.setPointerCapture?.(e.pointerId)
+                  // «Al terra»: arrossega sobre un pla horitzontal (pel terra); la resta, pel pla de la paret.
+                  const plane = new Plane().setFromNormalAndCoplanarPoint(m.free && !e.shiftKey ? new Vector3(0, 1, 0) : new Vector3(0, 0, 1), e.point)
+                  start.current = { p: e.point.clone(), plane, all: e.shiftKey, axis }
+                  setDragAxis(axis)
+                  if (controls) controls.enabled = false
+                  cursor.drag("grabbing")
+                  listenEnd(e.pointerId)
+                }}
+                onPointerMove={(e) => {
+                  if (!start.current) return
+                  e.stopPropagation()
+                  const d = compute(e)
+                  if (!d) return
+                  latest.current = d
+                  setLive(d)
+                  onDrag({ index: m.index, ...d })
+                }}
+                onPointerUp={end}
+                onPointerCancel={end}
+                onClick={(e) => e.stopPropagation()}
+                renderOrder={20}
+              >
+                <circleGeometry args={[1, 40]} />
+                <meshBasicMaterial color={hover === axis || dragAxis === axis ? "#98602c" : "#b57a37"} depthTest={false} depthWrite={false} transparent />
+              </mesh>
+              {/* Fletxa blanca ←→ (o ↕): barra i dos triangles plans. */}
+              <group rotation={[0, 0, axis === "v" ? Math.PI / 2 : 0]}>
+                <mesh position={[0, 0, 0.01]} renderOrder={21}>
+                  <planeGeometry args={[0.9, 0.13]} />
+                  <meshBasicMaterial color="white" depthTest={false} depthWrite={false} transparent />
+                </mesh>
+                <mesh position={[0.5, 0, 0.01]} renderOrder={21}>
+                  <circleGeometry args={[0.26, 3]} />
+                  <meshBasicMaterial color="white" depthTest={false} depthWrite={false} transparent />
+                </mesh>
+                <mesh position={[-0.5, 0, 0.01]} rotation={[0, 0, Math.PI]} renderOrder={21}>
+                  <circleGeometry args={[0.26, 3]} />
+                  <meshBasicMaterial color="white" depthTest={false} depthWrite={false} transparent />
+                </mesh>
+              </group>
+            </group>
+          ))}
         </group>
         </group>
       </Billboard>

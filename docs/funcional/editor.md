@@ -221,11 +221,17 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   (moble, objecte i ambient) amb el mateix aire: 16 a dalt al mòbil i 16 al voltant a l'ordinador.
 - **Mode del visor** (`VIEW_MODES`): **Per peça** (`LuShapes`: colors per tipus de peça, paleta `ROLE_GROUPS` a
   `viewer/roleColorMap.ts` i llegenda a `viewer/roleColors.tsx`; «Ferratges» = rol `hardware`, els components dels
-  jocs), **Textura** (`LuTrees`: materials i veta) i
+  jocs) i
   **Presentació** (`LuSparkles`: ombres, sense perfils, graella ni «+»; terra i paret amb llum d'estudi,
   `viewer/PresentationRoom.tsx`, escena a `viewer/presentationScene.ts`). Per dins: la qualitat (`viewer/renderQuality.ts`:
   fast / presentation, també a Preferències › Visor 3D) més `mobles:viewer-role-colors-fast` (els objectes en tenen una de
-  pròpia, `mobles:viewer-role-colors-object`, i s'obren amb la textura).
+  pròpia, `mobles:viewer-role-colors-object`, i s'obren amb la textura). **Sense «Textura»** (per decisió de l'usuari,
+  2026-10-16): els colors per tipus es treuen a «Colors» de les opcions. Les pestanyes 3D · Alçat · Foto de dalt del visor,
+  **només amb la icona** (el nom, al tooltip). Opcions de vista **sense «Descarregar imatge»** (es fa amb el Render) i
+  **sense «Render»** a l'ordinador: és al menú de l'app, sempre a sobre de Preferències (`RenderStatusNavItem`; el moble o
+  l'ambient obert hi diu com es comença, `useRenderLauncher`; des de l'Alçat, la Foto o el plànol, passa al 3D); al mòbil,
+  sense menú lateral, el Render continua a Opcions de vista. La icona fa pampallugues suaus (opacitat) mentre calcula;
+  «Desar PNG» mentre calcula l'atura.
 - **Selecció al 3D**: **mòdul seleccionat sòlid amb contorn taronja** (com Figma o SketchUp; per decisió de l'usuari:
   translúcid semblava que canviés de color); només es fa **translúcid amb un compartiment triat**. El primer clic tria el
   mòdul i el segon entra al compartiment tocat (`selectFrom3D`); tornar a clicar el seleccionat puja al pare; clicar la
@@ -252,7 +258,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     fondària); les illes i els objectes que tallen no compten. És un pas: després els mòduls i l'objecte van per separat
     (no és automàtic perquè un obstacle també serveix per veure si xoca). Grups de
     peces: caixa del grup amb el gizmo; el primer clic selecciona el grup i el segon la peça.
-  - **Mòduls**: nansa ↔ (`MoveHandle`) uns píxels per sobre de l'aresta de dalt (en un mòdul alt que no hi cap, baixa fins a
+  - **Mòduls**: nansa ↔ (`MoveHandle`; als penjats i als de terra lliures, **dues nanses**, ↔ i ↕, cada una mou en un
+    sol eix, per decisió de l'usuari, 2026-10-16: «dos marcadors, un per la x i un per la y») uns píxels per sobre de l'aresta de dalt (en un mòdul alt que no hi cap, baixa fins a
     sota de la barra del visor); **sense els + als costats** (per decisió de l'usuari, 2026-10-08: els mòduls s'afegeixen amb el + de l'arbre; `AddButton`/`onAddModule` queden sense ús); arrossegar-la el mou a la
     seva fila (`moveModuleBy`: els de la dreta es queden on eren) i, si és penjat, amunt i avall; al terra, de costat i
     endavant/enrere (`dz`); amb Maj, tot el moble (`moveAllBy`). Imant a les vores dels mòduls i dels objectes. Nanses, + i gizmo són malles 3D de mida constant

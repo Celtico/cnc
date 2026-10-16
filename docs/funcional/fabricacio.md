@@ -95,7 +95,7 @@
   és a ≤ 0,5 mm, forat passant Ø del tirador per defecte o cargol + 1; un forat = pom; 3–4 = el parell centrat) al motor
   `barHandle` de sempre amb `pitch` sense graons, triable a cada front (`front.handle`) o al mòdul; **potes**
   (`Moebelfuesse`, `proposeLeg`: pilots a la placa) amb motor nou `leg`, triables a la base «Potes» (`Base.hardware`):
-  `buildLegs` fa els forats a la cara de sota de la base a cada pota (a `inset` dels cantells, totes o cap); i la resta
+  `buildLegs` fa els forats a la cara de sota de la base a cada pota (a `inset` dels cantells; una placa que no hi cap just allà —un fons cargolat que es menja el darrere de la base, un forat a prop— es mou cap a dins el mínim, fins a 40 mm (`LEG_NUDGE`), amb avís; per decisió de l'usuari, 2026-10-16: «l'illa no respecta les potes»; si ni així, cap; una pota que cau a l'osca d'una columna la torna a posar `relayLegs`); i la resta
   **«només 3D»** (motor `model`: estructures i guies de taula, Cadro, portes corredisses i plegables, accessoris,
   electrònica, carpetes desconegudes, i els tiradors/potes sense patró): el model i el volum, **mai cap forat**, GLB per
   baixar. Tiradors i potes: **sense confirmar, cap forat** i avís `hardware`; malmesos o que fallen, inerts. Preferències

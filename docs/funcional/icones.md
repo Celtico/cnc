@@ -55,9 +55,9 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Foto | Foto · Referència · Distància · Rectangle | `LuCamera` · `LuCrosshair` · `LuMoveHorizontal` · `LuRectangleHorizontal` |
 | Foto | Origen (0,0) · Treure/tancar · Eines | `LuLocateFixed` · `LuX` · `LuPencilLine` |
 | Foto | Mida estimada · Mida real (cinta) · Línia del terra · Fondària | `LuEye` · `LuCircleCheck` · `LuArrowDownToLine` · `LuArrowUpFromLine` |
-| Visor | Modes Per peça · Textura · Presentació | `LuShapes` · `LuTrees` · `LuSparkles` |
+| Visor | Modes Per peça · Presentació | `LuShapes` · `LuSparkles` |
 | Visor | Enquadrar · Forats · Explosionat / muntat · Ferratges · Render · Veure a casa (AR) | `LuVideo` · `LuCircleDot` · `LuExpand` / `LuShrink` · `LuWrench` · `LuAperture` · `LuView` |
-| Visor | Ampliar / reduir 3D · Obertura portes · Opacitat de les peces · Imatge | `LuMaximize2` / `LuMinimize2` · `LuDoorOpen` · `LuBlend` · `LuImageDown` |
+| Visor | Ampliar / reduir 3D · Obertura portes · Opacitat de les peces | `LuMaximize2` / `LuMinimize2` · `LuDoorOpen` · `LuBlend` |
 | Ambients | Seleccionar · Paret (ploma) · Habitació · Calibrar · Plànol de fons | `LuMousePointer2` · `LuPenTool` · `LuBrickWall` · `LuPencilRuler` · `LuImageUp` |
 | Ambients | Finestra · Porta · Moure a un grup · Grup (carpeta) · Projectes | `LuAppWindow` · `LuDoorOpen` · `LuFolderInput` · `LuFolder` · `LuFolders` |
 | Ambients | Moble · Objecte / bloc · Pestanyes Plànol · 3D · Girar · Peces (plànol) · Interior | `LuBox` · `LuSofa` · `LuMap` · `LuRotate3D` · `LuRotateCw` / `LuRotateCcw` · `LuLayers` · `LuEye` |

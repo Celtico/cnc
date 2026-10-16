@@ -45,7 +45,7 @@ export function NavItem({
           aria-label={collapsed ? label : undefined}
         >
           {alert ? (
-            <Box as="span" display="inline-flex" color="red.solid" animation="blink 1s steps(2, jump-none) infinite" _motionReduce={{ animation: "none" }}>
+            <Box as="span" display="inline-flex" color="red.solid" animation="blink 1.6s ease-in-out infinite" _motionReduce={{ animation: "none" }}>
               <Icon />
             </Box>
           ) : (

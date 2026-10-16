@@ -1,6 +1,7 @@
-import { Box, HStack, IconButton, SegmentGroup } from "@chakra-ui/react"
-import { useEffect, useRef, useState, type ReactNode } from "react"
+import { Box, IconButton, SegmentGroup } from "@chakra-ui/react"
+import type { ReactNode } from "react"
 import { LuBox, LuCamera, LuLayoutPanelLeft, LuMaximize2, LuMinimize2 } from "react-icons/lu"
+import { Tooltip } from "../../components/ui/tooltip"
 import { RoleLegend } from "../../components/viewer/roleColors"
 import type { Panel } from "../../core/model"
 import type { ViewTab, ViewerOptions } from "./useViewerOptions"
@@ -27,21 +28,9 @@ export function EditorViewport({
   chrome: ReactNode
 }) {
   const { viewTab, setViewTab, formHidden, setFormHidden, viewerState } = opts
-  // Visor estret (finestra petita o panells amples): les pestanyes queden només amb icona
-  // perquè no les tapin els botons de la dreta.
-  const viewerBox = useRef<HTMLDivElement>(null)
-  const [viewerNarrow, setViewerNarrow] = useState(false)
-  useEffect(() => {
-    const el = viewerBox.current
-    if (!el) return
-    const ro = new ResizeObserver(([e]) => setViewerNarrow((e?.contentRect.width ?? 999) < 640))
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
 
   return (
     <Box
-      ref={viewerBox}
       order={{ base: 0, md: 2 }}
       flex={{ md: 1 }}
       minW={{ base: 0, md: "320px" }}
@@ -80,14 +69,15 @@ export function EditorViewport({
               ["photo", "Foto", LuCamera, "Composició sobre la foto"],
             ] as const
           ).map(([v, label, Icon, aria]) => (
-            <SegmentGroup.Item key={v} value={v} aria-label={aria}>
-              <SegmentGroup.ItemText>
-                <HStack gap={1.5}>
-                  <Icon /> {!viewerNarrow && <Box display={{ base: "none", sm: "inline" }}>{label}</Box>}
-                </HStack>
-              </SegmentGroup.ItemText>
-              <SegmentGroup.ItemHiddenInput />
-            </SegmentGroup.Item>
+            // Només la icona (per decisió de l'usuari, 2026-10-16); el nom, al tooltip.
+            <Tooltip key={v} content={`${label}: ${aria}`}>
+              <SegmentGroup.Item value={v} aria-label={`${label}: ${aria}`}>
+                <SegmentGroup.ItemText>
+                  <Icon />
+                </SegmentGroup.ItemText>
+                <SegmentGroup.ItemHiddenInput />
+              </SegmentGroup.Item>
+            </Tooltip>
           ))}
         </SegmentGroup.Root>
       </Box>

@@ -25,7 +25,6 @@ export function SceneView({
   pick,
   picks,
   edits,
-  onCapture,
   onSceneAccess,
 }: {
   comp: Composition
@@ -41,7 +40,6 @@ export function SceneView({
   pick: (s: Selection) => void
   picks: ReturnType<typeof viewerPicks>
   edits: Pick<CompositionEdits, "moveGroup" | "movePart" | "moveModel" | "moveRef">
-  onCapture: (fn: () => Promise<Blob>) => void
   onSceneAccess: (g: SceneGetter) => void
 }) {
   const { shownPanels, frameSize, viewerModules, ghosts, openOnly, cutPartIds, collidingRefs, cuttingRefs, highlightZone, solidParts } = scene
@@ -80,7 +78,6 @@ export function SceneView({
       openOnly={openOnly}
       materialMode={viewerState.materialMode}
       materials={materials}
-      onCapture={onCapture}
       quality={quality}
       onDeselect={() => select({ kind: "moble" })}
       selectedRefId={selection.kind === "ref" ? selection.id : selection.kind === "part" && cutPartIds.has(selection.id) ? `part:${selection.id}` : null}

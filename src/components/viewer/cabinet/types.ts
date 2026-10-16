@@ -52,8 +52,6 @@ export interface CabinetViewerProps {
   materialMode?: "material" | "role"
   /** Materials de les preferències, per resoldre els acabats. */
   materials?: MaterialPref[]
-  /** Rep la funció de captura (PNG a 2×, fons net). */
-  onCapture?: (capture: () => Promise<Blob>) => void
   /** Qualitat del render (resolució i ombres). */
   quality?: RenderQuality
   /** Rep una funció que dona l'escena i la càmera actuals (per al render per CPU). */

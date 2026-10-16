@@ -105,7 +105,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   // Teclat: copiar, enganxar, duplicar, esborrar, agrupar i moure amb les fletxes.
   useEditorKeys({ comp, setComp, selection, select, module, zone, selectionLocked, absParts: scene.absParts, edits, duplicateHardware, removeHardware })
   const picks = viewerPicks({ comp, build, selection, select, selectModule, pick, shiftRef })
-  const handles = useViewerHandles(name)
+  const handles = useViewerHandles()
 
   return (
     <>
@@ -204,7 +204,6 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
                 pick={pick}
                 picks={picks}
                 edits={edits}
-                onCapture={handles.registerCapture}
                 onSceneAccess={handles.registerScene}
               />
             }
@@ -219,7 +218,6 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
                 hasMoving={scene.groups.length > 0}
                 hasSelectedZone={!!scene.zoneRect}
                 sceneGetter={handles.sceneGetter}
-                onImage={() => void handles.downloadImage()}
               />
             }
           />

@@ -139,7 +139,8 @@ export function AmbientViewOptions({
               <ViewTile label="Peces" icon={<LuLayers />} on={showDetail} onClick={() => setShowDetail((v) => !v)} tip="Les peces dels mobles vistes des de dalt" />
               <ViewTile label="Imant" icon={<LuMagnet />} on={snapOn} onClick={() => setSnapOn((v) => !v)} tip="Imant a les parets i als extrems (Alt: sense, puntualment)" />
               {hasPlan && <ViewTile label="Plànol de fons" icon={<LuImage />} on={showPlan} onClick={() => setShowPlan((v) => !v)} />}
-              <ViewTile label="Render" icon={<LuAperture />} on={false} onClick={() => (setViewOptsOpen(false), onTab("3d"), onRender())} tip="Render fotorealista (des del 3D)" />
+              {/* El Render és al menú de l'app; al mòbil (sense menú lateral), aquí. */}
+              <Box display={{ base: "contents", md: "none" }}><ViewTile label="Render" icon={<LuAperture />} on={false} onClick={() => (setViewOptsOpen(false), onTab("3d"), onRender())} tip="Render fotorealista (des del 3D)" /></Box>
             </>
           ) : (
             <>
@@ -149,7 +150,7 @@ export function AmbientViewOptions({
               <ViewTile label="Ombres" icon={<LuSun />} on={shadows} onClick={() => setShadows((v) => !v)} />
               <ViewTile label="Sostre" icon={<LuPanelTop />} on={ceiling} onClick={() => setCeiling((v) => !v)} tip="Sostre a les habitacions tancades: es veu des de dins («Interior») i al render la llum entra per les finestres" />
               {hasRoof && <ViewTile label="Teulada" icon={<LuWarehouse />} on={roofOn} onClick={() => setRoofOn((v) => !v)} tip="La teulada de l'ambient (Propietats › Teulada). Amb la casa de nines, des de fora es fa transparent" />}
-              <ViewTile label="Render" icon={<LuAperture />} on={false} onClick={() => (setViewOptsOpen(false), onRender())} tip="Render fotorealista (GPU o CPU, com Cinema 4D): es va afinant i es desa en PNG" />
+              <Box display={{ base: "contents", md: "none" }}><ViewTile label="Render" icon={<LuAperture />} on={false} onClick={() => (setViewOptsOpen(false), onRender())} tip="Render fotorealista" /></Box>
             </>
           )
         }

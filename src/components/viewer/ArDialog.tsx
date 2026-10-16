@@ -81,9 +81,10 @@ export function ArDialog({ open, onClose, panels, name, models }: { open: boolea
   }, [open, panels, name, ios, real, models])
 
   return (
-    <FloatingWindow id="ar" open={open} onClose={onClose} title="Veure a casa" width={860} height={680} initialFocus={false}>
-      <Stack gap={3}>
-        <Box position="relative" h={{ base: "60dvh", md: "480px" }} minH="240px" borderRadius="md" overflow="hidden" bg="bg.muted">
+    <FloatingWindow id="ar" open={open} onClose={onClose} title="Veure a casa" width={860} height={680} initialFocus={false} bodyProps={{ display: "flex", flexDirection: "column", minH: 0 }}>
+      {/* El visor omple tota la finestra (també maximitzada), amb el text a sota. */}
+      <Stack gap={3} flex={1} minH={0}>
+        <Box position="relative" flex={1} minH="240px" borderRadius="md" overflow="hidden" bg="bg.muted">
           {error ? (
             <Text p={4} color="fg.error">
               No s'ha pogut preparar el model: {error}

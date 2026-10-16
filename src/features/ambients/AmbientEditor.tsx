@@ -2,7 +2,7 @@ import { Box, Flex } from "@chakra-ui/react"
 import { useCallback, useMemo, useRef, useState } from "react"
 import { toaster } from "../../components/ui/toaster"
 import type { SceneGetter } from "../../components/viewer/render/RenderDialog"
-import { openRender } from "../../components/viewer/render/renderStore"
+import { openRender, useRenderLauncher } from "../../components/viewer/render/renderStore"
 import { ambientSummary, parseAmbient, type Ambient, type Composition, type PlanPt } from "../../core/model"
 import { createProject, db } from "../../db/db"
 import { TopBarActions } from "../../components/TopBar"
@@ -75,6 +75,11 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
   const [objPicker, setObjPicker] = useState(false)
   // Render (path tracing per GPU o CPU), el mateix de l'editor.
   const startRender = () => openRender({ getScene: () => sceneGetter.current?.() ?? null, name, saveKey: `ambient:${ambientId}` })
+  // El botó «Render» del menú de l'app (des del plànol, primer el 3D).
+  useRenderLauncher(`ambient:${ambientId}`, () => {
+    if (tab !== "3d") setTab("3d")
+    startRender()
+  })
   const sceneGetter = useRef<SceneGetter | null>(null)
   const onSceneAccess = useCallback((g: SceneGetter) => {
     sceneGetter.current = g

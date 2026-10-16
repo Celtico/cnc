@@ -105,7 +105,7 @@
     WebP si el navegador en sap codificar (si no, JPEG/PNG). Si ja compleix, no millora o falla, es desa l'original. Avís amb
     `formatReport`. `useModelAssets` = `MODEL_ASSETS` + els de l'usuari; `forgetModel` en pujar-ne o esborrar-ne;
     `removeUserModel` sense UI. El `.moble` porta els que fa servir (base64) i en obrir-lo es tornen a crear amb el mateix id.
-- **Render** (`viewer/render/`, `RenderDialog`, «Render» a Opcions de vista, també als ambients; com Cinema 4D): path
+- **Render** (`viewer/render/`, `RenderDialog`, «Render» al menú de l'app (a sobre de Preferències; al mòbil, a Opcions de vista), també als ambients; com Cinema 4D): path
   tracing progressiu amb **dos motors que donen la mateixa imatge** (`ChoiceChips` GPU · CPU, per defecte GPU si n'hi ha,
   `mobles:render-engine`): **GPU** (WebGPU, `gpuTracer.ts` + `gpuTracer.wgsl.ts`) i **CPU** (`cpuEngine.ts`: un `pathWorker`
   per nucli). Sense WebGPU, GPU desactivada amb el motiu; si la GPU falla, CPU amb un avís.

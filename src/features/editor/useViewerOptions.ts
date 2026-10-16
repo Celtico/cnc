@@ -14,7 +14,7 @@ function readTab(): ViewTab {
   }
 }
 
-export type ViewMode = "pieces" | "texture" | "presentation"
+export type ViewMode = "pieces" | "presentation"
 
 /** Opcions de vista de l'editor: pestanya, mode del visor, colors, obertura, forats, explosió, ferratges i panells. */
 export function useViewerOptions(isObject: boolean) {
@@ -29,11 +29,12 @@ export function useViewerOptions(isObject: boolean) {
   const [quality, setQuality] = useRenderQuality()
   const [viewer, setViewerState] = useState<Omit<ViewerState, "materialMode">>({ opening: 0, opacity: 1, openOnlySelected: false })
   const viewerState: ViewerState = { ...viewer, materialMode: quality === "fast" && roleColors ? "role" : "material" }
-  // Mode del visor: Per peça (ràpid, colors per tipus), Textura (ràpid, materials) o Presentació.
-  const viewMode: ViewMode = quality === "presentation" ? "presentation" : roleColors ? "pieces" : "texture"
+  // Mode del visor: Per peça (ràpid, colors per tipus; un objecte, amb la textura) o Presentació. Sense «Textura» (per
+  // decisió de l'usuari, 2026-10-16): els colors per tipus es poden treure igualment a «Colors» de les opcions.
+  const viewMode: ViewMode = quality === "presentation" ? "presentation" : "pieces"
   const setViewMode = (m: ViewMode) => {
     setQuality(m === "presentation" ? "presentation" : "fast")
-    if (m !== "presentation") setRoleColors(m === "pieces")
+    if (m === "pieces" && quality === "presentation") setRoleColors(!isObject)
   }
   // Ferratges visuals (frontisses, tiradors, potes) i mostres del ray tracing.
   const [hardware, setHardware] = usePersistentFlag("mobles:viewer-hardware", true)

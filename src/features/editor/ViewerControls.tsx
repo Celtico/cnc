@@ -1,5 +1,5 @@
-import { Button, HStack, Slider, Stack, Switch } from "@chakra-ui/react"
-import { LuBlend, LuDoorOpen, LuImageDown } from "react-icons/lu"
+import { HStack, Slider, Stack, Switch } from "@chakra-ui/react"
+import { LuBlend, LuDoorOpen } from "react-icons/lu"
 import { FormRow } from "../../components/FormRow"
 
 export interface ViewerState {
@@ -16,13 +16,11 @@ export function ViewerControls({
   onChange,
   hasMoving,
   hasSelectedZone,
-  onImage,
 }: {
   state: ViewerState
   onChange: (patch: Partial<ViewerState>) => void
   hasMoving: boolean
   hasSelectedZone: boolean
-  onImage: () => void
 }) {
   return (
     <Stack gap={4}>
@@ -92,10 +90,6 @@ export function ViewerControls({
           <Switch.Label fontSize="sm">Obrir només el compartiment seleccionat</Switch.Label>
         </Switch.Root>
       </FormRow>
-
-      <Button size="sm" variant="outline" colorPalette="wood" alignSelf="flex-start" onClick={onImage}>
-        <LuImageDown /> Descarregar imatge
-      </Button>
     </Stack>
   )
 }

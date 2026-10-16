@@ -1,4 +1,4 @@
-import { useEffect, useSyncExternalStore } from "react"
+import { useEffect, useRef, useSyncExternalStore } from "react"
 import type { SceneGetter } from "./RenderDialog"
 
 /**
@@ -76,6 +76,33 @@ export function openRender(req: RenderRequest): void {
   host.set({ req, open: true, pending: null, shown: cur.shown + 1 })
 }
 
+/**
+ * Qui pot començar un render ara (el moble o l'ambient oberts): el botó «Render» del menú de l'app, sempre a sobre de
+ * Preferències (per decisió de l'usuari, 2026-10-16: «que surti sempre al menú principal i treure'l d'Opcions de vista»).
+ */
+const launcher = createStore<{ saveKey: string; start: () => void } | null>(null)
+
+/** L'editor obert diu com es comença el seu render (mentre és muntat; `null`: no se'n pot fer). */
+export function useRenderLauncher(saveKey: string, start: (() => void) | null): void {
+  const latest = useRef(start)
+  useEffect(() => {
+    latest.current = start
+  })
+  const on = start !== null
+  useEffect(() => {
+    if (!on) return
+    const mine = { saveKey, start: () => latest.current?.() }
+    launcher.set(mine)
+    return () => {
+      if (launcher.get() === mine) launcher.set(null)
+    }
+  }, [on, saveKey])
+}
+
+export function useCurrentRenderLauncher(): { saveKey: string; start: () => void } | null {
+  return useSyncExternalStore(launcher.subscribe, launcher.snapshot)
+}
+
 /** Torna a mostrar el render d'ara (l'indicador del menú). */
 export function showRender(): void {
   const cur = host.get()
@@ -124,6 +151,7 @@ export const renderHostState = (): HostState => host.get()
 export function resetRenderStore(): void {
   host.set({ req: null, open: false, pending: null, shown: 0 })
   status.set(null)
+  launcher.set(null)
 }
 
 /** «12 / 256 passades · 34 s» (l'indicador del menú i la barra del panell). */

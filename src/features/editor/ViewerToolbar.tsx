@@ -1,14 +1,14 @@
 import { Box, HStack, IconButton, SimpleGrid, Stack } from "@chakra-ui/react"
 import { useState, type ReactNode, type RefObject } from "react"
 import type { IconType } from "react-icons"
-import { LuAperture, LuBox, LuCircleDot, LuExpand, LuPanelLeft, LuPanelRight, LuPanelTop, LuShapes, LuShrink, LuSparkles, LuSquare, LuSquareDashed, LuTrees, LuView, LuWrench } from "react-icons/lu"
+import { LuAperture, LuBox, LuCircleDot, LuExpand, LuPanelLeft, LuPanelRight, LuPanelTop, LuShapes, LuShrink, LuSparkles, LuSquare, LuSquareDashed, LuView, LuWrench } from "react-icons/lu"
 import { Tooltip } from "../../components/ui/tooltip"
 import { segGroup, segItem } from "../../components/segmented"
 import { VIEW_LABELS, type ViewName } from "../../components/viewer/viewNames"
 import { ViewOptions, ViewTile } from "../../components/ViewOptions"
 import { ArDialog } from "../../components/viewer/ArDialog"
 import type { SceneGetter } from "../../components/viewer/render/RenderDialog"
-import { openRender } from "../../components/viewer/render/renderStore"
+import { openRender, useRenderLauncher } from "../../components/viewer/render/renderStore"
 import type { CompositionBuild } from "../../core/build/buildComposition"
 import type { Panel } from "../../core/model"
 import { ViewerControls } from "./ViewerControls"
@@ -17,7 +17,6 @@ import type { ViewMode, ViewerOptions } from "./useViewerOptions"
 
 const VIEW_MODES: [ViewMode, string, string, typeof LuShapes][] = [
   ["pieces", "Per peça", "cada tipus de peça d'un color, ràpid i amb guies", LuShapes],
-  ["texture", "Textura", "materials i veta, ràpid i amb guies", LuTrees],
   ["presentation", "Presentació", "ombres, terra i paret, sense guies", LuSparkles],
 ]
 
@@ -45,7 +44,6 @@ export function ViewerToolbar({
   hasMoving,
   hasSelectedZone,
   sceneGetter,
-  onImage,
 }: {
   opts: ViewerOptions
   camera: Pick<EditorCamera, "framed" | "frameFrom" | "viewDir">
@@ -56,9 +54,8 @@ export function ViewerToolbar({
   hasMoving: boolean
   hasSelectedZone: boolean
   sceneGetter: RefObject<SceneGetter | null>
-  onImage: () => void
 }) {
-  const { viewTab, viewMode, setViewMode, showHoles, setShowHoles, exploded, setExploded, viewer, hardware, setHardware, quality, roleColors, setRoleColors, viewerState, setViewer } = opts
+  const { viewTab, setViewTab, viewMode, setViewMode, showHoles, setShowHoles, exploded, setExploded, viewer, hardware, setHardware, quality, roleColors, setRoleColors, viewerState, setViewer } = opts
   const { framed, frameFrom, viewDir } = camera
   // «Veure a casa»: visor 3D amb el botó d'AR Quick Look (Safari a l'iPhone/iPad).
   const [arOpen, setArOpen] = useState(false)
@@ -70,21 +67,27 @@ export function ViewerToolbar({
   // Només icona (el text no hi cabia): el nom i l'explicació, al tooltip.
   const tile = (key: string, label: string, icon: ReactNode, on: boolean, onClick: () => void, tip?: string) => <ViewTile key={key} label={label} icon={icon} on={on} onClick={onClick} tip={tip} />
   const viewModes = (
-    <SimpleGrid columns={3} gap={1.5}>
+    <SimpleGrid columns={2} gap={1.5}>
       {VIEW_MODES.map(([v, label, tip, Icon]) => tile(v, label, <Icon />, viewMode === v, () => setViewMode(v), `${label}: ${tip}`))}
     </SimpleGrid>
   )
+  // El Render, al menú de l'app (a sobre de Preferències; per decisió de l'usuari, 2026-10-16), no a «Opcions de vista».
+  // Des de l'Alçat o la Foto, primer el 3D (el render és de l'escena 3D).
+  const startRender = () => {
+    setViewOptsOpen(false)
+    if (viewTab !== "3d") setViewTab("3d")
+    if (quality === "fast" && roleColors) setRoleColors(false)
+    if (!hardware) setHardware(true)
+    openRender({ getScene: () => sceneGetter.current?.() ?? null, name, saveKey: `moble:${projectId}` })
+  }
+  useRenderLauncher(`moble:${projectId}`, startRender)
   const viewTiles = (
     <>
       {tile("holes", "Forats", <LuCircleDot />, showHoles || exploded || viewer.opacity < 1, () => setShowHoles((v) => !v), exploded ? "A la vista explosionada els forats sempre es veuen" : viewer.opacity < 1 ? "Amb les peces translúcides (Opacitat) els forats sempre es veuen" : showHoles ? "Amagar forats" : "Mostrar forats")}
       {tile("explode", "Explosió", exploded ? <LuShrink /> : <LuExpand />, exploded, () => setExploded((v) => !v), exploded ? "Vista muntada" : "Vista explosionada")}
       {tile("hardware", "Ferratges", <LuWrench />, hardware, () => setHardware((v) => !v), hardware ? "Amagar frontisses, tiradors i potes" : "Mostrar frontisses, tiradors i potes")}
-      {tile("render", "Render", <LuAperture />, false, () => {
-        setViewOptsOpen(false)
-        if (quality === "fast" && roleColors) setRoleColors(false)
-        if (!hardware) setHardware(true)
-        openRender({ getScene: () => sceneGetter.current?.() ?? null, name, saveKey: `moble:${projectId}` })
-      }, "Render fotorealista (GPU o CPU, com Cinema 4D): es va afinant i es desa en PNG")}
+      {/* Al mòbil no hi ha menú lateral: el Render hi continua. */}
+      <Box display={{ base: "contents", md: "none" }}>{tile("render", "Render", <LuAperture />, false, startRender, "Render fotorealista")}</Box>
       {tile("ar", "A casa (AR)", <LuView />, false, () => setArOpen(true), "Veure a casa (realitat augmentada)")}
     </>
   )
@@ -122,7 +125,7 @@ export function ViewerToolbar({
       {/* Al mòbil, un calaix de baix amb el seu propi desplaçament; a l'ordinador, un popover. */}
       <ViewOptions lead={viewModes} tiles={viewTiles} open={viewOptsOpen} onOpenChange={setViewOptsOpen}>
         <Box pt={3} borderTopWidth="1px">
-          <ViewerControls state={viewerState} onChange={setViewer} hasMoving={hasMoving} hasSelectedZone={hasSelectedZone} onImage={onImage} />
+          <ViewerControls state={viewerState} onChange={setViewer} hasMoving={hasMoving} hasSelectedZone={hasSelectedZone} />
         </Box>
       </ViewOptions>
     </Stack>
