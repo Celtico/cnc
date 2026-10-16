@@ -23,7 +23,7 @@ const SHIM_FROM_FRONT = 60
 /** Calaixos: fronts, caixes de fusta i jocs paramètrics. */
 export class DrawersBuilder extends FrontsBuilder {
   /** Calaixos interiors en construcció (`buildInnerDrawers`): on és la cara dels seus fronts (Z del mòdul). */
-  private inner: { faceZ: number } | null = null
+  private inner: { faceZ: number; metalFront: boolean } | null = null
   private innerShims = 0
 
   /**
@@ -58,8 +58,12 @@ export class DrawersBuilder extends FrontsBuilder {
     }
     const L = S > 0 && hinges.has("left") && left ? shim("left", left) : left
     const R = S > 0 && hinges.has("right") && right ? shim("right", right) : right
+    // Sense suplement al costat de les frontisses, el braç i la placa de la frontissa topen amb els calaixos.
+    for (const side of hinges)
+      if ((side === "left" ? L === left : R === right) && (side === "left" ? left : right))
+        this.warnings.push({ code: "inner-drawers", message: `Calaixos interiors sense suplement al costat de les frontisses (${side === "left" ? "esquerra" : "dreta"}): el braç i la placa de la frontissa hi topen en obrir. Posa-hi el suplement (el gruix del cos).`, zoneId: zone.id })
     if (L !== left || R !== right)
-      if (!this.warnings.some((w) => w.code === "inner-drawers"))
+      if (!this.warnings.some((w) => w.code === "inner-drawers" && w.message.includes("es cargola")))
         this.warnings.push({ code: "inner-drawers", message: `Calaixos interiors: el suplement (${num(S)} mm, del cos) es cargola al lateral pel costat de dins abans de posar-hi la guia.`, zoneId: zone.id })
     const box: ZoneRect = { ...rect, x0: L !== left ? L!.xR : rect.x0, x1: R !== right ? R!.xL : rect.x1, y1 }
     const front: Extract<Front, { kind: "drawers" }> = {
@@ -70,7 +74,7 @@ export class DrawersBuilder extends FrontsBuilder {
       ...(inner.kit ? { kit: inner.kit } : {}),
     }
     const own = this.drawerHeights[zone.id]
-    this.inner = { faceZ }
+    this.inner = { faceZ, metalFront: inner.front === "kit" }
     try {
       this.buildDrawers(zone, front, box, box, L, R)
     } finally {
@@ -378,8 +382,9 @@ export class DrawersBuilder extends FrontsBuilder {
       const kitPlan = pick.plan
       const kit = kitPlan.kit
       const y0 = slideBase(i, kit)
-      // Calaix interior: el front interior entre els laterals del joc (2 mm de joc a cada costat), fins a dalt del joc.
-      const frontPanel = outerFront ?? this.addInnerFront(k, rect.x0 + 2, y, LW - 4, y0 - y + kitHeight(kit))
+      // Calaix interior: el front interior entre els laterals del joc (2 mm de joc a cada costat), fins a dalt del joc; amb
+      // el front metàl·lic del fabricant, cap peça de fusta al davant (ni els seus forats).
+      const frontPanel = outerFront ?? (this.inner?.metalFront ? null : this.addInnerFront(k, rect.x0 + 2, y, LW - 4, y0 - y + kitHeight(kit)))
       const at = { x0: rect.x0, y0, zFront }
       const pilot = kitPlan.pilot
       // Prebroques dels cargols de la guia als dos laterals del moble (el dret, mirall): z des del cantell de davant del
@@ -389,7 +394,7 @@ export class DrawersBuilder extends FrontsBuilder {
         for (const ref of [left, right])
           for (const h of kitPlan.sidePilots) addFaceHole(ref.panel, [ref === left ? ref.xR : ref.xL, r(y0 + h.y), r(zFront - h.z)], spec)
         // Suports de davant: al darrere del front (cara A), a `x` de cada lateral.
-        for (const h of kitPlan.frontPilots) for (const x of [rect.x0 + h.x, rect.x1 - h.x]) addFaceHole(frontPanel, [r(x), r(y0 + h.y), zFront], { ...pilot, tag: "kit-front" })
+        if (frontPanel) for (const h of kitPlan.frontPilots) for (const x of [rect.x0 + h.x, rect.x1 - h.x]) addFaceHole(frontPanel, [r(x), r(y0 + h.y), zFront], { ...pilot, tag: "kit-front" })
       }
       // Fusta: fons A (sobre la guia del lateral) i darrere B (sobre el fons, al final).
       const bottom = kitPlan.wood.find((w) => w.key === "bottom")
@@ -410,7 +415,13 @@ export class DrawersBuilder extends FrontsBuilder {
         if (pilot) for (const h of kitPlan.backPilots) for (const x of [bx0 + h.x, bx0 + back.width - h.x]) addFaceHole(backPanel, [r(x), r(yB + h.y), zB], { ...pilot, tag: "kit-back" })
       }
       this.extras.push(...kitSolidPanels(kitPlan, k, at, LW))
-      this.hardwareKits.push({ zoneId: zone.id, drawer: k, item: kitItemUsed.name, kit: `${kit.maker} ${kit.series} ${kit.heightClass.code}`, nl: kitPlan.nl, options: kitPlan.options, lines: kitPlan.lines, wood: kitPlan.wood, ...(kitPlan.rule ? { rule: kitPlan.rule } : {}), ...(kitPlan.syncRod !== undefined ? { syncRod: kitPlan.syncRod } : {}) })
+      // El front metàl·lic del fabricant: només es veu (no és de CNC), com els components del joc.
+      if (!frontPanel && !outerFront) {
+        const fh = r(y0 - y + kitHeight(kit))
+        this.extras.push(this.basePanel(`drawer-${k}-kit-innerFront`, "front interior metàl·lic", `Front interior metàl·lic calaix ${k}`, "hardware", r(LW - 4), fh, 2, "Acer fosc", "none", { ...NO_EDGES }, placement([r(rect.x0 + 2), r(y + fh), this.inner!.faceZ], X, neg(Y), neg(Z), Z)))
+      }
+      const lines = frontPanel ? kitPlan.lines : [...kitPlan.lines, { component: "innerFront", name: "Front interior metàl·lic del fabricant", qty: 1, note: `Per a ${num(LW)} mm de llum: demanar-lo al distribuïdor (no és al catàleg de l'app).` }]
+      this.hardwareKits.push({ zoneId: zone.id, drawer: k, item: kitItemUsed.name, kit: `${kit.maker} ${kit.series} ${kit.heightClass.code}`, nl: kitPlan.nl, options: kitPlan.options, lines, wood: kitPlan.wood, ...(kitPlan.rule ? { rule: kitPlan.rule } : {}), ...(kitPlan.syncRod !== undefined ? { syncRod: kitPlan.syncRod } : {}) })
     }
   }
 }

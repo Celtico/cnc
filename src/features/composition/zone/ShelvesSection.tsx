@@ -4,7 +4,7 @@ import type { ReactNode } from "react"
 import { FoldItem } from "../../../components/Fold"
 import { canHoldAccessories, canHoldShelves, moduleSlotItem, setShelves, slotOf, updateZone, type ModuleHardware, type Zone, type ZoneAccessory, type ZoneBounds } from "../../../core/model"
 import { NumRow } from "../../../components/NumRow"
-import { FormRow } from "../../../components/FormRow"
+import { ChoiceChips, FormRow } from "../../../components/FormRow"
 import { HardwarePick } from "../HardwarePick"
 import { useSettings } from "../../settings/SettingsContext"
 
@@ -153,6 +153,17 @@ function InnerDrawerRows({ root, zone, hardware, setback, body, onChange }: { ro
         <>
           <NumRow optionId="zone.shelves.innerDrawers.height" label="Alçada de cada calaix" value={d.height} min={60} max={1000} step={10} onChange={(height) => Number.isFinite(height) && height >= 60 && set({ ...d, height })} />
           <HardwarePick optionId="zone.shelves.innerDrawers.slide" slot="slide" current={d.hardware ?? moduleSlotItem(hardware, "slide")} inherited={moduleSlotItem(hardware, "slide")} onPick={(item) => set(item ? { ...d, hardware: item } : (({ hardware: _h, ...rest }) => rest)(d))} />
+          {/* Amb un joc de calaix: el front de fusta o el metàl·lic del fabricant (tot ferratge). */}
+          {(d.hardware ?? moduleSlotItem(hardware, "slide"))?.engine === "drawerKit" && (
+            <FormRow optionId="zone.shelves.innerDrawers.front" label="Front" help={d.front === "kit" ? "Cap peça de fusta al davant: el front interior metàl·lic del fabricant, a la comanda del joc." : "Front interior de fusta (del cos), baix, entre els laterals del joc."}>
+              <ChoiceChips
+                label="Front"
+                value={d.front ?? "wood"}
+                options={[{ id: "wood" as const, label: "De fusta" }, { id: "kit" as const, label: "Metàl·lic (del joc)" }]}
+                onChange={(v) => set(v === "kit" ? { ...d, front: "kit" } : (({ front: _f, ...rest }) => rest)(d))}
+              />
+            </FormRow>
+          )}
           <NumRow optionId="zone.shelves.innerDrawers.setback" label="Retirada del front" value={d.setback ?? 25} min={0} max={100} step={1} help="Del davant de la caixa al davant del front interior." onChange={(v) => Number.isFinite(v) && set({ ...d, setback: v })} />
           <NumRow optionId="zone.shelves.innerDrawers.shim" label="Suplement" value={d.shim ?? body} min={0} max={60} step={1} help={d.shim === undefined ? "Com el gruix del cos. Al costat de les frontisses: la guia s'hi cargola perquè el calaix no topi amb la frontissa (0 = sense)." : "Al costat de les frontisses: la guia s'hi cargola perquè el calaix no topi amb la frontissa (0 = sense)."} onChange={(v) => Number.isFinite(v) && v >= 0 && set({ ...d, shim: v })} />
         </>

@@ -53,3 +53,18 @@ describe("calaixos interiors amb un joc de calaix", () => {
     expect(b.hardwareKits.length).toBe(2)
   })
 })
+
+describe("calaixos interiors: front metàl·lic i avís sense suplement", () => {
+  it("amb el front del fabricant, cap front de fusta, es veu i la comanda el demana", async () => {
+    const { DEFAULT_HARDWARE_LIBRARY } = await import("../model")
+    const kit = DEFAULT_HARDWARE_LIBRARY.find((h) => h.engine === "drawerKit")!
+    const b = buildModule(col({ hardware: kit, front: "kit" }))
+    expect(b.panels.some((p) => p.label.startsWith("Front interior"))).toBe(false)
+    expect(b.extras.filter((p) => p.id.endsWith("kit-innerFront"))).toHaveLength(2)
+    expect(b.hardwareKits.every((k) => k.lines.some((l) => l.component === "innerFront"))).toBe(true)
+  })
+  it("sense suplement al costat de les frontisses, avisa", () => {
+    expect(buildModule(col({ shim: 0 })).warnings.some((w) => w.code === "inner-drawers" && w.message.includes("topen"))).toBe(true)
+    expect(buildModule(col()).warnings.some((w) => w.message.includes("topen"))).toBe(false)
+  })
+})

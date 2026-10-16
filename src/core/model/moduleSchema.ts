@@ -332,6 +332,12 @@ export interface InnerDrawers {
   setback?: number
   /** Gruix del suplement al costat de les frontisses (mm; sense: el gruix del cos; 0 = sense suplements). */
   shim?: number
+  /**
+   * El front: de fusta (sense: el front interior baix) o, amb un joc de calaix, **metàl·lic del fabricant** (`"kit"`; per
+   * decisió de l'usuari, 2026-10-16: «calaixos sense frontal, tot ferratge»): cap peça de fusta al davant; la comanda del
+   * joc diu que cal el front interior del fabricant. Amb una caixa de fusta, no compta.
+   */
+  front?: "kit"
 }
 
 export const ZoneSchema: z.ZodType<Zone> = z.lazy(() =>
@@ -370,6 +376,7 @@ export const ZoneSchema: z.ZodType<Zone> = z.lazy(() =>
         kit: KitOptionsSchema.partial().optional(),
         setback: mm.min(0).max(100).optional(),
         shim: mm.min(0).max(60).optional(),
+        front: z.literal("kit").optional(),
       })
       .optional(),
   }),

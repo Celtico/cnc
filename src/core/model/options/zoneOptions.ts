@@ -211,6 +211,7 @@ const shelves = section("zone.shelves", "Opcions de l'interior", {
   }, [
     field("zone.shelves.innerDrawers.height", "Alçada de cada calaix", { code: UI.shelves, control: "number", default: 180 }),
     field("zone.shelves.innerDrawers.slide", "Guia", { code: UI.shelves, control: "hardware", defaultText: AS_MODULE }),
+    field("zone.shelves.innerDrawers.front", "Front", { code: UI.shelves, control: "choice", showIf: "Amb un joc de calaix", default: "wood", choices: [{ value: "wood", label: "De fusta" }, { value: "kit", label: "Metàl·lic (del joc)" }], note: "Per decisió de l'usuari, 2026-10-16: «calaixos sense frontal, tot ferratge»." }),
     field("zone.shelves.innerDrawers.setback", "Retirada del front", { code: UI.shelves, control: "number", defaultText: "Preferències › Folgances per defecte (25)" }),
     field("zone.shelves.innerDrawers.shim", "Suplement", { code: UI.shelves, control: "number", defaultText: "El gruix del cos" }),
   ]),

@@ -285,6 +285,8 @@ function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: Zon
       const d = { ...out.innerDrawers }
       const kit = d.hardware ? d.hardware.engine === "drawerKit" : kitDefault
       if (!kit || !d.kit || !Object.keys(d.kit).length) delete d.kit
+      // El front metàl·lic del fabricant només amb un joc.
+      if (!kit) delete d.front
       out.innerDrawers = d
     }
   }

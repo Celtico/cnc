@@ -465,4 +465,6 @@ joc: entre els laterals del joc, 2 mm de joc a cada costat, fins a dalt del joc)
 `setback` (25) del davant de la caixa; al costat de les frontisses (els dos amb dues portes), un **suplement** del cos de
 `shim` mm (sense: el gruix del cos; 0 = cap) de l'alçada dels calaixos, des de 60 mm del davant (`SHIM_FROM_FRONT`:
 darrere de la placa de la frontissa, hipòtesi) fins al darrere: els forats de la guia hi van i el calaix és més estret.
-Avís `inner-drawers` (el suplement es cargola al lateral). Test `build/innerDrawers.test.ts`.
+Avís `inner-drawers` (el suplement es cargola al lateral; sense suplement al costat de les frontisses, un avís que el braç i la
+placa hi topen). Amb un joc, `front: "kit"` (per decisió de l'usuari, «calaixos sense frontal, tot ferratge»): cap front de
+fusta; el front interior metàl·lic del fabricant va a la comanda del joc i es pinta com a ferratge. Test `build/innerDrawers.test.ts`.
