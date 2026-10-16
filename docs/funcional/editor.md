@@ -203,10 +203,13 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   - Res de botons «Veure a l'alçat»: les pestanyes 3D · Alçat · Foto ja són a dalt del visor.
 - **Centre — Visor** amb pestanyes `3D` · `Alçat` · `Foto`. **Alçat** (`ElevationEditor`): el mòdul en edició i, translúcids,
   els veïns (costats, a sobre i a sota); clicar un veí hi passa (`neighbors`).
+- **Vistes** (per decisió de l'usuari, 2026-10-16): una barra de botons d'icona a baix del 3D, al mig (`VIEW_BUTTONS` a
+  `ViewerToolbar`; el nom al tooltip): **3D** (el 3/4 d'abans «Enquadrar», `LuBox`) · Davant · Darrere · Esquerra · Dreta ·
+  Dalt; la triada surt marcada mentre la càmera no es mou. L'únic lloc on es trien.
 - **Barra del visor**: fora només «Opcions de vista» (i amagar propietats). Opcions de vista (`components/ViewOptions`:
   `ViewOptions` + `ViewTile`, popover a l'ordinador, calaix de baix al mòbil; es tanca en obrir el Render): a dalt els tres
-  modes i les accions ràpides només amb icona i el nom al tooltip (`tile`/`viewTiles` a `EditorScreen`): Enquadrar, Forats,
-  Explosió, Ferratges, Render i Veure a casa (AR); a sota, les vistes (l'únic lloc on es trien), l'obertura, l'**opacitat** i la imatge. **Opacitat** (`ViewerState.opacity`, `LuBlend`, 10–100 %; per decisió de l'usuari, 2026-10-14: «per veure tot el mecanitzat de les peces»): per sota del 100 % totes les peces es fan translúcides amb aquella opacitat (`CabinetViewer seeThrough` → `PanelMesh seeThrough` numèric, la mateixa `veil` de «Com va muntat»: sense escriure la profunditat) i els forats, les ranures i els talls es veuen sempre (com a l'Explosió; «Forats» surt marcat); els ferratges continuen opacs. El **Render la conserva** (per decisió de l'usuari: `veil` marca els materials `userData.seeThrough` i `sceneData` els passa amb la seva opacitat, com el vidre, en lloc de treure'ls com a fantasmes; les marques dels forats no hi surten, només els forats que travessen); l'AR i la miniatura no la fan servir; no es desa.
+  modes i les accions ràpides només amb icona i el nom al tooltip (`tile`/`viewTiles` a `ViewerToolbar`): Forats,
+  Explosió, Ferratges, Render i Veure a casa (AR); a sota, l'obertura, l'**opacitat** i la imatge. **Opacitat** (`ViewerState.opacity`, `LuBlend`, 10–100 %; per decisió de l'usuari, 2026-10-14: «per veure tot el mecanitzat de les peces»): per sota del 100 % totes les peces es fan translúcides amb aquella opacitat (`CabinetViewer seeThrough` → `PanelMesh seeThrough` numèric, la mateixa `veil` de «Com va muntat»: sense escriure la profunditat) i els forats, les ranures i els talls es veuen sempre (com a l'Explosió; «Forats» surt marcat); els ferratges continuen opacs. El **Render la conserva** (per decisió de l'usuari: `veil` marca els materials `userData.seeThrough` i `sceneData` els passa amb la seva opacitat, com el vidre, en lloc de treure'ls com a fantasmes; les marques dels forats no hi surten, només els forats que travessen); l'AR i la miniatura no la fan servir; no es desa.
   **Explosió**: cada peça se separa 160 mm (`EXPLODE_MM`) per la seva `explodeDir` i hi van **els forats i les ranures
   sempre** (Forats surt marcat mentre dura) i tot el que hi va muntat: frontisses, tiradors, plaques, potes importades i
   col·locats a mà (`Panel.fittings`, dins del grup de la peça) i les potes de l'app amb la base (`ExplodeWith`, la mateixa
@@ -287,9 +290,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   la peça seleccionada»): càmera **ortogràfica** d'aquell costat amb el zoom que hi fa cabre el moble (`CameraRig`,
   `OrthographicCamera`; es pot orbitar i fer zoom) i el moble en **línies**: les peces gairebé transparents
   (`WIRE_OPACITY`, la `veil`), el perfil fosc i els forats sempre a la vista (`PanelMesh wire`); el gizmo i la selecció
-  funcionen igual. Una vista no es desa com a càmera. «Enquadrar» torna al 3/4 en perspectiva i només surt marcat amb el
+  funcionen igual. Una vista no es desa com a càmera. «3D» torna al 3/4 en perspectiva i només surt marcat amb el
   3/4. Sense cotes (són a l'Alçat).
-- **Càmera**: s'enquadra en obrir, triar una vista o amb «Enquadrar» (`LuVideo`); editar no la mou, i **redimensionar el
+- **Càmera**: s'enquadra en obrir o en triar una vista (la «3D» és el 3/4); editar no la mou, i **redimensionar el
   visor tampoc** (amagar o mostrar les Propietats o l'Estructura; per decisió de l'usuari, 2026-10-14; `CameraRig`: només
   els primers 1,5 s després de muntar-se, `SETTLE_MS`, mentre la disposició es col·loca). El botó
   surt **marcat** mentre la càmera és a l'enquadrament (`onFramedChange`). **Es recorda per moble** (`Composition.camera`,

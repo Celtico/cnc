@@ -1,6 +1,10 @@
-import { Box, SimpleGrid, Stack } from "@chakra-ui/react"
+import { Box, HStack, IconButton, SimpleGrid, Stack } from "@chakra-ui/react"
 import { useState, type ReactNode, type RefObject } from "react"
-import { LuAperture, LuCircleDot, LuExpand, LuShapes, LuShrink, LuSparkles, LuTrees, LuVideo, LuView, LuWrench } from "react-icons/lu"
+import type { IconType } from "react-icons"
+import { LuAperture, LuBox, LuCircleDot, LuExpand, LuPanelLeft, LuPanelRight, LuPanelTop, LuShapes, LuShrink, LuSparkles, LuSquare, LuSquareDashed, LuTrees, LuView, LuWrench } from "react-icons/lu"
+import { Tooltip } from "../../components/ui/tooltip"
+import { segGroup, segItem } from "../../components/segmented"
+import { VIEW_LABELS, type ViewName } from "../../components/viewer/viewNames"
 import { ViewOptions, ViewTile } from "../../components/ViewOptions"
 import { ArDialog } from "../../components/viewer/ArDialog"
 import type { SceneGetter } from "../../components/viewer/render/RenderDialog"
@@ -15,6 +19,16 @@ const VIEW_MODES: [ViewMode, string, string, typeof LuShapes][] = [
   ["pieces", "Per peça", "cada tipus de peça d'un color, ràpid i amb guies", LuShapes],
   ["texture", "Textura", "materials i veta, ràpid i amb guies", LuTrees],
   ["presentation", "Presentació", "ombres, terra i paret, sense guies", LuSparkles],
+]
+
+/** Les vistes de la barra de baix: la 3D (el 3/4 d'«Enquadrar») i les de cada costat. */
+const VIEW_BUTTONS: [ViewName | null, string, IconType, string][] = [
+  [null, "3D", LuBox, "Vista 3D: enquadra el moble de 3/4"],
+  ["front", VIEW_LABELS.front, LuSquare, "Vista de davant"],
+  ["back", VIEW_LABELS.back, LuSquareDashed, "Vista de darrere"],
+  ["left", VIEW_LABELS.left, LuPanelLeft, "Vista de l'esquerra"],
+  ["right", VIEW_LABELS.right, LuPanelRight, "Vista de la dreta"],
+  ["top", VIEW_LABELS.top, LuPanelTop, "Vista de dalt"],
 ]
 
 /**
@@ -34,7 +48,7 @@ export function ViewerToolbar({
   onImage,
 }: {
   opts: ViewerOptions
-  camera: Pick<EditorCamera, "framed" | "frameFrom">
+  camera: Pick<EditorCamera, "framed" | "frameFrom" | "viewDir">
   name: string
   projectId: number
   viewerPanels: Panel[]
@@ -45,7 +59,7 @@ export function ViewerToolbar({
   onImage: () => void
 }) {
   const { viewTab, viewMode, setViewMode, showHoles, setShowHoles, exploded, setExploded, viewer, hardware, setHardware, quality, roleColors, setRoleColors, viewerState, setViewer } = opts
-  const { framed, frameFrom } = camera
+  const { framed, frameFrom, viewDir } = camera
   // «Veure a casa»: visor 3D amb el botó d'AR Quick Look (Safari a l'iPhone/iPad).
   const [arOpen, setArOpen] = useState(false)
   // «Opcions de vista» obert: es tanca en obrir el Render (si no, el popover o el calaix quedaven a sobre).
@@ -62,7 +76,6 @@ export function ViewerToolbar({
   )
   const viewTiles = (
     <>
-      {tile("fit", "Enquadrar", <LuVideo />, framed, () => frameFrom(null), framed ? "Càmera enquadrada (no es mou sola en editar)" : "Enquadrar el moble")}
       {tile("holes", "Forats", <LuCircleDot />, showHoles || exploded || viewer.opacity < 1, () => setShowHoles((v) => !v), exploded ? "A la vista explosionada els forats sempre es veuen" : viewer.opacity < 1 ? "Amb les peces translúcides (Opacitat) els forats sempre es veuen" : showHoles ? "Amagar forats" : "Mostrar forats")}
       {tile("explode", "Explosió", exploded ? <LuShrink /> : <LuExpand />, exploded, () => setExploded((v) => !v), exploded ? "Vista muntada" : "Vista explosionada")}
       {tile("hardware", "Ferratges", <LuWrench />, hardware, () => setHardware((v) => !v), hardware ? "Amagar frontisses, tiradors i potes" : "Mostrar frontisses, tiradors i potes")}
@@ -77,6 +90,25 @@ export function ViewerToolbar({
   )
 
   return (
+    <>
+    {/* Les vistes, sempre a la vista a baix del 3D (per decisió de l'usuari, 2026-10-16): botons d'icona sense text (el nom,
+        al tooltip), amb la 3D (el 3/4 d'«Enquadrar»). La triada surt marcada mentre la càmera no es mou. */}
+    {viewTab === "3d" && (
+      <Box position="absolute" bottom={3} left="50%" transform="translateX(-50%)" zIndex={2}>
+        <HStack {...segGroup} bg="bg.panel" role="group" aria-label="Vistes">
+          {VIEW_BUTTONS.map(([v, label, Icon, tip]) => {
+            const on = framed && viewDir === v
+            return (
+              <Tooltip key={v ?? "3d"} content={tip}>
+                <IconButton {...segItem(on)} aria-label={label} aria-pressed={on} onClick={() => frameFrom(v)}>
+                  <Icon />
+                </IconButton>
+              </Tooltip>
+            )
+          })}
+        </HStack>
+      </Box>
+    )}
     <Stack
       position="absolute"
       top={3}
@@ -90,9 +122,10 @@ export function ViewerToolbar({
       {/* Al mòbil, un calaix de baix amb el seu propi desplaçament; a l'ordinador, un popover. */}
       <ViewOptions lead={viewModes} tiles={viewTiles} open={viewOptsOpen} onOpenChange={setViewOptsOpen}>
         <Box pt={3} borderTopWidth="1px">
-          <ViewerControls state={viewerState} onChange={setViewer} onView={(v) => frameFrom(v)} hasMoving={hasMoving} hasSelectedZone={hasSelectedZone} onImage={onImage} />
+          <ViewerControls state={viewerState} onChange={setViewer} hasMoving={hasMoving} hasSelectedZone={hasSelectedZone} onImage={onImage} />
         </Box>
       </ViewOptions>
     </Stack>
+    </>
   )
 }
