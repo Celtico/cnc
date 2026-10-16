@@ -87,6 +87,10 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     que toca, **un sol lloc per decisió i només el que la construcció llegeix** (`moduleRows` a
     `core/model/usedHardware.ts`, `frontsInspector.test.ts`), en cascada:
     - **Caixa** (`mod-structure`, `LuFrame`; abans «Estructura», es confonia amb la pestanya de l'arbre; `CarcassForm`):
+      **en subgrups plegables** (per decisió de l'usuari, 2026-10-16), cada un amb les seves opcions i una insígnia amb el
+      que hi ha: **Base** (suport, penjadors, base, llum a sota) · **Fons** (fons, ranura o retirada) · **Tapa** (tapa,
+      ranura d'aire, tauler de taula) · **Laterals** (laterals, parets, cantonades) · **Fronts** (estil, folgances,
+      retranqueig dels prestatges); el que l'aparell fixa no surt.
       a dalt, si el mòdul és un electrodomèstic, **una nota** amb el que fixa l'aparell (`applianceCarcass`, «Rentaplats:
       directe a terra, sense base, sense tapa i sense fons. Ho demana l'aparell»; les files fixes no surten) i les opcions
       del front de moble (`ApplianceFields`: Front, Material del front, Obre, Sòcol, Tirador); al nínxol de terra, els

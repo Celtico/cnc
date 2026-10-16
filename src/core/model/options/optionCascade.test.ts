@@ -120,7 +120,7 @@ describe("esborrany: editar i diferències", () => {
     const d = removeFromDraft(app, ["module.carcass.back"])
     const back = restoreAppNode(d, "module.carcass.back")
     expect(back.nodes.some((n) => n.id === "module.carcass.back")).toBe(true)
-    expect(back.edges.some((e) => e.id === edgeId("contains", "module.carcass", "module.carcass.back"))).toBe(true)
+    expect(back.edges.some((e) => e.id === edgeId("contains", "module.carcass.backGroup", "module.carcass.back"))).toBe(true)
     const e = app.edges[0]!
     expect(restoreAppEdge(removeFromDraft(app, [], [e.id]), e.id).edges.some((x) => x.id === e.id)).toBe(true)
   })

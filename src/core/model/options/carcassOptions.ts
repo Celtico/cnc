@@ -11,6 +11,7 @@ const HUNG_SIDES = "Surt amb qualsevol caixa penjada, però la construcció nom�
 export const CARCASS = section("module.carcass", "Caixa", { icon: "carcass", code: UI.sections, hideable: false, why: STRUCTURAL, note: "Insígnia «Recobrents»/«Encastats» si hi ha fronts. Les parts que fixa l'electrodomèstic que és el mòdul no surten: una nota a dalt ho diu." }, [
   // L'electrodomèstic que és el mòdul (Tipus = Electrodomèstic): una nota amb el que fixa i les opcions del front de moble.
   ...applianceFrontFields("module"),
+  section("module.carcass.baseGroup", "Base", { icon: "subsection", code: UI.carcass, note: "Per decisió de l'usuari, 2026-10-16: «a la Caixa fer subgrups: la Base amb les seves opcions, després el Fons, després la Tapa, després el Front»." }, [
   field("module.carcass.support", "Suport", {
     code: UI.carcass,
     control: "text",
@@ -45,6 +46,8 @@ export const CARCASS = section("module.carcass", "Caixa", { icon: "carcass", cod
     default: false,
     choices: [{ value: "on", label: "Sota la base", reveals: ["module.carcass.underLightHardware"] }],
   }, [field("module.carcass.underLightHardware", "Llum", { code: UI.carcass, control: "hardware", showIf: "Llum a sota", defaultText: AS_MODULE })]),
+  ]),
+  section("module.carcass.backGroup", "Fons", { icon: "subsection", code: UI.carcass }, [
   field("module.carcass.back", "Fons", {
     code: UI.carcass,
     control: "choice",
@@ -68,6 +71,8 @@ export const CARCASS = section("module.carcass", "Caixa", { icon: "carcass", cod
     }),
     field("module.carcass.backInsetSetback", "Retirada del fons", { code: UI.carcass, control: "number", showIf: "Fons = Encastat", default: 0, issue: RAW_BACK }),
   ]),
+  ]),
+  section("module.carcass.topGroup", "Tapa", { icon: "subsection", code: UI.carcass }, [
   field("module.carcass.top", "Tapa", {
     code: UI.carcass,
     control: "choice",
@@ -97,6 +102,8 @@ export const CARCASS = section("module.carcass", "Caixa", { icon: "carcass", cod
       field("module.carcass.tableTopShape", "Forma", { code: UI.carcass, control: "choice", default: "rect", choices: [{ value: "rect", label: "Rectangle" }, { value: "round", label: "Arrodonit" }, { value: "ellipse", label: "Oval" }], note: "i «Editar…» (forma a mida)" }),
     ]),
   ]),
+  ]),
+  section("module.carcass.sidesGroup", "Laterals", { icon: "subsection", code: UI.carcass, note: "Laterals, Parets i Cantonades (en depenen)." }, [
   field("module.carcass.sides", "Laterals", {
     code: UI.carcass,
     control: "choice",
@@ -125,6 +132,8 @@ export const CARCASS = section("module.carcass", "Caixa", { icon: "carcass", cod
     defaultEditable: true,
     choices: [{ value: "butt", label: "Normals" }, { value: "mitre", label: "A inglet" }],
   }),
+  ]),
+  section("module.carcass.frontsGroup", "Fronts", { icon: "subsection", code: UI.carcass, note: "L'estil i les folgances de tots els fronts del mòdul i el retranqueig dels prestatges." }, [
   field("module.carcass.frontStyle", "Estil dels fronts", {
     code: UI.carcass,
     control: "choice",
@@ -137,4 +146,5 @@ export const CARCASS = section("module.carcass", "Caixa", { icon: "carcass", cod
   field("module.carcass.outerGap", "Folgança front–cos", { code: UI.carcass, control: "number", showIf: "Com l'Estil dels fronts", defaultText: FROM_PREFS_GAPS, issue: "Mateixa dependència de Mòdul › Portes (més avall)." }),
   field("module.carcass.betweenGap", "Folgança entre fronts", { code: UI.carcass, control: "number", showIf: "Dues portes, dos o més calaixos, o un front recobrent que no és a l'arrel", defaultText: FROM_PREFS_GAPS, issue: "Mateixa dependència de Mòdul › Portes «Dues» (més avall)." }),
   field("module.carcass.shelfSetback", "Retranqueig dels prestatges", { code: UI.carcass, control: "number", showIf: "Algun compartiment amb tira LED, o prestatges (sense calaixos) que no van a ras o que un front encastat bloqueja", defaultText: FROM_PREFS_GAPS }),
+  ]),
 ])
