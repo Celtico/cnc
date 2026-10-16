@@ -11,6 +11,7 @@ import {
   splitZone,
   switchFront,
   unsplitZone,
+  flipSplit,
   canHoldAccessories,
   canHoldFront,
   canHoldShelves,
@@ -158,6 +159,12 @@ export function ZonePanel({
               <Button size="sm" variant="outline" onClick={() => onChange(unsplitZone(root, zone.id))}>
                 <LuUngroup /> Treure la divisió
               </Button>
+              {/* Girar-la: només si la de l'altra direcció té on unir el divisor (`splitDirsFor`). */}
+              {splitDirsFor(bounds).includes(zone.split.dir === "v" ? "h" : "v") && (
+                <Button size="sm" variant="outline" onClick={() => onChange(flipSplit(root, zone.id))}>
+                  {zone.split.dir === "v" ? <LuRows2 /> : <LuColumns2 />} Passar a {zone.split.dir === "v" ? "horitzontal" : "vertical"}
+                </Button>
+              )}
             </HStack>
             {splitExtra}
           </FoldItem>

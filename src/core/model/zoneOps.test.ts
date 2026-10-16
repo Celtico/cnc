@@ -147,3 +147,16 @@ describe("setDrawerHeight (alçades dels calaixos com la Divisió)", () => {
     expect(setDrawerHeight(drawers(["auto", "auto", 300]), 0, 150, [200, 200, 300]).heights).toEqual([150, 200, "auto"])
   })
 })
+
+describe("girar una divisió", async () => {
+  const { flipSplit, splitZone } = await import("./zoneOps")
+  it("vertical ↔ horitzontal, amb les mateixes zones i les mides a auto", () => {
+    const r = splitZone({ id: "r" }, "r", "v", 3)
+    const fixed = { ...r, split: { ...r.split!, sizes: [300, "auto", 200] as (number | "auto")[] } }
+    const f = flipSplit(fixed, "r")
+    expect(f.split!.dir).toBe("h")
+    expect(f.split!.children.map((c) => c.id)).toEqual(r.split!.children.map((c) => c.id))
+    expect(f.split!.sizes).toEqual(["auto", "auto", "auto"])
+    expect(flipSplit(f, "r").split!.dir).toBe("v")
+  })
+})

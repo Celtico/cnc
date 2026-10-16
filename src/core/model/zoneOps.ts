@@ -52,6 +52,14 @@ export function unsplitZone(root: Zone, id: string): Zone {
   })
 }
 
+/**
+ * Canvia la direcció d'una divisió (vertical ↔ horitzontal; per decisió de l'usuari, 2026-10-16): les zones i el que hi
+ * ha a dins es queden, en el mateix ordre; les mides fixes eren de l'altre eix, i passen totes a «auto» (iguals).
+ */
+export function flipSplit(root: Zone, id: string): Zone {
+  return updateZone(root, id, (z) => (z.split ? { ...z, split: { ...z.split, dir: z.split.dir === "v" ? "h" : "v", sizes: z.split.children.map(() => "auto" as const) } } : z))
+}
+
 /** Còpia d'una zona (i els seus fills) amb ids nous. */
 export function cloneZone(z: Zone): Zone {
   const { id: _old, split, ...rest } = z
