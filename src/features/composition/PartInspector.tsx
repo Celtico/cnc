@@ -42,6 +42,7 @@ import {
   DEFAULT_JOINERY,
   insertPartCopy,
   materialByName,
+  mobleBody,
   partChoices,
   reorientPart,
   PART_AXES,
@@ -116,6 +117,11 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
     // Si el material no es talla a la CNC (ferro, pedra, vidre…), la peça surt del nesting.
     update({ material: name, thickness: object ? p.thickness : t, nest: (m && materialCategory(m) === "sim") || object ? false : undefined })
   }
+  // «Com el cos» (per decisió de l'usuari, 2026-10-16): el material i el gruix del cos del mòdul on va enganxada o, si no,
+  // del moble (el més repetit dels mòduls).
+  const host = p.module ? comp.modules.find((m) => m.id === p.module) : undefined
+  const body = host ? { material: host.carcass.material, thickness: host.carcass.thickness } : mobleBody(comp)
+  const asBody = !!body && !object && p.material === body.material && p.thickness === body.thickness
   const groupLabel = p.group ?? "Sense grup"
   const attachable = !partsOnlyKind(compositionKind(comp)) && comp.modules.length > 0
   const attachedTo = p.module ? (comp.modules.find((m) => m.id === p.module)?.name ?? "?") : "Res"
@@ -191,7 +197,14 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
       {!cutter && (
         <FoldItem optionId="part.material" id="part-material" title="Material" icon={LuPalette} badge={p.material}>
           <FormRow optionId="part.material" label="Material" maxW="280px">
-            <MaterialSelect label="Material" hideLabel materials={boards} value={p.material} onChange={pickMaterial} />
+            <MaterialSelect
+              label="Material"
+              hideLabel
+              materials={boards}
+              value={asBody ? "" : p.material}
+              {...(body && !object ? { emptyLabel: `Com el cos (${body.material}, ${body.thickness} mm)` } : {})}
+              onChange={(v) => (v || !body ? pickMaterial(v) : update({ material: body.material, thickness: body.thickness, nest: undefined }))}
+            />
           </FormRow>
           {/* La veta és del tauler. Ferro, pedra, vidre…: sense veta. */}
           {cnc && (

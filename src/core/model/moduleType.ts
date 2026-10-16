@@ -6,6 +6,7 @@ import { isAppliance } from "./hardwareLibrary"
 import { moduleApplianceCarcass } from "./moduleVisible"
 import type { HardwareItem } from "./hardwareSchema"
 import type { Module } from "./moduleSchema"
+import type { Composition } from "./compositionSchema"
 
 /**
  * El **tipus** del mòdul (per decisió de l'usuari, 2026-10-15: «canviem Posició per tipus de moble, i allà seleccionem
@@ -120,4 +121,16 @@ export function withMobleMaterials(m: Module, modules: readonly Module[]): Modul
   if (f.drawerBottomMaterial) carcass.drawerBottomMaterial = f.drawerBottomMaterial
   else delete carcass.drawerBottomMaterial
   return { ...m, carcass }
+}
+
+/** El cos del moble: el material i el gruix més repetits dels seus mòduls (el «Com el moble» del mòdul). */
+export function mobleBody(comp: Pick<Composition, "modules">): { material: string; thickness: number } | undefined {
+  const count = new Map<string, { n: number; material: string; thickness: number }>()
+  for (const m of comp.modules) {
+    const k = `${m.carcass.material}|${m.carcass.thickness}`
+    const c = count.get(k)
+    count.set(k, { n: (c?.n ?? 0) + 1, material: m.carcass.material, thickness: m.carcass.thickness })
+  }
+  const top = [...count.values()].sort((a, b) => b.n - a.n)[0]
+  return top && { material: top.material, thickness: top.thickness }
 }

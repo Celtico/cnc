@@ -80,3 +80,12 @@ describe("Tipus de l'inspector: Moble o Electrodomèstic", () => {
     expect(setModuleKind(col, "moble", 0)).toBe(col)
   })
 })
+
+describe("el cos del moble", () => {
+  it("el material i el gruix més repetits dels mòduls", async () => {
+    const { mobleBody } = await import(".")
+    const m = (mat: string, t: number) => { const d = defaultModule("x", "x"); return { ...d, carcass: { ...d.carcass, material: mat, thickness: t } } }
+    expect(mobleBody({ modules: [m("A", 19), m("B", 16), m("B", 16)] })).toEqual({ material: "B", thickness: 16 })
+    expect(mobleBody({ modules: [] })).toBeUndefined()
+  })
+})

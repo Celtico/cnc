@@ -4,7 +4,7 @@ import { FoldGroup, FoldItem } from "../../components/Fold"
 import type { CompositionBuild } from "../../core/build/buildComposition"
 import type { ModuleBuild } from "../../core/build/buildModule"
 import { activeIslands } from "../../core/build/islands"
-import { groupItems, groupMulti, hasDrawers, moveMultiBy, newGroupName, partJoinery, partsOnlyKind, removeGroup, removeMulti, visibleModule, type Composition, type compositionKind, type Module, type MultiItem, type Settings, type Zone } from "../../core/model"
+import { groupItems, groupMulti, hasDrawers, mobleBody, moveMultiBy, newGroupName, partJoinery, partsOnlyKind, removeGroup, removeMulti, visibleModule, type Composition, type compositionKind, type Module, type MultiItem, type Settings, type Zone } from "../../core/model"
 import type { Project } from "../../db/db"
 import { CarcassForm, MaterialsForm } from "../composition/CarcassForm"
 import { HardwarePlacements, PlacementInspector, type PlacementActions } from "../composition/HardwarePlacements"
@@ -256,14 +256,3 @@ export function EditorInspector({
   )
 }
 
-/** El cos del moble: el material i el gruix més repetits dels seus mòduls (el «Com el moble» del mòdul). */
-function mobleBody(comp: Composition): { material: string; thickness: number } | undefined {
-  const count = new Map<string, { n: number; material: string; thickness: number }>()
-  for (const m of comp.modules) {
-    const k = `${m.carcass.material}|${m.carcass.thickness}`
-    const c = count.get(k)
-    count.set(k, { n: (c?.n ?? 0) + 1, material: m.carcass.material, thickness: m.carcass.thickness })
-  }
-  const top = [...count.values()].sort((a, b) => b.n - a.n)[0]
-  return top && { material: top.material, thickness: top.thickness }
-}
