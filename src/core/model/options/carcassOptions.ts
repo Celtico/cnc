@@ -84,11 +84,15 @@ export const CARCASS = section("module.carcass", "Caixa", { icon: "carcass", cod
     choices: [
       { value: "full", label: "Sencera", reveals: ["module.carcass.tableTop"] },
       { value: "ventSlot", label: "Ranura d'aire", reveals: ["module.carcass.ventGap"] },
-      { value: "grille", label: "Reixeta" },
+      { value: "grille", label: "Reixeta", reveals: ["module.carcass.grille.pattern", "module.carcass.grille.holes", "module.carcass.grille.slots", "module.carcass.grille.margin"] },
       { value: "none", label: "Sense tapa" },
     ],
   }, [
     field("module.carcass.ventGap", "Ranura d'aire", { code: UI.carcass, control: "number", showIf: "Tapa = Ranura d'aire", default: 60 }),
+    field("module.carcass.grille.pattern", "Patró", { code: UI.carcass, control: "choice", showIf: "Tapa = Reixeta", default: "slotsV", choices: [{ value: "slotsV", label: "Ranures verticals", reveals: ["module.carcass.grille.slots"] }, { value: "slotsH", label: "Ranures horitzontals", reveals: ["module.carcass.grille.slots"] }, { value: "holes", label: "Forats al tresbolillo", reveals: ["module.carcass.grille.holes"] }], note: "El mateix component que el front reixeta (`GrillePatternFields`); la tapa va fixa: sense muntatge." }),
+    field("module.carcass.grille.slots", "Ranura · Separació", { code: UI.carcass, control: "number", showIf: "Patró de ranures", default: 8 }),
+    field("module.carcass.grille.holes", "Diàmetre forat · Pas", { code: UI.carcass, control: "number", showIf: "Patró de forats" }),
+    field("module.carcass.grille.margin", "Marge", { code: UI.carcass, control: "number", showIf: "Tapa = Reixeta", default: 60 }),
     field("module.carcass.tableTop", "Tauler de taula", {
       code: UI.carcass,
       control: "switch",

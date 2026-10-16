@@ -1,5 +1,5 @@
 import { Stack, Switch, Text } from "@chakra-ui/react"
-import { LuAlignJustify, LuArrowDownToLine, LuArrowUpToLine, LuColumns3, LuDoorClosed, LuDoorOpen, LuFlipHorizontal2, LuGrip, LuMagnet, LuPanelLeft, LuPanelRight, LuSettings2 } from "react-icons/lu"
+import { LuArrowDownToLine, LuArrowUpToLine, LuDoorClosed, LuDoorOpen, LuFlipHorizontal2, LuMagnet, LuPanelLeft, LuPanelRight, LuSettings2 } from "react-icons/lu"
 import type { ReactNode } from "react"
 import { FoldItem } from "../../../components/Fold"
 import {
@@ -21,8 +21,8 @@ import { handleSpec } from "../../../core/build/hardware"
 import { NumRow } from "../../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../../components/FormRow"
 import { HardwarePick } from "../HardwarePick"
-import { IconChoice } from "../../../components/IconChoice"
 import { DrawerHeights, DrawerSlides, KitFields } from "./DrawerFields"
+import { GrillePatternFields } from "../GrillePatternFields"
 
 /** El front amb el seu ferratge (una còpia) o, sense, amb el del mòdul (el camp fora). */
 function withHardware<F extends Extract<Front, { kind: "door" | "drawers" | "flap" }>>(front: F, item: HardwareItem | undefined): F {
@@ -235,23 +235,9 @@ export function FrontFields({ front, openRatio, drawerHeights, onChange, hardwar
       )
     case "grille": {
       const p = front.pattern
-      const setP = (patch: Partial<typeof p>) => onChange({ ...front, pattern: { ...p, ...patch } })
       return (
         <Stack gap={3}>
           {/* Una fila per camp: el panell és estret i les opcions són llargues. */}
-          <FormRow optionId="zone.front.grille.pattern" label="Patró">
-            <IconChoice
-              hideLabel
-              label="Patró"
-              value={p.kind}
-              options={[
-                { value: "slotsV", label: "Ranures verticals", icon: LuColumns3 },
-                { value: "slotsH", label: "Ranures horitzontals", icon: LuAlignJustify },
-                { value: "holes", label: "Forats al tresbolillo", icon: LuGrip },
-              ]}
-              onChange={(kind) => setP({ kind })}
-            />
-          </FormRow>
           <FormRow optionId="zone.front.grille.mount" label="Muntatge">
             {/* Pastilles: «Frontisses» amb icona no cap en mig control segmentat. */}
             <ChoiceChips
@@ -267,18 +253,7 @@ export function FrontFields({ front, openRatio, drawerHeights, onChange, hardwar
           </FormRow>
           {/* Amb frontisses (les del mòdul): la filera de la placa. */}
           {front.mount !== "removable" && afterHinge}
-          {p.kind === "holes" ? (
-            <>
-              <NumRow optionId="zone.front.grille.holes" label="Diàmetre forat" value={p.holeDiameter} min={3} max={60} step={1} onChange={(holeDiameter) => setP({ holeDiameter })} />
-              <NumRow optionId="zone.front.grille.holes" label="Pas" value={p.holePitch} min={4} max={120} step={1} onChange={(holePitch) => setP({ holePitch })} />
-            </>
-          ) : (
-            <>
-              <NumRow optionId="zone.front.grille.slots" label="Ranura" value={p.slotWidth} min={3} max={60} step={1} onChange={(slotWidth) => setP({ slotWidth })} />
-              <NumRow optionId="zone.front.grille.slots" label="Separació" value={p.slotGap} min={3} max={100} step={1} onChange={(slotGap) => setP({ slotGap })} />
-            </>
-          )}
-          <NumRow optionId="zone.front.grille.margin" label="Marge" value={p.margin} min={10} max={200} step={5} onChange={(margin) => setP({ margin })} />
+          <GrillePatternFields pattern={p} onChange={(pattern) => onChange({ ...front, pattern })} ids={{ pattern: "zone.front.grille.pattern", holes: "zone.front.grille.holes", slots: "zone.front.grille.slots", margin: "zone.front.grille.margin" }} />
           {openRatio !== undefined && (
             <Text fontSize="sm" color={openRatio < 0.4 ? "fg.error" : "fg.muted"}>
               Àrea oberta: {Math.round(openRatio * 100)} % {openRatio < 0.4 ? "(per sota del 40 % recomanat)" : ""}

@@ -13,6 +13,7 @@ import { useSettings } from "../settings/SettingsContext"
 import { MaterialSelect } from "../settings/MaterialSelect"
 import { HardwarePick } from "./HardwarePick"
 import { HangerFields } from "./BaseFields"
+import { GrillePatternFields } from "./GrillePatternFields"
 import { ApplianceFields } from "./zone/ApplianceSection"
 
 type CarcassSection = "dims" | "structure"
@@ -194,6 +195,8 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
                   />
                 </FormRow>}
                 {vc.top.kind === "ventSlot" && c.top.kind === "ventSlot" && <NumRow optionId="module.carcass.ventGap" label="Ranura d'aire" value={c.top.gap} min={20} max={200} step={5} onChange={(gap) => set({ top: { kind: "ventSlot", gap } })} />}
+                {/* La reixeta de la tapa: el mateix patró que el front reixeta (va fixa a la caixa: sense muntatge). */}
+                {vc.top.kind === "grille" && c.top.kind === "grille" && <GrillePatternFields pattern={c.top.pattern} onChange={(pattern) => set({ top: { kind: "grille", pattern } })} ids={{ pattern: "module.carcass.grille.pattern", holes: "module.carcass.grille.holes", slots: "module.carcass.grille.slots", margin: "module.carcass.grille.margin" }} />}
 
                 {/* Tauler de taula: tapa per sobre dels laterals, amb voladís i forma. */}
                 {vc.top.kind === "full" && c.top.kind === "full" && <TableTopFields module={module} onChange={onChange} />}
