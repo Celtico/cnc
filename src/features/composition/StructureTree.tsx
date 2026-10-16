@@ -75,9 +75,14 @@ export function StructureTree({
   const showRefs = !isObject || comp.references.length > 0
   const showModels = isObject || models.length > 0
   const parts = comp.parts ?? []
-  // Grups de peces: plegats; s'obre sol el de la peça seleccionada.
-  const selGroup = selection.kind === "part" ? parts.find((q) => q.id === selection.id)?.group : selection.kind === "model" ? models.find((q) => q.id === selection.id)?.group : undefined
-  const { openGroups, toggleGroup, openGroup } = useOpenGroups(selGroup)
+  // Grups: plegats; s'obre sol el de l'element seleccionat (també des del 3D, per decisió de l'usuari, 2026-10-16: «quan
+  // selecciono una cosa que és dins d'un grup plegat, obrir el grup per veure la peça seleccionada»): peça, model o mòdul.
+  const selGroup =
+    selection.kind === "part" ? parts.find((q) => q.id === selection.id)?.group
+    : selection.kind === "model" ? models.find((q) => q.id === selection.id)?.group
+    : selModuleId ? comp.modules.find((m) => m.id === selModuleId)?.group
+    : undefined
+  const { openGroups, toggleGroup, openGroup } = useOpenGroups(selGroup, JSON.stringify(selection))
   const dnd = useTreeDnd({ comp, selection, onChange, openGroup })
   const addModel = (asset: ModelChoice, label: string) => {
     const [w, , d] = asset.size

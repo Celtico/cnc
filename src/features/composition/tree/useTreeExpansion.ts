@@ -15,10 +15,17 @@ export function useModuleAccordion(selModuleId: string | null) {
   return { openId, toggle }
 }
 
-/** Grups de peces: plegats; s'obre sol el de la peça seleccionada (`selGroup`). */
-export function useOpenGroups(selGroup: string | undefined) {
-  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
-  if (selGroup && !openGroups.has(selGroup)) setOpenGroups(new Set([...openGroups, selGroup]))
+/**
+ * Grups: plegats; en seleccionar un element d'un grup (`selKey` canvia), el seu grup (`selGroup`) s'obre sol. Plegar-lo
+ * després, amb l'element encara triat, el deixa plegat.
+ */
+export function useOpenGroups(selGroup: string | undefined, selKey: string) {
+  const [openGroups, setOpenGroups] = useState<Set<string>>(() => new Set(selGroup ? [selGroup] : []))
+  const [lastKey, setLastKey] = useState(selKey)
+  if (selKey !== lastKey) {
+    setLastKey(selKey)
+    if (selGroup && !openGroups.has(selGroup)) setOpenGroups(new Set([...openGroups, selGroup]))
+  }
   const toggleGroup = (g: string) => setOpenGroups((o) => {
     const n = new Set(o)
     if (n.has(g)) n.delete(g)

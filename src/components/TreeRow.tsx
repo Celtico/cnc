@@ -1,5 +1,5 @@
 import { Box, HStack, IconButton, Menu, Portal, Spinner, Text } from "@chakra-ui/react"
-import type { ReactNode } from "react"
+import { useEffect, useRef, type ReactNode } from "react"
 import { LuEllipsis, LuEye, LuEyeOff, LuLock, LuLockOpen, LuPlus } from "react-icons/lu"
 import { SectionLabel } from "./SectionLabel"
 
@@ -75,8 +75,14 @@ export function TreeRow({
   muted?: boolean
   menu?: ReactNode
 }) {
+  // Triat des d'un altre lloc (el 3D, l'alçat): la fila es fa veure a l'arbre (el grup plegat ja s'obre, `useOpenGroups`).
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (selected) ref.current?.scrollIntoView?.({ block: "nearest" })
+  }, [selected])
   return (
     <HStack
+      ref={ref}
       role="treeitem"
       aria-selected={selected}
       gap={2}
