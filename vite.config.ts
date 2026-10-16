@@ -54,8 +54,10 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // Els models 3D (`public/models/*.glb`, ~150 KB cadascun) també: les plantes surten sense connexió.
-        globPatterns: ["**/*.{js,css,html,svg,png,woff2,glb,hdr}"],
+        // Només l'app (codi, estils, icones): és el que cal per dissenyar i treure fitxers sense connexió. Els models 3D de
+        // les plantes (`models/*.glb`, ~4,4 MB) i els cels del render (`hdr/*.hdr`, ~4,2 MB) són decoratius: es desen el
+        // primer cop que es fan servir (més avall), i la instal·lació a l'iPhone baixa ~5,6 MB en lloc de ~14.
+        globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
         // Les pantalles d'inici d'iOS les desa el sistema en instal·lar l'app: no cal precachejar-les.
         // Fallbacks JS de Draco/Basis (de model-viewer, ~0,9 MB): el visor AR no els fa servir mai.
         globIgnores: ["splash/**", "assets/draco_*", "assets/basis_*"],
@@ -64,6 +66,18 @@ export default defineConfig({
         runtimeCaching: [
           // WASM de Draco i Basis (`src/pwaWasmCache.ts`).
           ...WASM_RUNTIME_CACHING,
+          {
+            // Plantes i altres models del catàleg (`models/*.glb`).
+            urlPattern: ({ url }) => url.pathname.startsWith("/models/"),
+            handler: "CacheFirst",
+            options: { cacheName: "mobles-models", expiration: { maxEntries: 60 }, cacheableResponse: { statuses: [200] } },
+          },
+          {
+            // Cels del render (`hdr/*.hdr`, ~2 MB cadascun).
+            urlPattern: ({ url }) => url.pathname.startsWith("/hdr/"),
+            handler: "CacheFirst",
+            options: { cacheName: "mobles-hdr", expiration: { maxEntries: 8 }, cacheableResponse: { statuses: [200] } },
+          },
           {
             urlPattern: ({ url }) => url.pathname.startsWith("/textures/"),
             handler: "CacheFirst",

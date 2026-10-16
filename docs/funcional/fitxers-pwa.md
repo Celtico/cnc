@@ -72,8 +72,10 @@
 - **Versió** (com a rack): `__APP_VERSION__` = nombre de commits i `__APP_COMMIT__` (git en construir, `vite.config.ts`; sense
   git, `APP_VERSION` o «dev»), petita al costat del nom al menú i al manifest. El Dockerfile instal·la git i el `.git` no
   s'ignora.
-- Precache (`vite.config.ts`): models `.glb` i HDRI sí; fotos de textura (`/textures/`) i pesos d'OIDN (`/oidn/`, `oidn.ts`
-  els valida i esborra els dolents de la seva memòria cau) no: `runtimeCaching` CacheFirst en fer-los servir; splash no.
+- Precache (`vite.config.ts`): només l'app (JS, CSS, HTML, icones), ~5,4 MB. Els models `.glb` del catàleg (`/models/`,
+  plantes, ~4,4 MB), els HDRI del render (`/hdr/`, ~4,2 MB), les fotos de textura (`/textures/`) i els pesos d'OIDN
+  (`/oidn/`, `oidn.ts` els valida i esborra els dolents de la seva memòria cau) no: `runtimeCaching` CacheFirst en fer-los
+  servir (sense connexió, només els que ja s'han fet servir algun cop); splash no.
   El WASM d'OpenCascade (`assets/occt-import-js-*.wasm`, importar ferratges) tampoc: CacheFirst en fer-lo servir, a la
   seva memòria (`mobles-occt`, `src/pwaWasmCache.ts`; amb Draco i Basis a la mateixa de 4, en sortia). L'API i els fitxers de
   Poly Haven (importar models) no passen per cap memòria cau: sense connexió fallen amb `OfflineError` i la UI ho explica.
