@@ -1,5 +1,5 @@
 import type { KitOrder } from "./buildModule"
-import { kitOptionsText, kitWoodText, type KitOrderLine } from "./drawerKit"
+import { kitOptionsText, kitWoodText, type KitOrderLine, type KitWoodSize } from "./drawerKit"
 
 /**
  * La comanda dels jocs de calaix d'un moble, agrupada per al taller (Peces › «Ferratges dels jocs» i el LLEGEIX-ME):
@@ -13,6 +13,8 @@ export interface KitGroup {
   lines: KitOrderLine[]
   /** «Per calaix: Fons del calaix (A) · 681 × 421 × 16 · Darrere del calaix (B) · 660 × 63 × 16». */
   wood: string
+  /** Les peces de fusta d'un calaix (les de `wood`), per pintar-les com a taula a la UI. */
+  woodParts?: KitWoodSize[]
 }
 
 export function kitGroups(orders: readonly (KitOrder & { module?: number })[]): KitGroup[] {
@@ -21,7 +23,7 @@ export function kitGroups(orders: readonly (KitOrder & { module?: number })[]): 
     const key = `${o.kit}|${o.nl}|${o.options.closing}|${o.options.back}|${o.syncRod ?? ""}`
     let g = groups.get(key)
     if (!g) {
-      g = { key, title: "", drawers: 0, lines: o.lines.map((l) => ({ ...l, qty: 0 })), wood: o.wood.length ? `Per calaix: ${o.wood.map(kitWoodText).join(" · ")}` : "Sense peces de fusta.", modules: new Set() }
+      g = { key, title: "", drawers: 0, lines: o.lines.map((l) => ({ ...l, qty: 0 })), wood: o.wood.length ? `Per calaix: ${o.wood.map(kitWoodText).join(" · ")}` : "Sense peces de fusta.", woodParts: o.wood, modules: new Set() }
       groups.set(key, g)
     }
     g.drawers += 1

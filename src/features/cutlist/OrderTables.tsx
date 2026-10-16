@@ -2,59 +2,18 @@ import { Stack, Table, Text } from "@chakra-ui/react"
 import { SectionLabel } from "../../components/SectionLabel"
 import type { CompositionBuild } from "../../core/build/buildComposition"
 import type { KitGroup } from "../../core/build/kitOrders"
+import { KitOrderCard } from "./KitOrderCard"
 import { WiringPlan } from "./WiringPlan"
-
-/** La comanda d'un joc (calaix o llum): el títol, la taula de components i la nota de sota. */
-function KitOrderTable({ group: g }: { group: KitGroup }) {
-  return (
-    <Stack gap={1}>
-      <Text fontSize="sm" fontWeight="medium">
-        {g.title}
-      </Text>
-      <Table.ScrollArea borderWidth="1px" rounded="lg">
-        <Table.Root size="sm" variant="line" striped>
-          <Table.Header>
-            <Table.Row>
-              <Table.ColumnHeader>Component</Table.ColumnHeader>
-              <Table.ColumnHeader textAlign="end">Qt</Table.ColumnHeader>
-              <Table.ColumnHeader>Referència</Table.ColumnHeader>
-              <Table.ColumnHeader>Notes</Table.ColumnHeader>
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {g.lines.map((l, i) => (
-              <Table.Row key={i}>
-                <Table.Cell fontWeight="medium">{l.name}</Table.Cell>
-                <Table.Cell textAlign="end">{l.qty}</Table.Cell>
-                <Table.Cell fontFamily="mono" fontSize="xs">
-                  {l.item ?? "—"}
-                </Table.Cell>
-                <Table.Cell fontSize="xs" color="fg.muted">
-                  {[l.cutLength !== undefined ? `tallar a ${l.cutLength} mm` : "", l.note ?? ""].filter(Boolean).join(" · ")}
-                </Table.Cell>
-              </Table.Row>
-            ))}
-          </Table.Body>
-        </Table.Root>
-      </Table.ScrollArea>
-      {g.wood && (
-        <Text fontSize="xs" color="fg.muted">
-          {g.wood}
-        </Text>
-      )}
-    </Stack>
-  )
-}
 
 /** Les comandes de ferratges: jocs de calaix, ferratges per mòdul, ferratges per metres i llums (amb el pla de cablejat). */
 export function OrderSections({ kitRows, fittingRows, linearRows, lightRows, wirings }: { kitRows: KitGroup[]; fittingRows: KitGroup[]; linearRows: KitGroup[]; lightRows: KitGroup[]; wirings: CompositionBuild["wirings"] }) {
   return (
     <>
     {kitRows.length > 0 && (
-      <Stack gap={2} data-testid="kit-orders">
+      <Stack gap={3} data-testid="kit-orders">
         <SectionLabel>Ferratges dels jocs</SectionLabel>
         {kitRows.map((g) => (
-          <KitOrderTable key={g.key} group={g} />
+          <KitOrderCard key={g.key} group={g} />
         ))}
         <Text fontSize="xs" color="fg.muted">
           Calaixos de doble paret: el joc del fabricant (números d'article del catàleg) i la fusta que demana (el fons i el darrere ja són a la llista de peces; cap lateral de fusta).
@@ -62,10 +21,10 @@ export function OrderSections({ kitRows, fittingRows, linearRows, lightRows, wir
       </Stack>
     )}
     {fittingRows.length > 0 && (
-      <Stack gap={2} data-testid="fitting-orders">
+      <Stack gap={3} data-testid="fitting-orders">
         <SectionLabel>Ferratges</SectionLabel>
         {fittingRows.map((g) => (
-          <KitOrderTable key={g.key} group={g} />
+          <KitOrderCard key={g.key} group={g} />
         ))}
         <Text fontSize="xs" color="fg.muted">
           El que cal comprar per mòdul: frontisses, tiradors, pistons de gas i potes, amb el número d'article del catàleg (els forats ja són a les peces).
@@ -73,10 +32,10 @@ export function OrderSections({ kitRows, fittingRows, linearRows, lightRows, wir
       </Stack>
     )}
     {linearRows.length > 0 && (
-      <Stack gap={2} data-testid="linear-orders">
+      <Stack gap={3} data-testid="linear-orders">
         <SectionLabel>Ferratges per metres</SectionLabel>
         {linearRows.map((g) => (
-          <KitOrderTable key={g.key} group={g} />
+          <KitOrderCard key={g.key} group={g} />
         ))}
         <Text fontSize="xs" color="fg.muted">
           Perfils que es compren en barres (o per metres) i es tallen a mida: la regleta de paret dels penjadors (la dels mòduls penjats seguits, d'un sol tros) i els sòcols d'alumini, amb els clips i les cantoneres.
@@ -84,10 +43,10 @@ export function OrderSections({ kitRows, fittingRows, linearRows, lightRows, wir
       </Stack>
     )}
     {lightRows.length > 0 && (
-      <Stack gap={2} data-testid="light-orders">
+      <Stack gap={3} data-testid="light-orders">
         <SectionLabel>Llums i instal·lació elèctrica</SectionLabel>
         {lightRows.map((g) => (
-          <KitOrderTable key={g.key} group={g} />
+          <KitOrderCard key={g.key} group={g} />
         ))}
         {wirings.map((w) => (
           <WiringPlan key={w.moduleId} item={w} />

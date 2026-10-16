@@ -131,6 +131,16 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   groc discontinu) amb la ref, forats i fresats d'un color per eina amb la llegenda, «Amplada de l'eina», fletxa de rampa,
   números d'«Ordre» («289·302·318» si coincideixen), zoom 1×/2×/4×, `ChoiceChips` per tauler i la llista compacta
   d'operacions (tocar-ne una la marca).
+- **Cotes en passar el ratolí** (per decisió de l'usuari, 2026-10-16: «que et mostri totes les mides relacionades per poder
+  comprovar la vista CAM»): passar el ratolí per una peça, un forat o un fresat el ressalta i hi dibuixa les cotes (el
+  `DimLine` dels plànols, amb gruix i lletra en píxels de pantalla a qualsevol zoom) i una fitxa a un racó del dibuix.
+  Peça: amplada × alçada i X/Y des de l'origen (baix a l'esquerra), distància als cantells dret i de dalt del tauler, llarg ×
+  ample i gir. Forat: Ø, fondària, X/Y des de l'origen i distància als cantells més propers de la peça (i als quatre a la
+  fitxa). Contorn o tall: mida (o Ø), llargada del recorregut, eina i Ø, fondària, passades i sobrant; caixera, ranura i
+  fresat: amplada, llargada, fondària i distància als cantells de la peça. Passar per una fila de la llista fa el mateix al
+  dibuix, i al revés la fila s'il·lumina (i la llista s'hi desplaça si té barra pròpia). Al mòbil, **tocar** fixa la
+  inspecció (i marca la fila de l'operació); tornar a tocar o tocar el tauler la treu. Càlcul pur a
+  `features/export/camInspect.ts` (`camInspect.test.ts`).
 - Tests (`xcsPreview.test.ts`): mobles del catàleg amb el context real (el que es llegeix = el que s'ha escrit),
   `nesting_T01.xcs`, el programa real del taller i els per peça.
 

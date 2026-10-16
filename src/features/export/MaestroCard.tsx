@@ -1,8 +1,9 @@
-import { Alert, Box, Button, HStack, Stack, Text } from "@chakra-ui/react"
+import { Alert, Button, HStack, Stack, Text } from "@chakra-ui/react"
 import { LuFactory, LuMonitorCog } from "react-icons/lu"
 import { FoldItem } from "../../components/Fold"
 import type { Machine } from "../../core/model"
 import { ExportCard } from "./ExportCard"
+import { PostCncList } from "./PostCncList"
 import type { MaestroPrograms } from "./useMaestroPrograms"
 
 /** Mm amb coma decimal (com a la resta de la UI). */
@@ -68,24 +69,7 @@ export function MaestroCard({ base, machine, xcs, onXcs, onCam }: { base: string
       {xcs && xcs.postProcessPanels > 0 && (
         // Inglets, cantells, encolar…: no són avisos, és el que toca després de la CNC (també al LLEGEIX-ME).
         <FoldItem id="export-after-cnc" variant="nested" title="Després de la CNC" count={xcs.postProcessPanels}>
-          <Stack gap={2} fontSize="sm" mt={1}>
-            {xcs.rows.map((r) =>
-              r.postProcesses.length ? (
-                <Box key={r.ref}>
-                  <Text fontWeight="medium">
-                    {r.ref} · {r.label}
-                  </Text>
-                  <Text color="fg.muted">{r.route}</Text>
-                  <Stack as="ol" gap={0} ps={5} listStyleType="decimal">
-                    {r.postProcesses.map((x, k) => (
-                      <li key={k}>{x.text}</li>
-                    ))}
-                  </Stack>
-                </Box>
-              ) : null,
-            )}
-            <Text color="fg.muted">Cantells amb la numeració de l'app (1 dalt · 2 dreta · 3 baix · 4 esquerra).</Text>
-          </Stack>
+          <PostCncList rows={xcs.rows} />
         </FoldItem>
       )}
     </ExportCard>

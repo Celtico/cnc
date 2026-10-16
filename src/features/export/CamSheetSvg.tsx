@@ -1,11 +1,40 @@
-import { Fragment } from "react"
+import { Fragment, type PointerEvent } from "react"
+import { DimLine } from "../../components/DimLine"
 import { approachSegment, type CamOp, type CamRow, type Pt } from "../../core/export/xcsPreview"
 import { colorFor, svgPath, token, type CamSheetView } from "./camDrawing"
+import type { CamInspection, CamTarget } from "./camInspect"
 
 export type Zoom = "1" | "2" | "4"
 
-/** El dibuix d'un programa: tauler, peces, recorreguts de les eines, forats, sentits, rampes, refs i ordre. */
-export function CamSheetSvg({ view, file, cw, zoom, band, order, selRow }: { view: CamSheetView; file: string; cw: number; zoom: Zoom; band: boolean; order: boolean; selRow: CamRow | null }) {
+/**
+ * El dibuix d'un programa: tauler, peces, recorreguts de les eines, forats, sentits, rampes, refs i ordre. Passar el
+ * ratolí per una peça o una operació (o tocar-la) la ressalta amb les seves cotes (`insp`, de `camInspect`).
+ */
+export function CamSheetSvg({
+  view,
+  file,
+  cw,
+  zoom,
+  band,
+  order,
+  selRow,
+  target,
+  insp,
+  onHover,
+  onPick,
+}: {
+  view: CamSheetView
+  file: string
+  cw: number
+  zoom: Zoom
+  band: boolean
+  order: boolean
+  selRow: CamRow | null
+  target: CamTarget | null
+  insp: CamInspection | null
+  onHover: (t: CamTarget | null) => void
+  onPick: (t: CamTarget | null) => void
+}) {
   const { preview: p } = view
   const L = p.workpiece?.L ?? 1000
   const W = p.workpiece?.W ?? 1000
@@ -19,6 +48,15 @@ export function CamSheetSvg({ view, file, cw, zoom, band, order, selRow }: { vie
   const Y = (y: number) => W - y
   const top = p.ops.filter((o) => o.plane === "Top")
   const selected = new Set(selRow?.ops.map((o) => o.n) ?? [])
+  if (target?.kind === "op") selected.add(target.n)
+  const activePart = target?.kind === "part" ? p.parts.find((q) => q.ref === target.ref) : undefined
+  /** Zona per inspeccionar: el ratolí la mostra en passar-hi; tocar-la (o clicar) la deixa fixada. */
+  const hit = (t: CamTarget) => ({
+    onPointerEnter: (e: PointerEvent) => e.pointerType !== "touch" && onHover(t),
+    onPointerLeave: (e: PointerEvent) => e.pointerType !== "touch" && onHover(null),
+    onClick: () => onPick(t),
+    style: { cursor: "pointer" },
+  })
   const fontPx = 10
 
   const drillR = (o: CamOp) => Math.max((o.diameter ?? 0) / 2, px(2.5))
@@ -85,7 +123,7 @@ export function CamSheetSvg({ view, file, cw, zoom, band, order, selRow }: { vie
   return (
     <svg width={svgW} height={(svgW * vh) / vw} viewBox={`${-pad} ${-pad} ${vw} ${vh}`} style={{ display: "block" }} role="img" aria-label={`Programa ${file}`}>
       {/* Tauler i marge que no s'aprofita. */}
-      <rect x={0} y={0} width={L} height={W} fill={token("bg.panel")} stroke={token("fg.muted")} strokeWidth={1} vectorEffect="non-scaling-stroke" />
+      <rect x={0} y={0} width={L} height={W} onClick={() => onPick(null)} fill={token("bg.panel")} stroke={token("fg.muted")} strokeWidth={1} vectorEffect="non-scaling-stroke" />
       {p.edgeTrim ? <rect x={p.edgeTrim} y={p.edgeTrim} width={L - 2 * p.edgeTrim} height={W - 2 * p.edgeTrim} fill="none" stroke={token("fg.subtle")} strokeDasharray="4 4" strokeWidth={1} vectorEffect="non-scaling-stroke" /> : null}
       {/* Peces (les petites, en groc). */}
       {p.parts.map((q) => {
@@ -149,13 +187,33 @@ export function CamSheetSvg({ view, file, cw, zoom, band, order, selRow }: { vie
           </text>
         )
       })}
+      {/* Peça inspeccionada. */}
+      {activePart &&
+        (insp?.outline ? (
+          <path d={svgPath(insp.outline, true, W)} fill="none" stroke={token("fg")} strokeWidth={2.5} vectorEffect="non-scaling-stroke" pointerEvents="none" />
+        ) : (
+          <rect x={activePart.x} y={Y(activePart.y + activePart.h)} width={activePart.w} height={activePart.h} fill="none" stroke={token("fg")} strokeWidth={2.5} vectorEffect="non-scaling-stroke" pointerEvents="none" />
+        ))}
+      {/* Zones per inspeccionar: les peces a sota, les operacions (amb un gruix mínim per encertar-les) a sobre. */}
+      <g fill="transparent" stroke="transparent">
+        {p.parts.map((q) => (
+          <rect key={`h${q.ref}`} x={q.x} y={Y(q.y + q.h)} width={q.w} height={q.h} pointerEvents="fill" {...hit({ kind: "part", ref: q.ref })} />
+        ))}
+        {top.map((o) => {
+          if (o.kind === "drill") return <circle key={`h${o.n}`} cx={o.x} cy={Y(o.y ?? 0)} r={Math.max(drillR(o), px(6))} pointerEvents="fill" {...hit({ kind: "op", n: o.n })} />
+          const d = view.draws.get(o.n)
+          if (!d) return null
+          const pts = d.centre.length > 1 ? d.centre : d.outline
+          return <path key={`h${o.n}`} d={svgPath(pts, d.closed, W)} fill={d.fill ? "transparent" : "none"} strokeWidth={Math.max(d.width ?? 0, px(10))} strokeLinejoin="round" strokeLinecap="round" pointerEvents={d.fill ? "visible" : "stroke"} {...hit({ kind: "op", n: o.n })} />
+        })}
+      </g>
       {/* Ordre: el número de cada fila de la llista al començament de la seva primera operació. */}
       {(order || selRow) &&
         orderMarks(view.rows.filter((r) => order || r === selRow)).map(({ at: a, label }) => {
           const fs = px(9)
           const rw = Math.max(px(14), label.length * fs * 0.62 + px(6))
           return (
-            <g key={`n${label}`}>
+            <g key={`n${label}`} pointerEvents="none">
               <rect x={a[0] - rw / 2} y={Y(a[1]) - px(7)} width={rw} height={px(14)} rx={px(7)} fill={token("fg")} />
               <text x={a[0]} y={Y(a[1])} textAnchor="middle" dominantBaseline="central" fill={token("bg")} style={{ fontFamily: "inherit", fontWeight: 600, fontSize: fs }}>
                 {label}
@@ -163,6 +221,14 @@ export function CamSheetSvg({ view, file, cw, zoom, band, order, selRow }: { vie
             </g>
           )
         })}
+      {/* Cotes del que s'inspecciona (gruix i lletra en píxels de pantalla, a qualsevol zoom). */}
+      {insp && (
+        <g pointerEvents="none">
+          {insp.dims.map((d, i) => (
+            <DimLine key={i} d={{ a: [d.a[0], Y(d.a[1])], b: [d.b[0], Y(d.b[1])], offset: -px(d.off), label: d.label, title: d.title }} stroke={px(1)} fs={px(11)} />
+          ))}
+        </g>
+      )}
     </svg>
   )
 }
