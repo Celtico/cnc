@@ -90,10 +90,10 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
       directe a terra, sense base, sense tapa i sense fons. Ho demana l'aparell»; les files fixes no surten) i les opcions
       del front de moble (`ApplianceFields`: Front, Material del front, Obre, Sòcol, Tirador); al nínxol de terra, els
       laterals són «Laterals de remat» (una peça sola, sense Parets ni Estil dels fronts: `ApplianceCarcass.niche`).
-      **Suport**, **Alçada** i **Pota** (els del moble, `SupportBasics`: canviar-los aquí els canvia a tots els mòduls de
-      terra; per decisió de l'usuari, 2026-10-16: «les opcions que no són possibles no han de sortir, però sí les que ho
-      són, com les potes»; la retirada, el sòcol i els trams, al Moble › Sòcol i potes; sense base, el text «Directe a
-      terra»; penjat: «Penjat a la paret, a … mm del terra», es canvia a Tipus) i, sota, **Base** (Sencera · Sense base;
+      **Suport**: és una opció global (la de tots els mòduls de terra), i les globals no es repeteixen al mòdul (per
+      decisió de l'usuari, 2026-10-16: «no repetir les opcions ni posar un missatge, sinó un botó que digui modificar
+      opció global»): el text del que hi ha i el botó **Modificar opció global**, que obre el Moble › Sòcol i potes (suport,
+      alçada, pota, retirada, sòcol i trams); penjat: «Penjat a la paret, a … mm del terra», es canvia a Tipus i, sota, **Base** (Sencera · Sense base;
       amb potes no surt: s'hi cargolen). **Llum a sota**: penjat o amb potes vistes (amb sòcol quedaria amagada: no surt
       i no es fa). La resta, com sempre:
       penjat, «Penjadors» i «Regleta» amb «Com el mòdul» i «Cap» (`BaseFields.tsx`)—, fons i, just a sota, **Ranura del fons** (en ranura) o **Retirada

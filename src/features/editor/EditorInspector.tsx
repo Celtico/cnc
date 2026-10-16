@@ -4,7 +4,7 @@ import { FoldGroup, FoldItem } from "../../components/Fold"
 import type { CompositionBuild } from "../../core/build/buildComposition"
 import type { ModuleBuild } from "../../core/build/buildModule"
 import { activeIslands } from "../../core/build/islands"
-import { groupItems, groupMulti, hasDrawers, moveMultiBy, newGroupName, partJoinery, partsOnlyKind, removeGroup, removeMulti, setSupport, visibleModule, type Composition, type compositionKind, type Module, type MultiItem, type Settings, type Zone } from "../../core/model"
+import { groupItems, groupMulti, hasDrawers, moveMultiBy, newGroupName, partJoinery, partsOnlyKind, removeGroup, removeMulti, visibleModule, type Composition, type compositionKind, type Module, type MultiItem, type Settings, type Zone } from "../../core/model"
 import type { Project } from "../../db/db"
 import { CarcassForm, MaterialsForm } from "../composition/CarcassForm"
 import { HardwarePlacements, PlacementInspector, type PlacementActions } from "../composition/HardwarePlacements"
@@ -234,7 +234,15 @@ export function EditorInspector({
           <FoldItem optionId="module.dims" id="mod-dims" title="Mides" icon={LuMoveDiagonal} badge={`${module.carcass.width} × ${module.carcass.height}`}>
             <CarcassForm module={module} onChange={updateModule} section="dims" />
           </FoldItem>
-          <ModuleSections module={module} updateModule={updateModule} support={comp.support} onSupport={(patch) => setComp((c) => (c.support ? setSupport(c, { ...c.support, ...patch }) : c))} />
+          <ModuleSections
+            module={module}
+            updateModule={updateModule}
+            support={comp.support}
+            onOpenSupport={() => {
+              select({ kind: "moble" })
+              setInspectorOpen(["moble-support"])
+            }}
+          />
           {/* «Ferratges» (col·locats a mà i els de les regles) no surt a l'inspector del mòdul (per decisió de l'usuari,
               2026-10-08): els col·locats es conserven, es fabriquen i es veuen al 3D (on es trien i s'editen). */}
         </Stack>

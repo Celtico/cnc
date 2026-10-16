@@ -93,15 +93,14 @@ export function SupportForm({ comp, setComp }: { comp: Composition; setComp: (f:
   )
 }
 
-/** Els ids de les opcions en cascada de {@link SupportBasics}: al Moble (`moble.support.*`) o a la Caixa del mòdul. */
+/** Els ids de les opcions en cascada de {@link SupportBasics} (`moble.support.*`). */
 interface SupportIds { kind: string; height: string; leg: string; legInset: string }
 
 /**
- * Suport, alçada i pota: el mateix per a tots els mòduls de terra. Al Moble › Sòcol i potes i, per decisió de l'usuari
- * (2026-10-16: «les opcions que no són possibles no han de sortir, però sí les que ho són, com les potes»), també a la
- * Caixa de cada mòdul de terra: el canvi és el del moble.
+ * Suport, alçada i pota: el mateix per a tots els mòduls de terra, només al Moble › Sòcol i potes (la Caixa del mòdul en
+ * diu el text i hi porta amb «Modificar opció global»).
  */
-export function SupportBasics({ support: s, onChange: set, first, help, ids }: { support: FloorSupport; onChange: (patch: Partial<FloorSupport>) => void; first?: Module; help: string; ids: SupportIds }) {
+function SupportBasics({ support: s, onChange: set, first, help, ids }: { support: FloorSupport; onChange: (patch: Partial<FloorSupport>) => void; first?: Module; help: string; ids: SupportIds }) {
   return (
     <>
       <FormRow optionId={ids.kind} label="Suport" help={help}>

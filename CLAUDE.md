@@ -210,6 +210,9 @@ Les etiquetes i les ajudes de la UI fan servir sempre aquestes paraules (auditor
     Mòdul › Electrodomèstic i no al seu Interior; el d'un mòdul dividit, al compartiment). Els **per defecte** del mòdul (tirador i ferratges)
     no surten: es trien a cada compartiment («Com el mòdul» = l'heretat). Res del que la construcció no llegeix no surt, i
     al revés (`usedHardwareSlots`, `moduleRows`; res amagat compta).
+  - **Opcions globals** (per decisió de l'usuari, 2026-10-16): una opció que és de tot el moble (p. ex. el suport dels
+    mòduls de terra) **no es repeteix** a l'inspector del mòdul ni s'hi posa un missatge: hi surt el que hi ha (text) i un
+    botó **«Modificar opció global»** que obre la secció del Moble on es tria.
   - **Opció nova a un inspector → al registre** de les opcions en cascada (`core/model/options/`, `optionId` a la fila; ho
     comprova `src/optionCascade.test.ts`): així surt a l'esborrany de Preferències › Opcions en cascada (un dibuix per
     pensar la cascada; **no s'aplica a l'Editor**, [convencions](docs/convencions.md)).

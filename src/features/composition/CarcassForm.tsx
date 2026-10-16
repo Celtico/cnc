@@ -6,12 +6,11 @@ import { IconChoice } from "../../components/IconChoice"
 import { useState } from "react"
 import { ProfileEditor } from "./ProfileEditor"
 import { PRESETS, matchPreset } from "./profilePresets"
-import { LuCircle, LuPencilRuler, LuRectangleHorizontal, LuSquircle } from "react-icons/lu"
+import { LuCircle, LuGlobe, LuPencilRuler, LuRectangleHorizontal, LuSquircle } from "react-icons/lu"
 import { LuDrill, LuGrid3X3, LuInspectionPanel, LuLayers2, LuPanelBottom, LuPanelTop, LuSquareDashed, LuSquare, LuSquareDashedBottom, LuSquareSquare, LuSquareStack, LuTriangleRight, LuWind } from "react-icons/lu"
 import { useSettings } from "../settings/SettingsContext"
 import { MaterialSelect } from "../settings/MaterialSelect"
 import { HardwarePick } from "./HardwarePick"
-import { SupportBasics } from "./SupportForm"
 import { HangerFields } from "./BaseFields"
 import { ApplianceFields } from "./zone/ApplianceSection"
 
@@ -24,7 +23,7 @@ type CarcassSection = "dims" | "structure"
  * decisió de l'usuari, 2026-10-08: «l'Estil també a la Caixa»; abans eren a «Acabats»). Només el que la construcció
  * llegeix (`moduleRows`, `core/model/usedHardware.ts`). Els passacables són a `CableHolesForm`.
  */
-export function CarcassForm({ module, onChange, section, rows = moduleRows(module), support, onSupport }: { module: Module; onChange: (m: Module) => void; section: CarcassSection; rows?: ModuleRows; /** El suport dels mòduls de terra (Moble › Sòcol i potes). */ support?: FloorSupport; /** Canvia el suport del moble (el de tots els mòduls de terra). */ onSupport?: (patch: Partial<FloorSupport>) => void }) {
+export function CarcassForm({ module, onChange, section, rows = moduleRows(module), support, onOpenSupport }: { module: Module; onChange: (m: Module) => void; section: CarcassSection; rows?: ModuleRows; /** El suport dels mòduls de terra (Moble › Sòcol i potes). */ support?: FloorSupport; /** Obre l'opció global: Moble › Sòcol i potes. */ onOpenSupport?: () => void }) {
   const c = module.carcass
   const { gaps } = useSettings().settings
   const set = (patch: Partial<Carcass>) => onChange({ ...module, carcass: { ...c, ...patch } })
@@ -77,11 +76,21 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
             <HangerFields module={module} base={c.base} onChange={(base) => set({ base })} />
           </>
         ) : rule?.support === false ? null : (
-          support && onSupport && vc.base.kind !== "none" ? (
-          <SupportBasics support={support} onChange={onSupport} first={module} help="El mateix per a tots els mòduls de terra: canviar-lo aquí el canvia a tots. La retirada, el sòcol i els trams, al Moble › Sòcol i potes." ids={{ kind: "module.carcass.support", height: "module.carcass.support.height", leg: "module.carcass.support.leg", legInset: "module.carcass.support.legInset" }} />
-        ) : (
-          <FixedRow optionId="module.carcass.support" label="Suport" text={supportText(support, vc.base)} help="El mateix per a tots els mòduls de terra: es tria al Moble › Sòcol i potes." />
-        )
+          // Una opció global (la de tots els mòduls de terra) no es repeteix al mòdul (per decisió de l'usuari,
+          // 2026-10-16: «no repetir les opcions ni posar un missatge, sinó un botó que digui modificar opció global»): què
+          // hi ha i un botó que porta al Moble › Sòcol i potes.
+          <FormRow optionId="module.carcass.support" label="Suport">
+            <Stack gap={2} pt="7px" align="flex-start">
+              <Text fontSize="sm" color="fg.muted">
+                {supportText(support, vc.base)}
+              </Text>
+              {onOpenSupport && (
+                <Button size="xs" variant="outline" colorPalette="wood" onClick={onOpenSupport}>
+                  <LuGlobe /> Modificar opció global
+                </Button>
+              )}
+            </Stack>
+          </FormRow>
         )}
         {/* La Base, sota el Suport (en depèn): amb potes hi és sempre (s'hi cargolen). */}
         {rule?.bottom !== undefined ? null : vc.base.kind === "legs" ? null : (

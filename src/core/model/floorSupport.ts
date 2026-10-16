@@ -1,4 +1,4 @@
-import { activeRuns, compositionKind, freeX, isTurned, modulePlacements, partsOnlyKind, type ModulePlacement } from "./composition"
+import { activeRuns, compositionKind, freeX, modulePlacements, partsOnlyKind, type ModulePlacement } from "./composition"
 import type { Composition, PlinthRun } from "./compositionSchema"
 import type { Base, Module } from "./moduleSchema"
 import { isApplianceModule, moduleApplianceCarcass, visibleModule } from "./moduleVisible"
@@ -251,5 +251,3 @@ export function tramHeightMismatches(comp: Composition, tram: FloorTram, places:
   return tops.filter((t) => Math.abs(t.top - expected) > 1).map((t) => ({ module: comp.modules[t.i]!, top: t.top, expected }))
 }
 
-/** Tots els mòduls del tram miren enrere (girats): el davant del sòcol és el costat de la paret. */
-export const tramFacesBack = (comp: Pick<Composition, "modules">, tram: FloorTram): boolean => tram.modules.every((i) => isTurned(comp.modules[i]!))

@@ -189,7 +189,7 @@ function addGroove(host: Panel, hb: Box, [x0, x1, z0, z1]: [number, number, numb
  * on mira (davant +Z, darrere −Z, esquerra −X, dreta +X; els de l'osca també): les potes queden on les posa una base
  * sencera.
  */
-export interface LegInsets {
+interface LegInsets {
   front: number
   back: number
   left: number

@@ -117,12 +117,12 @@ export function ModulePositionFields({ comp, module, moduleX, updateModule }: { 
  * retranqueig a la Caixa; el material dels fronts a Materials; l'espiga a Unió. Els ferratges per defecte del
  * mòdul no surten: cada compartiment tria el seu (o «Com el mòdul»).
  */
-export function ModuleSections({ module, updateModule, support, onSupport }: { module: Module; updateModule: (m: Module) => void; /** El suport dels mòduls de terra (Moble › Sòcol i potes): la Caixa el diu. */ support?: FloorSupport; /** Canvia el suport del moble (des de la Caixa). */ onSupport?: (patch: Partial<FloorSupport>) => void }) {
+export function ModuleSections({ module, updateModule, support, onOpenSupport }: { module: Module; updateModule: (m: Module) => void; /** El suport dels mòduls de terra (Moble › Sòcol i potes): la Caixa el diu. */ support?: FloorSupport; /** Porta a l'opció global (Moble › Sòcol i potes). */ onOpenSupport?: () => void }) {
   const rows = moduleRows(module)
   return (
     <>
       <FoldItem optionId="module.carcass" id="mod-structure" title="Caixa" icon={LuFrame} badge={rows.style && !moduleApplianceCarcass(module)?.rule.niche ? (module.fronts.style === "inset" ? "Encastats" : "Recobrents") : undefined}>
-        <CarcassForm module={module} onChange={updateModule} section="structure" rows={rows} support={support} onSupport={onSupport} />
+        <CarcassForm module={module} onChange={updateModule} section="structure" rows={rows} support={support} onOpenSupport={onOpenSupport} />
       </FoldItem>
       {/* Portes de dalt a baix de tot el mòdul (armari), només amb l'Interior dividit: sense dividir, el Front és el
           del compartiment. Després de la Caixa (els laterals diuen on hi caben) i abans dels Materials (Fronts). */}

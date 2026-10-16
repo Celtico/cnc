@@ -13,21 +13,10 @@ export const CARCASS = section("module.carcass", "Caixa", { icon: "carcass", cod
   ...applianceFrontFields("module"),
   field("module.carcass.support", "Suport", {
     code: UI.carcass,
-    control: "choice",
-    showIf: "Mòdul de terra amb base: el del moble (canviar-lo aquí el canvia a tots). Sense base: text «Directe a terra». Penjat: text «Penjat a la paret, a H mm del terra», es canvia a Tipus. L'electrodomèstic de terra no en té (ho diu la nota).",
-    default: "floor",
-    choices: [
-      { value: "floor", label: "Directe a terra", hides: ["module.carcass.support.height", "module.carcass.support.leg"] },
-      { value: "plinth", label: "Sòcol", reveals: ["module.carcass.support.height", "module.carcass.support.leg"], hides: ["module.carcass.underLight"], note: "la retirada, el sòcol i els trams, al Moble › Sòcol i potes" },
-      { value: "legs", label: "Potes vistes", reveals: ["module.carcass.support.height", "module.carcass.support.leg", "module.carcass.underLight"] },
-    ],
-    note: "Per decisió de l'usuari, 2026-10-15: «és un sòcol per a tots els mòduls i no un per a cada un»; 2026-10-16: «les opcions que no són possibles no han de sortir, però sí les que ho són, com les potes». És el mateix del Moble › Sòcol i potes. Un mòdul sense base no pot anar sobre potes: directe a terra.",
-  }, [
-    field("module.carcass.support.height", "Alçada", { code: UI.carcass, control: "number", showIf: "Suport ≠ Directe a terra", range: { min: 20, max: 400, step: 5, suffix: "mm" }, default: 100 }),
-    field("module.carcass.support.leg", "Pota", { code: UI.carcass, control: "hardware", showIf: "Suport ≠ Directe a terra, i hi ha potes a la biblioteca o el moble en porta una", defaultText: "Genèriques" }, [
-      field("module.carcass.support.legInset", "Potes al davant", { code: UI.carcass, control: "number", showIf: "Una pota amb distància pròpia al davant (AXILO 78)" }),
-    ]),
-  ]),
+    control: "text",
+    showIf: "Mòdul de terra: què hi ha (el del moble) i el botó «Modificar opció global», que porta al Moble › Sòcol i potes. Penjat: text «Penjat a la paret, a H mm del terra», es canvia a Tipus. L'electrodomèstic de terra no en té (ho diu la nota).",
+    note: "Per decisió de l'usuari, 2026-10-15: «és un sòcol per a tots els mòduls i no un per a cada un»; 2026-10-16: «les opcions que siguin globals no repetir-les ni posar un missatge, sinó un botó que digui modificar opció global». Suport, alçada i pota es trien només al Moble › Sòcol i potes.",
+  }),
   field("module.carcass.hanger", "Penjadors", {
     code: UI.base,
     control: "hardware",
