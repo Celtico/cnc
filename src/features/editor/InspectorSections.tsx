@@ -1,5 +1,5 @@
 import { Stack, Switch } from "@chakra-ui/react"
-import { LuArrowDownToLine, LuBolt, LuBrickWall, LuFrame, LuPalette } from "react-icons/lu"
+import { LuArrowDownToLine, LuBolt, LuBrickWall, LuFrame, LuPalette, LuPanelTop } from "react-icons/lu"
 import { FoldItem } from "../../components/Fold"
 import { FormRow } from "../../components/FormRow"
 import { IconChoice } from "../../components/IconChoice"
@@ -14,7 +14,7 @@ import { zoneLabel } from "../composition/zoneLabel"
 import { MaterialSelect } from "../settings/MaterialSelect"
 import type { SetComp } from "./useEditorDoc"
 
-/** On va el mòdul (a sota del Tipus): arrambat o lliure al terra, l'alçada del penjat, les separacions, girat i X. */
+/** On va el mòdul (Posició): arrambat, penjat o lliure al terra, l'alçada del penjat, les separacions, girat i X. */
 export function ModulePositionFields({ comp, module, moduleX, updateModule }: { comp: Composition; module: Module; moduleX: number | undefined; updateModule: (m: Module) => void }) {
   // Posició dins de la seva fila (a terra o penjats) i el mòdul anterior de la fila.
   const rowMates = comp.modules.filter((m) => rowOf(m) === rowOf(module) && !freeX(m))
@@ -25,29 +25,30 @@ export function ModulePositionFields({ comp, module, moduleX, updateModule }: { 
       {/* Dues files, com les cuines: a terra (baixos) i penjats (alts); el penjat es tria al Tipus. Dins de cada fila,
           l'ordre és el de l'arbre (d'esquerra a dreta) i cada mòdul va al costat de l'anterior de la seva fila. A terra:
           arrambat a la paret (a la fila) o lliure al terra (X pròpia). */}
-      {mountOf(module) === "hung" ? null : (
-        <FormRow
-          optionId="module.position.mount"
-          label="Lloc"
-          help={
-            mountOf(module) === "floor"
+      <FormRow
+        optionId="module.position.mount"
+        label="Fila"
+        help={
+          mountOf(module) === "hung"
+            ? "Al 3D, arrossega la maneta del mòdul: es mou per la paret, de costat i amunt/avall (Maj: tot el moble)."
+            : mountOf(module) === "floor"
               ? "Al 3D, arrossega la maneta del mòdul: es mou pel terra, de costat i endavant/enrere (Maj: tot el moble)."
               : "Al 3D, arrossega la maneta del mòdul: llisca de costat tocant la paret (Maj: tot el moble)."
-          }
-        >
-          <IconChoice
-            label="Lloc"
-            hideLabel
-            value={mountOf(module) as "wall" | "floor"}
-            options={[
-              { value: "wall", label: "Arrambat a la paret", icon: LuBrickWall, hint: "Arrambat a la paret: a la fila; es mou de costat" },
-              { value: "floor", label: "Lliure al terra", icon: LuArrowDownToLine, hint: "Lliure al terra: es mou pel terra, també separat de la paret (una illa)" },
-            ]}
-            // Al terra: surt de la fila i es queda on és (X pròpia). El mateix camí que l'assistent (`setModuleMount`).
-            onChange={(v) => updateModule(setModuleMount(module, v, Math.round(moduleX ?? 0)))}
-          />
-        </FormRow>
-      )}
+        }
+      >
+        <IconChoice
+          label="Fila"
+          hideLabel
+          value={mountOf(module)}
+          options={[
+            { value: "wall", label: "Arrambat a la paret", icon: LuBrickWall, hint: "Arrambat a la paret: a terra; es mou de costat" },
+            { value: "hung", label: "Penjat", icon: LuPanelTop, hint: "Penjat a la paret: es mou de costat i amunt/avall" },
+            { value: "floor", label: "Lliure al terra", icon: LuArrowDownToLine, hint: "Lliure al terra: es mou pel terra, també separat de la paret (una illa)" },
+          ]}
+          // Al terra: surt de la fila i es queda on és (X pròpia). El mateix camí que l'assistent (`setModuleMount`).
+          onChange={(v) => updateModule(setModuleMount(module, v, Math.round(moduleX ?? 0)))}
+        />
+      </FormRow>
       {module.carcass.base.kind === "wall" && (
         <NumRow
           optionId="module.position.height"

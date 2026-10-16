@@ -14,7 +14,7 @@ export const CARCASS = section("module.carcass", "Caixa", { icon: "carcass", cod
   field("module.carcass.support", "Suport", {
     code: UI.carcass,
     control: "text",
-    showIf: "Mòdul de terra: què hi ha (el del moble) i el botó «Modificar opció global», que porta al Moble › Sòcol i potes. Penjat: text «Penjat a la paret, a H mm del terra», es canvia a Tipus. L'electrodomèstic de terra no en té (ho diu la nota).",
+    showIf: "Mòdul de terra: què hi ha (el del moble) i el botó «Modificar opció global», que porta al Moble › Sòcol i potes. Penjat: text «Penjat a la paret, a H mm del terra», es canvia a Posició. L'electrodomèstic de terra no en té (ho diu la nota).",
     note: "Per decisió de l'usuari, 2026-10-15: «és un sòcol per a tots els mòduls i no un per a cada un»; 2026-10-16: «les opcions que siguin globals no repetir-les ni posar un missatge, sinó un botó que digui modificar opció global». Suport, alçada i pota es trien només al Moble › Sòcol i potes.",
   }),
   field("module.carcass.hanger", "Penjadors", {

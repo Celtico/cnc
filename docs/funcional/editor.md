@@ -78,9 +78,10 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     material i, per a cada tram, on porta sòcol; vegeu Model › Suport), Encaixos (si alguna peça en fa),
     Materials de tot el moble (aplica a tots els mòduls), Acabats de l'escena (`Composition.scene`: `floor`, `wall` per a Presentació i miniatura; buit = «Com a
     Preferències»; `CabinetViewer sceneFinish`, `renderThumb(…, finish)`).
-  - Mòdul: **Tipus** (`ModuleTypeSection`: Baix · Penjat · Columna · Electrodomèstic, l'aparell de l'Electrodomèstic i on
-    va: Lloc —arrambat o lliure al terra—, l'alçada del penjat, separacions, girat, X; el Baix i el Penjat no porten
-    electrodomèstics: la placa i la campana també es trien amb el tipus Electrodomèstic) · Mides · **Caixa** · **Portes** (només amb l'Interior dividit) · **Unió** (si la caixa en fa) ·
+  - Mòdul: **Tipus** (`ModuleTypeSection`; per decisió de l'usuari, 2026-10-16: només **Moble · Electrodomèstic**,
+    `setModuleKind`, i l'aparell de l'Electrodomèstic; la placa i la campana també es trien aquí) · **Posició**
+    (`ModulePositionSection`, com abans del 2026-10-15: Fila —arrambat a la paret, penjat o lliure al terra—, l'alçada del
+    penjat, separacions, girat, X; Baix o Columna surt de l'alçada) · Mides · **Caixa** · **Portes** (només amb l'Interior dividit) · **Unió** (si la caixa en fa) ·
     **Materials** (en aquest ordre per decisió de l'usuari, 2026-10-13). **Sense «Acabats»** (per decisió de l'usuari,
     2026-10-08: «això dels acabats no està bé»; abans una secció `mod-joinery`, `LuHammer`): cada fila és a la secció del
     que toca, **un sol lloc per decisió i només el que la construcció llegeix** (`moduleRows` a
@@ -93,7 +94,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
       **Suport**: és una opció global (la de tots els mòduls de terra), i les globals no es repeteixen al mòdul (per
       decisió de l'usuari, 2026-10-16: «no repetir les opcions ni posar un missatge, sinó un botó que digui modificar
       opció global»): el text del que hi ha i el botó **Modificar opció global**, que obre el Moble › Sòcol i potes (suport,
-      alçada, pota, retirada, sòcol i trams); penjat: «Penjat a la paret, a … mm del terra», es canvia a Tipus i, sota, **Base** (Sencera · Sense base;
+      alçada, pota, retirada, sòcol i trams); penjat: «Penjat a la paret, a … mm del terra», es canvia a Posició i, sota, **Base** (Sencera · Sense base;
       amb potes no surt: s'hi cargolen). **Llum a sota**: penjat o amb potes vistes (amb sòcol quedaria amagada: no surt
       i no es fa). La resta, com sempre:
       penjat, «Penjadors» i «Regleta» amb «Com el mòdul» i «Cap» (`BaseFields.tsx`)—, fons i, just a sota, **Ranura del fons** (en ranura) o **Retirada

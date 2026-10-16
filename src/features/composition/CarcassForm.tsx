@@ -72,7 +72,7 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
             sota: «la base que es pugui treure». */}
         {c.base.kind === "wall" ? (
           <>
-            <FixedRow optionId="module.carcass.support" label="Suport" text={`Penjat a la paret, a ${c.base.height} mm del terra`} help="Es canvia a Tipus." />
+            <FixedRow optionId="module.carcass.support" label="Suport" text={`Penjat a la paret, a ${c.base.height} mm del terra`} help="Es canvia a Posició." />
             <HangerFields module={module} base={c.base} onChange={(base) => set({ base })} />
           </>
         ) : rule?.support === false ? null : (

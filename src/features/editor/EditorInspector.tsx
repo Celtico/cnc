@@ -17,7 +17,7 @@ import type { CompositionEdits } from "./editorCommands"
 import { InspectorAlerts } from "./InspectorAlerts"
 import { InspectorHeader } from "./InspectorHeader"
 import { ModuleSections, SceneFinishFields, ZoneSection } from "./InspectorSections"
-import { ModuleTypeSection } from "./ModuleTypeSection"
+import { ModulePositionSection, ModuleTypeSection } from "./ModuleTypeSection"
 import { SupportForm } from "../composition/SupportForm"
 import type { SetComp } from "./useEditorDoc"
 import { clipOf, pasteClip } from "./pasteClip"
@@ -227,10 +227,11 @@ export function EditorInspector({
       ) : module ? (
         // Seccions plegables independents (com Figma o Fusion): es poden tenir diverses
         // obertes i cada una recorda el seu estat.
-        // Ordre (per decisió de l'usuari, 2026-10-13; el Tipus, 2026-10-15): Tipus (on va i, l'electrodomèstic, l'aparell) ·
-        // Mides · Electrodomèstic (la placa o la campana) · Caixa · Portes (dividit) · Unió · Materials.
+        // Ordre (per decisió de l'usuari, 2026-10-13; el Tipus, 2026-10-16): Tipus (moble o electrodomèstic i l'aparell) ·
+        // Posició · Mides · Caixa · Portes (dividit) · Unió · Materials.
         <Stack gap={0}>
-            <ModuleTypeSection comp={comp} module={module} moduleX={build?.modules[moduleIndex]?.x} updateModule={updateModule} islandFront={islandBack ? comp.modules.find((m) => m.id === islandBack.front)?.name : undefined} />
+          <ModuleTypeSection module={module} moduleX={build?.modules[moduleIndex]?.x} updateModule={updateModule} />
+          <ModulePositionSection comp={comp} module={module} moduleX={build?.modules[moduleIndex]?.x} updateModule={updateModule} islandFront={islandBack ? comp.modules.find((m) => m.id === islandBack.front)?.name : undefined} />
           <FoldItem optionId="module.dims" id="mod-dims" title="Mides" icon={LuMoveDiagonal} badge={`${module.carcass.width} × ${module.carcass.height}`}>
             <CarcassForm module={module} onChange={updateModule} section="dims" />
           </FoldItem>

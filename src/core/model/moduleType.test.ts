@@ -67,3 +67,16 @@ describe("tipus del mòdul", () => {
     expect(withMobleMaterials(emptyModule("n", "N"), [])).toEqual(emptyModule("n", "N"))
   })
 })
+
+describe("Tipus de l'inspector: Moble o Electrodomèstic", () => {
+  it("Moble treu l'aparell i deixa l'alçada i on va; Electrodomèstic el marca", async () => {
+    const { setModuleKind } = await import(".")
+    const col = { ...defaultModule("c", "c"), carcass: { ...defaultModule("c", "c").carcass, height: 2100 } }
+    const e = setModuleKind(col, "appliance", 0)
+    expect(moduleType(e)).toBe("appliance")
+    const m = setModuleKind(e, "moble", 0)
+    expect(moduleType(m)).toBe("tall")
+    expect(m.carcass.height).toBe(2100)
+    expect(setModuleKind(col, "moble", 0)).toBe(col)
+  })
+})

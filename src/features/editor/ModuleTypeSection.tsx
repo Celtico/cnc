@@ -1,47 +1,45 @@
 import { Text } from "@chakra-ui/react"
-import { LuPanelBottom, LuPanelTop, LuRectangleVertical, LuRefrigerator } from "react-icons/lu"
+import { LuBox, LuMove, LuRefrigerator } from "react-icons/lu"
 import type { IconType } from "react-icons"
 import { FoldItem } from "../../components/Fold"
 import { FormRow } from "../../components/FormRow"
 import { IconChoice } from "../../components/IconChoice"
-import { APPLIANCE_LABELS, MODULE_TYPE_LABELS, isAppliance, moduleType, setModuleAppliance, setModuleType, type Composition, type Module, type ModuleType } from "../../core/model"
+import { APPLIANCE_LABELS, isAppliance, moduleType, mountOf, setModuleAppliance, setModuleKind, type Composition, type Module } from "../../core/model"
 import { HardwarePick } from "../composition/HardwarePick"
 import { ModulePositionFields } from "./InspectorSections"
 
-const TYPE_ICON: Record<ModuleType, IconType> = { base: LuPanelBottom, wall: LuPanelTop, tall: LuRectangleVertical, appliance: LuRefrigerator }
-const TYPE_HINT: Record<ModuleType, string> = {
-  base: "Baix: a terra, sobre el suport del moble (sòcol, potes o directe a terra)",
-  wall: "Penjat a la paret, amb penjadors",
-  tall: "Columna: a terra, de dalt a baix",
+type Kind = "moble" | "appliance"
+const KIND_ICON: Record<Kind, IconType> = { moble: LuBox, appliance: LuRefrigerator }
+const KIND_LABEL: Record<Kind, string> = { moble: "Moble", appliance: "Electrodomèstic" }
+const KIND_HINT: Record<Kind, string> = {
+  moble: "Moble: un mòdul de fusta (baix, columna o penjat; on va, a Posició)",
   appliance: "Electrodomèstic: rentaplats, frigorífic, forn, placa, campana…; la Caixa és la que demana l'aparell",
 }
 
 /**
- * **Tipus** (per decisió de l'usuari, 2026-10-15: «canviem Posició per tipus de moble, i allà seleccionem electrodomèstic,
- * i a dins la Caixa les opcions de l'electrodomèstic»): el primer del mòdul. Baix · Penjat · Columna · Electrodomèstic
- * (`setModuleType`); l'Electrodomèstic hi tria l'aparell (`setModuleAppliance`; el Baix i el Penjat no en porten) i la Caixa en
- * porta les opcions. A sota, on va: arrambat o lliure al terra, l'alçada del penjat i les separacions. El de darrere d'una
- * illa es col·loca sol: només el diu.
+ * **Tipus** (per decisió de l'usuari, 2026-10-16: «tornar a deixar com abans Posició, i posar com a primera opció Tipus, on
+ * només es pot triar si és moble o electrodomèstic»): el primer del mòdul. Moble · Electrodomèstic (`setModuleKind`);
+ * l'Electrodomèstic hi tria l'aparell (`setModuleAppliance`) i la Caixa en porta les opcions. On va, a la secció Posició.
  */
-export function ModuleTypeSection({ comp, module, moduleX, updateModule, islandFront }: { comp: Composition; module: Module; moduleX: number | undefined; updateModule: (m: Module) => void; /** El mòdul és el de darrere d'una illa: el nom del de davant. */ islandFront?: string }) {
-  const type = moduleType(module)
+export function ModuleTypeSection({ module, moduleX, updateModule }: { module: Module; moduleX: number | undefined; updateModule: (m: Module) => void }) {
+  const kind: Kind = moduleType(module) === "appliance" ? "appliance" : "moble"
   const here = Math.round(moduleX ?? 0)
   const za = module.root.appliance
   const a = za && isAppliance(za.hardware) ? za.hardware.appliance : undefined
   const split = !!module.root.split
-  const badge = type === "appliance" && a ? APPLIANCE_LABELS[a.kind] : type === "wall" && module.carcass.base.kind === "wall" ? `Penjat a ${module.carcass.base.height}` : MODULE_TYPE_LABELS[type]
+  const badge = kind === "appliance" && a ? APPLIANCE_LABELS[a.kind] : KIND_LABEL[kind]
   return (
-    <FoldItem optionId="module.type" id="mod-type" title="Tipus" icon={TYPE_ICON[type]} badge={badge}>
-      <FormRow optionId="module.type.kind" label="Tipus" help={split && type !== "appliance" ? "Electrodomèstic: un mòdul dividit el porta a cada compartiment (una columna amb el forn i el microones)." : undefined}>
+    <FoldItem optionId="module.type" id="mod-type" title="Tipus" icon={KIND_ICON[kind]} badge={badge}>
+      <FormRow optionId="module.type.kind" label="Tipus" help={split && kind !== "appliance" ? "Electrodomèstic: un mòdul dividit el porta a cada compartiment (una columna amb el forn i el microones)." : undefined}>
         <IconChoice
           hideLabel
           label="Tipus"
-          value={type}
-          options={(Object.keys(TYPE_ICON) as ModuleType[]).map((t) => ({ value: t, label: MODULE_TYPE_LABELS[t], icon: TYPE_ICON[t], hint: TYPE_HINT[t], disabled: t === "appliance" && split }))}
-          onChange={(t) => updateModule(setModuleType(module, t, here))}
+          value={kind}
+          options={(Object.keys(KIND_ICON) as Kind[]).map((k) => ({ value: k, label: KIND_LABEL[k], icon: KIND_ICON[k], hint: KIND_HINT[k], disabled: k === "appliance" && split }))}
+          onChange={(k) => updateModule(setModuleKind(module, k, here))}
         />
       </FormRow>
-      {type === "appliance" && (
+      {kind === "appliance" && (
         <HardwarePick
           optionId="module.type.appliance"
           engine="appliance"
@@ -52,6 +50,15 @@ export function ModuleTypeSection({ comp, module, moduleX, updateModule, islandF
           onPick={(item) => updateModule(setModuleAppliance(module, item, here))}
         />
       )}
+    </FoldItem>
+  )
+}
+
+/** **Posició** (com abans del 2026-10-15): la fila (arrambat, penjat o lliure al terra) i on va. */
+export function ModulePositionSection({ comp, module, moduleX, updateModule, islandFront }: { comp: Composition; module: Module; moduleX: number | undefined; updateModule: (m: Module) => void; /** El mòdul és el de darrere d'una illa: el nom del de davant. */ islandFront?: string }) {
+  const badge = islandFront ? "Illa · darrere" : module.carcass.base.kind === "wall" ? `Penjat a ${module.carcass.base.height}` : mountOf(module) === "floor" ? `Lliure al terra · ${module.wallGap ?? 0} de la paret` : "Arrambat a la paret"
+  return (
+    <FoldItem optionId="module.position" id="mod-position" title="Posició" icon={LuMove} badge={badge}>
       {islandFront ? (
         <Text fontSize="sm" color="fg.muted">
           És el mòdul de darrere de l'illa amb «{islandFront}»: es gira 180° i es col·loca sol, enganxat al seu darrere.

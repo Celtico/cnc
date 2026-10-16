@@ -50,19 +50,19 @@ describe("esborrany: la llavor de l'app", () => {
     expect(app.nodes).toHaveLength(OPTION_NODES.size + choices)
     expect(app.nodes.find((n) => n.id === "module.carcass.back")?.kind).toBe("option")
     expect(app.nodes.find((n) => n.id === "module")?.kind).toBe("section")
-    expect(app.nodes.find((n) => n.id === choiceId("module.type.kind", "wall"))).toMatchObject({ kind: "choice", label: "Penjat" })
+    expect(app.nodes.find((n) => n.id === choiceId("module.position.mount", "hung"))).toMatchObject({ kind: "choice", label: "Penjat" })
   })
   it("fletxes: a dins de (l'arbre), fa aparèixer i fa desaparèixer", () => {
     const ids = new Set(app.edges.map((e) => e.id))
     expect(ids.has(edgeId("contains", "module.type", "module.type.kind"))).toBe(true)
-    expect(ids.has(edgeId("contains", "module.type.kind", choiceId("module.type.kind", "wall")))).toBe(true)
-    expect(ids.has(edgeId("reveals", choiceId("module.type.kind", "wall"), "module.position.height"))).toBe(true)
+    expect(ids.has(edgeId("contains", "module.position.mount", choiceId("module.position.mount", "hung")))).toBe(true)
+    expect(ids.has(edgeId("reveals", choiceId("module.position.mount", "hung"), "module.position.height"))).toBe(true)
     expect(ids.has(edgeId("hides", choiceId("module.position.mount", "floor"), "module.position.gap"))).toBe(true)
   })
   it("les possibles incoherències i les condicions vénen del registre", () => {
     const withIssue = [...OPTION_NODES.values()].filter((n) => n.issue).length
     expect(app.nodes.filter((n) => n.issue)).toHaveLength(withIssue)
-    expect(app.nodes.find((n) => n.id === "module.position.height")?.when).toBe("Tipus = Penjat")
+    expect(app.nodes.find((n) => n.id === "module.position.height")?.when).toBe("Fila = Penjat")
   })
   it("sense canvis, cap diferència; les arrels són les del registre", () => {
     expect(diffDraft(app).count).toBe(0)
@@ -84,7 +84,7 @@ describe("esborrany: editar i diferències", () => {
     expect(diff.changed.get("module.carcass.back")?.after.label).toBe("Fons de l'armari")
     // Treure una secció en treu tot el que té a dins.
     expect(diff.removed.map((n) => n.id)).toContain("module.type.kind")
-    expect(diff.removed.map((n) => n.id)).toContain(choiceId("module.type.kind", "wall"))
+    expect(diff.removed.map((n) => n.id)).toContain(choiceId("module.type.kind", "appliance"))
     // Unir d'una nansa a l'altra el posa a dins; la fletxa es pot canviar a «fa aparèixer».
     expect(diff.addedEdges.has(edgeId("reveals", choiceId("module.carcass.back", "groove"), "n1"))).toBe(true)
     expect(diff.addedEdges.has(edgeId("contains", "module.carcass", "n1"))).toBe(true)

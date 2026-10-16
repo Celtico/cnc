@@ -1,17 +1,15 @@
 import { AS_MODULE, STRUCTURAL, UI, field, group, section, type OptionNode } from "./optionTypes"
 
 /** Mòdul › Tipus, Mides i Electrodomèstic (dades del registre de les opcions en cascada). */
-const type = section("module.type", "Tipus", { icon: "type", code: UI.type, hideable: false, why: STRUCTURAL, note: "Per decisió de l'usuari, 2026-10-15: «canviem Posició per tipus de moble, i allà seleccionem electrodomèstic». El mòdul de darrere d'una illa no té les opcions de lloc (es col·loca sol)." }, [
+const type = section("module.type", "Tipus", { icon: "type", code: UI.type, hideable: false, why: STRUCTURAL, note: "Per decisió de l'usuari, 2026-10-16: «primer Tipus, on només es pot triar si és moble o electrodomèstic»; on va (a terra, penjat), a Posició." }, [
   field("module.type.kind", "Tipus", {
     code: UI.type,
     control: "choice",
-    default: "base",
+    default: "moble",
     hideable: false,
     why: STRUCTURAL,
     choices: [
-      { value: "base", label: "Baix", reveals: ["module.position.mount"] },
-      { value: "wall", label: "Penjat", reveals: ["module.position.height", "module.carcass.hanger", "module.carcass.underLight"], hides: ["module.position.mount"], note: "a 1450 mm del terra, amb el fons retirat per al penjador" },
-      { value: "tall", label: "Columna", reveals: ["module.position.mount"], note: "2100 mm d'alçada si en tenia menys de 1200" },
+      { value: "moble", label: "Moble" },
       { value: "appliance", label: "Electrodomèstic", reveals: ["module.type.appliance"], note: "no amb l'Interior dividit (es tria a cada compartiment)" },
     ],
   }),
@@ -20,20 +18,24 @@ const type = section("module.type", "Tipus", { icon: "type", code: UI.type, hide
     control: "hardware",
     showIf: "Tipus = Electrodomèstic",
     defaultText: "Tria l'aparell",
-    note: "Per decisió de l'usuari, 2026-10-15: «quan és baix o penjat no poden sortir electrodomèstics»: tots es trien aquí (també la placa i la campana, que conserven l'Interior). Les opcions del front de moble, a la Caixa.",
+    note: "Per decisió de l'usuari, 2026-10-15: «quan és baix o penjat no poden sortir electrodomèstics»: tots es trien aquí (també la placa i la campana, que conserven l'Interior). Les opcions del front de moble, a la Caixa. Un aparell penjat (microones) penja el mòdul.",
   }),
-  field("module.position.mount", "Lloc", {
+])
+
+const position = section("module.position", "Posició", { icon: "position", code: UI.type, hideable: false, why: STRUCTURAL, note: "Com abans del 2026-10-15 (per decisió de l'usuari, 2026-10-16). El mòdul de darrere d'una illa no té les opcions (es col·loca sol)." }, [
+  field("module.position.mount", "Fila", {
     code: UI.sections,
     control: "choice",
-    showIf: "No penjat",
     default: "wall",
+    hideable: false,
+    why: STRUCTURAL,
     choices: [
       { value: "wall", label: "Arrambat a la paret", reveals: ["module.position.gap"] },
+      { value: "hung", label: "Penjat", reveals: ["module.position.height", "module.carcass.hanger", "module.carcass.underLight"], note: "a 1450 mm del terra, amb el fons retirat per al penjador" },
       { value: "floor", label: "Lliure al terra", reveals: ["module.position.wallGap", "module.position.turned", "module.position.x"], hides: ["module.position.gap"] },
     ],
-    why: "Amagada, tots els mòduls nous van arrambats a la paret.",
   }),
-  field("module.position.height", "Alçada del terra", { code: UI.sections, control: "number", showIf: "Tipus = Penjat", range: { min: 0, max: 2800, step: 10, suffix: "mm" }, default: 1450, hideable: false, why: STRUCTURAL }),
+  field("module.position.height", "Alçada del terra", { code: UI.sections, control: "number", showIf: "Fila = Penjat", range: { min: 0, max: 2800, step: 10, suffix: "mm" }, default: 1450, hideable: false, why: STRUCTURAL }),
   field("module.position.wallGap", "Separació de la paret", { code: UI.sections, control: "number", showIf: "Lloc = Lliure al terra", range: { min: 0, max: 10000, step: 10, suffix: "mm" }, default: 0 }),
   field("module.position.turned", "Girat", { code: UI.sections, control: "switch", showIf: "Lloc = Lliure al terra", default: false }),
   field("module.position.x", "De costat (X)", { code: UI.sections, control: "number", showIf: "Fora de la fila (Lliure al terra, amb X pròpia)", hideable: false, why: STRUCTURAL }),
@@ -103,7 +105,7 @@ export function applianceNodes(): OptionNode {
   ])
 }
 
-const MODULE_POSITION = [type, dims]
+const MODULE_POSITION = [type, position, dims]
 
 /** Mòdul › Portes, Unió i Materials. */
 const MODULE_TAIL: OptionNode[] = [

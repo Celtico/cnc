@@ -13,9 +13,7 @@ import type { Module } from "./moduleSchema"
  * primer que es tria del mòdul: decideix on va (a terra o penjat), les mides per defecte i, l'electrodomèstic, la caixa que
  * demana l'aparell (`applianceCarcass`). Pur.
  */
-export type ModuleType = "base" | "wall" | "tall" | "appliance"
-
-export const MODULE_TYPE_LABELS: Record<ModuleType, string> = { base: "Baix", wall: "Penjat", tall: "Columna", appliance: "Electrodomèstic" }
+type ModuleType = "base" | "wall" | "tall" | "appliance"
 
 /** Alçada a partir de la qual un mòdul de terra sense tipus és una columna. */
 const TALL_FROM = 1200
@@ -68,6 +66,17 @@ export function setModuleType(m: Module, type: ModuleType, here: number): Module
   const h = out.carcass.height
   const height = type === "tall" ? (h < TALL_FROM ? DEFAULT_HEIGHT.tall : h) : h >= TALL_FROM ? DEFAULT_HEIGHT.base : h
   return withType({ ...out, carcass: { ...out.carcass, height } }, type)
+}
+
+/**
+ * El Tipus de l'inspector (per decisió de l'usuari, 2026-10-16: «primer Tipus, on només es pot triar si és moble o
+ * electrodomèstic»; on va, a Posició): Moble treu l'aparell i deixa el mòdul on és (Baix o Columna per l'alçada, Penjat si
+ * penja); Electrodomèstic el marca (l'aparell es tria a sota).
+ */
+export function setModuleKind(m: Module, kind: "moble" | "appliance", here: number): Module {
+  if (kind === "appliance") return setModuleType(m, "appliance", here)
+  if (moduleType(m) !== "appliance") return m
+  return withType(withoutModuleAppliance(m), undefined)
 }
 
 /**
