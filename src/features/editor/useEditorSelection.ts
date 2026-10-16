@@ -43,7 +43,7 @@ export function useEditorSelection({ comp, initial, kind, setMobilePane }: { com
         ? { kind: "ref", id: selectedRef }
         : selKind === "part" && selectedPart && comp.parts?.some((r) => r.id === selectedPart)
           ? { kind: "part", id: selectedPart }
-          : selKind === "group" && selectedGroup && [...comp.modules, ...(comp.parts ?? []), ...(comp.models ?? [])].some((r) => r.group === selectedGroup)
+          : selKind === "group" && selectedGroup && [...comp.modules, ...(comp.parts ?? []), ...(comp.models ?? []), ...comp.references].some((r) => r.group === selectedGroup)
             ? { kind: "group", id: selectedGroup }
           : selKind === "model" && selectedModel && comp.models?.some((g) => g.id === selectedModel)
             ? { kind: "model", id: selectedModel }
@@ -180,7 +180,7 @@ export function isSelectionLocked(comp: Composition, selection: Selection): bool
     : selection.kind === "ref" ? !!comp.references.find((r) => r.id === selection.id)?.locked
     : selection.kind === "part" ? !!comp.parts?.find((q) => q.id === selection.id)?.locked
     : selection.kind === "model" ? !!comp.models?.find((g) => g.id === selection.id)?.locked
-    : selection.kind === "group" ? [...comp.modules, ...(comp.parts ?? []), ...(comp.models ?? [])].filter((q) => q.group === selection.id).every((q) => q.locked)
+    : selection.kind === "group" ? [...comp.modules, ...(comp.parts ?? []), ...(comp.models ?? []), ...comp.references].filter((q) => q.group === selection.id).every((q) => q.locked)
     : selection.kind === "multi" ? selection.items.some((x) => (x.kind === "part" ? comp.parts?.find((q) => q.id === x.id) : x.kind === "model" ? comp.models?.find((q) => q.id === x.id) : x.kind === "module" ? comp.modules.find((q) => q.id === x.id) : comp.references.find((q) => q.id === x.id))?.locked)
     : false
 }

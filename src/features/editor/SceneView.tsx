@@ -87,7 +87,13 @@ export function SceneView({
       collidingRefIds={collidingRefs}
       cuttingRefIds={cuttingRefs}
       highlightZone={highlightZone}
-      onSelectRef={(id) => pick(id.startsWith("part:") ? { kind: "part", id: id.slice(5) } : { kind: "ref", id })}
+      onSelectRef={(id) => {
+        if (id.startsWith("part:")) return pick({ kind: "part", id: id.slice(5) })
+        // D'un grup (com les peces): el primer clic tria el grup; el segon, l'objecte.
+        const g = comp.references.find((r) => r.id === id)?.group
+        const inside = g && ((selection.kind === "group" && selection.id === g) || (selection.kind === "ref" && comp.references.find((r) => r.id === selection.id)?.group === g))
+        pick(g && !inside ? { kind: "group", id: g } : { kind: "ref", id })
+      }}
       fitKey={fitKey}
       onFramedChange={setFramed}
       initialCamera={cameraRef.current}
