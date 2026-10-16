@@ -37,7 +37,7 @@ const position = section("module.position", "Posició", { icon: "position", code
   }),
   field("module.position.height", "Alçada del terra", { code: UI.sections, control: "number", showIf: "Fila = Penjat", range: { min: 0, max: 2800, step: 10, suffix: "mm" }, default: 1450, hideable: false, why: STRUCTURAL }),
   field("module.position.wallGap", "Separació de la paret", { code: UI.sections, control: "number", showIf: "Lloc = Lliure al terra", range: { min: 0, max: 10000, step: 10, suffix: "mm" }, default: 0 }),
-  field("module.position.turned", "Girat", { code: UI.sections, control: "switch", showIf: "Lloc = Lliure al terra", default: false }),
+  field("module.position.turned", "Fronts", { code: UI.sections, control: "choice", showIf: "Fila = Lliure al terra", default: "0", choices: [{ value: "0", label: "Endavant" }, { value: "270", label: "A l'esquerra" }, { value: "90", label: "A la dreta" }, { value: "180", label: "Enrere" }], note: "Per decisió de l'usuari, 2026-10-13 (enrere, illa d'esquena) i 2026-10-16 (a un costat, l'extrem d'una illa): gira al voltant del centre de la caixa (`Module.rot`, `moduleRot`)." }),
   field("module.position.x", "De costat (X)", { code: UI.sections, control: "number", showIf: "Fora de la fila (Lliure al terra, amb X pròpia)", hideable: false, why: STRUCTURAL }),
   field("module.position.gap", "Separació des de l'inici / amb l'anterior", { code: UI.sections, control: "number", showIf: "A la fila (sense X pròpia); l'etiqueta diu si és el primer", range: { min: 0, max: 5000, step: 10, suffix: "mm" }, default: 0 }),
 ])

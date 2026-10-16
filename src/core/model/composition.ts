@@ -58,8 +58,40 @@ export type ModuleMount = "wall" | "hung" | "floor"
 /** Mòdul al terra lliure amb posició X pròpia (fora de la fila). */
 export const freeX = (m: Module): boolean => m.x !== undefined && m.carcass.base.kind !== "wall" && m.wallGap !== undefined
 
-/** Girat 180° (`Module.turned`): només amb el mòdul lliure al terra. */
-export const isTurned = (m: Module): boolean => !!m.turned && m.carcass.base.kind !== "wall" && m.wallGap !== undefined
+/** Gir d'un mòdul al voltant del vertical, en graus (vist de dalt, antihorari: 90 = fronts a +X). */
+export type ModuleRot = 0 | 90 | 180 | 270
+
+/** El gir del mòdul (`Module.rot`, o `turned` = 180): només amb el mòdul lliure al terra; si no, 0. */
+export const moduleRot = (m: Module): ModuleRot => (m.carcass.base.kind !== "wall" && m.wallGap !== undefined ? (m.rot ?? (m.turned ? 180 : 0)) : 0)
+
+/** Gira el punt (x, z) `rot` graus al voltant de (cx, cz) (vist de dalt, antihorari: +Z → +X amb 90). */
+export function rotXZ(x: number, z: number, rot: ModuleRot, cx = 0, cz = 0): [number, number] {
+  const dx = x - cx, dz = z - cz
+  if (rot === 90) return [cx + dz, cz - dx]
+  if (rot === 180) return [cx - dx, cz - dz]
+  if (rot === 270) return [cx - dz, cz + dx]
+  return [x, z]
+}
+
+/** El gir contrari (desfà `rotXZ`). */
+export const unrot = (rot: ModuleRot): ModuleRot => ((360 - rot) % 360) as ModuleRot
+
+/** Cap on miren els fronts d'un mòdul a la planta: +z (endavant), −z, +x o −x. */
+export type Facing = "+z" | "-z" | "+x" | "-x"
+const facingOf = (rot: ModuleRot): Facing => (rot === 90 ? "+x" : rot === 180 ? "-z" : rot === 270 ? "-x" : "+z")
+
+/**
+ * La petjada d'un mòdul a la planta (coordenades de la composició): la caixa `w` × `d` (d = fins a la cara dels fronts)
+ * a `place`, girada al voltant del seu centre (`moduleRot`), i cap on miren els fronts.
+ */
+export function moduleFootprint(m: Module, place: { x: number; z?: number }, d: number, rot: ModuleRot = moduleRot(m)): { x0: number; x1: number; z0: number; z1: number; facing: Facing } {
+  const w = m.carcass.width
+  const x = place.x, z = place.z ?? 0
+  const quarter = rot === 90 || rot === 270
+  const [hw, hd] = quarter ? [d / 2, w / 2] : [w / 2, d / 2]
+  const cx = x + w / 2, cz = z + d / 2
+  return { x0: cx - hw, x1: cx + hw, z0: cz - hd, z1: cz + hd, facing: facingOf(rot) }
+}
 
 export const mountOf = (m: Module): ModuleMount => (m.carcass.base.kind === "wall" ? "hung" : m.wallGap !== undefined ? "floor" : "wall")
 

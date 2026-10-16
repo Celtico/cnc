@@ -1,12 +1,12 @@
-import { Stack, Switch } from "@chakra-ui/react"
-import { LuArrowDownToLine, LuBolt, LuBrickWall, LuFrame, LuPalette, LuPanelTop } from "react-icons/lu"
+import { Stack } from "@chakra-ui/react"
+import { LuArrowDown, LuArrowDownToLine, LuArrowLeft, LuArrowRight, LuArrowUp, LuBolt, LuBrickWall, LuFrame, LuPalette, LuPanelTop } from "react-icons/lu"
 import { FoldItem } from "../../components/Fold"
 import { FormRow } from "../../components/FormRow"
 import { IconChoice } from "../../components/IconChoice"
 import { NumRow } from "../../components/NumRow"
 import type { ModuleBuild } from "../../core/build/buildModule"
 import { splitChildSizes } from "../../core/build/layout"
-import { carcassBounds, coveringZone, moduleApplianceCarcass, freeX, hasDrawers, moduleHasInnerPieces, moduleRows, moduleSlotItem, mountOf, rowOf, setModuleMount, system32RowPlace, visibleModule, zoneBounds, type Composition, type FloorSupport, type Module, type Settings, type Zone } from "../../core/model"
+import { carcassBounds, coveringZone, moduleApplianceCarcass, freeX, hasDrawers, moduleHasInnerPieces, moduleRot, moduleRows, moduleSlotItem, mountOf, rowOf, setModuleMount, system32RowPlace, visibleModule, zoneBounds, type Composition, type FloorSupport, type Module, type Settings, type Zone } from "../../core/model"
 import { CarcassForm, InnerClearanceRow, JointForm, MaterialsForm } from "../composition/CarcassForm"
 import { System32Pick } from "../composition/HardwarePick"
 import { ModuleDoorsSection, ZonePanel } from "../composition/ZonePanel"
@@ -73,14 +73,26 @@ export function ModulePositionFields({ comp, module, moduleX, updateModule }: { 
           help="Del darrere del mòdul a la paret."
         />
       )}
-      {/* Girat 180° (una illa amb dos mòduls d'esquena, calaixos pels dos costats): només lliure al terra. */}
+      {/* Cap on miren els fronts (només lliure al terra): enrere, una illa amb dos mòduls d'esquena; a un costat, el mòdul
+          de l'extrem d'una illa (per decisió de l'usuari, 2026-10-16). Gira al voltant del centre de la caixa. */}
       {mountOf(module) === "floor" && (
-        <FormRow optionId="module.position.turned" label="Girat" help={module.turned ? "Els fronts miren enrere: posa'l d'esquena amb un altre mòdul per fer una illa amb calaixos pels dos costats." : undefined}>
-          <Switch.Root size="sm" pt="6px" checked={!!module.turned} onCheckedChange={(e) => updateModule(e.checked ? { ...module, turned: true } : (({ turned: _t, ...rest }) => rest)(module))}>
-            <Switch.HiddenInput />
-            <Switch.Control />
-            <Switch.Label fontSize="sm">180° (fronts enrere)</Switch.Label>
-          </Switch.Root>
+        <FormRow optionId="module.position.turned" label="Fronts" help={moduleRot(module) === 180 ? "Els fronts miren enrere: posa'l d'esquena amb un altre mòdul per fer una illa amb calaixos pels dos costats." : moduleRot(module) ? "Girat 90°: per a l'extrem d'una illa. Gira al voltant del seu centre; mou-lo amb la maneta fins que toqui l'illa." : undefined}>
+          <IconChoice
+            hideLabel
+            label="Fronts"
+            value={String(moduleRot(module)) as "0" | "90" | "180" | "270"}
+            options={[
+              { value: "0", label: "Endavant", icon: LuArrowDown, hint: "Els fronts miren endavant (com sempre)" },
+              { value: "270", label: "A l'esquerra", icon: LuArrowLeft, hint: "Girat 90°: els fronts miren a l'esquerra (l'extrem esquerre d'una illa)" },
+              { value: "90", label: "A la dreta", icon: LuArrowRight, hint: "Girat 90°: els fronts miren a la dreta (l'extrem dret d'una illa)" },
+              { value: "180", label: "Enrere", icon: LuArrowUp, hint: "Girat 180°: els fronts miren enrere (illa amb dos mòduls d'esquena)" },
+            ]}
+            onChange={(v) => {
+              const { turned: _t, rot: _r, ...rest } = module
+              const rot = Number(v) as 0 | 90 | 180 | 270
+              updateModule(rot ? { ...rest, rot } : rest)
+            }}
+          />
         </FormRow>
       )}
       {freeX(module) ? (

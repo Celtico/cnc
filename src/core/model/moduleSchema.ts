@@ -413,9 +413,16 @@ export const ModuleSchema = z.object({
    * Només «Lliure al terra»: girat 180° al voltant del vertical (els fronts miren enrere), per fer una illa amb dos mòduls
    * d'esquena (per decisió de l'usuari, 2026-10-13). El mòdul es construeix igual; només canvia com es col·loca
    * (`buildComposition`, al voltant del centre de la caixa de les seves peces: ocupa el mateix lloc). Res amagat compta:
-   * en un altre muntatge no es llegeix (`isTurned`).
+   * en un altre muntatge no es llegeix (`moduleRot`).
    */
   turned: z.boolean().optional(),
+  /**
+   * Només «Lliure al terra»: el gir al voltant del vertical, en graus (vist de dalt, antihorari: amb 90 els fronts miren a
+   * la dreta, +X; amb 270, a l'esquerra), per posar un mòdul a l'extrem d'una illa (per decisió de l'usuari, 2026-10-16).
+   * Mana sobre `turned` (el 180 d'abans). Com `turned`: es construeix igual i es gira al voltant del centre de la caixa
+   * de les seves peces (`moduleRot`).
+   */
+  rot: z.union([z.literal(90), z.literal(180), z.literal(270)]).optional(),
   /**
    * Només «Al terra» (lliure): posició X pròpia (mm des de l'origen). No segueix la fila ni
    * n'empeny els altres: així es pot posar una illa davant de la cuina. Sense: segueix la fila.

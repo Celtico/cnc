@@ -1,4 +1,4 @@
-import { activeRuns, compositionKind, freeX, modulePlacements, partsOnlyKind, type ModulePlacement } from "./composition"
+import { activeRuns, compositionKind, freeX, moduleFootprint, modulePlacements, partsOnlyKind, type ModulePlacement } from "./composition"
 import type { Composition, PlinthRun } from "./compositionSchema"
 import type { Base, Module } from "./moduleSchema"
 import { isApplianceModule, moduleApplianceCarcass, visibleModule } from "./moduleVisible"
@@ -45,12 +45,8 @@ export function floorTrams(comp: Pick<Composition, "modules" | "kind" | "runs" |
   const onLegs = (comp as Composition).support?.kind !== "floor"
   const inTram = (m: Module) => m.carcass.base.kind !== "wall" && (!onLegs || m.carcass.base.kind === "legs" || isApplianceModule(m) || !(comp as Composition).support)
   const idx = comp.modules.map((m, i) => (inTram(m) ? i : -1)).filter((i) => i >= 0)
-  const box = (i: number) => {
-    const m = comp.modules[i]!
-    const p = places[i]!
-    const z = p.z ?? 0
-    return { x0: p.x, x1: p.x + m.carcass.width, z0: z, z1: z + moduleFrontFace(m) }
-  }
+  // La petjada a la planta (també dels girats 90°: l'amplada va en Z).
+  const box = (i: number) => moduleFootprint(comp.modules[i]!, places[i]!, moduleFrontFace(comp.modules[i]!))
   const parent = new Map<number, number>(idx.map((i) => [i, i]))
   const find = (i: number): number => {
     while (parent.get(i) !== i) i = parent.get(i)!

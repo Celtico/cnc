@@ -1,5 +1,5 @@
 import type { RefObject } from "react"
-import type { CompositionBuild } from "../../core/build/buildComposition"
+import { moduleFromWorld, type CompositionBuild } from "../../core/build/buildComposition"
 import { findZone, parentOf, type Composition } from "../../core/model"
 import type { Selection } from "../composition/StructureTree"
 
@@ -53,7 +53,8 @@ export function viewerPicks({
     const mb = build?.modules[idx]
     const mod = comp.modules[idx]
     if (!inside || !at || !mb || !mod) return selectModule(id)
-    const lx = mb.mirrorX !== undefined ? mb.mirrorX - (at[0] - mb.x) : at[0] - mb.x
+    // El punt clicat, al mòdul (també si està girat).
+    const [lx] = moduleFromWorld(mb, at[0], at[2])
     const ly = at[1] - mb.y
     const inner = mb.build.layout.rects.get(mod.root.id)
     if (inner && (lx < inner.x0 || lx > inner.x1 || ly < inner.y0 || ly > inner.y1)) return selectModule(id)

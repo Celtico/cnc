@@ -1,5 +1,5 @@
 import type { KitOrderLine } from "./drawerKit"
-import { activeRuns, compositionKind, withSupport, isSolidMaterial, isTurned, modelFootprint, modulePlacements, NO_EDGES, partsOnlyKind, partCutters, type Composition, type ModelObject, type Module, type Panel, type Vec3 } from "../model"
+import { activeRuns, compositionKind, withSupport, isSolidMaterial, moduleRot, rotXZ, unrot, type ModuleRot, modelFootprint, modulePlacements, NO_EDGES, partsOnlyKind, partCutters, type Composition, type ModelObject, type Module, type Panel, type Vec3 } from "../model"
 import { applyRefCuts, migrateCableHoles, refTouchesBox } from "./refCuts"
 import { columnRearLimits, columnWalls, relayLegs } from "./columnWalls"
 import { buildModule, type BuildWarning, type KitOrder, type ModuleBuild, type Wiring } from "./buildModule"
@@ -26,9 +26,10 @@ export interface CompositionBuild {
   panels: Panel[]
   warnings: CompositionWarning[]
   /**
-   * `mirrorX`: mòdul girat 180° (`isTurned`): la X local `xl` va a `x + mirrorX − xl` (`moduleWorldX`). Sense: `x + xl`.
+   * `turn`: mòdul girat (`moduleRot`): les coordenades del mòdul es giren `rot` graus al voltant de (`cx`, `cz`) (el centre
+   * de la caixa de les seves peces) abans de sumar-hi `x`, `z` (`moduleToWorld`, `moduleFromWorld`). Sense: només es sumen.
    */
-  modules: { id: string; index: number; x: number; y: number; z: number; build: ModuleBuild; mirrorX?: number }[]
+  modules: { id: string; index: number; x: number; y: number; z: number; build: ModuleBuild; turn?: ModuleTurn }[]
   /** Encaixos entre peces lliures. */
   joints: PartJoint[]
   /** Elements sense nesting (peces lliures de ferro, pedra, vidre…): 3D i llista, no taller. */
@@ -70,19 +71,40 @@ function localBox(panels: Panel[]): { min: [number, number, number]; max: [numbe
   return { min, max }
 }
 
-/** Centre (×2) en X i Z de la caixa de les peces d'un mòdul, en coordenades del mòdul: l'eix del gir de 180°. */
-function turnFrame(panels: Panel[]): { mx: number; mz: number } {
+/** El gir d'un mòdul a la composició: graus i centre (coordenades del mòdul). */
+interface ModuleTurn {
+  rot: Exclude<ModuleRot, 0>
+  cx: number
+  cz: number
+}
+
+/** El gir d'un mòdul al voltant del centre (en X i Z) de la caixa de les seves peces, en coordenades del mòdul. */
+function turnFrame(panels: Panel[], rot: Exclude<ModuleRot, 0>): ModuleTurn {
   let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity
   for (const p of panels) {
     const b = panelBox(p)
     x0 = Math.min(x0, b.min[0]); x1 = Math.max(x1, b.max[0]); z0 = Math.min(z0, b.min[2]); z1 = Math.max(z1, b.max[2])
   }
-  return Number.isFinite(x0) ? { mx: x0 + x1, mz: z0 + z1 } : { mx: 0, mz: 0 }
+  return Number.isFinite(x0) ? { rot, cx: (x0 + x1) / 2, cz: (z0 + z1) / 2 } : { rot, cx: 0, cz: 0 }
 }
 
-/** X de la composició d'una X del mòdul (`xl`), també si està girat 180° (`mirrorX`). */
-export function moduleWorldX(mb: { x: number; mirrorX?: number }, xl: number): number {
-  return mb.mirrorX !== undefined ? mb.x + mb.mirrorX - xl : mb.x + xl
+/** Un punt del mòdul (X i Z del mòdul) a la composició, també si està girat (`turn`). */
+export function moduleToWorld(mb: { x: number; z: number; turn?: ModuleTurn }, xl: number, zl: number): [number, number] {
+  const [x, z] = mb.turn ? rotXZ(xl, zl, mb.turn.rot, mb.turn.cx, mb.turn.cz) : [xl, zl]
+  return [x + mb.x, z + mb.z]
+}
+
+/** Un punt de la composició (X i Z) al mòdul: el contrari de `moduleToWorld`. */
+export function moduleFromWorld(mb: { x: number; z: number; turn?: ModuleTurn }, xw: number, zw: number): [number, number] {
+  const x = xw - mb.x, z = zw - mb.z
+  return mb.turn ? rotXZ(x, z, unrot(mb.turn.rot), mb.turn.cx, mb.turn.cz) : [x, z]
+}
+
+/** La caixa a la composició d'una caixa del mòdul (x, y i z del mòdul), també si està girat. */
+export function moduleBoxToWorld(mb: { x: number; y: number; z: number; turn?: ModuleTurn }, b: { x0: number; x1: number; y0: number; y1: number; z0: number; z1: number }): { x0: number; x1: number; y0: number; y1: number; z0: number; z1: number } {
+  const pts = [[b.x0, b.z0], [b.x1, b.z0], [b.x0, b.z1], [b.x1, b.z1]].map(([x, z]) => moduleToWorld(mb, x!, z!))
+  const xs = pts.map((p) => p[0]), zs = pts.map((p) => p[1])
+  return { x0: Math.min(...xs), x1: Math.max(...xs), y0: b.y0 + mb.y, y1: b.y1 + mb.y, z0: Math.min(...zs), z1: Math.max(...zs) }
 }
 
 
@@ -117,12 +139,17 @@ export function buildComposition(input: Composition): CompositionBuild {
   const keepOut = (m: Module, i: number): [number, number][] => {
     const pl = places[i]!
     const mz = pl.z ?? 0
+    const W = m.carcass.width, D = m.carcass.depth + m.carcass.thickness
+    const rot = moduleRot(m)
     const out: [number, number][] = []
     for (const o of comp.references ?? []) {
       if (o.effect !== "cut" || (o.axis ?? "z") !== "y" || o.y > 1) continue
-      const x0 = o.x - pl.x, x1 = o.x + o.w - pl.x
-      if (x1 <= 0 || x0 >= m.carcass.width || o.z >= mz + m.carcass.depth + m.carcass.thickness || o.z + o.d <= mz) continue
-      out.push(isTurned(m) ? [m.carcass.width - x1, m.carcass.width - x0] : [x0, x1])
+      // La petjada de la columna al mòdul (desfent el gir al voltant del centre de la caixa).
+      const pts = [[o.x, o.z], [o.x + o.w, o.z], [o.x, o.z + o.d], [o.x + o.w, o.z + o.d]].map(([x, z]) => rotXZ(x! - pl.x, z! - mz, unrot(rot), W / 2, D / 2))
+      const x0 = Math.min(...pts.map((p) => p[0])), x1 = Math.max(...pts.map((p) => p[0]))
+      const z0 = Math.min(...pts.map((p) => p[1])), z1 = Math.max(...pts.map((p) => p[1]))
+      if (x1 <= 0 || x0 >= W || z0 >= D || z1 <= 0) continue
+      out.push([x0, x1])
     }
     return out
   }
@@ -131,7 +158,7 @@ export function buildComposition(input: Composition): CompositionBuild {
   // Amb sòcol, la llum a sota dels mòduls de terra quedaria amagada darrere del sòcol: no es fa (es guarda, per si es
   // canvia a potes vistes).
   const lit = (m: Module): Module => (comp.support?.kind === "plinth" && m.carcass.base.kind === "legs" && m.carcass.underLight ? { ...m, carcass: (({ underLight: _u, ...c }) => c)(m.carcass) } : m)
-  const builds = onlyParts ? [] : comp.modules.map(lit).map((m, i) => buildModule(m, { ...(isTurned(m) ? {} : { rearLimits: columnRearLimits(m, comp.references, places[i]!) }), keepOut: keepOut(m, i), ...(appliancePlinth !== undefined ? { appliancePlinth } : {}) }))
+  const builds = onlyParts ? [] : comp.modules.map(lit).map((m, i) => buildModule(m, { ...(moduleRot(m) ? {} : { rearLimits: columnRearLimits(m, comp.references, places[i]!) }), keepOut: keepOut(m, i), ...(appliancePlinth !== undefined ? { appliancePlinth } : {}) }))
   // Illes: el mòdul de darrere es gira 180° i es posa enganxat al darrere del de davant (mateixa X, a `gap` mm), sigui
   // quina sigui la seva posició pròpia.
   const islands = onlyParts ? [] : activeIslands(comp)
@@ -151,14 +178,23 @@ export function buildComposition(input: Composition): CompositionBuild {
     const { x, y } = places[i]!
     const z = places[i]!.z ?? 0
     const build = builds[i]!
-    // Girat 180° al voltant del vertical pel centre de la caixa de les peces (ocupa el mateix lloc): x → 2·cx − x,
-    // z → 2·cz − z i els eixos de cada peça amb la X i la Z canviades de signe (gir, no mirall: les peces són les mateixes).
-    const turn = isTurned(m) || backOf.has(m.id) ? turnFrame(build.panels) : undefined
+    // Girat al voltant del vertical pel centre de la caixa de les peces (`moduleRot`; el de darrere d'una illa, 180°):
+    // l'origen i els eixos de cada peça es giren (gir, no mirall: les peces són les mateixes).
+    const rot = backOf.has(m.id) ? 180 : moduleRot(m)
+    const turn = rot ? turnFrame(build.panels, rot) : undefined
     const place = (pl: Panel["placement"]): Panel["placement"] => {
       const o = pl.origin
       if (!turn) return { ...pl, origin: [o[0] + x, o[1] + y, o[2] + z] }
-      const v = (a: Vec3): Vec3 => [-a[0], a[1], -a[2]]
-      return { origin: [turn.mx - o[0] + x, o[1] + y, turn.mz - o[2] + z], xAxis: v(pl.xAxis), yAxis: v(pl.yAxis), zAxis: v(pl.zAxis), explodeDir: v(pl.explodeDir) }
+      if (turn.rot === 180) {
+        const v = (a: Vec3): Vec3 => [-a[0], a[1], -a[2]]
+        return { origin: [2 * turn.cx - o[0] + x, o[1] + y, 2 * turn.cz - o[2] + z], xAxis: v(pl.xAxis), yAxis: v(pl.yAxis), zAxis: v(pl.zAxis), explodeDir: v(pl.explodeDir) }
+      }
+      const v = (a: Vec3): Vec3 => {
+        const [vx, vz] = rotXZ(a[0], a[2], turn.rot)
+        return [vx, a[1], vz]
+      }
+      const [ox, oz] = rotXZ(o[0], o[2], turn.rot, turn.cx, turn.cz)
+      return { origin: [ox + x, o[1] + y, oz + z], xAxis: v(pl.xAxis), yAxis: v(pl.yAxis), zAxis: v(pl.zAxis), explodeDir: v(pl.explodeDir) }
     }
     for (const p of build.panels) panels.push({ ...p, id: `${m.id}:${p.id}`, module: i + 1, placement: place(p.placement) })
     for (const p of build.extras) moduleExtras.push({ ...p, id: `${m.id}:${p.id}`, module: i + 1, placement: place(p.placement) })
@@ -179,7 +215,7 @@ export function buildComposition(input: Composition): CompositionBuild {
         moduleId: m.id,
         message: "Mòdul penjat: posa-hi penjadors de moble (regulables) i un fons d'almenys 8 mm o un travesser de penjar al darrere.",
       })
-    modules.push({ id: m.id, index: i + 1, x, y, z, build, ...(turn ? { mirrorX: turn.mx } : {}) })
+    modules.push({ id: m.id, index: i + 1, x, y, z, build, ...(turn ? { turn } : {}) })
   })
 
   // Mòduls que es trepitgen (una columna i un penjat a la mateixa X, una illa sobre la fila, el voladís d'un tauler de
@@ -231,7 +267,7 @@ export function buildComposition(input: Composition): CompositionBuild {
   }
   for (const w of runWarnings) warnings.push({ code: "layout", message: w.message })
   const vents = builds.flatMap((b, i) => b.ventInlets.map((v) => ({ ...v, module: i })))
-  const trams = onlyParts ? undefined : buildTramPlinths(comp, places, n, vents, (i) => isTurned(comp.modules[i]!) || backOf.has(comp.modules[i]!.id))
+  const trams = onlyParts ? undefined : buildTramPlinths(comp, places, n, vents, (i) => (backOf.has(comp.modules[i]!.id) ? 180 : moduleRot(comp.modules[i]!)))
   if (trams) {
     for (const p of trams.panels) panels.push(normalizePanel(p))
     moduleExtras.push(...trams.extras)
@@ -298,7 +334,7 @@ export function buildComposition(input: Composition): CompositionBuild {
     }    // Les potes de l'app (AXILO 78) a les cantonades de la base retallada, com les genèriques.
     const legModules = modules.flatMap((m) => {
       const module = comp.modules.find((x) => x.id === m.id)
-      return module && !isTurned(module) ? [{ index: m.index, module }] : []
+      return module && !moduleRot(module) ? [{ index: m.index, module }] : []
     })
     for (const pr of relayLegs(panels, legModules)) {
       const moduleId = modules.find((m) => m.index === pr.panel.module)?.id

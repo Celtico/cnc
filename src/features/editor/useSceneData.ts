@@ -3,7 +3,7 @@ import { panelBox } from "../../core/build/geometry"
 import type { ViewerModule } from "../../components/viewer/CabinetViewer"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { legPoints } from "../../core/build/columnWalls"
-import { moduleWorldX, type CompositionBuild, type CompositionWarning } from "../../core/build/buildComposition"
+import { moduleBoxToWorld, type CompositionBuild, type CompositionWarning } from "../../core/build/buildComposition"
 import type { ModuleBuild } from "../../core/build/buildModule"
 import { materialIssues } from "../../core/build/materialIssues"
 import { isEmptyComposition, mountOf, partCutters, resolveParts, viewerSize, type Composition, type HardwareItem, type Module, type Panel, type Settings } from "../../core/model"
@@ -52,7 +52,12 @@ export function useSceneData({
       (build?.modules ?? []).map((m) => {
         const c = comp.modules[m.index - 1]!.carcass
         const mod = comp.modules[m.index - 1]!
-        return { id: m.id, index: m.index, x: m.x, y: m.y, z: m.z, width: c.width, height: c.height, depth: c.depth + c.thickness, wall: c.base.kind === "wall", free: mountOf(mod) === "floor", ...(c.base.kind === "legs" ? { legs: legsView(c.base, c.depth, m.build.panels, build?.panels.find((p) => p.id === `${m.id}:bottom`)) } : {}) }
+        // Girat 90° o 270°: el contorn, la maneta i les potes genèriques van a la seva petjada a la planta.
+        const quarter = m.turn?.rot === 90 || m.turn?.rot === 270
+        const w = quarter ? moduleBoxToWorld(m, { x0: 0, x1: c.width, y0: 0, y1: c.height, z0: 0, z1: c.depth + c.thickness }) : undefined
+        const place = w ? { x: w.x0, z: w.z0, width: w.x1 - w.x0, depth: w.z1 - w.z0 } : { x: m.x, z: m.z, width: c.width, depth: c.depth + c.thickness }
+        const legs = c.base.kind === "legs" ? legsView(c.base, w ? place.depth : c.depth, m.build.panels, build?.panels.find((p) => p.id === `${m.id}:bottom`)) : undefined
+        return { id: m.id, index: m.index, ...place, y: m.y, height: c.height, wall: c.base.kind === "wall", free: mountOf(mod) === "floor", ...(legs ? { legs } : {}) }
       }),
     [build, comp],
   )
@@ -92,28 +97,29 @@ export function useSceneData({
     if (!mod || !module) return null
     const c = module.carcass
     // Mòdul seleccionat: només el contorn, sense vel i sòlid (translúcid només amb un compartiment).
-    if (selectionKind === "module")
-      return { x0: mod.x, x1: mod.x + c.width, y0: mod.y, y1: mod.y + c.height, z0: mod.z, z1: mod.z + c.depth + c.thickness, veil: false }
+    // Coordenades del mòdul a la composició (també si està girat: `moduleBoxToWorld`).
+    if (selectionKind === "module") return { ...moduleBoxToWorld(mod, { x0: 0, x1: c.width, y0: 0, y1: c.height, z0: 0, z1: c.depth + c.thickness }), veil: false }
     if (selectionKind !== "zone" || !zoneRect) return null
-    const [x0, x1] = [moduleWorldX(mod, zoneRect.x0), moduleWorldX(mod, zoneRect.x1)].sort((a, b) => a - b) as [number, number]
-    return { x0, x1, y0: mod.y + zoneRect.y0, y1: mod.y + zoneRect.y1, z0: mod.z, z1: mod.z + c.depth + c.thickness }
+    return moduleBoxToWorld(mod, { x0: zoneRect.x0, x1: zoneRect.x1, y0: zoneRect.y0, y1: zoneRect.y1, z0: 0, z1: c.depth + c.thickness })
   }, [selectionKind, zoneRect, build, moduleIndex, module])
   const openOnly = useMemo(() => {
     if (!viewer.openOnlySelected || !zoneRect || !build) return null
     const mod = build.modules[moduleIndex]
     if (!mod) return null
-    const [x0, x1] = [moduleWorldX(mod, zoneRect.x0), moduleWorldX(mod, zoneRect.x1)].sort((a, b) => a - b) as [number, number]
-    const y0 = mod.y + zoneRect.y0
-    const y1 = mod.y + zoneRect.y1
+    const m = comp.modules[moduleIndex]
+    const { x0, x1, y0, y1, z0, z1 } = moduleBoxToWorld(mod, { x0: zoneRect.x0, x1: zoneRect.x1, y0: zoneRect.y0, y1: zoneRect.y1, z0: 0, z1: m ? m.carcass.depth + m.carcass.thickness : 0 })
     const ids = new Set<string>()
     for (const g of groups) {
       const p = panels.find((x) => x.id === g.panelIds[0])
       if (!p) continue
       const b = panelBox(p)
-      if (b.max[0] > x0 + 1 && b.min[0] < x1 - 1 && b.max[1] > y0 + 1 && b.min[1] < y1 - 1) ids.add(g.id)
+      // Un mòdul girat 90° té els compartiments en Z.
+      const quarter = mod.turn?.rot === 90 || mod.turn?.rot === 270
+      const across = quarter ? b.max[2] > z0 + 1 && b.min[2] < z1 - 1 : b.max[0] > x0 + 1 && b.min[0] < x1 - 1
+      if (across && b.max[1] > y0 + 1 && b.min[1] < y1 - 1) ids.add(g.id)
     }
     return ids
-  }, [viewer.openOnlySelected, zoneRect, build, moduleIndex, groups, panels])
+  }, [viewer.openOnlySelected, zoneRect, build, moduleIndex, groups, panels, comp.modules])
   const collisions = useMemo(() => openingCollisions(panels, groups, viewer.opening, comp.references, openOnly ?? undefined), [panels, groups, viewer.opening, comp.references, openOnly])
 
   const collidingRefs = useMemo(() => new Set(warnings.flatMap((w) => (w.refId ? [w.refId] : []))), [warnings])

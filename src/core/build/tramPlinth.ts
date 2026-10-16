@@ -1,4 +1,4 @@
-import { floorTrams, isApplianceModule, isTurned, moduleFrontFace, tramHeightMismatches, tramSides, type Composition, type ModulePlacement, type Panel } from "../model"
+import { floorTrams, isApplianceModule, moduleFootprint, moduleFrontFace, moduleRot, tramHeightMismatches, tramSides, type Composition, type Facing, type ModulePlacement, type ModuleRot, type Panel } from "../model"
 import type { LinearPiece } from "./linearOrders"
 import type { VentInlet } from "./module/types"
 import { aluPlinth, plinthPieces, woodPlinthPanels, type PlinthFrame } from "./plinth"
@@ -30,7 +30,7 @@ interface TramVent extends VentInlet {
   module: number
 }
 
-export function buildTramPlinths(comp: Composition, places: ModulePlacement[], moduleNumber: number, vents: TramVent[] = [], turned: (i: number) => boolean = (i) => isTurned(comp.modules[i]!)): TramPlinthBuild {
+export function buildTramPlinths(comp: Composition, places: ModulePlacement[], moduleNumber: number, vents: TramVent[] = [], rotOf: (i: number) => ModuleRot = (i) => moduleRot(comp.modules[i]!)): TramPlinthBuild {
   const out: TramPlinthBuild = { panels: [], extras: [], linear: [], warnings: [] }
   const s = comp.support
   if (!s) return out
@@ -49,34 +49,34 @@ export function buildTramPlinths(comp: Composition, places: ModulePlacement[], m
   for (const tram of trams) {
     const ms = tram.modules.map((i) => comp.modules[i]!)
     const first = ms[0]!
-    const x0 = Math.min(...tram.modules.map((i) => places[i]!.x))
-    const x1 = Math.max(...tram.modules.map((i) => places[i]!.x + comp.modules[i]!.carcass.width))
-    const zBackEdge = Math.min(...tram.modules.map((i) => places[i]!.z ?? 0))
-    // La cara dels fronts més endarrerida del tram (mòduls de fondàries diferents: el sòcol, recte, mai per davant de cap
-    // front); els electrodomèstics de terra no compten (el seu front de moble s'enrasa amb els del costat).
-    const faces = tram.modules.filter((i) => !isApplianceModule(comp.modules[i]!)).map((i) => (places[i]!.z ?? 0) + moduleFrontFace(comp.modules[i]!))
-    const zFace = Math.min(...(faces.length ? faces : tram.modules.map((i) => (places[i]!.z ?? 0) + moduleFrontFace(comp.modules[i]!))))
     const sides = tramSides(s, tram, comp)
     const ss = pl.sideSetback ?? pl.setback
-    // Els fronts miren enrere (una fila de mòduls girats): el davant del sòcol és el costat de la paret. Una illa (dues
-    // files d'esquena, `turned`: el de darrere de cada illa) té fronts als dos costats: el sòcol, retirat dels dos.
-    const fwd = tram.modules.filter((i) => !turned(i))
-    const bwd = tram.modules.filter((i) => turned(i))
-    const back = fwd.length === 0
-    const both = fwd.length > 0 && bwd.length > 0
-    // La cara dels fronts girats és a la Z petita del mòdul: el sòcol, mai per davant del més endarrerit.
-    const bwdFaces = bwd.filter((i) => !isApplianceModule(comp.modules[i]!)).map((i) => places[i]!.z ?? 0)
-    const zFaceBwd = Math.max(...(bwdFaces.length ? bwdFaces : bwd.map((i) => places[i]!.z ?? 0)))
-    const fwdFaces = fwd.filter((i) => !isApplianceModule(comp.modules[i]!)).map((i) => (places[i]!.z ?? 0) + moduleFrontFace(comp.modules[i]!))
-    const zFaceFwd = Math.min(...(fwdFaces.length ? fwdFaces : fwd.map((i) => (places[i]!.z ?? 0) + moduleFrontFace(comp.modules[i]!))))
-    const frame = {
-      x0: sides.left ? x0 + ss : x0,
-      x1: sides.right ? x1 - ss : x1,
-      zBack: both ? zFaceBwd + pl.setback : back ? zBackEdge + pl.setback : zBackEdge + ss,
-      zFront: both ? zFaceFwd - pl.setback : back ? zFace - ss : zFace - pl.setback,
-      y0: 0,
-      sides: { front: both || !back ? true : !!sides.back, back: both || back ? true : !!sides.back, left: !!sides.left, right: !!sides.right },
+    // La petjada de cada mòdul a la planta i cap on miren els fronts (`moduleFootprint`: girats 90°, 180° o 270°, `rotOf`).
+    const fps = tram.modules.map((i) => ({ i, ...moduleFootprint(comp.modules[i]!, places[i]!, moduleFrontFace(comp.modules[i]!), rotOf(i)) }))
+    const X0 = Math.min(...fps.map((f) => f.x0)), X1 = Math.max(...fps.map((f) => f.x1)), Z0 = Math.min(...fps.map((f) => f.z0))
+    // Els que miren cap a un costat; per a la cara, sense els electrodomèstics de terra (el seu front de moble s'enrasa amb
+    // els del costat), si n'hi ha d'altres.
+    const facing = (d: Facing) => {
+      const all = fps.filter((f) => f.facing === d)
+      const own = all.filter((f) => !isApplianceModule(comp.modules[f.i]!))
+      return own.length ? own : all
     }
+    const fz = facing("+z"), bz = facing("-z"), rx = facing("+x"), lx = facing("-x")
+    // La cara de davant d'un tram sense fronts endavant (una fila girada): la més endarrerida dels del tram.
+    const nonApp = fps.filter((f) => !isApplianceModule(comp.modules[f.i]!))
+    const zFaceAll = Math.min(...(nonApp.length ? nonApp : fps).map((f) => f.z1))
+    // Cada costat del sòcol: on hi miren fronts, retirat `setback` de la cara més endarrerida i sempre; si no, el
+    // costat del tram (retirat `ss` si es tria). Una illa (dues files d'esquena) en té als dos costats; un mòdul girat 90°
+    // a l'extrem, al seu costat.
+    const frame = {
+      x0: lx.length ? Math.max(...lx.map((f) => f.x0)) + pl.setback : sides.left ? X0 + ss : X0,
+      x1: rx.length ? Math.min(...rx.map((f) => f.x1)) - pl.setback : sides.right ? X1 - ss : X1,
+      zBack: bz.length ? Math.max(...bz.map((f) => f.z0)) + pl.setback : Z0 + ss,
+      zFront: fz.length ? Math.min(...fz.map((f) => f.z1)) - pl.setback : zFaceAll - ss,
+      y0: 0,
+      sides: { front: fz.length > 0 || !bz.length || !!sides.back, back: bz.length > 0 || !!sides.back, left: lx.length > 0 || !!sides.left, right: rx.length > 0 || !!sides.right },
+    }
+    const x0 = X0, x1 = X1
     const prefix = `tram:${tram.id}:`
     if (pl.hardware) {
       try {
@@ -100,7 +100,10 @@ export function buildTramPlinths(comp: Composition, places: ModulePlacement[], m
       // L'entrada d'aire dels electrodomèstics del tram: un retall al sòcol de davant, centrat al compartiment.
       for (const v of vents.filter((v) => tram.modules.includes(v.module))) {
         const m = comp.modules[v.module]!
-        const at = (x: number) => places[v.module]!.x + (isTurned(m) ? m.carcass.width - x : x)
+        const rot = rotOf(v.module)
+        // Un mòdul girat 90° no té el front al sòcol de davant: l'entrada d'aire, a mà.
+        if (rot === 90 || rot === 270) continue
+        const at = (x: number) => places[v.module]!.x + (rot === 180 ? m.carcass.width - x : x)
         const cx = (at(v.x0) + at(v.x1)) / 2
         const w = Math.floor(Math.abs(v.x1 - v.x0) - 2 * VENT_MARGIN)
         const vh = Math.ceil((v.cm2 * 100) / Math.max(1, w))
@@ -111,7 +114,7 @@ export function buildTramPlinths(comp: Composition, places: ModulePlacement[], m
       for (const q of pieces) out.panels.push({ ...q, module: moduleNumber })
       if (f.corners === "mitre" && plinthPieces(f).some((p) => p.mitres.length)) mitreNote = true
     }
-    legFeet(out, s, pl.setback, ss, both ? { ...sides, back: false } : sides, ms, pl.hardware ? Number(pl.hardware.params.depth ?? first.carcass.thickness) : (pl.thickness ?? first.carcass.thickness))
+    legFeet(out, s, pl.setback, ss, { back: !bz.length && !!sides.back, left: !lx.length && !!sides.left, right: !rx.length && !!sides.right }, ms, pl.hardware ? Number(pl.hardware.params.depth ?? first.carcass.thickness) : (pl.thickness ?? first.carcass.thickness))
   }
   if (mitreNote) out.warnings.push({ code: "mitre", message: "Sòcol a inglet: tall a 45° als extrems dels trams que fan cantonada; encolar-los (o una escaire per dins)." })
   return out

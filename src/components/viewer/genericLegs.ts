@@ -1,4 +1,5 @@
 import { CylinderGeometry, Group, Mesh, MeshStandardMaterial } from "three"
+import { moduleBoxToWorld } from "../../core/build/buildComposition"
 import { legPoints } from "../../core/build/columnWalls"
 import type { CompositionBuild } from "../../core/build/buildComposition"
 import type { Composition } from "../../core/model"
@@ -28,12 +29,13 @@ export function genericLegsGroup(comp: Composition, build: CompositionBuild): Gr
     if (build.panels.some((p) => p.module === m.index && p.fittings?.some((f) => f.kind === "leg"))) continue
     const inset = base.hardware?.engine === "leg" ? (base.hardware.params.inset ?? 50) : 50
     const c = mod.carcass
-    const W = c.width, D = c.depth + c.thickness
+    // La petjada a la planta (girat 90° o 270°, l'amplada va en Z).
+    const fp = moduleBoxToWorld(m, { x0: 0, x1: c.width, y0: 0, y1: 0, z0: 0, z1: c.depth + c.thickness })
     const pts = (bottom && legPoints(bottom, inset)) ?? [
-      [m.x + inset, m.z + inset],
-      [m.x + W - inset, m.z + inset],
-      [m.x + inset, m.z + D - inset],
-      [m.x + W - inset, m.z + D - inset],
+      [fp.x0 + inset, fp.z0 + inset],
+      [fp.x1 - inset, fp.z0 + inset],
+      [fp.x0 + inset, fp.z1 - inset],
+      [fp.x1 - inset, fp.z1 - inset],
     ]
     const H = base.height
     for (const [px, pz] of pts) {
