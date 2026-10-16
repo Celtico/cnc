@@ -224,3 +224,24 @@ describe("llums sota la base amb una columna que no toca el darrere", () => {
     expect(drv.max[0] <= 420 - 110 || drv.min[0] >= 580 + 110).toBe(true)
   })
 })
+
+describe("potes AXILO d'una base retallada per una columna", () => {
+  it("les del davant i les de les cantonades de fora, al mateix lloc que en un mòdul sense columna", async () => {
+    const { HAFELE_LEGS } = await import("../model/hafele/hafeleLegs")
+    const { toWorld } = await import("./geometry")
+    const leg = HAFELE_LEGS[0]!
+    const m = (id: string) => {
+      const b = defaultModule(id, id, { width: 600, height: 800, depth: 560 })
+      return { ...b, carcass: { ...b.carcass, base: { kind: "legs" as const, height: 100, hardware: leg } } }
+    }
+    const b = buildComposition({ modules: [m("a"), m("b")], references: [col(800, -50, 250, 150)] })
+    const legsOf = (id: string) => {
+      const p = b.panels.find((q) => q.id === id)!
+      return p.fittings!.filter((f) => f.kind === "leg").map((f) => toWorld(p, [f.x, f.y, 0])).map((w) => [Math.round(w[0]), Math.round(w[2])].join(",")).sort()
+    }
+    expect(b.panels.find((q) => q.id === "b:bottom")!.outline).toBeDefined()
+    // El mòdul «b» és 600 mm més a la dreta: les seves potes, les mateixes desplaçades.
+    const shifted = legsOf("a:bottom").map((s) => s.split(",").map(Number)).map(([x, z]) => `${x! + 600},${z}`).sort()
+    expect(legsOf("b:bottom")).toEqual(shifted)
+  })
+})

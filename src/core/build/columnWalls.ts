@@ -184,12 +184,25 @@ function addGroove(host: Panel, hb: Box, [x0, x1, z0, z1]: [number, number, numb
 /**
  * On van les potes d'una base retallada (per una columna): una a cada cantonada que sobresurt del contorn de la base
  * (vista de dalt, x·z del moble), a `inset` de cada costat; una base rectangular dona les quatre de sempre. Les
- * cantonades de dins (la de l'osca) no en porten. Sense contorn, cap (es fan les de sempre).
+ * cantonades de dins (la de l'osca) no en porten. Sense contorn, cap (es fan les de sempre). Amb una distància per a cada
+ * costat (`LegInsets`, la AXILO 78: les del davant més endins, pel sòcol), cada cantell del contorn pren la del costat cap
+ * on mira (davant +Z, darrere −Z, esquerra −X, dreta +X; els de l'osca també): les potes queden on les posa una base
+ * sencera.
  */
+export interface LegInsets {
+  front: number
+  back: number
+  left: number
+  right: number
+}
+
 /** Distància mínima entre dues potes (centre a centre): la placa de la AXILO 78 fa 92 × 79. */
 const LEG_MIN_GAP = 110
 
-export function legPoints(base: Panel, inset: number): [number, number][] | undefined {
+/** Una pota de la base sencera a menys d'això d'una cantonada del contorn és la d'aquella cantonada: es queda on era. */
+const KEEP_LEG = 80
+
+export function legPoints(base: Panel, inset: number | LegInsets): [number, number][] | undefined {
   if (!base.outline || base.outline.length < 3) return undefined
   const pts = base.outline.map((q) => {
     const w = toWorldXZ(base, q[0], q[1])
@@ -207,14 +220,24 @@ export function legPoints(base: Panel, inset: number): [number, number][] | unde
     // Cantonada que sobresurt: el gir de (p − a) a (b − p) és cap a l'esquerra en un contorn antihorari.
     const cross = (p[0] - a[0]) * (b[1] - p[1]) - (p[1] - a[1]) * (b[0] - p[0])
     if (cross <= 0) continue
-    const k = Math.min(inset, lu / 2, lv / 2)
-    const q: [number, number] = [r(p[0] + (u[0]! / lu) * k + (v[0]! / lv) * k), r(p[1] + (u[1]! / lu) * k + (v[1]! / lv) * k)]
+    // Moure's pel cantell p→a allunya la pota del cantell p→b, i al revés.
+    const ku = Math.min(edgeInset(inset, p, b), lu / 2)
+    const kv = Math.min(edgeInset(inset, a, p), lv / 2)
+    const q: [number, number] = [r(p[0] + (u[0]! / lu) * ku + (v[0]! / lv) * kv), r(p[1] + (u[1]! / lu) * ku + (v[1]! / lv) * kv)]
     // Dues cantonades massa a prop (una osca estreta): les potes es trepitjarien (per decisió de l'usuari, 2026-10-14: «aquí
     // es xafen les potes»); n'hi va una sola.
     if (out.some((o) => Math.hypot(o[0] - q[0], o[1] - q[1]) < LEG_MIN_GAP)) continue
     out.push(q)
   }
   return out
+}
+
+/** La distància de les potes a un cantell (de `from` a `to`, contorn antihorari a x·z): la del costat cap on mira. */
+function edgeInset(inset: number | LegInsets, from: [number, number], to: [number, number]): number {
+  if (typeof inset === "number") return inset
+  // Normal de fora d'un cantell antihorari: (dz, −dx).
+  const nx = to[1] - from[1], nz = -(to[0] - from[0])
+  return Math.abs(nz) >= Math.abs(nx) ? (nz > 0 ? inset.front : inset.back) : nx > 0 ? inset.right : inset.left
 }
 
 function toWorldXZ(p: Panel, u: number, v: number): [number, number] {
@@ -267,7 +290,9 @@ export function relayLegs(panels: Panel[], modules: { index: number; module: Mod
     // Les plantilles del dibuix de cada costat (esquerra / dreta: el mirall ja hi és).
     const sideOf = (f: (typeof old)[number]) => (toWorld(bottom, [f.x, f.y, faceZ])[0] < mid ? "left" : "right")
     const tpl = { left: old.find((f) => sideOf(f) === "left") ?? f0, right: old.find((f) => sideOf(f) === "right") ?? f0 }
-    const pts = legPoints(bottom, item.params.inset ?? 50)
+    const q = item.params
+    const or = (v: number | undefined) => (Number.isFinite(v) && v! > 0 ? v! : (q.inset ?? 50))
+    const pts = legPoints(bottom, { front: or(q.insetFront), back: or(q.insetBack), left: or(q.insetLeft), right: or(q.insetRight) })
     if (!pts) continue
     const ops = item.targets.find((t) => t.key === "base")?.ops ?? []
     const inside = (x: number, y: number) => {
@@ -281,8 +306,19 @@ export function relayLegs(panels: Panel[], modules: { index: number; module: Mod
     }
     const fittings = bottom.fittings!.filter((f) => !(f.kind === "leg" && f.leg))
     const holes = bottom.holes.filter((h) => h.tag !== "leg")
+    // Les potes de la base sencera que encara hi són (les cantonades de fora): es queden on eren (per decisió de l'usuari,
+    // 2026-10-16: «no respecta la col·locació de les potes del davant»); la cantonada del contorn només dona les de l'osca.
+    const kept = old.filter((f) => inside(f.x, f.y)).map((f) => toWorld(bottom, [f.x, f.y, faceZ])).map((w): [number, number] => [w[0], w[2]])
+    const used = new Set<number>()
+    const placed = pts.map(([px, pz]): [number, number] => {
+      let k = -1
+      for (let i = 0; i < kept.length; i++) if (!used.has(i) && Math.hypot(kept[i]![0] - px, kept[i]![1] - pz) < KEEP_LEG && (k < 0 || Math.hypot(kept[i]![0] - px, kept[i]![1] - pz) < Math.hypot(kept[k]![0] - px, kept[k]![1] - pz))) k = i
+      if (k < 0) return [px, pz]
+      used.add(k)
+      return kept[k]!
+    })
     let skipped = 0
-    for (const [px, pz] of pts) {
+    for (const [px, pz] of placed) {
       const side = px < mid ? "left" : "right"
       const s = item.params.mirror === 1 && side === "right" ? -1 : 1
       const legHoles = ops.flatMap((op) => {
