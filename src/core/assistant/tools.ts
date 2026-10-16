@@ -302,7 +302,7 @@ function apply(comp: Composition, name: ToolName, input: never, ctx: ToolContext
         if (c.base.kind === "wall") fail("El mòdul és penjat: no té base de terra. Primer set_module_position mount=wall o floor.")
         // «open» (sense base, d'abans) és directe a terra amb `noBottom` (la forma d'ara, com la UI).
         if (c.base.kind === "open" && !c.noBottom) c.noBottom = true
-        // El suport és el de tots els mòduls de terra (Moble › Sòcol i potes): es canvia al moble i el sòcol és per tram.
+        // El suport és el de tots els mòduls de terra (Moble › Suport general): es canvia al moble i el sòcol és per tram.
         support = i.base.kind === "legs" ? { kind: "legs", height: i.base.height } : i.base.kind === "plinth" ? { kind: "plinth", height: i.base.height, setback: i.base.setback } : { kind: "floor" }
         if (i.base.kind === "open") c.noBottom = true
       }

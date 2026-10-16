@@ -117,10 +117,10 @@ export function EditorInspector({
               Selecciona un mòdul, un compartiment o un objecte a l'estructura (o clica'l al 3D) per editar-lo.
             </Text>
           </FoldItem>
-          {/* Sòcol i potes: un sol suport per a tots els mòduls de terra i un sòcol per tram (per decisió de l'usuari,
+          {/* Suport general: un sol suport per a tots els mòduls de terra i un sòcol per tram (per decisió de l'usuari,
               2026-10-15: «és un sòcol per a tots els mòduls i no un per a cada un»). */}
           {!partsOnlyKind(kind) && comp.support && (
-            <FoldItem optionId="moble.support" id="moble-support" title="Sòcol i potes" icon={LuPanelBottom} badge={comp.support.kind === "plinth" ? `Sòcol ${comp.support.height}` : comp.support.kind === "legs" ? `Potes ${comp.support.height}` : "A terra"}>
+            <FoldItem optionId="moble.support" id="moble-support" title="Suport general" icon={LuPanelBottom} badge={comp.support.kind === "plinth" ? `Sòcol ${comp.support.height}` : comp.support.kind === "legs" ? `Potes ${comp.support.height}` : "A terra"}>
               <SupportForm comp={comp} setComp={setComp} />
             </FoldItem>
           )}

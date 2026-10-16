@@ -118,7 +118,7 @@ export function ModulePositionFields({ comp, module, moduleX, updateModule }: { 
  * retranqueig a la Caixa; el material dels fronts a Materials; l'espiga a Unió. Els ferratges per defecte del
  * mòdul no surten: cada compartiment tria el seu (o «Com el mòdul»).
  */
-export function ModuleSections({ module, updateModule, support, onOpenSupport }: { module: Module; updateModule: (m: Module) => void; /** El suport dels mòduls de terra (Moble › Sòcol i potes): la Caixa el diu. */ support?: FloorSupport; /** Porta a l'opció global (Moble › Sòcol i potes). */ onOpenSupport?: () => void }) {
+export function ModuleSections({ module, updateModule, support, onOpenSupport }: { module: Module; updateModule: (m: Module) => void; /** El suport dels mòduls de terra (Moble › Suport general): la Caixa el diu. */ support?: FloorSupport; /** Porta a l'opció global (Moble › Suport general). */ onOpenSupport?: () => void }) {
   const rows = moduleRows(module)
   return (
     <>

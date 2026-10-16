@@ -73,7 +73,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   «Treure del grup» surt **just a sota del grup** mentre se n'arrossega un element (peces, models i mòduls; el mòdul queda
   solt al mateix lloc). També «Treure del grup» al menú ⋯ de cada element.
 - **Propietats** del que hi ha seleccionat i **només d'això**, en seccions plegables amb **una sola oberta alhora** (per decisió de l'usuari, 2026-10-13, i a tota l'app des del 2026-10-14: `FoldGroup` a l'inspector, recordada a la sessió `mobles:inspector-open`; les subseccions `size="sm"` de dins, una oberta entre elles; vegeu UI):
-  - Moble: Resum (i avisos de fusteria), **Sòcol i potes** (si hi ha mòduls de terra; `SupportForm`: el suport de tots
+  - Moble: Resum (i avisos de fusteria), **Suport general** (si hi ha mòduls de terra; `SupportForm`: el suport de tots
     els mòduls de terra —Directe a terra · Sòcol · Potes vistes—, l'alçada, la pota, la retirada, fusta o alumini, el
     material i, per a cada tram, on porta sòcol; vegeu Model › Suport), Encaixos (si alguna peça en fa),
     Materials de tot el moble (aplica a tots els mòduls), Acabats de l'escena (`Composition.scene`: `floor`, `wall` per a Presentació i miniatura; buit = «Com a
@@ -93,7 +93,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
       laterals són «Laterals de remat» (una peça sola, sense Parets ni Estil dels fronts: `ApplianceCarcass.niche`).
       **Suport**: és una opció global (la de tots els mòduls de terra), i les globals no es repeteixen al mòdul (per
       decisió de l'usuari, 2026-10-16: «no repetir les opcions ni posar un missatge, sinó un botó que digui modificar
-      opció global»): el text del que hi ha i el botó **Modificar opció global**, que obre el Moble › Sòcol i potes (suport,
+      opció global»): el text del que hi ha i el botó **Modificar opció global**, que obre el Moble › Suport general (suport,
       alçada, pota, retirada, sòcol i trams); penjat: «Penjat a la paret, a … mm del terra», es canvia a Posició i, sota, **Base** (Sencera · Sense base;
       amb potes no surt: s'hi cargolen). **Llum a sota**: penjat o amb potes vistes (amb sòcol quedaria amagada: no surt
       i no es fa). La resta, com sempre:

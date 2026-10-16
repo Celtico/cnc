@@ -84,7 +84,7 @@ export function buildTramPlinths(comp: Composition, places: ModulePlacement[], m
         const alu = aluPlinth(frame, pl.hardware, prefix, moduleNumber, { front: 2 * ms.length, back: 2 * ms.length })
         out.extras.push(...alu.extras.map((p) => ({ ...p, module: moduleNumber })))
         out.linear.push(...alu.pieces)
-        if (alu.height > H + 0.5) out.warnings.push({ code: "hardware", message: `«${pl.hardware.name}» fa ${num(alu.height)} mm d'alçada i les potes ${num(H)}: no hi cap. Posa les potes a ${num(alu.height)} mm o més (Moble › Sòcol i potes) o tria un sòcol més baix.` })
+        if (alu.height > H + 0.5) out.warnings.push({ code: "hardware", message: `«${pl.hardware.name}» fa ${num(alu.height)} mm d'alçada i les potes ${num(H)}: no hi cap. Posa les potes a ${num(alu.height)} mm o més (Moble › Suport general) o tria un sòcol més baix.` })
         else if (H - alu.height > 20) out.warnings.push({ code: "hardware", message: `«${pl.hardware.name}» fa ${num(alu.height)} mm d'alçada i les potes ${num(H)}: queda un forat de ${num(H - alu.height)} mm sota els mòduls. Baixa les potes o tria un sòcol més alt.` })
       } catch (err) {
         out.warnings.push({ code: "hardware", message: `Sòcol: ${err instanceof Error ? err.message : String(err)}. No es fa.` })

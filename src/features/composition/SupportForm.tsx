@@ -23,7 +23,7 @@ const sidesOf = (s: TramSides): SidesChoice => (s.back ? "all" : s.left && s.rig
 const SIDES: Record<SidesChoice, TramSides> = { front: {}, left: { left: true }, right: { right: true }, sides: { left: true, right: true }, all: { back: true, left: true, right: true } }
 
 /**
- * **Sòcol i potes** (Moble; per decisió de l'usuari, 2026-10-15: «és un sòcol per a tots els mòduls i no un per a cada
+ * **Suport general** (Moble; per decisió de l'usuari, 2026-10-15: «és un sòcol per a tots els mòduls i no un per a cada
  * un»; «el sòcol no pot anar per cada mòdul, és una peça global»): el suport de tots els mòduls de terra
  * (`Composition.support`, `setSupport`). Directe a terra, Sòcol (sobre potes, una peça per tram) o Potes vistes; l'alçada i
  * la pota; i el sòcol: la retirada, de fusta o d'alumini i, per a cada tram (`floorTrams`: els mòduls de terra que es
@@ -97,7 +97,7 @@ export function SupportForm({ comp, setComp }: { comp: Composition; setComp: (f:
 interface SupportIds { kind: string; height: string; leg: string; legInset: string }
 
 /**
- * Suport, alçada i pota: el mateix per a tots els mòduls de terra, només al Moble › Sòcol i potes (la Caixa del mòdul en
+ * Suport, alçada i pota: el mateix per a tots els mòduls de terra, només al Moble › Suport general (la Caixa del mòdul en
  * diu el text i hi porta amb «Modificar opció global»).
  */
 function SupportBasics({ support: s, onChange: set, first, help, ids }: { support: FloorSupport; onChange: (patch: Partial<FloorSupport>) => void; first?: Module; help: string; ids: SupportIds }) {

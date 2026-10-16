@@ -41,7 +41,7 @@
 - **Carcassa** (inspector del mòdul, secció Caixa):
   - **Suport: un per a tot el moble** (`Composition.support`, `supportSchema.ts`, `floorSupport.ts`; per decisió de
     l'usuari, 2026-10-15: «és un sòcol per a tots els mòduls i no un per a cada un»; «el sòcol no pot anar per cada mòdul,
-    és una peça global»): Moble › **Sòcol i potes** (`SupportForm`) tria **Directe a terra · Sòcol · Potes vistes**,
+    és una peça global»): Moble › **Suport general** (`SupportForm`) tria **Directe a terra · Sòcol · Potes vistes**,
     l'alçada de les potes, la pota i el sòcol. `withSupport` (en obrir el moble, a cada canvi de l'Editor i a
     `buildComposition`) l'escriu a la base de cada mòdul de terra (`{ kind: "none" }` o `{ kind: "legs", height, hardware }`):
     al mòdul, el Suport és un text. Un mòdul **sense base** no pot anar sobre potes (s'hi cargolen): va directe a terra i

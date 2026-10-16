@@ -23,7 +23,7 @@ type CarcassSection = "dims" | "structure"
  * decisió de l'usuari, 2026-10-08: «l'Estil també a la Caixa»; abans eren a «Acabats»). Només el que la construcció
  * llegeix (`moduleRows`, `core/model/usedHardware.ts`). Els passacables són a `CableHolesForm`.
  */
-export function CarcassForm({ module, onChange, section, rows = moduleRows(module), support, onOpenSupport }: { module: Module; onChange: (m: Module) => void; section: CarcassSection; rows?: ModuleRows; /** El suport dels mòduls de terra (Moble › Sòcol i potes). */ support?: FloorSupport; /** Obre l'opció global: Moble › Sòcol i potes. */ onOpenSupport?: () => void }) {
+export function CarcassForm({ module, onChange, section, rows = moduleRows(module), support, onOpenSupport }: { module: Module; onChange: (m: Module) => void; section: CarcassSection; rows?: ModuleRows; /** El suport dels mòduls de terra (Moble › Suport general). */ support?: FloorSupport; /** Obre l'opció global: Moble › Suport general. */ onOpenSupport?: () => void }) {
   const c = module.carcass
   const { gaps } = useSettings().settings
   const set = (patch: Partial<Carcass>) => onChange({ ...module, carcass: { ...c, ...patch } })
@@ -67,7 +67,7 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
             onChange={(root) => onChange({ ...module, root })}
           />
         )}
-        {/* Suport: el penjat, aquí (els penjadors); els de terra, el del moble (Moble › Sòcol i potes, per decisió de
+        {/* Suport: el penjat, aquí (els penjadors); els de terra, el del moble (Moble › Suport general, per decisió de
             l'usuari, 2026-10-15: «és un sòcol per a tots els mòduls i no un per a cada un»). La Base (la peça de baix), a
             sota: «la base que es pugui treure». */}
         {c.base.kind === "wall" ? (
@@ -78,7 +78,7 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
         ) : rule?.support === false ? null : (
           // Una opció global (la de tots els mòduls de terra) no es repeteix al mòdul (per decisió de l'usuari,
           // 2026-10-16: «no repetir les opcions ni posar un missatge, sinó un botó que digui modificar opció global»): què
-          // hi ha i un botó que porta al Moble › Sòcol i potes.
+          // hi ha i un botó que porta al Moble › Suport general.
           <FormRow optionId="module.carcass.support" label="Suport">
             <Stack gap={2} pt="7px" align="flex-start">
               <Text fontSize="sm" color="fg.muted">

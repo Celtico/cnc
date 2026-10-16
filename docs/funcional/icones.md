@@ -28,7 +28,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Inspector | Mides · Caixa (base, fons, tapa, laterals, estil dels fronts i folgances) · Portes (del mòdul; com el Front de la porta) · Materials · Unió (l'espiga del mòdul; la de la categoria Unions) · Ferratges (inspector de la peça lliure, Preferències i visor; no al mòdul) · Front · Pare | `LuMoveDiagonal` · `LuFrame` · `LuDoorClosed` · `LuPalette` · `LuBolt` · `LuWrench` · `LuDoorClosed` · `LuArrowUp` |
 | Inspector | Base: Directe a terra · Sòcol · Potes (la de la categoria Potes, no la Taula) · Sense base | `LuArrowDownToLine` · `LuPanelBottom` · `LuFootprints` · `LuSquareDashedBottom` |
 | Inspector | Fons en ranura · Cargolat darrere · Encastat · Sense fons | `LuLayers2` · `LuDrill` · `LuInspectionPanel` · `LuSquareDashed` |
-| Inspector | Resum del moble · Sòcol i potes · Tipus del mòdul | `LuBox` · `LuPanelBottom` · el del tipus (`LuPanelBottom`, `LuPanelTop`, `LuRectangleVertical`, `LuRefrigerator`) |
+| Inspector | Resum del moble · Suport general · Tipus del mòdul · Posició | `LuBox` · `LuPanelBottom` · el del tipus (`LuBox` moble, `LuRefrigerator` electrodomèstic) · `LuMove` |
 | Inspector | Grup (peces lliures) · Enganxada (a un mòdul, al terra / a la paret) · CNC de la peça (la de Màquina CNC) | `LuGroup` · `LuLink` · `LuFactory` |
 | Forma | Forma a mida / perfil · Cilindre (la caixa, `LuBox`) | `LuSpline` · `LuCylinder` |
 | Render | Qualitat · Càmera · Escena · Llums · Sol · Cel · Llum (materials que fan llum) · Imatge | `LuGauge` · `LuCamera` · `LuHouse` · `LuLightbulb` · `LuSun` · `LuCloudSun` · `LuLamp` · `LuImage` |
