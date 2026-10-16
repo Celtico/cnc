@@ -12,6 +12,7 @@ import { profileGeometry } from "../refGeometry"
 import { surfaceMaterial } from "../surfaceMaterial"
 import { disposeMaterial } from "../textures"
 import { S, SELECT_COLOR } from "./constants"
+import { snapToleranceMm } from "../snapTolerance"
 import { useOrbitControls } from "../orbitControls"
 
 export interface SnapTargets {
@@ -20,17 +21,14 @@ export interface SnapTargets {
   z: number[]
 }
 
-/** Distància (mm) a la qual una aresta de l'objecte s'enganxa a una aresta de referència. */
-const SNAP_MM = 15
-
-/** Posició (mm, arrodonida a 1) i si s'ha enganxat: prova les dues arestes de l'objecte. */
-function snapAxis(pos: number, size: number, targets: number[], free: boolean): { v: number; snapped: boolean } {
+/** Posició (mm, arrodonida a 1) i si s'ha enganxat: prova les dues arestes de l'objecte, a `tol` mm (`snapToleranceMm`). */
+function snapAxis(pos: number, size: number, targets: number[], free: boolean, tol: number): { v: number; snapped: boolean } {
   if (free) return { v: Math.round(pos), snapped: false }
   let best: number | null = null
   for (const t of targets) {
     for (const edge of [pos, pos + size]) {
       const delta = t - edge
-      if (Math.abs(delta) <= SNAP_MM && (best === null || Math.abs(delta) < Math.abs(best))) best = delta
+      if (Math.abs(delta) <= tol && (best === null || Math.abs(delta) < Math.abs(best))) best = delta
     }
   }
   return best === null ? { v: Math.round(pos), snapped: false } : { v: Math.round(pos + best), snapped: true }
@@ -93,6 +91,8 @@ export function RefGhost({
 }) {
   const controls = useOrbitControls()
   const [drag, setDrag] = useState<{ x: number; y: number; z: number; axes: Axis[]; snapped: Axis[] } | null>(null)
+  // La càmera i la mida d'ara (l'imant va en píxels de pantalla).
+  const getThree = useThree((st) => st.get)
   const latest = useLatest(drag)
   const state = useRef<{ plane: Plane; grab: Vector3; axes: Axis[]; start: [number, number]; moved: boolean } | null>(null)
   const snap = useMemo((): SnapTargets => {
@@ -147,9 +147,11 @@ export function RefGhost({
         at.sub(st.grab)
         const raw = { x: (at.x - offset[0]) / S, y: (at.y - offset[1]) / S, z: (at.z - offset[2]) / S }
         const next = { x: g.x, y: g.y, z: g.z, axes: st.axes, snapped: [] as Axis[] }
+        const three = getThree()
+        const tol = snapToleranceMm(three.camera, three.size.height, at, S)
         for (const a of st.axes) {
           const size = a === "x" ? g.w : a === "y" ? g.h : g.d
-          const r = snapAxis(raw[a], size, snap[a], e.altKey)
+          const r = snapAxis(raw[a], size, snap[a], e.altKey, tol)
           next[a] = r.v
           if (r.snapped) next.snapped.push(a)
         }

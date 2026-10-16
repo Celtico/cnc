@@ -13,7 +13,7 @@ export function useObjectBoxes({ size, modules, parts, models, ghosts, selectedS
     for (const m of modules ?? []) {
       t.x.push(m.x, m.x + m.width)
       t.y.push(m.y, m.y + m.height)
-      t.z.push(m.depth)
+      t.z.push(m.z ?? 0, (m.z ?? 0) + m.depth)
     }
     return t
   }, [modules, size.width, size.height, size.depth])

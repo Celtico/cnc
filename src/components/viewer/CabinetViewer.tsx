@@ -98,6 +98,10 @@ export function CabinetViewer({
   const [moduleDrag, setModuleDrag] = useState<{ index: number; dx: number; dy: number; dz: number; all: boolean } | null>(null)
   const { onFittingSelect, onPanelHover, onPanelClick } = usePanelHandlers({ onSelectModule, onSelectPart, onSelectHardware, modules, size }, setHoverModule)
   const { snapTargets, partBoxes, selectedPartBox, modelBoxes, selectedModelBox, setBox, selectedModel, groupBox } = useObjectBoxes({ size, modules, parts, models, ghosts, selectedSet, selectedPartId, selectedModelId, selectedGroup })
+  // Un sol imant per a tot el que es mou amb el gizmo (per decisió de l'usuari, 2026-10-16: «uns s'enganxen ràpid i altres
+  // no»): les arestes de totes les peces lliures, els models i els objectes, menys les dels que es mouen (a més de
+  // `snapTargets`: mòduls, terra i paret). La distància, en píxels de pantalla (`snapToleranceMm`).
+  const snapOthers = (moving: ReadonlySet<string> = new Set()) => [...partBoxes, ...modelBoxes, ...(ghosts ?? [])].filter((b) => !moving.has(b.id))
   // De la caixa girada a la cantonada del model (el gizmo mou la caixa).
   const toModelPos = (pos: { x: number; y: number; z: number }) => (selectedModel && selectedModelBox ? { x: pos.x - selectedModelBox.x + selectedModel.x, y: pos.y, z: pos.z - selectedModelBox.z + selectedModel.z } : pos)
   // Els models comparteixen geometria i materials (memòria de `models3d`): en tancar el visor (o recrear el
@@ -203,7 +207,7 @@ export function CabinetViewer({
             guides={q.guides}
             offset={[-size.width * S * 0.5, 0, -size.depth * S * 0.5]}
             targets={snapTargets}
-            others={ghosts}
+            others={snapOthers()}
             onSelect={onSelectRef}
             onMove={onMoveRef}
           />
@@ -218,7 +222,7 @@ export function CabinetViewer({
             guides={q.guides}
             offset={[-size.width * S * 0.5, 0, -size.depth * S * 0.5]}
             targets={snapTargets}
-            others={[...partBoxes, ...(ghosts ?? [])]}
+            others={snapOthers()}
             onSelect={onSelectPart}
             onMove={onMovePart}
             outline
@@ -238,7 +242,7 @@ export function CabinetViewer({
             guides={q.guides}
             offset={[-size.width * S * 0.5, 0, -size.depth * S * 0.5]}
             targets={snapTargets}
-            others={[...modelBoxes, ...partBoxes, ...(ghosts ?? [])]}
+            others={snapOthers()}
             onSelect={onSelectModel}
             onMove={onMoveModel ? (id, pos) => onMoveModel(id, toModelPos(pos)) : undefined}
             onDrag={(pos) => setModelDrag(pos && { id: selectedModelBox.id, ...toModelPos(pos) })}
@@ -254,7 +258,7 @@ export function CabinetViewer({
             guides={q.guides}
             offset={[-size.width * S * 0.5, 0, -size.depth * S * 0.5]}
             targets={snapTargets}
-            others={[...partBoxes.filter((b) => !(parts ?? []).some((p) => p.id === b.id && p.group === selectedGroup)), ...(ghosts ?? [])]}
+            others={snapOthers(new Set([...(parts ?? []), ...(models ?? []), ...(ghosts ?? [])].filter((q) => q.group && q.group === selectedGroup).map((q) => q.id)))}
             onMove={onMoveGroup ? (_, pos) => onMoveGroup(selectedGroup!, pos.x - groupBox.x, pos.y - groupBox.y, pos.z - groupBox.z) : undefined}
             outline
           />
@@ -268,7 +272,7 @@ export function CabinetViewer({
             guides={q.guides}
             offset={[-size.width * S * 0.5, 0, -size.depth * S * 0.5]}
             targets={snapTargets}
-            others={[...partBoxes, ...(ghosts ?? [])].filter((b) => !selectedSet?.some((x) => x.id === b.id))}
+            others={snapOthers(new Set(selectedSet?.map((x) => x.id)))}
             onMove={onMoveSet ? (_, pos) => onMoveSet(pos.x - setBox.x, pos.y - setBox.y, pos.z - setBox.z) : undefined}
             outline
           />
@@ -292,7 +296,7 @@ export function CabinetViewer({
         {selected && onMoveModule && (
           <MoveHandle
             m={selected}
-            others={[...(modules ?? []).filter((o) => o.id !== selected.id).flatMap((o) => [o.x, o.x + o.width]), ...(ghosts ?? []).flatMap((g) => [g.x, g.x + g.w])]}
+            others={[...(modules ?? []).filter((o) => o.id !== selected.id).flatMap((o) => [o.x, o.x + o.width]), ...snapOthers().flatMap((g) => [g.x, g.x + g.w])]}
             onDrag={setModuleDrag}
             onDrop={(dx, dy, dz, all) => {
               setModuleDrag(null)

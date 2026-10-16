@@ -1,10 +1,11 @@
-import { useFrame, type ThreeEvent } from "@react-three/fiber"
+import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber"
 import { Billboard, Html } from "@react-three/drei"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Plane, Vector3, type Group } from "three"
 import { useViewerCursor } from "../cursor"
 import { usePixelScale } from "../pixelScale"
 import { S } from "./constants"
+import { snapToleranceMm } from "../snapTolerance"
 import type { ViewerModule } from "./types"
 import { useOrbitControls } from "../orbitControls"
 
@@ -32,6 +33,8 @@ export function MoveHandle({
   onDrop: (dx: number, dy: number, dz: number, all: boolean) => void
 }) {
   const controls = useOrbitControls()
+  // La càmera i la mida d'ara (l'imant va en píxels de pantalla).
+  const getThree = useThree((st) => st.get)
   const start = useRef<{ p: Vector3; plane: Plane; all: boolean } | null>(null)
   const latest = useRef<{ dx: number; dy: number; dz: number; all: boolean } | null>(null)
   const [live, setLive] = useState<{ dx: number; dy: number; dz: number; all: boolean } | null>(null)
@@ -97,10 +100,12 @@ export function MoveHandle({
     // «Al terra»: endavant i enrere, sense passar la paret.
     const dz = m.free && !s0.all ? Math.max(-(m.z ?? 0), Math.round((p.z - s0.p.z) / S)) : 0
     if (!e.altKey) {
+      const three = getThree()
+      const tol = snapToleranceMm(three.camera, three.size.height, p, S)
       let best: number | null = null
       for (const t of others) for (const edge of [m.x + dx, m.x + m.width + dx]) {
         const d = t - edge
-        if (Math.abs(d) <= 15 && (best === null || Math.abs(d) < Math.abs(best))) best = d
+        if (Math.abs(d) <= tol && (best === null || Math.abs(d) < Math.abs(best))) best = d
       }
       if (best !== null) dx += best
     }
