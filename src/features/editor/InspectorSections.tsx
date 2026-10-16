@@ -1,5 +1,5 @@
 import { Stack } from "@chakra-ui/react"
-import { LuArrowDown, LuArrowDownToLine, LuArrowLeft, LuArrowRight, LuArrowUp, LuBolt, LuBrickWall, LuFrame, LuPalette, LuPanelTop } from "react-icons/lu"
+import { LuArrowDown, LuArrowDownToLine, LuMoveDiagonal2, LuMoveHorizontal, LuArrowLeft, LuArrowRight, LuArrowUp, LuBolt, LuBrickWall, LuFrame, LuPalette, LuPanelTop } from "react-icons/lu"
 import { FoldItem } from "../../components/Fold"
 import { FormRow } from "../../components/FormRow"
 import { IconChoice } from "../../components/IconChoice"
@@ -8,6 +8,7 @@ import type { ModuleBuild } from "../../core/build/buildModule"
 import { splitChildSizes } from "../../core/build/layout"
 import { carcassBounds, coveringZone, moduleApplianceCarcass, freeX, hasDrawers, moduleHasInnerPieces, moduleRot, moduleRows, moduleSlotItem, mountOf, rowOf, setModuleMount, system32RowPlace, visibleModule, zoneBounds, type Composition, type FloorSupport, type Module, type Settings, type Zone } from "../../core/model"
 import { CarcassForm, InnerClearanceRow, JointForm, MaterialsForm } from "../composition/CarcassForm"
+import { AxisLabel } from "../composition/RefInspector"
 import { System32Pick } from "../composition/HardwarePick"
 import { ModuleDoorsSection, ZonePanel } from "../composition/ZonePanel"
 import { zoneLabel } from "../composition/zoneLabel"
@@ -61,17 +62,47 @@ export function ModulePositionFields({ comp, module, moduleX, updateModule }: { 
           help="Fins a la part de baix del mòdul."
         />
       )}
-      {mountOf(module) === "floor" && (
+      {/* Lliure al terra: on és a la planta, com la Posició de les peces i els objectes (per decisió de l'usuari,
+          2026-10-16: «si és lliure, han de sortir X i Y»): De costat (X) i Fondària (Z, de la paret al darrere). */}
+      {freeX(module) ? (
+        <>
+        <NumRow
+          optionId="module.position.x"
+          label={<AxisLabel icon={LuMoveHorizontal} name="De costat" axis="X" hint="Des de l'inici del moble" />}
+          ariaLabel="De costat (X)"
+          value={module.x!}
+          min={-20000}
+          max={20000}
+          step={10}
+          onChange={(x) => Number.isFinite(x) && updateModule({ ...module, x })}
+          help="Fora de la fila: no empeny els altres (una illa, un moble solt)."
+        />
         <NumRow
           optionId="module.position.wallGap"
-          label="Separació de la paret"
+          label={<AxisLabel icon={LuMoveDiagonal2} name="Fondària" axis="Z" hint="De la paret al darrere del mòdul" />}
+          ariaLabel="Fondària (Z)"
           value={module.wallGap ?? 0}
           min={0}
           max={10000}
           step={10}
-          onChange={(wallGap) => updateModule({ ...module, wallGap })}
-          help="Del darrere del mòdul a la paret."
+          onChange={(wallGap) => Number.isFinite(wallGap) && updateModule({ ...module, wallGap })}
         />
+        </>
+      ) : (
+      <NumRow
+          optionId="module.position.gap"
+          label={rowIndex > 0 ? "Separació amb l'anterior" : "Separació des de l'inici"}
+          value={module.gapBefore}
+          min={0}
+          max={5000}
+          step={10}
+          onChange={(g) => updateModule({ ...module, gapBefore: g })}
+          help={rowIndex > 0 ? `Des de «${rowPrev!.name}», a l'esquerra en la mateixa fila.` : "És el primer de la fila: la distància des de l'esquerra del moble."}
+        />
+      )}
+      {/* Al terra d'abans sense X pròpia (segueix la fila): la separació de la paret. */}
+      {mountOf(module) === "floor" && !freeX(module) && (
+        <NumRow optionId="module.position.wallGap" label="Separació de la paret" value={module.wallGap ?? 0} min={0} max={10000} step={10} onChange={(wallGap) => Number.isFinite(wallGap) && updateModule({ ...module, wallGap })} help="Del darrere del mòdul a la paret." />
       )}
       {/* Cap on miren els fronts (només lliure al terra): enrere, una illa amb dos mòduls d'esquena; a un costat, el mòdul
           de l'extrem d'una illa (per decisió de l'usuari, 2026-10-16). Gira al voltant del centre de la caixa. */}
@@ -94,29 +125,6 @@ export function ModulePositionFields({ comp, module, moduleX, updateModule }: { 
             }}
           />
         </FormRow>
-      )}
-      {freeX(module) ? (
-        <NumRow
-          optionId="module.position.x"
-          label="De costat (X)"
-          value={module.x!}
-          min={-20000}
-          max={20000}
-          step={10}
-          onChange={(x) => Number.isFinite(x) && updateModule({ ...module, x })}
-          help="Des de l'inici del moble. Fora de la fila: no empeny els altres (una illa, un moble solt)."
-        />
-      ) : (
-      <NumRow
-          optionId="module.position.gap"
-          label={rowIndex > 0 ? "Separació amb l'anterior" : "Separació des de l'inici"}
-          value={module.gapBefore}
-          min={0}
-          max={5000}
-          step={10}
-          onChange={(g) => updateModule({ ...module, gapBefore: g })}
-          help={rowIndex > 0 ? `Des de «${rowPrev!.name}», a l'esquerra en la mateixa fila.` : "És el primer de la fila: la distància des de l'esquerra del moble."}
-        />
       )}
     </>
   )
