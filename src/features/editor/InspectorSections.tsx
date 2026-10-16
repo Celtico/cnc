@@ -118,7 +118,7 @@ export function ModulePositionFields({ comp, module, moduleX, updateModule }: { 
  * retranqueig a la Caixa; el material dels fronts a Materials; l'espiga a Unió. Els ferratges per defecte del
  * mòdul no surten: cada compartiment tria el seu (o «Com el mòdul»).
  */
-export function ModuleSections({ module, updateModule, support, onOpenSupport }: { module: Module; updateModule: (m: Module) => void; /** El suport dels mòduls de terra (Moble › Suport general): la Caixa el diu. */ support?: FloorSupport; /** Porta a l'opció global (Moble › Suport general). */ onOpenSupport?: () => void }) {
+export function ModuleSections({ module, updateModule, support, onOpenSupport, moble }: { module: Module; updateModule: (m: Module) => void; /** El cos del moble (el més repetit dels mòduls): «Com el moble» a Materials. */ moble?: { material: string; thickness: number }; /** El suport dels mòduls de terra (Moble › Suport general): la Caixa el diu. */ support?: FloorSupport; /** Porta a l'opció global (Moble › Suport general). */ onOpenSupport?: () => void }) {
   const rows = moduleRows(module)
   return (
     <>
@@ -148,7 +148,7 @@ export function ModuleSections({ module, updateModule, support, onOpenSupport }:
         </FoldItem>
       )}
       <FoldItem optionId="module.materials" id="mod-materials" title="Materials" icon={LuPalette}>
-        <MaterialsForm scope="module" carcass={module.carcass} hasDrawers={hasDrawers(visibleModule(module).root)} hasFronts={rows.frontMaterial} onPatch={(patch) => updateModule({ ...module, carcass: { ...module.carcass, ...patch } })} />
+        <MaterialsForm scope="module" carcass={module.carcass} {...(moble ? { moble } : {})} hasDrawers={hasDrawers(visibleModule(module).root)} hasFronts={rows.frontMaterial} onPatch={(patch) => updateModule({ ...module, carcass: { ...module.carcass, ...patch } })} />
       </FoldItem>
     </>
   )

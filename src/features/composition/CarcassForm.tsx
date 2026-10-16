@@ -326,7 +326,7 @@ const MATERIAL_IDS = {
   moble: { body: "moble.materials.body", thickness: "moble.materials.thickness", fronts: "moble.materials.fronts", back: "moble.materials.back", backThickness: "moble.materials.backThickness", drawerBottom: "moble.materials.drawerBottom" },
 } as const
 
-export function MaterialsForm({ scope, carcass: c, onPatch, mixed, hasBack = c.back !== "none", hasDrawers = false, hasFronts = true }: { /** Mòdul › Materials o Materials de tot el moble (els ids de les opcions en cascada). */ scope: "module" | "moble"; carcass: Carcass; onPatch: (patch: Partial<Carcass>) => void; mixed?: boolean; /** Sense fons: no surten les opcions del fons. */ hasBack?: boolean; /** Amb calaixos: la fila «Fons del calaix». */ hasDrawers?: boolean; /** La fila «Fronts» (al mòdul, només amb algun front que es fa). */ hasFronts?: boolean }) {
+export function MaterialsForm({ scope, carcass: c, onPatch, mixed, hasBack = c.back !== "none", hasDrawers = false, hasFronts = true, moble }: { /** Mòdul › Materials o Materials de tot el moble (els ids de les opcions en cascada). */ scope: "module" | "moble"; carcass: Carcass; /** Al mòdul: la caixa del moble (Materials de tot el moble), per a «Com el moble». */ moble?: Pick<Carcass, "material" | "thickness">; onPatch: (patch: Partial<Carcass>) => void; mixed?: boolean; /** Sense fons: no surten les opcions del fons. */ hasBack?: boolean; /** Amb calaixos: la fila «Fons del calaix». */ hasDrawers?: boolean; /** La fila «Fronts» (al mòdul, només amb algun front que es fa). */ hasFronts?: boolean }) {
   const { settings } = useSettings()
   const mat = materialByName(settings, c.material)
   const backMat = materialByName(settings, c.backMaterial)
@@ -345,6 +345,7 @@ export function MaterialsForm({ scope, carcass: c, onPatch, mixed, hasBack = c.b
     onPatch(key === "material" && sameBack ? { material: name, thickness, backMaterial: name, backThickness: thickness } : { [key]: name, [thicknessKey]: thickness })
   }
   const sameBack = c.backMaterial === c.material && c.backThickness === c.thickness
+  const asMoble = !!moble && c.material === moble.material && c.thickness === moble.thickness
   // Mateix material però un altre gruix: al nesting van a taulers diferents.
   const backApart = c.backMaterial === c.material && c.backThickness !== c.thickness
   // Només els de CNC (`boardChoices`/`backChoices`); un moble fet amb un altre continua igual (avís al selector).
@@ -359,7 +360,15 @@ export function MaterialsForm({ scope, carcass: c, onPatch, mixed, hasBack = c.b
         </Text>
       )}
       <FormRow optionId={ids.body} label="Cos" maxW="280px">
-        <MaterialSelect label="Cos" hideLabel materials={boards} value={c.material} onChange={pickMaterial("material", "thickness")} />
+        {/* Al mòdul, «Com el moble» (per decisió de l'usuari, 2026-10-16): el cos i el gruix dels Materials de tot el moble. */}
+        <MaterialSelect
+          label="Cos"
+          hideLabel
+          materials={boards}
+          value={asMoble ? "" : c.material}
+          {...(moble ? { emptyLabel: `Com el moble (${moble.material}, ${moble.thickness} mm)` } : {})}
+          onChange={(v) => (v || !moble ? pickMaterial("material", "thickness")(v) : onPatch(sameBack ? { material: moble.material, thickness: moble.thickness, backMaterial: moble.material, backThickness: moble.thickness } : { material: moble.material, thickness: moble.thickness }))}
+        />
       </FormRow>
       {mat ? (
         <FormRow optionId={ids.thickness} label="Gruix">

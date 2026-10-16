@@ -239,6 +239,7 @@ export function EditorInspector({
             module={module}
             updateModule={updateModule}
             support={comp.support}
+            moble={mobleBody(comp)}
             onOpenSupport={() => {
               select({ kind: "moble" })
               setInspectorOpen(["moble-support"])
@@ -253,4 +254,16 @@ export function EditorInspector({
       </FoldGroup>
     </Stack>
   )
+}
+
+/** El cos del moble: el material i el gruix més repetits dels seus mòduls (el «Com el moble» del mòdul). */
+function mobleBody(comp: Composition): { material: string; thickness: number } | undefined {
+  const count = new Map<string, { n: number; material: string; thickness: number }>()
+  for (const m of comp.modules) {
+    const k = `${m.carcass.material}|${m.carcass.thickness}`
+    const c = count.get(k)
+    count.set(k, { n: (c?.n ?? 0) + 1, material: m.carcass.material, thickness: m.carcass.thickness })
+  }
+  const top = [...count.values()].sort((a, b) => b.n - a.n)[0]
+  return top && { material: top.material, thickness: top.thickness }
 }
