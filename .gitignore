@@ -34,3 +34,6 @@ _to_delete/
 
 # Catàlegs d'electrodomèstics (Siemens, Balay, Bosch, Teka): només locals
 docs/electrodomestic/*.pdf
+
+# Captures de referència de SolidWorks (imatges de tercers): només locals
+docs/solidworks/
