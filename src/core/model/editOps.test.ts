@@ -319,3 +319,16 @@ describe("grups de mòduls", async () => {
     expect(removeGroup(comp, "G").modules).toHaveLength(0)
   })
 })
+
+describe("moure un grup de mòduls seguits de la fila", async () => {
+  const { moveGroupBy } = await import("./editOps")
+  const { defaultModule } = await import(".")
+  const m = (id: string, gapBefore: number, group?: string) => ({ ...defaultModule(id, id), gapBefore, ...(group ? { group } : {}) })
+  it("a la dreta i a l'esquerra, les separacions de dins es conserven i el de després les absorbeix", () => {
+    const comp = { kind: "moble", modules: [m("A", 0), m("B", 100, "G"), m("C", 0, "G"), m("D", 20, "G"), m("E", 0)], references: [] } as never
+    const r = moveGroupBy(comp, "G", 50, 0, 0) as { modules: { gapBefore: number }[] }
+    expect(r.modules.map((x) => x.gapBefore)).toEqual([0, 150, 0, 20, 0])
+    const l = moveGroupBy(comp, "G", -30, 0, 0) as { modules: { gapBefore: number }[] }
+    expect(l.modules.map((x) => x.gapBefore)).toEqual([0, 70, 0, 20, 30])
+  })
+})

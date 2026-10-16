@@ -102,6 +102,40 @@ export function moveModuleBy(comp: Composition, id: string, dx: number, dy = 0, 
 }
 
 /**
+ * Mou uns quants mòduls junts (un grup, la selecció múltiple). A cada fila, cada tirada de mòduls triats seguits es mou
+ * sencera: el primer guanya la separació (`gapBefore`) i el següent de la fila que no és de la tirada la perd (com
+ * `moveModuleBy`); els de dins no canvien, i així no se separen. Amb X pròpia (lliure al terra), cadascun la seva X.
+ */
+function moveModulesBy(comp: Composition, ids: ReadonlySet<string>, dx: number, dy = 0, dz = 0): Composition {
+  if (!ids.size) return comp
+  const modules = comp.modules.map((m) => ({ ...m }))
+  for (const row of ["floor", "wall"] as const) {
+    const order = modules.map((m, k) => (rowOf(m) === row && !freeX(m) ? k : -1)).filter((k) => k >= 0)
+    for (let r = 0; r < order.length; r++) {
+      const k = order[r]!
+      if (!ids.has(modules[k]!.id) || (r > 0 && ids.has(modules[order[r - 1]!]!.id))) continue
+      const gap = Math.max(0, Math.round(modules[k]!.gapBefore + dx))
+      const actual = gap - modules[k]!.gapBefore
+      modules[k]!.gapBefore = gap
+      let e = r
+      while (e + 1 < order.length && ids.has(modules[order[e + 1]!]!.id)) e++
+      const next = order[e + 1]
+      if (next !== undefined) modules[next]!.gapBefore = Math.max(0, modules[next]!.gapBefore - actual)
+    }
+  }
+  return {
+    ...comp,
+    modules: modules.map((m) => {
+      if (!ids.has(m.id)) return m
+      if (freeX(m)) return { ...m, x: Math.round(m.x! + dx), wallGap: Math.max(0, Math.round((m.wallGap ?? 0) + dz)) }
+      const base = m.carcass.base.kind === "wall" && dy ? { ...m.carcass.base, height: Math.max(0, Math.round(m.carcass.base.height + dy)) } : m.carcass.base
+      const wallGap = m.wallGap !== undefined && m.carcass.base.kind !== "wall" ? Math.max(0, Math.round(m.wallGap + dz)) : m.wallGap
+      return { ...m, ...(wallGap !== undefined ? { wallGap } : {}), carcass: { ...m.carcass, base } }
+    }),
+  }
+}
+
+/**
  * Mou tot el moble `dx` mm respecte a l'habitació. Com que el moble comença a x = 0, si va
  * més a l'esquerra del que permeten les separacions inicials, són els objectes els que es
  * mouen a la dreta (el resultat és el mateix).
@@ -377,13 +411,14 @@ export function moveMultiBy(comp: Composition, items: readonly MultiItem[], dx: 
   const b = multiBox(comp, items)
   if (!b) return comp
   const ddy = Math.max(dy, -b.min[1])
-  // Els mòduls, pel camí de la nansa (`moveModuleBy`: a la seva fila; amunt i avall, només els penjats).
-  let base = comp
-  for (const x of items) if (x.kind === "module") base = moveModuleBy(base, x.id, dx, ddy, dz)
-  comp = base
+  // Els mòduls, junts: a la seva fila, com la nansa (`moveModuleBy`), però una tirada de mòduls triats seguits es mou
+  // sencera i conserva les separacions de dins (per decisió de l'usuari, 2026-10-16: «en moure grups es desplacen i no
+  // mantenen l'espai original»); amunt i avall, només els penjats.
+  comp = moveModulesBy(comp, new Set(items.filter((x) => x.kind === "module").map((x) => x.id)), dx, ddy, dz)
   return {
     ...comp,
-    parts: (comp.parts ?? []).map((p) => (inMulti(items, "part", p.id) ? { ...p, x: p.x + dx, y: p.y + ddy, z: p.z + dz } : p)),
+    // Una peça enganxada a un mòdul que també es mou ja el segueix (x relativa): no es mou dues vegades.
+    parts: (comp.parts ?? []).map((p) => (inMulti(items, "part", p.id) && !(p.module && inMulti(items, "module", p.module)) ? { ...p, x: p.x + dx, y: p.y + ddy, z: p.z + dz } : p)),
     // Els objectes al terra o a la paret s'hi queden (`anchorRef`).
     references: comp.references.map((r) => (inMulti(items, "ref", r.id) ? anchorRef({ ...r, x: r.x + dx, y: r.y + ddy, z: r.z + dz }) : r)),
     ...(comp.models ? { models: comp.models.map((m) => (inMulti(items, "model", m.id) ? { ...m, x: m.x + dx, y: m.y + ddy, z: m.z + dz } : m)) } : {}),
