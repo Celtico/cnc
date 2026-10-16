@@ -276,7 +276,7 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
             )}
           </Stack>
         </FoldItem>
-        {(rows.style && !rule?.niche) || rows.outerGap || rows.betweenGap || rows.shelfSetback && (
+        {((rows.style && !rule?.niche) || rows.outerGap || rows.betweenGap || rows.shelfSetback) && (
             <FoldItem optionId="module.carcass.frontsGroup" id="mod-carcass-fronts" title="Fronts" icon={LuSquareStack} size="sm" badge={module.fronts.style === "inset" ? "Encastats" : "Recobrents"}>
               <Stack gap={4}>
                 {/* Tots els fronts del mòdul, al final de la Caixa (en depenen: el davant de la caixa, la llum). Només si es
