@@ -55,3 +55,17 @@ describe("illa: mòduls d'esquena i panells de remat", () => {
     expect(buildComposition({ ...comp(), islands: [island({ back: "nope" })] }).panels).toEqual(base.panels)
   })
 })
+
+describe("illa amb sòcol: un sol sòcol, retirat dels fronts de les dues files", () => {
+  it("el davant a la retirada del front de davant i el darrere a la del front del de darrere (girat)", () => {
+    const c = { ...comp(island({ left: false, right: false })), support: { kind: "plinth", height: 100, plinth: { setback: 50 } } } as Composition
+    const b = buildComposition(c)
+    const F = boxOf(b.panels.filter((p) => p.module === 1))
+    const B = boxOf(b.panels.filter((p) => p.module === 2))
+    const plinth = b.panels.filter((p) => /^Sòcol/.test(p.label))
+    const zs = plinth.map((p) => [panelBox(p).min[2]!, panelBox(p).max[2]!])
+    // De punta a punta de l'illa: del front del de darrere (+50) al front del de davant (−50).
+    expect(Math.min(...zs.map((z) => z[0]!))).toBeCloseTo(B.lo[2]! + 50)
+    expect(Math.max(...zs.map((z) => z[1]!))).toBeCloseTo(F.hi[2]! - 50)
+  })
+})

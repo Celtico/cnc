@@ -1,4 +1,4 @@
-import { floorTrams, isApplianceModule, isTurned, moduleFrontFace, tramFacesBack, tramHeightMismatches, tramSides, type Composition, type ModulePlacement, type Panel } from "../model"
+import { floorTrams, isApplianceModule, isTurned, moduleFrontFace, tramHeightMismatches, tramSides, type Composition, type ModulePlacement, type Panel } from "../model"
 import type { LinearPiece } from "./linearOrders"
 import type { VentInlet } from "./module/types"
 import { aluPlinth, plinthPieces, woodPlinthPanels, type PlinthFrame } from "./plinth"
@@ -30,7 +30,7 @@ interface TramVent extends VentInlet {
   module: number
 }
 
-export function buildTramPlinths(comp: Composition, places: ModulePlacement[], moduleNumber: number, vents: TramVent[] = []): TramPlinthBuild {
+export function buildTramPlinths(comp: Composition, places: ModulePlacement[], moduleNumber: number, vents: TramVent[] = [], turned: (i: number) => boolean = (i) => isTurned(comp.modules[i]!)): TramPlinthBuild {
   const out: TramPlinthBuild = { panels: [], extras: [], linear: [], warnings: [] }
   const s = comp.support
   if (!s) return out
@@ -58,15 +58,24 @@ export function buildTramPlinths(comp: Composition, places: ModulePlacement[], m
     const zFace = Math.min(...(faces.length ? faces : tram.modules.map((i) => (places[i]!.z ?? 0) + moduleFrontFace(comp.modules[i]!))))
     const sides = tramSides(s, tram, comp)
     const ss = pl.sideSetback ?? pl.setback
-    // Els fronts miren enrere (una fila de mòduls girats): el davant del sòcol és el costat de la paret.
-    const back = tramFacesBack(comp, tram)
+    // Els fronts miren enrere (una fila de mòduls girats): el davant del sòcol és el costat de la paret. Una illa (dues
+    // files d'esquena, `turned`: el de darrere de cada illa) té fronts als dos costats: el sòcol, retirat dels dos.
+    const fwd = tram.modules.filter((i) => !turned(i))
+    const bwd = tram.modules.filter((i) => turned(i))
+    const back = fwd.length === 0
+    const both = fwd.length > 0 && bwd.length > 0
+    // La cara dels fronts girats és a la Z petita del mòdul: el sòcol, mai per davant del més endarrerit.
+    const bwdFaces = bwd.filter((i) => !isApplianceModule(comp.modules[i]!)).map((i) => places[i]!.z ?? 0)
+    const zFaceBwd = Math.max(...(bwdFaces.length ? bwdFaces : bwd.map((i) => places[i]!.z ?? 0)))
+    const fwdFaces = fwd.filter((i) => !isApplianceModule(comp.modules[i]!)).map((i) => (places[i]!.z ?? 0) + moduleFrontFace(comp.modules[i]!))
+    const zFaceFwd = Math.min(...(fwdFaces.length ? fwdFaces : fwd.map((i) => (places[i]!.z ?? 0) + moduleFrontFace(comp.modules[i]!))))
     const frame = {
       x0: sides.left ? x0 + ss : x0,
       x1: sides.right ? x1 - ss : x1,
-      zBack: back ? zBackEdge + pl.setback : zBackEdge + ss,
-      zFront: back ? zFace - ss : zFace - pl.setback,
+      zBack: both ? zFaceBwd + pl.setback : back ? zBackEdge + pl.setback : zBackEdge + ss,
+      zFront: both ? zFaceFwd - pl.setback : back ? zFace - ss : zFace - pl.setback,
       y0: 0,
-      sides: { front: back ? !!sides.back : true, back: back ? true : !!sides.back, left: !!sides.left, right: !!sides.right },
+      sides: { front: both || !back ? true : !!sides.back, back: both || back ? true : !!sides.back, left: !!sides.left, right: !!sides.right },
     }
     const prefix = `tram:${tram.id}:`
     if (pl.hardware) {
@@ -102,7 +111,7 @@ export function buildTramPlinths(comp: Composition, places: ModulePlacement[], m
       for (const q of pieces) out.panels.push({ ...q, module: moduleNumber })
       if (f.corners === "mitre" && plinthPieces(f).some((p) => p.mitres.length)) mitreNote = true
     }
-    legFeet(out, s, pl.setback, ss, sides, ms, pl.hardware ? Number(pl.hardware.params.depth ?? first.carcass.thickness) : (pl.thickness ?? first.carcass.thickness))
+    legFeet(out, s, pl.setback, ss, both ? { ...sides, back: false } : sides, ms, pl.hardware ? Number(pl.hardware.params.depth ?? first.carcass.thickness) : (pl.thickness ?? first.carcass.thickness))
   }
   if (mitreNote) out.warnings.push({ code: "mitre", message: "Sòcol a inglet: tall a 45° als extrems dels trams que fan cantonada; encolar-los (o una escaire per dins)." })
   return out

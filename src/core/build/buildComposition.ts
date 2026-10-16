@@ -231,7 +231,7 @@ export function buildComposition(input: Composition): CompositionBuild {
   }
   for (const w of runWarnings) warnings.push({ code: "layout", message: w.message })
   const vents = builds.flatMap((b, i) => b.ventInlets.map((v) => ({ ...v, module: i })))
-  const trams = onlyParts ? undefined : buildTramPlinths(comp, places, n, vents)
+  const trams = onlyParts ? undefined : buildTramPlinths(comp, places, n, vents, (i) => isTurned(comp.modules[i]!) || backOf.has(comp.modules[i]!.id))
   if (trams) {
     for (const p of trams.panels) panels.push(normalizePanel(p))
     moduleExtras.push(...trams.extras)
