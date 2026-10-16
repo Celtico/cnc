@@ -9,7 +9,7 @@ import { useEffect, useMemo } from "react"
  * passar per sobre, i entre els de passar per sobre, l'últim. S'escriu al canvas (no al `body`): si el component
  * es desmunta a mig hover, en desmuntar-se treu el seu i no queda cap mà penjada a la resta de l'app.
  */
-type ViewerCursor = "pointer" | "grab" | "grabbing"
+type ViewerCursor = "pointer" | "grab" | "grabbing" | "move"
 
 interface CanvasCursors {
   hover: Map<symbol, ViewerCursor>
@@ -50,4 +50,51 @@ export function useViewerCursor() {
     [el, api],
   )
   return api
+}
+
+/**
+ * Amb ⌘ (o Ctrl) premut i el ratolí a sobre del 3D, el cursor de moure (per decisió de l'usuari, 2026-10-16): arrossegar
+ * amb la tecla desplaça la vista (OrbitControls). Guanya al de passar per sobre; un arrossegament de debò, al seu.
+ */
+export function usePanModifierCursor() {
+  const el = useThree((st) => st.gl.domElement)
+  useEffect(() => {
+    const id = Symbol("pan-cursor")
+    let inside = false
+    let held = false
+    const sync = () => set(el, "drag", id, inside && held ? "move" : null)
+    const key = (e: KeyboardEvent) => {
+      const next = e.metaKey || e.ctrlKey
+      if (next !== held) {
+        held = next
+        sync()
+      }
+    }
+    const move = (e: PointerEvent) => {
+      inside = true
+      if ((e.metaKey || e.ctrlKey) !== held) held = e.metaKey || e.ctrlKey
+      sync()
+    }
+    const leave = () => {
+      inside = false
+      sync()
+    }
+    const blur = () => {
+      held = false
+      sync()
+    }
+    el.addEventListener("pointermove", move)
+    el.addEventListener("pointerleave", leave)
+    window.addEventListener("keydown", key)
+    window.addEventListener("keyup", key)
+    window.addEventListener("blur", blur)
+    return () => {
+      el.removeEventListener("pointermove", move)
+      el.removeEventListener("pointerleave", leave)
+      window.removeEventListener("keydown", key)
+      window.removeEventListener("keyup", key)
+      window.removeEventListener("blur", blur)
+      set(el, "drag", id, null)
+    }
+  }, [el])
 }

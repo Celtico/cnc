@@ -8,6 +8,7 @@ import { useLatest } from "../../../lib/useLatest"
 import type { ViewName } from "../viewNames"
 import { S } from "./constants"
 import { animStep } from "./anim"
+import { usePanModifierCursor } from "../cursor"
 import type { CabinetViewerProps } from "./types"
 
 
@@ -35,6 +36,7 @@ const SETTLE_MS = 1500
  */
 export function CameraRig({ size, viewDir, fitKey, onFramedChange, initialCamera, onCameraChange, cameraGoto }: { size: CabinetViewerProps["size"]; viewDir: ViewName | null; fitKey: number; onFramedChange?: (framed: boolean) => void; initialCamera?: CameraPose; onCameraChange?: (camera: CameraPose) => void; cameraGoto?: { pose: CameraPose; n: number } | null }) {
   const controls = useRef<OrbitControlsImpl>(null)
+  usePanModifierCursor()
   const { camera, size: viewport, invalidate } = useThree()
   const w = size.width * S
   const h = size.height * S

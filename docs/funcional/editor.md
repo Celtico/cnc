@@ -231,7 +231,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   **sense «Render»** a l'ordinador: és al menú de l'app, sempre a sobre de Preferències (`RenderStatusNavItem`; el moble o
   l'ambient obert hi diu com es comença, `useRenderLauncher`; des de l'Alçat, la Foto o el plànol, passa al 3D); al mòbil,
   sense menú lateral, el Render continua a Opcions de vista. La icona fa pampallugues suaus (opacitat) mentre calcula;
-  «Desar PNG» mentre calcula l'atura.
+  «Desar PNG» mentre calcula l'atura. Amb ⌘ o Ctrl premut i el ratolí a sobre del 3D (moble i ambient), el cursor de moure
+  (`usePanModifierCursor`): arrossegar amb la tecla desplaça la vista.
 - **Selecció al 3D**: **mòdul seleccionat sòlid amb contorn taronja** (com Figma o SketchUp; per decisió de l'usuari:
   translúcid semblava que canviés de color); només es fa **translúcid amb un compartiment triat**. El primer clic tria el
   mòdul i el segon entra al compartiment tocat (`selectFrom3D`); tornar a clicar el seleccionat puja al pare; clicar la

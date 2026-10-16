@@ -5,7 +5,7 @@ import type { OrbitControlsImpl } from "../../components/viewer/orbitControls"
 import { Color, NeutralToneMapping, type PerspectiveCamera } from "three"
 import { BoxFrame } from "../../components/viewer/BoxFrame"
 import { MoveGizmo } from "../../components/viewer/MoveGizmo"
-import { useViewerCursor } from "../../components/viewer/cursor"
+import { usePanModifierCursor, useViewerCursor } from "../../components/viewer/cursor"
 import { releaseModelGpu } from "../../components/viewer/models3d"
 import { SceneAccess, StudioEnvironment, TextureRefresh } from "../../components/viewer/SceneHelpers"
 import type { SceneGetter } from "../../components/viewer/render/RenderDialog"
@@ -124,6 +124,7 @@ const RENDER_BG = "#e9e6e1"
 
 function Controls({ target, home, fitSignal, eye, eyeSignal, maxDistance, onPoseChange, initialCamera, onCameraChange, locked, goto }: { target: [number, number, number]; home: [number, number, number]; fitSignal: number; eye: ReturnType<typeof eyePose>; eyeSignal: number; maxDistance: number; onPoseChange?: (pose: "home" | "eye" | null) => void; initialCamera?: CameraPose; onCameraChange?: (camera: CameraPose) => void; locked: boolean; goto?: { pose: CameraPose; n: number } }) {
   const ref = useRef<OrbitControlsImpl>(null)
+  usePanModifierCursor()
   const camera = useThree((s) => s.camera) as PerspectiveCamera
   const invalidate = useThree((s) => s.invalidate)
   const pose = (pos: [number, number, number], tgt: [number, number, number], fov: number) => {
