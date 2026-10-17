@@ -12,7 +12,7 @@ import type { Selection } from "../composition/StructureTree"
 import { NO_WARNINGS, type SceneData } from "./useSceneData"
 
 /** Avisos que només informen (no cal arreglar res). */
-const INFO = (w: CompositionWarning) => w.code === "material-heat" || w.code === "mitre" || w.code === "push" || w.code === "shelf-strut" || (w.code === "inset" && w.message.startsWith("Fronts"))
+const INFO = (w: CompositionWarning) => !!w.info || w.code === "material-heat" || w.code === "mitre" || w.code === "push" || w.code === "shelf-strut" || (w.code === "inset" && w.message.startsWith("Fronts"))
 
 /**
  * Avisos al peu de l'inspector: mesures estimades de la foto, xocs de l'obertura i avisos de fusteria de la selecció.

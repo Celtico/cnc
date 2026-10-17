@@ -287,7 +287,7 @@ export class Builder extends AppliancesBuilder {
     const own = flush ? 0 : (zone.shelves!.setback ?? c.shelfSetback)
     const strut = this.strutClearance(zone)
     const setback = strut !== undefined && own < strut ? strut : own
-    if (setback !== own) this.warnings.push({ code: "shelf-strut", message: `Prestatges retirats ${num(setback)} mm del davant (en lloc de ${num(own)}) perquè no toquin el pistó de l'abatible al lateral.`, zoneId: zone.id })
+    if (setback !== own) this.warnings.push({ code: "shelf-strut", info: true, message: `Prestatges retirats ${num(setback)} mm del davant (en lloc de ${num(own)}) perquè no toquin el pistó de l'abatible al lateral.`, zoneId: zone.id })
     if (setback !== c.shelfSetback && !flush) this.shelfSetbackOf.set(zone.id, setback)
     // El del mòdul ja ho avisa (`carcass.ts`); el propi, aquí.
     if (zone.shelves!.setback !== undefined && blocked && setback < d.t) this.warnings.push({ code: "inset", message: `Prestatges retirats ${num(setback)} mm i el front encastat entra ${num(d.t)} mm: hi toparien. Retira'ls almenys ${num(d.t)} mm (Opcions de l'interior › Retranqueig).`, zoneId: zone.id })
@@ -300,9 +300,9 @@ export class Builder extends AppliancesBuilder {
         message: `Prestatge de ${num(t)} mm amb una llum de ${num(width)} mm: es vinclarà (màxim recomanat 800).`,
         zoneId: zone.id,
         options: [
-          { text: "Dividir el compartiment amb un divisor vertical al mig (Dividir, al compartiment)." },
+          { text: "Dividir el compartiment amb un divisor vertical al mig.", where: "divide" },
           { text: "Fer els prestatges gruixuts (buits): aguanten més.", where: "shelves" },
-          { text: "Fer el cos amb un tauler més gruixut (30 mm).", where: "materials" },
+          { text: "Fer el cos amb un tauler més gruixut, si el material en té.", where: "materials" },
         ],
       })
     }

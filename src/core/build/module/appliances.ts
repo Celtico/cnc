@@ -67,7 +67,7 @@ export abstract class AppliancesBuilder extends DrawersBuilder {
     const below = this.findBelow(rect)
     const above = this.findAbove(rect)
 
-    if (fillsNiche(a)) this.checkNiche(a, rect, name, src, warn)
+    if (fillsNiche(a)) this.checkNiche(a, rect, name, src, warn, (message) => this.warnings.push({ code: "appliance", info: true, message, zoneId: zone.id }))
     else if (a.kind === "hood") this.checkCabinet(a, rect, name, src, warn)
     const front = takesFront(a) && za.front !== false
     this.drawAppliance(item, a, rect, n, front, above)
@@ -83,7 +83,7 @@ export abstract class AppliancesBuilder extends DrawersBuilder {
   }
 
   /** El nínxol (la llum del compartiment) amb les mides del catàleg: ample, alt (en columna o penjat, el que toca) i fons. */
-  protected checkNiche(a: Appliance, rect: ZoneRect, name: string, src: string, warn: (m: string) => void): void {
+  protected checkNiche(a: Appliance, rect: ZoneRect, name: string, src: string, warn: (m: string) => void, inform: (m: string) => void): void {
     const w = r(rect.x1 - rect.x0)
     const h = r(rect.y1 - rect.y0)
     const d = r(this.rearDepth(rect))
@@ -98,7 +98,13 @@ export abstract class AppliancesBuilder extends DrawersBuilder {
     }
     const bad: string[] = []
     if (!inRange(w, niche?.w)) bad.push(`${num(w)} mm d'ample (en demana ${rangeText(niche?.w)})`)
-    if (!inRange(h, hRange)) bad.push(`${num(h)} mm d'alt (en demana ${rangeText(hRange)}${wall ? " al moble penjat" : tall && a.tallNicheH ? " en columna" : ""})`)
+    // Un aparell de terra en un nínxol una mica més alt del que vol (la cuina fa 870 i el rentaplats en vol 865): és el
+    // normal, s'hi posa un suplement a terra sota les potes. Per decisió de l'usuari (2026-10-17: «trec un error i n'entra
+    // un de nou»), això no és un error: s'explica què cal fer.
+    const over = hRange?.max !== undefined ? h - hRange.max : 0
+    const shim = !wall && !tall && standsOnFloor(a) && over > 0 && over <= 30
+    if (shim) inform(`${name}: el nínxol fa ${num(h)} mm d'alt i l'aparell en vol com a molt ${num(hRange!.max!)} (${src}): posa un suplement de ${num(over)} mm a terra, sota les potes (un tros de tauler), i arribarà al taulell.`)
+    else if (!inRange(h, hRange)) bad.push(`${num(h)} mm d'alt (en demana ${rangeText(hRange)}${wall ? " al moble penjat" : tall && a.tallNicheH ? " en columna" : ""})`)
     if (!inRange(d, dRange)) bad.push(`${num(d)} mm de fons (en demana ${rangeText(dRange)})`)
     if (bad.length) warn(`${name}: l'aparell no hi cap com diu el fabricant: el nínxol fa ${bad.join(", ")} (${src}).`)
   }

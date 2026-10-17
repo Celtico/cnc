@@ -119,6 +119,8 @@ export function hasDrawers(root: Zone): boolean {
   // Els calaixos d'un compartiment tapat pel front d'una zona de més amunt no es fan.
   walkBuiltZones(root, (z, { covered }) => {
     if (z.front?.kind === "drawers" && !covered) hit = true
+    // Els calaixos interiors (darrere d'una porta) també porten fons del calaix: el seu material es tria igual.
+    if (z.innerDrawers && !z.split) hit = true
   })
   return hit
 }

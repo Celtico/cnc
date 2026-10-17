@@ -10,7 +10,7 @@ import type { CompositionWarning } from "./buildComposition"
  * Un avís per material (i per gruix), en l'ordre de les peces.
  */
 export function materialIssues(
-  build: { panels: readonly Panel[]; extras?: readonly Panel[] },
+  build: { panels: readonly Panel[]; extras?: readonly Panel[]; modules?: readonly { index: number; id: string }[] },
   comp: Pick<Composition, "references">,
   materials: readonly MaterialPref[],
 ): CompositionWarning[] {
@@ -31,7 +31,19 @@ export function materialIssues(
     // Els de simulació no tenen gruixos a triar (no es tallen): no s'avisa.
     if (!m || materialCategory(m) === "sim" || m.thicknesses.includes(p.thickness) || thick.has(key)) continue
     thick.add(key)
-    out.push({ code: "thickness-not-listed", message: `El gruix ${fmt(p.thickness)} mm no és dels gruixos de «${m.name}» (${m.thicknesses.map(fmt).join(" · ")} mm).` })
+    // De quina peça i mòdul és (per anar-hi), i què es pot fer.
+    const moduleId = build.modules?.find((x) => x.index === p.module)?.id
+    const shim = p.id.includes("inner-shim")
+    out.push({
+      code: "thickness-not-listed",
+      message: `${p.label}: el gruix ${fmt(p.thickness)} mm no és dels gruixos de «${m.name}» (${m.thicknesses.map(fmt).join(" · ")} mm).`,
+      panelId: p.id,
+      ...(moduleId ? { moduleId } : {}),
+      options: [
+        { text: `Posar-hi un gruix dels que té el material (${m.thicknesses.map(fmt).join(" · ")} mm)${shim ? ": el suplement dels calaixos interiors" : ""}.`, where: shim ? "innerDrawers" : "materials" },
+        { text: "O afegir aquest gruix al material, si el taller el té (Preferències › Materials)." },
+      ],
+    })
   }
   // Els components dels jocs de ferratges (rol `hardware`) no són cap tria del moble: el 3D els pinta pel nom
   // («Acer fosc», «Blanc seda», `resolveFinish`) i no van al taller com a peces.

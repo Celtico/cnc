@@ -23,7 +23,12 @@ describe("materials que no lliguen amb Preferències (`materialIssues`)", () => 
   it("gruix que no és dels del material: un avís per material i gruix", () => {
     const c = comp({ thickness: 18 })
     const w = materialIssues(buildComposition(c), c, DEFAULT_SETTINGS.materials).filter((x) => x.code === "thickness-not-listed")
-    expect(w.map((x) => x.message)).toEqual(["El gruix 18 mm no és dels gruixos de «Melamina blanca» (10 · 16 · 19 · 30 mm)."])
+    expect(w).toHaveLength(1)
+    expect(w[0]!.message).toMatch(/: el gruix 18 mm no és dels gruixos de «Melamina blanca» \(10 · 16 · 19 · 30 mm\)\.$/)
+    // De quina peça i mòdul és (per anar-hi) i què es pot fer.
+    expect(w[0]!.panelId).toBeDefined()
+    expect(w[0]!.moduleId).toBeDefined()
+    expect(w[0]!.options?.length).toBe(2)
   })
 
   it("també els objectes de referència amb material", () => {

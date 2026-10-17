@@ -64,7 +64,7 @@ export class DrawersBuilder extends FrontsBuilder {
         this.warnings.push({ code: "inner-drawers", message: `Calaixos interiors sense suplement al costat de les frontisses (${side === "left" ? "esquerra" : "dreta"}): el braç i la placa de la frontissa hi topen en obrir. Posa-hi el suplement (el gruix del cos).`, zoneId: zone.id })
     if (L !== left || R !== right)
       if (!this.warnings.some((w) => w.code === "inner-drawers" && w.message.includes("es cargola")))
-        this.warnings.push({ code: "inner-drawers", message: `Calaixos interiors: el suplement (${num(S)} mm, del cos) es cargola al lateral pel costat de dins abans de posar-hi la guia.`, zoneId: zone.id })
+        this.warnings.push({ code: "inner-drawers", info: true, message: `Calaixos interiors: el suplement (${num(S)} mm${inner.shim === undefined ? ", el gruix del cos" : ""}) es cargola al lateral pel costat de dins abans de posar-hi la guia.`, zoneId: zone.id })
     const box: ZoneRect = { ...rect, x0: L !== left ? L!.xR : rect.x0, x1: R !== right ? R!.xL : rect.x1, y1 }
     const front: Extract<Front, { kind: "drawers" }> = {
       kind: "drawers",

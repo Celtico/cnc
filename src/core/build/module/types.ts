@@ -58,10 +58,12 @@ export interface BuildWarning {
    * cada opció amb on es fa a l'editor (`where`: un lloc de `FIX_PLACES`, `features/editor/warningTarget.ts`), si en té.
    */
   options?: { text: string; where?: FixPlaceKey }[]
+  /** Només informa (no cal arreglar res: com es munta, què ha fet la construcció sola). */
+  info?: boolean
 }
 
 /** Els llocs de l'editor on es pot anar des d'una opció d'un avís. */
-export type FixPlaceKey = "position" | "dims" | "support" | "back" | "sides" | "materials" | "front" | "shelves" | "appliance" | "refPosition" | "partPosition"
+export type FixPlaceKey = "position" | "dims" | "support" | "back" | "sides" | "materials" | "front" | "shelves" | "innerDrawers" | "divide" | "appliance" | "refPosition" | "partPosition"
 
 /** Un calaix fet amb un joc paramètric: el que cal comprar (números d'article) i la fusta que demana. */
 export interface KitOrder {

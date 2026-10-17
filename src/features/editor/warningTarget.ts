@@ -28,6 +28,8 @@ const FIX_PLACES: Record<FixPlaceKey, FixPlace> = {
   materials: MODULE(["mod-materials"], "Materials"),
   front: ZONE(["zone-front"], "Front"),
   shelves: ZONE(["zone-shelves", "zone-shelves-shelves"], "Interior › Prestatges"),
+  innerDrawers: ZONE(["zone-shelves", "zone-shelves-drawers"], "Interior › Calaixos interiors"),
+  divide: ZONE(["zone-divide"], "Dividir"),
   appliance: ZONE(["zone-appliance"], "Electrodomèstic"),
   refPosition: { level: "ref", folds: ["ref-position"], label: "Posició de l'objecte" },
   partPosition: { level: "part", folds: ["part-position"], label: "Posició de la peça" },
@@ -129,7 +131,11 @@ export function warningTarget(w: CompositionWarning, comp: Composition, build: C
       const z = moduleBoxToWorld(mb, { x0: rect.x0, x1: rect.x1, y0: rect.y0, y1: rect.y1, z0: 0, z1: m.carcass.depth + m.carcass.thickness })
       box = { min: [z.x0, z.y0, z.z0], max: [z.x1, z.y1, z.z1] }
       // Les peces del mòdul que hi cauen (el front, els prestatges…), per marcar-les.
-      panels = (build?.panels ?? []).filter((p) => p.module === mb.index && inside(center(panelBox(p)), box!)).map((p) => p.id)
+      const inZone = (build?.panels ?? []).filter((p) => p.module === mb.index && inside(center(panelBox(p)), box!))
+      // Si l'avís parla d'unes peces (el fons del calaix), només aquestes.
+      const roles = ROLE_HINT[w.code]
+      const hinted = roles ? inZone.filter((p) => roles.includes(p.role)) : []
+      panels = (hinted.length ? hinted : inZone).map((p) => p.id)
     }
   }
   if (!panels.length && !box && w.partId) panels = (build?.panels ?? []).filter((p) => p.id === `part:${w.partId}` || p.id.startsWith(`part:${w.partId}-`)).map((p) => p.id)
