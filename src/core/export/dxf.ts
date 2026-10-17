@@ -1,4 +1,4 @@
-import type { Cutout, Groove, Hole, Panel } from "../model"
+import { isFlatPocket, type Cutout, type Groove, type Hole, type Panel, type Pocket } from "../model"
 import { asciiFold } from "./text"
 
 /**
@@ -70,6 +70,14 @@ function grooveLayer(g: Groove): string {
   return `${prefix}_W${num(width)}_P${num(g.depth)}`
 }
 
+/**
+ * Capa d'un buidat de qualsevol forma (`Panel.pockets`): `POCKET_P<fondària>` (cara B: `POCKET_B_…`); els de fons no pla
+ * porten `_3D` (el fons arrodonit o de forma no cap al DXF: el contorn i la fondària més gran).
+ */
+function pocketLayer(k: Pocket): string {
+  return `${k.face === "B" ? "POCKET_B" : "POCKET"}_P${num(k.depth)}${isFlatPocket(k) ? "" : "_3D"}`
+}
+
 /** Totes les capes que fa servir un conjunt de peces, ordenades. */
 export function dxfLayers(panels: Panel[], labels = true): string[] {
   const set = new Set<string>([LAYER_CONTOUR])
@@ -77,6 +85,7 @@ export function dxfLayers(panels: Panel[], labels = true): string[] {
   for (const p of panels) {
     for (const h of p.holes) set.add(holeLayer(h))
     for (const g of p.grooves) set.add(grooveLayer(g))
+    for (const k of p.pockets ?? []) set.add(pocketLayer(k))
     if (p.cutouts?.length) set.add(LAYER_CUT_THROUGH)
     if (p.mitres?.length) set.add(LAYER_MITRE)
   }
@@ -206,6 +215,7 @@ export function panelEntities(panel: Panel, labels = true, threeD = true): strin
       g.face === "B" ? up(g.depth) : down(g.depth),
     )
   }
+  for (const k of panel.pockets ?? []) out += polyline(pocketLayer(k), k.points, k.face === "B" ? up(k.depth) : down(k.depth))
   for (const h of panel.holes) {
     // Els de cantell (horitzontals) es marquen al punt d'entrada, a mig gruix.
     const zz = h.face === "edge" ? (threeD ? { z: T / 2, t: 0 } : FLAT) : h.face === "B" ? up(h.depth) : down(h.depth)

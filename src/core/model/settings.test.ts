@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest"
 import { defaultModule } from "./composition"
 import { DEFAULT_HARDWARE_KITS, DEFAULT_MODULE_HARDWARE, DEFAULT_LEGACY_HARDWARE, copyHardwareItem, setKitPilot } from "./hardware"
+import { CORIAN_V50_FINISH } from "./settingsDefaults"
+import { backChoices, boardChoices } from "./materialOps"
 import {
   BUILTIN_REFERENCES,
   SETTINGS_VERSION,
@@ -284,18 +286,41 @@ describe("v12: duplicats fora i noms únics", () => {
     expect(names).not.toContain("DM 10")
     expect(names).not.toContain("Pi")
     expect(names).toContain("Fulles de pi")
-    expect(SETTINGS_VERSION).toBe(50)
+    expect(SETTINGS_VERSION).toBe(51)
   })
 
   it("v50: les preferències d'abans reben els Corian (massissos, de CNC, sense veta), un sol cop", () => {
     const old = { ...DEFAULT_SETTINGS, version: 49, materials: DEFAULT_SETTINGS.materials.filter((m) => !m.id.startsWith("corian-")) }
     const res = parseSettings(JSON.parse(JSON.stringify(old)))
-    const corian = res.settings.materials.filter((m) => m.id.startsWith("corian-"))
+    const corian = res.settings.materials.filter((m) => ["corian-white", "corian-sand", "corian-grey"].includes(m.id))
     expect(corian.map((m) => m.name)).toEqual(["Corian blanc", "Corian sorra", "Corian gris pedra"])
     expect(corian.every((m) => m.solid && !m.hasGrain && m.cnc !== false && m.thicknesses.includes(12))).toBe(true)
     // Un d'esborrat després de la v50 no torna.
     const again = parseSettings(JSON.parse(JSON.stringify({ ...res.settings, materials: res.settings.materials.filter((m) => m.id !== "corian-white") })))
     expect(again.settings.materials.some((m) => m.id === "corian-white")).toBe(false)
+  })
+
+  it("v51: els Corian de la v50 reben el gra fi (si no s'havien tocat) i els blocs de 38 i 57", () => {
+    const v50 = { ...DEFAULT_SETTINGS, version: 50, materials: DEFAULT_SETTINGS.materials.map((m) => (m.id === "corian-sand" ? { ...m, thicknesses: [6, 12, 19], finish: CORIAN_V50_FINISH["corian-sand"]! } : m.id === "corian-grey" ? { ...m, thicknesses: [6, 12, 19], finish: { ...CORIAN_V50_FINISH["corian-grey"]!, color: "#808080" } as typeof m.finish } : m)) }
+    const res = parseSettings(JSON.parse(JSON.stringify(v50)))
+    const sand = res.settings.materials.find((m) => m.id === "corian-sand")!
+    const grey = res.settings.materials.find((m) => m.id === "corian-grey")!
+    expect(sand.finish).toEqual(DEFAULT_SETTINGS.materials.find((m) => m.id === "corian-sand")!.finish)
+    expect(sand.thicknesses).toEqual([6, 12, 19, 38, 57])
+    // El color tocat a mà es queda.
+    expect((grey.finish as { color: string }).color).toBe("#808080")
+    // Tots a la categoria Corian, amb la carta de colors.
+    expect(materialCategory(sand)).toBe("corian")
+    const cat = res.settings.materials.filter((m) => materialCategory(m) === "corian")
+    expect(cat.length).toBeGreaterThan(90)
+    expect(cat.some((m) => m.name === "Corian Glacier White" && m.finish.kind === "image")).toBe(true)
+  })
+
+  it("els Corian van als selectors dels taulers (es tallen a la CNC) i no als dels fons", () => {
+    const ms = DEFAULT_SETTINGS.materials
+    const glacier = ms.find((m) => m.name === "Corian Glacier White")!
+    expect(boardChoices(ms)).toContain(glacier)
+    expect(backChoices(ms).filter((m) => materialCategory(m) === "back").includes(glacier)).toBe(false)
   })
 
   it("«Melamina 19» i «DM 10» inicials passen als de sempre (amb les referències de les preferències) i «Pi» a «Fulles de pi»", () => {

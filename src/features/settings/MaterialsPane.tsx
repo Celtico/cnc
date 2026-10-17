@@ -1,6 +1,6 @@
 import { Badge, Box, Button, HStack, IconButton, Input, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
 import { useContext, useEffect, useRef, useState, type ReactNode, type RefObject } from "react"
-import { LuCopy, LuFactory, LuImagePlus, LuLayers2, LuLayers3, LuPaintbrush, LuSprayCan, LuStar, LuSwatchBook, LuTrash2 } from "react-icons/lu"
+import { LuCopy, LuFactory, LuImagePlus, LuLayers2, LuLayers3, LuPaintbrush, LuSprayCan, LuStar, LuSwatchBook, LuTrash2, LuGem } from "react-icons/lu"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { FloatingWindow } from "../../components/FloatingWindow"
 import { SearchBar } from "../../components/SearchBar"
@@ -28,11 +28,12 @@ import { useLatest } from "../../lib/useLatest"
 import { useCloseWhenGone } from "./useCloseWhenGone"
 
 /** Icones de les categories (com els apartats de les pàgines principals). */
-const CATEGORY_ICONS: Record<MaterialCategory, IconType> = { board: LuLayers3, back: LuLayers2, sim: LuSprayCan }
+const CATEGORY_ICONS: Record<MaterialCategory, IconType> = { board: LuLayers3, back: LuLayers2, corian: LuGem, sim: LuSprayCan }
 /** Per a què serveix cada categoria (sota el nom, a l'acordió). */
 const CATEGORY_HINTS: Record<MaterialCategory, string> = {
   board: "Materials per al nesting: es tallen a la CNC (cossos, fronts, taulells).",
   back: "Materials per al nesting: taulers prims per als fons.",
+  corian: "Superfície sòlida (carta de colors de Corian): es fresa a la CNC com un tauler, sense cantejar. Taulells, lavabos, plats de dutxa i mobles.",
   sim: "Materials decoratius per als objectes i els ambients: no es tallen.",
 }
 /** Categories obertes (es recorden durant la sessió). */
@@ -182,7 +183,7 @@ export function MaterialsList({ materials, onChange, onRename, onDelete, footer,
             key={shownM.id}
             m={shownM}
             dirty={dirty}
-            footer={materialCategory(shownM) === "board" || materialCategory(shownM) === "back" ? footer : undefined}
+            footer={materialCategory(shownM) !== "sim" ? footer : undefined}
             onChange={(patch) => i >= 0 && update(i, patch)}
             nameError={(name) => materialNameError(materials, shownM.id, name)}
             onRename={(name) => i >= 0 && onRename(shownM.name, name)}

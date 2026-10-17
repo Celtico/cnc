@@ -2,6 +2,7 @@ import { DEFAULT_CABINET } from "./cabinet"
 import { DEFAULT_HARDWARE_DEFAULTS, DEFAULT_HARDWARE_LIBRARY } from "./hardware"
 import { DEFAULT_KIT_PILOT } from "./hardwareKit"
 import { PHOTO_MATERIALS } from "./textureSets"
+import { CORIAN_CATALOG } from "./corianColors"
 import { upgradeToPhoto } from "./photoUpgrade"
 import { defaultMachineRules } from "./machine"
 import { SETTINGS_VERSION, type AssistantPref, type Finish, type MaterialPref, type RefPreset, type Settings } from "./settingsSchema"
@@ -55,13 +56,21 @@ export const NON_CNC_MATERIALS: MaterialPref[] = [
 /**
  * Superfície sòlida tipus Corian (resina acrílica amb càrrega mineral; per decisió de l'usuari, 2026-10-17): es mecanitza
  * a la CNC com la fusta (fresa, sense veta), es fan taulells, sobres, lavabos i mobles, i es veu com una pedra mat. És
- * massís (el cantell és el mateix material, polit: no es canteja). Afegits a la v50.
+ * massís (el cantell és el mateix material, polit: no es canteja). Les planxes són de 6, 12 i 19 mm; 38 i 57 són dues o
+ * tres de 19 encolades (el bloc d'un lavabo massís, on es fresa la pica). Afegits a la v50 (els blocs, a la v51).
  */
 export const CORIAN_MATERIALS: MaterialPref[] = [
-  { id: "corian-white", name: "Corian blanc", thicknesses: [6, 12, 19], hasGrain: false, finish: { kind: "stone", color: "#f1efea", vein: "#e2ded6", veins: 0, size: 600, seed: 7, style: "granite", grain: 0.08, polish: 0.35 }, edge: "", solid: true, category: "board" },
-  { id: "corian-sand", name: "Corian sorra", thicknesses: [6, 12, 19], hasGrain: false, finish: { kind: "stone", color: "#ddd3c3", vein: "#a99a84", veins: 0, size: 600, seed: 13, style: "granite", grain: 0.35, polish: 0.35 }, edge: "", solid: true, category: "board" },
-  { id: "corian-grey", name: "Corian gris pedra", thicknesses: [6, 12, 19], hasGrain: false, finish: { kind: "stone", color: "#9d9b97", vein: "#6f6c67", veins: 0, size: 600, seed: 19, style: "granite", grain: 0.4, polish: 0.35 }, edge: "", solid: true, category: "board" },
+  { id: "corian-white", name: "Corian blanc", thicknesses: [6, 12, 19, 38, 57], hasGrain: false, finish: { kind: "stone", color: "#f1efea", vein: "#e2ded6", veins: 0, size: 600, seed: 7, style: "granite", grain: 0.08, polish: 0.35 }, edge: "", solid: true, category: "corian" },
+  { id: "corian-sand", name: "Corian sorra", thicknesses: [6, 12, 19, 38, 57], hasGrain: false, finish: { kind: "stone", color: "#ddd3c3", vein: "#c4b8a4", veins: 0, size: 600, seed: 13, style: "granite", grain: 0.06, polish: 0.35 }, edge: "", solid: true, category: "corian" },
+  { id: "corian-grey", name: "Corian gris pedra", thicknesses: [6, 12, 19, 38, 57], hasGrain: false, finish: { kind: "stone", color: "#9d9b97", vein: "#85837e", veins: 0, size: 600, seed: 19, style: "granite", grain: 0.08, polish: 0.35 }, edge: "", solid: true, category: "corian" },
 ]
+
+/** Els acabats dels Corian a la v50 (massa gra): la v51 els canvia si no s'han tocat (i hi afegeix els blocs de 38 i 57). */
+export const CORIAN_V50_FINISH: Record<string, Finish> = {
+  "corian-white": { kind: "stone", color: "#f1efea", vein: "#e2ded6", veins: 0, size: 600, seed: 7, style: "granite", grain: 0.08, polish: 0.35 },
+  "corian-sand": { kind: "stone", color: "#ddd3c3", vein: "#a99a84", veins: 0, size: 600, seed: 13, style: "granite", grain: 0.35, polish: 0.35 },
+  "corian-grey": { kind: "stone", color: "#9d9b97", vein: "#6f6c67", veins: 0, size: 600, seed: 19, style: "granite", grain: 0.4, polish: 0.35 },
+}
 
 /** Lacats brillants (vernís): com els mobles de catàleg de lacat negre. Afegits a la v15. */
 export const GLOSS_MATERIALS: MaterialPref[] = [
@@ -253,6 +262,7 @@ export const BUILTIN_MATERIALS: MaterialPref[] = upgradeToPhoto([
   ...GLOSS_MATERIALS,
   ...RIFT_MATERIALS,
   ...CORIAN_MATERIALS,
+  ...CORIAN_CATALOG,
   ...CLADDING_MATERIALS,
   ...PHOTO_MATERIALS,
 ])

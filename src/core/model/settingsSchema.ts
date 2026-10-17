@@ -70,7 +70,7 @@ const mm = z.number().finite()
  * v49: fora `optionPrefs` (per decisió de l'usuari, 2026-10-15: res de les opcions en cascada s'aplica a l'Editor fins que
  * no es tingui clar; Preferències › Opcions en cascada és un esborrany a part, `db.drafts`). Es treu en llegir.
  */
-export const SETTINGS_VERSION = 50
+export const SETTINGS_VERSION = 51
 
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
@@ -254,7 +254,7 @@ export const MaterialPrefSchema = z.object({
    * Categoria (Preferències › Materials i selectors). Sense: es dedueix (`materialCategory`).
    * `sim` = de simulació: només es veu (blocs i parets dels ambients, coixins…), no es fabrica.
    */
-  category: z.enum(["board", "back", "hard", "sim"]).optional(),
+  category: z.enum(["board", "back", "corian", "hard", "sim"]).optional(),
   /**
    * Render: llum que emet (radiància, ~1 paper blanc al sol tènue; pantalla de làmpada ≈ 4,
    * bombeta ≈ 30). Al visor es veu encès. v5.
@@ -298,14 +298,16 @@ const MaterialListSchema = z.array(MaterialPrefSchema).min(1).superRefine((list,
   })
 })
 /**
- * Categories: Taulers · Fons · Simulació. «Metall, pedra i vidre» (`hard`, a l'esquema per als desats antics) és
+ * Categories: Taulers · Fons · Corian · Simulació. Corian (superfície sòlida, per decisió de l'usuari, 2026-10-17) es talla
+ * a la CNC com un tauler (`isCncBoard`): va als mateixos selectors. «Metall, pedra i vidre» (`hard`, a l'esquema per als desats antics) és
  * Simulació (per decisió de l'usuari: és el mateix, no es tallen a la CNC).
  */
-export type MaterialCategory = "board" | "back" | "sim"
+export type MaterialCategory = "board" | "back" | "corian" | "sim"
 
 export const MATERIAL_CATEGORIES: { id: MaterialCategory; label: string; hint: string }[] = [
   { id: "board", label: "Taulers", hint: "Es tallen a la CNC: cossos, fronts, taulells." },
   { id: "back", label: "Fons", hint: "Taulers prims per als fons." },
+  { id: "corian", label: "Corian", hint: "Superfície sòlida (la carta de colors de Corian): es fresa a la CNC com un tauler, sense veta i sense cantejar (el cantell és el mateix material, polit). Per a taulells, sobres, lavabos, plats de dutxa i mobles; 38 i 57 mm són planxes de 19 encolades." },
   { id: "sim", label: "Simulació", hint: "No es tallen a la CNC, només es veuen: metall, pedra, vidre, teixits, parquet, pintura… per als ambients i els objectes. Una peça lliure d'aquests materials surt a «Elements sense nesting»." },
 ]
 
@@ -313,6 +315,12 @@ export const MATERIAL_CATEGORIES: { id: MaterialCategory; label: string; hint: s
 export function materialCategory(m: Pick<MaterialPref, "category" | "forBacks" | "cnc">): MaterialCategory {
   const c = m.category ?? (m.forBacks ? "back" : m.cnc === false ? "sim" : "board")
   return c === "hard" ? "sim" : c
+}
+
+/** Es talla a la CNC com un tauler (cos, fronts, taulells): els Taulers i els Corian. */
+export const isCncBoard = (m: Pick<MaterialPref, "category" | "forBacks" | "cnc">): boolean => {
+  const c = materialCategory(m)
+  return c === "board" || c === "corian"
 }
 
 /** Canvia la categoria d'un material mantenint coherents `forBacks` i `cnc`. */

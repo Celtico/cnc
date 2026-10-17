@@ -7,7 +7,8 @@ import { deepEqual, MATERIAL_MERGES, rescalePhotoTiles, resolveMaterialAlias, re
 import { defaultMachine, defaultMachineRules, MachineRulesSchema, migrateMachine, repairMachine, type Machine, type MachineRules } from "./machine"
 import { repairValue } from "./repair"
 import { AssistantPrefSchema, GapsPrefSchema, MaterialPrefSchema, RefPresetSchema, SETTINGS_VERSION, SettingsSchema, materialNameKey, type MaterialPref, type RefPreset, type Settings } from "./settingsSchema"
-import { BUILTIN_MATERIALS, BUILTIN_REFERENCES, CLADDING_MATERIALS, CORIAN_MATERIALS, DEFAULT_GROOVE_CLEARANCE, DEFAULT_INNER_CLEARANCE, DEFAULT_SETTINGS, APPLIANCE_MATERIALS, FRAME_MATERIALS, GLOSS_MATERIALS, LAMPSHADE_GLOW, LAWN_FINISH, LED_MATERIALS, NON_CNC_MATERIALS, OLD_LAWN_FINISH, RETIRED_TEMPLATE_MATERIALS, RIFT_MATERIALS, SIM_MATERIALS, SIM_MATERIALS_SINCE, TEMPLATE_MATERIALS, isRetired } from "./settingsDefaults"
+import { CORIAN_CATALOG } from "./corianColors"
+import { BUILTIN_MATERIALS, BUILTIN_REFERENCES, CLADDING_MATERIALS, CORIAN_MATERIALS, CORIAN_V50_FINISH, DEFAULT_GROOVE_CLEARANCE, DEFAULT_INNER_CLEARANCE, DEFAULT_SETTINGS, APPLIANCE_MATERIALS, FRAME_MATERIALS, GLOSS_MATERIALS, LAMPSHADE_GLOW, LAWN_FINISH, LED_MATERIALS, NON_CNC_MATERIALS, OLD_LAWN_FINISH, RETIRED_TEMPLATE_MATERIALS, RIFT_MATERIALS, SIM_MATERIALS, SIM_MATERIALS_SINCE, TEMPLATE_MATERIALS, isRetired } from "./settingsDefaults"
 
 // --- Migració i importació ------------------------------------------------------------
 
@@ -191,8 +192,18 @@ function migrateMaterials(materialsRaw: MaterialPref[], version: number, problem
   const v47m = version < 47 && v36m !== BUILTIN_MATERIALS ? [...v36m, ...missing(APPLIANCE_MATERIALS, v36m)] : v36m
   // v50: les superfícies sòlides tipus Corian, si no hi són.
   const v50m = version < 50 && v47m !== BUILTIN_MATERIALS ? [...v47m, ...missing(CORIAN_MATERIALS, v47m)] : v47m
+  // v51: els Corian de la v50 a la categoria Corian, amb el gra més fi (el de la v50 semblava granit), si no s'han tocat, i els blocs de 38 i 57.
+  const v51m = version < 51 && v50m !== BUILTIN_MATERIALS
+    ? v50m.map((m) => {
+        const fresh = CORIAN_V50_FINISH[m.id] ? CORIAN_MATERIALS.find((c) => c.id === m.id) : undefined
+        if (!fresh) return m
+        return { ...m, ...(deepEqual(m.finish, CORIAN_V50_FINISH[m.id]) ? { finish: fresh.finish } : {}), thicknesses: [...new Set([...m.thicknesses, 38, 57])].sort((a, b) => a - b), ...(m.category === "board" ? { category: "corian" as const } : {}) }
+      })
+    : v50m
+  // v51: la carta de colors de Corian (categoria Corian), si no hi és.
+  const v51c = version < 51 && v51m !== BUILTIN_MATERIALS ? [...v51m, ...missing(CORIAN_CATALOG, v51m)] : v51m
   // Noms únics (sempre): un de repetit passa a «X 2» amb un avís (abans no es comprovava).
-  const unique = dedupeMaterialNames(v50m)
+  const unique = dedupeMaterialNames(v51c)
   problems.push(...unique.problems)
   return { materials: unique.materials, renames: v12.renames }
 }

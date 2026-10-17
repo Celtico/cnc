@@ -48,6 +48,11 @@ export const RefObjectSchema = z.object({
    * render (p. ex. una tele, un radiador). Sense, és un fantasma translúcid que no surt al render.
    */
   material: z.string().optional(),
+  /**
+   * Objecte que talla sense travessar: radi del fons (mm). La peça hi fa un buidat amb el fons arrodonit, com una pica (la
+   * paret recta i un quart de cercle fins al fons; per decisió de l'usuari, 2026-10-17). Sense: de fons pla.
+   */
+  round: mm.positive().optional(),
   /** Enganxat al terra: y = 0 sempre; al 3D només es mou pel terra. */
   onFloor: z.boolean().optional(),
   /** Enganxat a la paret: z = 0 sempre (tocant la paret); al 3D només es mou per la paret. */

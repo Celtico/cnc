@@ -47,3 +47,10 @@ export function pickBlade(m: Machine, depth: number, maxThickness: number): Mach
     .filter((t) => usableTool(t) && t.kind === "blade" && (t.bladeThickness ?? 0) > 0 && (t.bladeThickness ?? 0) <= maxThickness + EPS && reaches(t, depth) && t.diameter / 2 > depth)
     .sort((a, b) => (a.bladeThickness ?? 0) - (b.bladeThickness ?? 0) || a.code.localeCompare(b.code))[0]
 }
+
+/** La fresa esfèrica (`ball`) que arriba a la fondària, per a l'acabat dels relleus: la més grossa (deixa menys marca). */
+export function pickBallRouter(m: Machine, depth: number): MachineTool | undefined {
+  return m.tools
+    .filter((t) => usableTool(t) && t.kind === "router" && t.ball && t.diameter > 0 && reaches(t, depth))
+    .sort((a, b) => b.diameter - a.diameter || a.code.localeCompare(b.code))[0]
+}

@@ -133,7 +133,7 @@ function groupKey(p: Panel): string {
   // Peces amb forma o talls (de qualsevol rol): només s'agrupen amb el mateix contorn i talls.
   const shape = p.outline || p.cutouts?.length ? JSON.stringify([p.outline ?? null, p.cutouts ?? null]) : ""
   // Peces lliures: a més, els mateixos mecanitzats.
-  const machining = p.role === "part" ? `${p.holes.length}/${p.grooves.length}` : ""
+  const machining = p.role === "part" ? `${p.holes.length}/${p.grooves.length + (p.pockets?.length ?? 0)}` : ""
   return [
     p.role,
     p.length,

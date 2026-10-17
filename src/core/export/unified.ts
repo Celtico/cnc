@@ -116,6 +116,8 @@ function toSolid(p: Panel): Solid {
           [g.x, g.y + g.h],
         ] as [number, number][],
       })),
+      // Buidats de qualsevol forma: el contorn i la fondària més gran (els de fons no pla, aproximats).
+      ...(p.pockets ?? []).map((k) => ({ depth: k.depth, side: k.face === "A" ? ("a" as const) : ("b" as const), pts: flatten(k.points, Math.PI / 16).map(([x, y]) => [Math.round(x * 100) / 100, Math.round(y * 100) / 100] as [number, number]) })),
       // Talls passants: pocket de tota la fondària (depth = gruix), des de la cara A.
       ...(p.cutouts ?? []).map((c) => ({ depth: p.thickness, side: "a" as const, pts: cutoutPolygon(c) })),
     ],

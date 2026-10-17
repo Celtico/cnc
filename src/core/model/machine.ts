@@ -20,7 +20,7 @@ export const TOOL_KIND_LABELS: Record<ToolKind, string> = {
 }
 
 /** Camps d'una eina que l'usuari pot tocar: una reimportació no els trepitja (`MachineTool.edited`). */
-export const TOOL_EDITABLE = ["name", "auto", "mounted", "maxDepth", "orientation"] as const
+export const TOOL_EDITABLE = ["name", "auto", "mounted", "maxDepth", "orientation", "ball"] as const
 export type ToolEditable = (typeof TOOL_EDITABLE)[number]
 
 export const MachineToolSchema = z.object({
@@ -52,6 +52,11 @@ export const MachineToolSchema = z.object({
   rotation: z.enum(["left", "right"]).optional(),
   /** Tipus de punta de la broca (Maestro: FlatDrill, LanceDrill…). */
   tip: z.string().optional(),
+  /**
+   * Fresa de punta esfèrica (radi = Ø / 2): la de l'acabat dels relleus 3D (una pica; `core/machine/relief.ts`). Maestro no ho
+   * diu: es marca a mà. Sense: de punta plana.
+   */
+  ball: z.boolean().optional(),
   /** Capçals on és muntada (de l'.atrx): 1 = perforadora, 3/6 = electromandrins… */
   heads: z.array(z.number().int()).optional(),
   /** Mandrins de la perforadora on és muntada (de l'.atrx). */

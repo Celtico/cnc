@@ -5,6 +5,7 @@ import { RulePicker } from "../../machine/rules"
 import { needsSecondFace, panelProcesses, secondFaceProgram, type ProcessKind } from "../../process/processes"
 import { closedPolyline, cutLoop, dedupePolyline, edgeHoleOnFace, grooveRouterPath, insideCircleClockwise, maxToolDiameter, rectPts, sharpCorners, slotPts } from "./geometry"
 import { contourLine, contourPasses, cutWhat, grooveStrategy, grooveWhat, holeWhat, passDepths, pocketLines, rulesComment } from "./ops"
+import { pocketMachining, pocketWhat } from "./pockets"
 import { comment, cs, EDGE_PLANE, edgePoint, EOL, HEAD, num, Script, toolArg, type XcsOp } from "./script"
 
 interface XcsProgram {
@@ -119,6 +120,7 @@ export function panelXcs(p: Panel, ref: string, m: Machine, rules?: RulePicker):
   faceHoles(run)
   edgeHoles(run)
   grooves(run)
+  pockets(run)
   cutouts(run)
   outlineContour(run)
 
@@ -300,6 +302,29 @@ function grooves(run: PanelRun): void {
     s.lines.push(...grooveStrategy(depth, maxPass))
     s.lines.push(`CreateRoughFinish(${cs(name)}, ${num(depth)}, ${cs("ranura")}, TypeOfProcess.GeneralRouting, ${toolArg(router)}, ${HEAD}, 0, -1, -1, -1, 0);`)
     s.op({ kind: "route", tool: router.code, depth, points: pts, what: grooveWhat(g), passes: passDepths(depth, maxPass) })
+    run.handled++
+  }
+}
+
+/** Buidats de qualsevol forma (caixeres i relleus 3D, `pockets.ts`): a la cara on són (la B, girada sobre l'eix X). */
+function pockets(run: PanelRun): void {
+  const { p, m, W, warnings, rp, A, B, skip } = run
+  for (const pk of p.pockets ?? []) {
+    run.features++
+    const s = pk.face === "A" ? A : B
+    const tr = (x: number, y: number): [number, number] => (pk.face === "A" ? [x, y] : [x, W - y])
+    const trB = (pts: typeof pk.points) => (pk.face === "A" ? pts : pts.map((q) => (q.length > 2 ? ([q[0], W - q[1], -q[2]!] as [number, number, number]) : ([q[0], W - q[1]] as [number, number]))))
+    const res = pocketMachining(p, pk, m, rp, tr, trB, (prefix) => s.name(prefix))
+    warnings.push(...res.warnings)
+    if (res.skip) {
+      skip(pocketWhat(pk), res.skip.why, res.skip.tool)
+      continue
+    }
+    s.select("Top")
+    for (const st of res.steps) {
+      s.lines.push(...st.lines)
+      s.op({ kind: st.kind, tool: st.tool.code, depth: st.depth, points: st.points, what: `${pocketWhat(pk)}: ${st.label}` })
+    }
     run.handled++
   }
 }

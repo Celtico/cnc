@@ -48,10 +48,10 @@ describe("canviar el nom d'un material a les dades (`renameMaterialRefs`)", () =
 
 describe("llistes dels selectors", () => {
   const ms = DEFAULT_SETTINGS.materials
-  it("cos, fronts, taulell i tauler per defecte: només taulers de CNC", () => {
+  it("cos, fronts, taulell i tauler per defecte: només taulers de CNC (i Corian)", () => {
     const b = boardChoices(ms)
     expect(b.length).toBeGreaterThan(5)
-    expect(b.every((m) => materialCategory(m) === "board")).toBe(true)
+    expect(b.every((m) => materialCategory(m) === "board" || materialCategory(m) === "corian")).toBe(true)
     expect(b.some((m) => m.name === "Vidre" || m.name === "Pedra" || m.name === "DM (fons)" || m.name === "Teixit gris")).toBe(false)
   })
   it("fons i mides de tauler: taulers i fons", () => {

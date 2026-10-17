@@ -101,11 +101,11 @@ export function takeDirty(hf: Heightfield): Heightfield["dirty"] {
 }
 
 /**
- * Escombrada d'una fresa de punta plana de radi `r` d'`a` a `b` (la punta, Z des de la cara de sota): cada cel·la que toca
+ * Escombrada d'una fresa de punta plana (o esfèrica, `ball`) de radi `r` d'`a` a `b` (la punta, Z des de la cara de sota): cada cel·la que toca
  * el disc en algun moment baixa fins a la Z més baixa que hi passa (exacte per a rectes i rampes). Els trams llargs es
  * parteixen perquè la caixa que es recorre sigui estreta.
  */
-export function stampSegment(hf: Heightfield, a: P3, b: P3, rIn: number): void {
+export function stampSegment(hf: Heightfield, a: P3, b: P3, rIn: number, ball = false): void {
   if (Math.min(a[2], b[2]) >= hf.T) return
   // Una broca més petita que la cel·la marca almenys la cel·la del centre.
   const r = Math.max(rIn, hf.cell * 0.51)
@@ -116,11 +116,11 @@ export function stampSegment(hf: Heightfield, a: P3, b: P3, rIn: number): void {
     const s0 = k / n
     const s1 = (k + 1) / n
     const p = (s: number): P3 => [a[0] + (b[0] - a[0]) * s, a[1] + (b[1] - a[1]) * s, a[2] + (b[2] - a[2]) * s]
-    stampPiece(hf, p(s0), p(s1), r)
+    stampPiece(hf, p(s0), p(s1), r, ball)
   }
 }
 
-function stampPiece(hf: Heightfield, a: P3, b: P3, r: number): void {
+function stampPiece(hf: Heightfield, a: P3, b: P3, r: number, ball: boolean): void {
   const { cell, nx, ny, T, data } = hf
   // Fins a 2 cel·les fora del disc: la distància a la vora (canal B) de les cel·les del voltant.
   const m = r + EDGE_CELLS * cell
@@ -180,6 +180,8 @@ function stampPiece(hf: Heightfield, a: P3, b: P3, r: number): void {
         if (lo > hi) continue
         z = Math.min(a[2] + dz * lo, a[2] + dz * hi)
       }
+      // Esfèrica: la bola puja cap a la vora (la punta és al centre).
+      if (ball) z += r - Math.sqrt(Math.max(0, r2 - Math.min(r2, (dist + r) * (dist + r))))
       const code = encode(z, T)
       const e = encodeEdge(dist, cell)
       if (code < data[k]!) {

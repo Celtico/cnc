@@ -173,5 +173,5 @@ export function visualPanel(p: Panel): Panel {
  * (`holes`: marques dels forats o ferratges, que fan servir les cassoletes).
  */
 export function panelVisualKey(p: Panel, holes: boolean): string {
-  return JSON.stringify([p.id, p.role, p.length, p.width, p.thickness, p.material, p.grain, p.edges, p.outline, p.rawSides, p.cutouts, p.mitres, p.solidCuts, p.grooves, p.push, p.photo ?? null, holes ? p.holes : null, holes ? p.fittings ?? null : null])
+  return JSON.stringify([p.id, p.role, p.length, p.width, p.thickness, p.material, p.grain, p.edges, p.outline, p.rawSides, p.cutouts, p.mitres, p.solidCuts, p.pockets ?? null, p.grooves, p.push, p.photo ?? null, holes ? p.holes : null, holes ? p.fittings ?? null : null])
 }

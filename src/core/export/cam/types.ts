@@ -6,6 +6,8 @@ export type Pt = [number, number]
 export interface CamSeg {
   to: Pt
   arc?: { c: Pt; cw: boolean }
+  /** Recorreguts (`AddSegmentToToolpath`): la Z del punt (0 a la cara de dalt, negativa a dins). */
+  z?: number
 }
 
 export interface CamPath {
@@ -18,6 +20,8 @@ export interface CamPath {
   circle?: { c: Pt; r: number }
   /** Recorreguts (`CreateToolpath`): la Z més baixa (negativa = dins de la peça). */
   minZ?: number
+  /** Recorreguts: la Z del punt de partida. */
+  startZ?: number
 }
 
 export type CamOpKind = "drill" | "contour" | "pocket" | "rough" | "slot"
@@ -57,6 +61,8 @@ export interface CamOp {
   maxPass?: number
   /** Recorregut explícit del centre de l'eina (`CreateToolpath`, el que fa TopSolid). */
   toolpath?: CamPath
+  /** Fresa esfèrica (comentari `//FRESA ESFERICA`): els relleus 3D. */
+  ball?: boolean
 }
 
 export interface CamPart {

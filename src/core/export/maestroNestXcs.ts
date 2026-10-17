@@ -96,7 +96,8 @@ export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, 
     if (needsSecondFace(p)) {
       const n = p.holes.filter((h) => h.face === "B").length
       const g = p.grooves.filter((x) => x.face === "B").length
-      const what = [n ? `${n} ${n === 1 ? "forat" : "forats"}` : "", g ? `${g} ${g === 1 ? "ranura" : "ranures"}` : ""].filter(Boolean).join(" i ")
+      const k = (p.pockets ?? []).filter((x) => x.face === "B").length
+      const what = [n ? `${n} ${n === 1 ? "forat" : "forats"}` : "", g ? `${g} ${g === 1 ? "ranura" : "ranures"}` : "", k ? `${k} ${k === 1 ? "buidat" : "buidats"}` : ""].filter(Boolean).join(" i ")
       post.unshift({ kind: "secondFace", station: "perforadora / 2a passada", text: `Mecanitzats cara B (${what}): fer a la perforadora / segona passada` })
     }
     const route = [tab ? `CNC (tauler ${tab})` : "no cap a cap tauler", ...post.map((x) => x.station)].join(" → ")

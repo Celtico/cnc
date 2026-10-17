@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, materialCategory, materialNameKey, type MaterialPref, type Settings } from "./settings"
+import { DEFAULT_SETTINGS, isCncBoard, materialCategory, materialNameKey, type MaterialPref, type Settings } from "./settings"
 
 /**
  * Operacions sobre els materials de Preferències que han de deixar les referències bé: canviar el nom, eliminar-ne un
@@ -8,16 +8,15 @@ import { DEFAULT_SETTINGS, materialCategory, materialNameKey, type MaterialPref,
 
 // --- Llistes dels selectors -----------------------------------------------------------------
 
-/** Cos, fronts, taulell i sòcol, tauler per defecte: només taulers de CNC (ni fons, ni metall/pedra/vidre, ni simulació). */
+/** Cos, fronts, taulell i sòcol, tauler per defecte: només taulers de CNC i Corian (ni fons, ni metall/pedra/vidre, ni simulació). */
 export function boardChoices(materials: readonly MaterialPref[]): MaterialPref[] {
-  return materials.filter((m) => materialCategory(m) === "board")
+  return materials.filter(isCncBoard)
 }
 
 /** Fons (del mòdul i per defecte) i mides de tauler: els que es tallen a la CNC (taulers i fons). */
 export function backChoices(materials: readonly MaterialPref[]): MaterialPref[] {
   return materials.filter((m) => {
-    const c = materialCategory(m)
-    return c === "board" || c === "back"
+    return isCncBoard(m) || materialCategory(m) === "back"
   })
 }
 

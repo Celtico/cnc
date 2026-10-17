@@ -47,9 +47,21 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
               { id: "obstacle", label: <><LuShield /> Obstacle</> },
               { id: "cut", label: <><LuScissors /> Talla</> },
             ]}
-            onChange={(v) => update({ effect: v === "cut" ? "cut" : undefined })}
+            onChange={(v) => update({ effect: v === "cut" ? "cut" : undefined, ...(v === "cut" ? {} : { round: undefined }) })}
           />
         </FormRow>
+        {o.effect === "cut" && (
+          <NumRow
+            optionId="ref.effect.round"
+            label="Fons arrodonit"
+            help="Si no travessa la peça: el buidat té el fons arrodonit amb aquest radi, com una pica (la paret recta i un quart de cercle fins al fons). 0 = de fons pla. Al programa de la CNC hi va el desbast i l'acabat en 3D."
+            value={o.round ?? 0}
+            min={0}
+            max={500}
+            step={5}
+            onChange={(r) => update({ round: r > 0 ? r : undefined })}
+          />
+        )}
       </FoldItem>
       <FoldItem optionId="ref.shape" id="ref-shape" title="Forma" icon={shapeOpt.icon} badge={shapeOpt.name}>
         <FormRow optionId="ref.shape" label="Forma">

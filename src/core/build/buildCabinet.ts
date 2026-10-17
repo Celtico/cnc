@@ -1,5 +1,6 @@
 import {
   NO_EDGES,
+  rotatePocket,
   type CabinetParams,
   type EdgeBanding,
   type EdgeSide,
@@ -374,6 +375,7 @@ export function normalizePanel(p: Panel): Panel {
     }),
     // Ferratges importats (només visuals): el mateix gir, també la direcció v.
     ...(p.fittings ? { fittings: p.fittings.map((f) => ({ ...rot(f), v: [f.v[1], -f.v[0]] as [number, number] })) } : {}),
+    ...(p.pockets ? { pockets: p.pockets.map((k) => rotatePocket(k, L)) } : {}),
     grooves: p.grooves.map((g) => ({
       ...g,
       x: g.y,

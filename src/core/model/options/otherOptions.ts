@@ -78,8 +78,10 @@ export const PART = group("part", "Peça lliure", { icon: "part", code: UI.inspe
     control: "choice",
     default: "part",
     defaultEditable: true,
-    choices: [{ value: "part", label: "Peça" }, { value: "cut", label: "Talla", hides: ["part.material", "part.cnc", "part.joints"] }],
-  }),
+    choices: [{ value: "part", label: "Peça" }, { value: "cut", label: "Talla", hides: ["part.material", "part.cnc", "part.joints"], reveals: ["part.effect.round"] }],
+  }, [
+    field("part.effect.round", "Fons arrodonit", { code: UI.part, control: "number", showIf: "Talla", default: 0, defaultEditable: true, note: "Si no travessa: un buidat amb el fons arrodonit (una pica), amb recorreguts 3D al programa." }),
+  ]),
   section("part.orient", "Orientació", {
     icon: "orient",
     code: UI.part,
@@ -142,8 +144,10 @@ export const REF = group("ref", "Objecte de referència", { icon: "ref", code: U
     control: "choice",
     default: "obstacle",
     defaultEditable: true,
-    choices: [{ value: "obstacle", label: "Obstacle" }, { value: "cut", label: "Talla", reveals: ["ref.orient"], hides: ["ref.material"] }],
-  }),
+    choices: [{ value: "obstacle", label: "Obstacle" }, { value: "cut", label: "Talla", reveals: ["ref.orient", "ref.effect.round"], hides: ["ref.material"] }],
+  }, [
+    field("ref.effect.round", "Fons arrodonit", { code: UI.ref, control: "number", showIf: "Talla", default: 0, defaultEditable: true, note: "Si no travessa: un buidat amb el fons arrodonit (una pica), amb recorreguts 3D al programa." }),
+  ]),
   section("ref.shape", "Forma", {
     icon: "shape",
     code: UI.ref,

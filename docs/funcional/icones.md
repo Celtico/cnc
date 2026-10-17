@@ -66,7 +66,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Arbre | Element visible / amagat · bloquejat / lliure (l'ull i el cadenat de cada fila) | `LuEye` / `LuEyeOff` · `LuLock` / `LuLockOpen` |
 | Galeries | Historial · Catàleg · Col·leccions de mobles | `LuHistory` · `LuBookOpen` · `LuLibrary` |
 | Exportar | DXF (CNC) · STEP 3D · CSV de nesting · CSV de peces · GLB · Avançat | `LuScissors` · `LuCuboid` · `LuLayoutGrid` · `LuFileDown` · `LuBoxes` · `LuSettings2` |
-| Materials | Categories de la llista: Taulers · Fons · Simulació | `LuLayers3` · `LuLayers2` · `LuSprayCan` |
+| Materials | Categories de la llista: Taulers · Fons · Corian · Simulació | `LuLayers3` · `LuLayers2` · `LuGem` · `LuSprayCan` |
 | Màquines | Màquina CNC (pàgina, grups del detall i export Maestro) · Per defecte · Triar carpeta… · Triar fitxers… | `LuFactory` · `LuStar` · `LuFolderOpen` · `LuFileUp` |
 | Màquines | Regles de mecanitzat · Distribució dels taulers (girar peces) · Vista CAM | `LuRoute` · `LuRotateCw` · `LuMonitorCog` |
 | Materials | Posar una foto / mapa (relleu, brillantor) · Carregar joc de textures… · Carpeta… | `LuImagePlus` · `LuFileUp` · `LuFolderOpen` |

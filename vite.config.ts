@@ -81,7 +81,7 @@ export default defineConfig({
           {
             urlPattern: ({ url }) => url.pathname.startsWith("/textures/"),
             handler: "CacheFirst",
-            options: { cacheName: "mobles-textures", expiration: { maxEntries: 120, maxAgeSeconds: 365 * 24 * 3600 }, cacheableResponse: { statuses: [200] } },
+            options: { cacheName: "mobles-textures", expiration: { maxEntries: 260, maxAgeSeconds: 365 * 24 * 3600 }, cacheableResponse: { statuses: [200] } },
           },
           {
             // Fotos dels electrodomèstics (`appliances/*.webp`, ~0,4 MB en total): la miniatura i la cara vista al 3D. «-v2»:

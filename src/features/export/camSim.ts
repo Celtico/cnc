@@ -26,6 +26,8 @@ export interface SimMove {
   /** Índex a `SimProgram.ops`. */
   op: number
   r: number
+  /** Fresa esfèrica (relleus 3D): deixa la forma de la bola. */
+  ball?: boolean
 }
 
 export interface SimOp {
@@ -135,11 +137,12 @@ export function buildSimProgram(view: CamSheetView): SimProgram {
   let pos: P3 = home
   let opIdx = 0
   let r = 0
+  let ball = false
   const push = (kind: SimMove["kind"], b: P3) => {
     const len = Math.hypot(b[0] - pos[0], b[1] - pos[1], b[2] - pos[2])
     if (len < 1e-9) return
     const dt = len / feedOf(kind, pos, b)
-    moves.push({ kind, a: pos, b, t0: t, t1: t + dt, op: opIdx, r })
+    moves.push({ kind, a: pos, b, t0: t, t1: t + dt, op: opIdx, r, ...(ball ? { ball } : {}) })
     t += dt
     pos = b
   }
@@ -165,8 +168,15 @@ export function buildSimProgram(view: CamSheetView): SimProgram {
       const width = view.widths.get(o.n)
       const d = width ? view.draws.get(o.n) : camDraw(o, DEFAULT_TOOL_D)
       r = (width ?? DEFAULT_TOOL_D) / 2
+      ball = !!o.ball
       if (!d || !d.centre.length) shown = false
-      else {
+      else if (d.centre3) {
+        // Recorregut 3D explícit: cada punt a la seva Z (sobre la cara, en ràpid).
+        const q0 = d.centre3[0]!
+        goTo([q0[0], q0[1]])
+        for (const q of d.centre3) push(q[2] >= 0 && pos[2] >= T ? "rapid" : "cut", [q[0], q[1], T + q[2]])
+        retract()
+      } else {
         const centre = d.centre
         const strokes = d.fill ? pocketStrokes(centre, r * 1.2) : [d.closed && centre.length > 2 ? [...centre, centre[0]!] : centre]
         const ramp = o.approach?.k ? approachSegment(centre, o.approach.k * r) : null
@@ -195,6 +205,7 @@ export function buildSimProgram(view: CamSheetView): SimProgram {
         if (o.ref && o.kind === "contour" && o.side === "outside" && o.depth >= T - 1e-6) finished.set(o.ref, { ref: o.ref, t, outline: view.outlines.get(o.ref) ?? d.outline })
       }
     }
+    ball = false
     if (!shown) side++
     ops.push({ n: o.n, t0, t1: t, r, shown })
   }
@@ -266,7 +277,7 @@ export function advanceSim(hf: Heightfield, prog: SimProgram, cur: SimCursor, t:
       const m = prog.moves[k]!
       if (m.t0 >= t) break
       if (m.kind !== "cut") continue
-      stampSegment(hf, lerp(m, Math.max(cur.t, m.t0)), lerp(m, Math.min(t, m.t1)), m.r)
+      stampSegment(hf, lerp(m, Math.max(cur.t, m.t0)), lerp(m, Math.min(t, m.t1)), m.r, m.ball)
     }
   }
   while (cur.fin < prog.finished.length && prog.finished[cur.fin]!.t <= t) tintPolygon(hf, prog.finished[cur.fin++]!.outline)

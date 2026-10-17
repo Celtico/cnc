@@ -1,4 +1,4 @@
-import { bounds, flatten, type Panel } from "../model"
+import { bounds, flatten, pocketBounds, type Panel } from "../model"
 import { pointInRing, rectsOverlap, type Pt2, type Rect2 } from "./region2d"
 
 /**
@@ -34,6 +34,10 @@ function keepOutRects(p: Panel, clearance: number): Rect2[] {
     out.push({ a0: h.x - r, a1: h.x + r, b0: h.y - r, b1: h.y + r })
   }
   for (const g of p.grooves) out.push({ a0: g.x - clearance, a1: g.x + g.w + clearance, b0: g.y - clearance, b1: g.y + g.h + clearance })
+  for (const k of p.pockets ?? []) {
+    const b = pocketBounds(k)
+    out.push({ a0: b.x0 - clearance, a1: b.x1 + clearance, b0: b.y0 - clearance, b1: b.y1 + clearance })
+  }
   for (const c of p.cutouts ?? []) {
     if (c.kind === "circle") {
       const r = c.diameter / 2 + clearance

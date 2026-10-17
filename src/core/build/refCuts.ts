@@ -1,4 +1,4 @@
-import { bounds, bulgeOf, ccw, ccwB, flatten, pointInPolygon, polygonArea, polygonTouchesRect, refSection, signedArea, type BPt, type Composition, type Cutout, type Panel, type RefObject, type Vec3 } from "../model"
+import { bounds, bulgeOf, ccw, ccwB, flatten, movePocket, pocketBounds, pointInPolygon, polygonArea, polygonTouchesRect, refSection, signedArea, type BPt, type Composition, type Cutout, type Panel, type RefObject, type Vec3 } from "../model"
 import { buildModule } from "./buildModule"
 import { normalizePanel } from "./buildCabinet"
 import { toLocal } from "./geometry"
@@ -293,18 +293,19 @@ function sidewaysCut(o: RefObject, sec: Section, p: Panel, b: Box, extra: boolea
 }
 
 /**
- * Un objecte que entra de cara però no travessa la peça (de `lo` a `hi` en el seu eix, dins del gruix de `n0` a `n1`):
- * - des d'una cara, cercle de fins a Ø35 dins de la peça → **forat** de la seva Ø i fondària (com una cassoleta; més gros
- *   no hi ha broca);
- * - des d'una cara, rectangle dins de la peça → **buidat** rectangular (`grooves`, de la seva fondària);
- * - la resta (un perfil, o un buidat que arriba al cantell, o un que queda dins del gruix sense tocar cap cara): el
- *   booleà en 3D (`solidCuts`) i un avís, perquè al programa de la CNC no hi va.
+ * Un objecte que entra per una cara i no la travessa (per decisió de l'usuari, 2026-10-17: «que no foradi si no
+ * traspassa»; «buidats de qualsevol forma vagin al programa de la CNC»): un **forat** de la seva fondària si és un cilindre
+ * fins a Ø35 de fons pla, una **ranura** si és una caixa recta, i si no un **buidat** (`Panel.pockets`) amb el contorn de
+ * l'objecte (perfil, cercle gros) i, amb `round`, el fons arrodonit (una pica). Un de fons pla que surt per la vora queda
+ * retallat a la peça (un rebaix obert). El que no entra per cap cara (tot dins del gruix) o el d'un fons arrodonit que surt
+ * per la vora es veu al 3D (`solidCuts`) i s'avisa: la CNC no el fa.
  */
 function blindCut(o: RefObject, sec: Section, p: Panel, lo: number, hi: number, n0: number, n1: number, extra: boolean): string | undefined {
   const r1 = (v: number) => Math.round(v * 10) / 10
   const depth = r1(hi - lo)
   const fromMax = hi >= n1 - 0.5
   const fromMin = lo <= n0 + 0.5
+  const round = o.round && o.round > 0 ? o.round : undefined
   const at = (pu: number, pv: number, av: number): Vec3 => {
     const q: [number, number, number] = [0, 0, 0]
     q[sec.u] = pu
@@ -319,13 +320,42 @@ function blindCut(o: RefObject, sec: Section, p: Panel, lo: number, hi: number, 
     const pts = sec.poly.map(([pu, pv]) => at(pu, pv, surface))
     const bb = bounds(pts.map((q) => [q[0], q[1]] as [number, number]))
     const inside = bb.x0 >= 1 && bb.y0 >= 1 && bb.x1 <= p.length - 1 && bb.y1 <= p.width - 1
-    if (inside && sec.circle && 2 * sec.circle.r <= 35 + 0.01) {
+    if (inside && !round && sec.circle && 2 * sec.circle.r <= 35 + 0.01) {
       const c = at(sec.circle.cu, sec.circle.cv, surface)
       p.holes = [...p.holes, { x: r1(c[0]), y: r1(c[1]), diameter: r1(2 * sec.circle.r), depth, face, tag: "ref" }]
       return
     }
-    if (inside && !sec.outline && sec.poly.length === 4) {
+    if (inside && !round && !sec.outline && sec.poly.length === 4 && isAxisRect(pts)) {
       p.grooves = [...p.grooves, { x: r1(bb.x0), y: r1(bb.y0), w: r1(bb.x1 - bb.x0), h: r1(bb.y1 - bb.y0), depth, face, tag: "ref" }]
+      return
+    }
+    // El contorn a la cara, en coordenades de la peça (amb arcs).
+    let outline: BPt[]
+    if (sec.circle) {
+      const c = at(sec.circle.cu, sec.circle.cv, surface)
+      const r = sec.circle.r
+      // Quatre quarts d'arc (bulge = tan(22,5°)).
+      const q = Math.tan(Math.PI / 8)
+      outline = [[r1(c[0] + r), r1(c[1]), q], [r1(c[0]), r1(c[1] + r), q], [r1(c[0] - r), r1(c[1]), q], [r1(c[0]), r1(c[1] - r), q]]
+    } else if (sec.outline) {
+      const loc = pts.map((q) => [q[0], q[1]] as [number, number])
+      const mirror = Math.sign(signedArea(loc)) !== Math.sign(signedArea(sec.poly))
+      outline = sec.outline.map((q): BPt => {
+        const l = at(q[0], q[1], surface)
+        const b = bulgeOf(q) * (mirror ? -1 : 1)
+        return b ? [r1(l[0]), r1(l[1]), b] : [r1(l[0]), r1(l[1])]
+      })
+    } else outline = pts.map((q) => [r1(q[0]), r1(q[1])] as BPt)
+    outline = ccwB(outline)
+    if (!inside && !round) {
+      // Rebaix obert: el contorn retallat a la peça.
+      const clipped = pc.intersection([flatten(outline)], [[[0, 0], [p.length, 0], [p.length, p.width], [0, p.width]]])
+      const ring = clipped.length === 1 && clipped[0]!.length === 1 ? clipped[0]![0]!.slice(0, -1) : null
+      if (ring && ring.length >= 3 && polygonArea(ring as [number, number][]) > 1) outline = ccwB(ring.map(([x, y]) => [r1(x), r1(y)] as BPt))
+      else outline = []
+    }
+    if (flatten(outline).length >= 3 && (inside || !round)) {
+      p.pockets = [...(p.pockets ?? []), { points: outline, depth, face, ...(round ? { round } : {}), tag: "ref" }]
       return
     }
   }
@@ -333,7 +363,15 @@ function blindCut(o: RefObject, sec: Section, p: Panel, lo: number, hi: number, 
   const a0 = at(0, 0, lo), a1 = at(0, 0, hi)
   p.solidCuts = [...(p.solidCuts ?? []), { points: start, dir: [a1[0] - a0[0], a1[1] - a0[1], a1[2] - a0[2]] }]
   if (extra) return
-  return `«${o.name}» entra ${num(depth)} mm a ${p.label} sense travessar-la: es veu al 3D, però a la CNC aquest buidat (${fromMax || fromMin ? "amb forma o fins al cantell" : "dins del gruix"}) no es fa.`
+  return `«${o.name}» entra ${num(depth)} mm a ${p.label} sense travessar-la: es veu al 3D, però a la CNC aquest buidat (${fromMax || fromMin ? "amb el fons arrodonit fins al cantell" : "dins del gruix"}) no es fa.`
+}
+
+/** Els quatre punts fan un rectangle alineat amb la peça (una ranura). */
+function isAxisRect(pts: Vec3[]): boolean {
+  return pts.every((q, i) => {
+    const n = pts[(i + 1) % pts.length]!
+    return Math.abs(q[0] - n[0]) < 0.01 || Math.abs(q[1] - n[1]) < 0.01
+  })
 }
 
 /** El punt és sobre el contorn del polígon (a 0,05 mm d'algun costat). */
@@ -371,6 +409,7 @@ function trimTo(p: Panel, bb: { x0: number; y0: number; x1: number; y1: number }
   if (p.outline) p.outline = p.outline.map((v) => (v.length === 3 ? ([q(v[0] - bb.x0), q(v[1] - bb.y0), v[2]] as [number, number, number]) : ([q(v[0] - bb.x0), q(v[1] - bb.y0)] as [number, number])))
   p.holes = p.holes.map(sh)
   p.grooves = p.grooves.map(sh)
+  if (p.pockets) p.pockets = p.pockets.map((k) => movePocket(k, -bb.x0, -bb.y0))
   if (p.rawSides) p.rawSides = p.rawSides.map(([x0, y0, x1, y1]) => [q(x0 - bb.x0), q(y0 - bb.y0), q(x1 - bb.x0), q(y1 - bb.y0)])
   if (p.cutouts) p.cutouts = p.cutouts.map((c) => (c.kind === "polygon" ? { ...c, points: c.points.map((v) => (v.length === 3 ? ([q(v[0] - bb.x0), q(v[1] - bb.y0), v[2]] as [number, number, number]) : ([q(v[0] - bb.x0), q(v[1] - bb.y0)] as [number, number]))) } : sh(c)))
 }
@@ -431,6 +470,12 @@ function notch(p: Panel, cutter: [number, number][], extra?: Panel[]): string | 
   p.outline = rings[0]!
   p.holes = keepHoles(original.holes, rings[0]!)
   p.grooves = keepGrooves(original.grooves, rings[0]!)
+  // Els buidats, amb el tros on cau el seu centre.
+  const pocketIn = (ring: [number, number][]) => (original.pockets ?? []).filter((k) => {
+    const b = pocketBounds(k)
+    return pointInPolygon([(b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2], ring)
+  })
+  if (original.pockets) p.pockets = pocketIn(rings[0]!)
   for (const h of sorted[0]!.slice(1)) p.cutouts = [...(p.cutouts ?? []), { kind: "polygon", points: ccw((h as [number, number][]).slice(0, -1)), tag: "ref" }]
   // Si el que queda ocupa menys que la peça (la columna se n'ha menjat una franja sencera), la peça es fa a la seva mida.
   if (sorted.length === 1) {
@@ -458,6 +503,7 @@ function notch(p: Panel, cutter: [number, number][], extra?: Panel[]): string | 
       outline: ring.map(([x, y]) => [Math.round((x - bb.x0) * 100) / 100, Math.round((y - bb.y0) * 100) / 100] as [number, number]),
       holes: keepHoles(original.holes, ring).map(sh),
       grooves: keepGrooves(original.grooves, ring).map(sh),
+      ...(original.pockets ? { pockets: pocketIn(ring).map((k) => movePocket(k, -bb.x0, -bb.y0)) } : {}),
       placement: { ...p.placement, origin: [o[0] + bb.x0 * xAxis[0] + bb.y0 * yAxis[0], o[1] + bb.x0 * xAxis[1] + bb.y0 * yAxis[1], o[2] + bb.x0 * xAxis[2] + bb.y0 * yAxis[2]] },
     }
     delete piece.cutouts

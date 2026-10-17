@@ -1086,166 +1086,140 @@
    "top|dalt|450x300x30|Roure massís / xapat|x|e1000|h0|g0|c0|o-|@948cd610|m:left,right"
   ]
  },
- "store-exterior-taula-exterior-1": {
+ "store-corian-lavabo-mass-s-1": {
   "panels": 1,
-  "extras": 4,
-  "warnings": [
-   "table"
-  ],
-  "p": [
-   "top|dalt|2000x950x30|Roure massís / xapat|x|e1111|h0|g0|c0|o-|@6f7c3573"
-  ]
- },
- "store-exterior-taula-exterior-2": {
-  "panels": 0,
-  "extras": 3,
-  "warnings": [],
-  "p": []
- },
- "store-exterior-taula-exterior-3": {
-  "panels": 1,
-  "extras": 4,
-  "warnings": [
-   "table"
-  ],
-  "p": [
-   "top|dalt|1800x950x30|Roure massís / xapat|x|e1111|h0|g0|c0|oaaad18ab|@6f7c3573"
-  ]
- },
- "store-exterior-banc-exterior-1": {
-  "panels": 3,
-  "extras": 0,
-  "warnings": [
-   "mitre"
-  ],
-  "p": [
-   "side|lat d|450x420x30|Roure massís / xapat|x|e0010|h0|g0|c0|o-|@b3bd3ff1|m:right",
-   "side|lat e|450x420x30|Roure massís / xapat|x|e1000|h0|g0|c0|o-|@84a01218|m:right",
-   "top|dalt|1800x420x30|Roure massís / xapat|x|e1000|h0|g0|c0|o-|@948cd610|m:left,right"
-  ]
- },
- "store-exterior-banc-exterior-2": {
-  "panels": 9,
   "extras": 0,
   "warnings": [],
   "p": [
-   "back|trassera|1400x390x10|DM (fons)|none|e0000|h0|g0|c0|o-|@00f6ae24",
-   "bottom|baix|1362x470x19|Roure massís / xapat|x|e0010|h6:57d3b39d|g0|c0|o-|@a575e97d",
-   "flap|abatible|1396x386x19|Roure massís / xapat|y|e1111|h2:fd500cfb|g0|c2:b0b28d40|o-|@1c357b54",
-   "plinth|socol|1400x55x19|Roure massís / xapat|x|e1111|h0|g0|c0|o-|@c474303b",
-   "plinth|socol|441x55x19|Roure massís / xapat|x|e1010|h0|g0|c0|o-|@75889bd2",
-   "plinth|socol|441x55x19|Roure massís / xapat|x|e1010|h0|g0|c0|o-|@a3e16376",
-   "side|lat d|470x390x19|Roure massís / xapat|y|e0011|h24:c1bf599a|g0|c0|o-|@cf6d0c21",
-   "side|lat e|470x390x19|Roure massís / xapat|y|e0110|h24:c1bf599a|g0|c0|o-|@440e5a29",
-   "top|dalt|1362x470x19|Roure massís / xapat|x|e1000|h6:57d3b39d|g0|c0|o-|@1e8db413"
+   "part|Lavabo|600x460x57|Corian Glacier White|x|e0000|h0|g0|c0|o-|@eae1151f|k:2:611973bf"
   ]
  },
- "store-exterior-banc-exterior-3": {
+ "store-corian-lavabo-mass-s-2": {
   "panels": 1,
-  "extras": 6,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "part|Lavabo doble|1200x480x57|Corian Cameo White|x|e0000|h0|g0|c0|o-|@d288e5f9|k:4:efa71a32"
+  ]
+ },
+ "store-corian-lavabo-mass-s-3": {
+  "panels": 1,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "part|Lavabo|500x400x38|Corian Deep Nocturne|x|e0000|h0|g0|c0|o-|@45fb4f21|k:2:fd4921a5"
+  ]
+ },
+ "store-corian-moble-de-lavabo-1": {
+  "panels": 10,
+  "extras": 5,
   "warnings": [
-   "table"
+   "push"
   ],
   "p": [
-   "top|dalt|1600x400x30|Roure massís / xapat|x|e1111|h0|g0|c0|o-|@948cd610"
+   "back|trassera|777x408.5x10|DM (fons)|none|e0000|h0|g0|c2:d04a5486|o-|@0d5d14ad",
+   "bottom|baix|762x460x19|Melamina blanca|x|e0010|h6:1813b2fe|g1:226bda92|c0|o-|@aa9cb286",
+   "drawerBack|darrere calaix|705x361x16|Melamina blanca|x|e1000|h4:f4003304|g0|c0|o-|@93c54ca1",
+   "drawerBottom|fons calaix|720x407x10|DM (fons)|none|e0000|h0|g0|c0|o-|@0193a689",
+   "drawerFront|frontal calaix|796x416x19|Corian Glacier White|x|e1111|h4:0eb5b914|g1:47751f93|c0|o-|@e0e1bfe6|push",
+   "drawerSide|lateral calaix|400x383x16|Melamina blanca|x|e1000|h6:7c4adb06|g1:45309763|c0|o-|@b949ccd6",
+   "drawerSide|lateral calaix|400x383x16|Melamina blanca|x|e1000|h6:c961d480|g1:45309763|c0|o-|@944e0a6f",
+   "part|Sobre-pica|800x480x38|Corian Glacier White|x|e0000|h0|g0|c0|o-|@97c05962|k:2:f11e63af",
+   "side|lat d|460x420x19|Melamina blanca|y|e0011|h9:63dd5ee1|g1:a14f5452|c0|o-|@14e53e66",
+   "side|lat e|460x420x19|Melamina blanca|y|e0110|h9:dfe7597e|g1:6a490adf|c0|o-|@0c38bf1e"
   ]
  },
- "store-exterior-moble-auxiliar-exterior-1": {
+ "store-corian-moble-de-lavabo-2": {
   "panels": 26,
-  "extras": 1,
-  "warnings": [],
-  "p": [
-   "back|trassera|1400x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@97330a66",
-   "bottom|baix|1362x590x19|Roure massís / xapat|x|e0010|h9:ec2ba216|g0|c0|o-|@11a485b9",
-   "divider|divisor|781x590x19|Roure massís / xapat|x|e1000|h55:c77c40ca|g0|c0|o-|@d7595f29",
-   "door|porta d|796x346.8x19|Roure massís / xapat|x|e1111|h2:cbd8bae5|g0|c2:e687efb6|o-|@c31e04b6",
-   "door|porta e|796x346.8x19|Roure massís / xapat|x|e1111|h2:d254e0ad|g0|c2:a0d982b8|o-|@96cf7341",
-   "drawerBack|darrere calaix|614.5x208x16|Roure massís / xapat|x|e1000|h4:1d27214c|g0|c0|o-|@2df95594",
-   "drawerBack|darrere calaix|614.5x208x16|Roure massís / xapat|x|e1000|h4:1d27214c|g0|c0|o-|@6e9c1d56",
-   "drawerBack|darrere calaix|614.5x208x16|Roure massís / xapat|x|e1000|h4:1d27214c|g0|c0|o-|@d59ec358",
-   "drawerBottom|fons calaix|629.5x557x10|DM (fons)|none|e0000|h0|g0|c0|o-|@283a1148",
-   "drawerBottom|fons calaix|629.5x557x10|DM (fons)|none|e0000|h0|g0|c0|o-|@2c095b8c",
-   "drawerBottom|fons calaix|629.5x557x10|DM (fons)|none|e0000|h0|g0|c0|o-|@4379c93a",
-   "drawerFront|frontal calaix|696.5x263x19|Roure massís / xapat|x|e1111|h4:9565e4a0|g1:021ad8bc|c2:bc315efb|o-|@3ef55957",
-   "drawerFront|frontal calaix|696.5x263x19|Roure massís / xapat|x|e1111|h4:9565e4a0|g1:021ad8bc|c2:bc315efb|o-|@508f7e59",
-   "drawerFront|frontal calaix|696.5x263x19|Roure massís / xapat|x|e1111|h4:9565e4a0|g1:021ad8bc|c2:bc315efb|o-|@90c09411",
-   "drawerSide|lateral calaix|550x230x16|Roure massís / xapat|x|e1000|h6:8eff3916|g1:43be8519|c0|o-|@0ab252ba",
-   "drawerSide|lateral calaix|550x230x16|Roure massís / xapat|x|e1000|h6:8eff3916|g1:43be8519|c0|o-|@5133408e",
-   "drawerSide|lateral calaix|550x230x16|Roure massís / xapat|x|e1000|h6:8eff3916|g1:43be8519|c0|o-|@8f35cecc",
-   "drawerSide|lateral calaix|550x230x16|Roure massís / xapat|x|e1000|h6:96f60673|g1:43be8519|c0|o-|@78da1a5f",
-   "drawerSide|lateral calaix|550x230x16|Roure massís / xapat|x|e1000|h6:96f60673|g1:43be8519|c0|o-|@a1882851",
-   "drawerSide|lateral calaix|550x230x16|Roure massís / xapat|x|e1000|h6:96f60673|g1:43be8519|c0|o-|@e4b7b1ad",
-   "plinth|socol|1400x75x19|Roure massís / xapat|x|e1111|h0|g0|c0|o-|@e66e67a9",
-   "plinth|socol|551x75x19|Roure massís / xapat|x|e1010|h0|g0|c0|o-|@a3e16376",
-   "plinth|socol|551x75x19|Roure massís / xapat|x|e1010|h0|g0|c0|o-|@f461b094",
-   "shelf|estanter|670.5x570x19|Roure massís / xapat|x|e0010|h0|g0|c0|o-|@c643af47",
-   "side|lat d|800x590x19|Roure massís / xapat|x|e0110|h9:61dae49a|g0|c0|o-|@332dee19",
-   "side|lat e|800x590x19|Roure massís / xapat|x|e1100|h49:9ffa1d73|g0|c0|o-|@4de0a145"
-  ]
- },
- "store-exterior-moble-auxiliar-exterior-2": {
-  "panels": 5,
-  "extras": 0,
-  "warnings": [],
-  "p": [
-   "bottom|baix|762x450x19|Roure massís / xapat|x|e0010|h6:c7879c36|g0|c0|o-|@527f0bed",
-   "shelf|estanter|761x430x19|Roure massís / xapat|x|e0010|h0|g0|c0|o-|@19690606",
-   "side|lat d|700x450x19|Roure massís / xapat|x|e0110|h6:5929d5f0|g0|c0|o-|@9b5324d0",
-   "side|lat e|700x450x19|Roure massís / xapat|x|e1100|h6:5929d5f0|g0|c0|o-|@2071405d",
-   "top|dalt|762x450x19|Roure massís / xapat|x|e1000|h6:c7879c36|g0|c0|o-|@d70795d1"
-  ]
- },
- "store-exterior-moble-auxiliar-exterior-3": {
-  "panels": 4,
-  "extras": 0,
+  "extras": 5,
   "warnings": [
-   "mitre"
+   "push"
   ],
   "p": [
-   "back|trassera|500x500x10|DM (fons)|none|e0000|h0|g0|c0|o-|@d3864258",
-   "bottom|baix|500x490x19|MDF lacat terracota|x|e0010|h0|g0|c0|o-|@55bae208|m:left,right",
-   "side|lat d|500x490x19|MDF lacat terracota|x|e0110|h26:7c5c6fc0|g0|c0|o-|@a6de9528|m:left",
-   "side|lat e|500x490x19|MDF lacat terracota|x|e1100|h26:7c5c6fc0|g0|c0|o-|@641cff2b|m:left"
+   "back|trassera|977x438.5x10|DM (fons)|none|e0000|h0|g0|c2:3896ff5a|o-|@36776972",
+   "bottom|baix|962x470x19|Melamina gris|x|e0010|h9:ca4ce237|g1:9366b373|c0|o-|@9f079ab8",
+   "divider|divisor|440x431x19|Melamina gris|y|e0100|h11:70fac091|g0|c0|o-|@d789e923",
+   "drawerBack|darrere calaix|414.5x166.5x16|Melamina gris|x|e1000|h4:068a8202|g0|c0|o-|@45d45849",
+   "drawerBack|darrere calaix|414.5x166.5x16|Melamina gris|x|e1000|h4:068a8202|g0|c0|o-|@696c3088",
+   "drawerBack|darrere calaix|414.5x166.5x16|Melamina gris|x|e1000|h4:068a8202|g0|c0|o-|@7f7f583f",
+   "drawerBack|darrere calaix|414.5x166.5x16|Melamina gris|x|e1000|h4:068a8202|g0|c0|o-|@9f622902",
+   "drawerBottom|fons calaix|429.5x407x10|DM (fons)|none|e0000|h0|g0|c0|o-|@74960359",
+   "drawerBottom|fons calaix|429.5x407x10|DM (fons)|none|e0000|h0|g0|c0|o-|@a8526814",
+   "drawerBottom|fons calaix|429.5x407x10|DM (fons)|none|e0000|h0|g0|c0|o-|@dc9c6b6e",
+   "drawerBottom|fons calaix|429.5x407x10|DM (fons)|none|e0000|h0|g0|c0|o-|@ec761dd3",
+   "drawerFront|frontal calaix|496.5x221.5x19|Corian Rain Cloud|x|e1111|h4:59af4764|g1:9e5d50ee|c0|o-|@7464723a|push",
+   "drawerFront|frontal calaix|496.5x221.5x19|Corian Rain Cloud|x|e1111|h4:59af4764|g1:9e5d50ee|c0|o-|@f393f3ae|push",
+   "drawerFront|frontal calaix|496.5x221.5x19|Corian Rain Cloud|x|e1111|h4:ea6bb838|g1:2df4367e|c0|o-|@1d21f305|push",
+   "drawerFront|frontal calaix|496.5x221.5x19|Corian Rain Cloud|x|e1111|h4:ea6bb838|g1:2df4367e|c0|o-|@b2137d09|push",
+   "drawerSide|lateral calaix|400x188.5x16|Melamina gris|x|e1000|h6:295eb97a|g1:45309763|c0|o-|@33f30ac6",
+   "drawerSide|lateral calaix|400x188.5x16|Melamina gris|x|e1000|h6:295eb97a|g1:45309763|c0|o-|@43bd5a80",
+   "drawerSide|lateral calaix|400x188.5x16|Melamina gris|x|e1000|h6:295eb97a|g1:45309763|c0|o-|@861e4e27",
+   "drawerSide|lateral calaix|400x188.5x16|Melamina gris|x|e1000|h6:295eb97a|g1:45309763|c0|o-|@eec1760d",
+   "drawerSide|lateral calaix|400x188.5x16|Melamina gris|x|e1000|h6:6e67af9a|g1:45309763|c0|o-|@36bbfd2e",
+   "drawerSide|lateral calaix|400x188.5x16|Melamina gris|x|e1000|h6:6e67af9a|g1:45309763|c0|o-|@40f3259a",
+   "drawerSide|lateral calaix|400x188.5x16|Melamina gris|x|e1000|h6:6e67af9a|g1:45309763|c0|o-|@b4923eed",
+   "drawerSide|lateral calaix|400x188.5x16|Melamina gris|x|e1000|h6:6e67af9a|g1:45309763|c0|o-|@fca475a9",
+   "part|Sobre-pica|1000x490x57|Corian Rain Cloud|x|e0000|h0|g0|c0|o-|@da36a07d|k:2:6af5ec07",
+   "side|lat d|470x450x19|Melamina gris|y|e0011|h11:88125832|g1:c0e4efb8|c0|o-|@318c216c",
+   "side|lat e|470x450x19|Melamina gris|y|e0110|h11:be0d3b7e|g1:c233f0fa|c0|o-|@0c38bf1e"
   ]
  },
- "store-exterior-emmagatzematge-exterior-1": {
-  "panels": 14,
-  "extras": 0,
-  "warnings": [
-   "material-heat",
-   "material-heat"
-  ],
+ "store-corian-moble-de-lavabo-3": {
+  "panels": 11,
+  "extras": 5,
+  "warnings": [],
   "p": [
-   "back|trassera|1600x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@0da4fb81",
-   "back|trassera|1600x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@9007caf2",
-   "bottom|baix|562x490x19|Roure massís / xapat|x|e0010|h6:217a74fc|g0|c0|o-|@5fd3667a",
-   "bottom|baix|562x490x19|Roure massís / xapat|x|e0010|h6:217a74fc|g0|c0|o-|@6d6839c6",
-   "grille|reixeta|1596x596x19|Roure massís / xapat|x|e1111|h3:1e4e56ca|g0|c29:db42a961|o-|@fad787ea",
-   "grille|reixeta|1596x596x19|Roure massís / xapat|x|e1111|h3:d4ccdbbb|g0|c29:db42a961|o-|@dafbde3c",
-   "shelf|estanter|561x470x19|Roure massís / xapat|x|e0010|h0|g0|c0|o-|@638af291",
-   "shelf|estanter|561x470x19|Roure massís / xapat|x|e0010|h0|g0|c0|o-|@6ab2810d",
-   "side|lat d|1600x490x19|Roure massís / xapat|x|e0110|h100:c033fcaa|g0|c0|o-|@11f80926",
-   "side|lat d|1600x490x19|Roure massís / xapat|x|e0110|h100:c033fcaa|g0|c0|o-|@66be147b",
-   "side|lat e|1600x490x19|Roure massís / xapat|x|e1100|h100:c033fcaa|g0|c0|o-|@3b9d7c9f",
-   "side|lat e|1600x490x19|Roure massís / xapat|x|e1100|h100:c033fcaa|g0|c0|o-|@4de0a145",
-   "top|dalt|562x490x19|Roure massís / xapat|x|e1000|h6:217a74fc|g0|c0|o-|@534b7617",
-   "top|dalt|562x490x19|Roure massís / xapat|x|e1000|h6:217a74fc|g0|c0|o-|@59812aa3"
+   "back|trassera|877x438.5x10|DM (fons)|none|e0000|h0|g0|c2:08b662a9|o-|@36776972",
+   "bottom|baix|862x460x19|Roure massís / xapat|x|e0010|h6:b81d7a45|g1:54ebf0a7|c0|o-|@5fe31a13",
+   "drawerBack|darrere calaix|805x154x16|Roure massís / xapat|x|e1000|h4:31654812|g0|c0|o-|@b9ea7272",
+   "drawerBottom|fons calaix|820x407x10|DM (fons)|none|e0000|h0|g0|c0|o-|@0a6a70d0",
+   "drawerFront|frontal calaix|896x206x19|Roure massís / xapat|x|e1111|h4:ad3eeda0|g1:06d7401e|c2:77d4dcff|o-|@e0e1bfe6",
+   "drawerSide|lateral calaix|400x176x16|Roure massís / xapat|x|e1000|h6:05f2ad60|g1:45309763|c0|o-|@5964066b",
+   "drawerSide|lateral calaix|400x176x16|Roure massís / xapat|x|e1000|h6:da205f84|g1:45309763|c0|o-|@a2b3e4ad",
+   "fixedShelf|estanter fixe|862x430x19|Roure massís / xapat|x|e0010|h6:6eaefbe3|g0|c0|o-|@fe17e0a5",
+   "part|Sobre-pica|900x480x38|Corian Sand Storm|x|e0000|h0|g0|c0|o-|@97c05962|k:2:757a0a7e",
+   "side|lat d|460x450x19|Roure massís / xapat|y|e0011|h22:6a3ef2fd|g1:29417237|c0|o-|@d556a193",
+   "side|lat e|460x450x19|Roure massís / xapat|y|e0110|h22:30e15b14|g1:c233f0fa|c0|o-|@0c38bf1e"
   ]
  },
- "store-exterior-emmagatzematge-exterior-2": {
-  "panels": 9,
+ "store-corian-plat-de-dutxa-1": {
+  "panels": 1,
   "extras": 0,
   "warnings": [],
   "p": [
-   "back|trassera|1200x590x10|DM (fons)|none|e0000|h0|g0|c0|o-|@00f6ae24",
-   "bottom|baix|1162x590x19|Roure massís / xapat|x|e0010|h6:42d3b4c1|g0|c0|o-|@4ef2ef7f",
-   "flap|abatible|1196x586x19|Roure massís / xapat|y|e1111|h2:ea0cbdd1|g0|c2:bb7320ea|o-|@7fceda9c",
-   "plinth|socol|1200x55x19|Roure massís / xapat|x|e1111|h0|g0|c0|o-|@833e1f08",
-   "plinth|socol|561x55x19|Roure massís / xapat|x|e1010|h0|g0|c0|o-|@50dfa635",
-   "plinth|socol|561x55x19|Roure massís / xapat|x|e1010|h0|g0|c0|o-|@729c1b04",
-   "side|lat d|590x590x19|Roure massís / xapat|x|e0110|h36:fcde4dd5|g0|c0|o-|@4d09b809",
-   "side|lat e|590x590x19|Roure massís / xapat|x|e1100|h36:fcde4dd5|g0|c0|o-|@6ae7bd8f",
-   "top|dalt|1162x590x19|Roure massís / xapat|x|e1000|h6:42d3b4c1|g0|c0|o-|@6386d739"
+   "part|Plat de dutxa|1200x800x38|Corian Glacier White|x|e0000|h0|g0|c0|o-|@e874f12d|k:2:1fb3664d"
+  ]
+ },
+ "store-corian-plat-de-dutxa-2": {
+  "panels": 1,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "part|Plat de dutxa|1400x900x38|Corian Sand Storm|x|e0000|h0|g0|c0|o-|@65e78974|k:2:f03ccbb0"
+  ]
+ },
+ "store-corian-plat-de-dutxa-3": {
+  "panels": 1,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "part|Plat de dutxa|900x900x38|Corian Cameo White|x|e0000|h0|g0|c0|o-|@65e78974|k:2:1dfeb90e"
+  ]
+ },
+ "store-corian-taulell-amb-escorredor-1": {
+  "panels": 1,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "part|Taulell|2000x620x19|Corian Glacier White|x|e0000|h0|g0|c1:65091273|o-|@4c84f899|k:5:ae37032f"
+  ]
+ },
+ "store-corian-taulell-amb-escorredor-2": {
+  "panels": 1,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "part|Taulell|1400x600x19|Corian Rain Cloud|x|e0000|h0|g0|c1:a6391131|o-|@b7a665cb|k:4:f838f894"
   ]
  }
 }

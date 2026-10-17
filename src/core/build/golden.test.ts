@@ -50,7 +50,7 @@ function panelLine(p: Panel): string {
   const outline = p.outline ? hash(p.outline.map((q) => q.map(n2).join(",")).join(";")) : "-"
   const pl = p.placement
   const place = hash([...pl.origin, ...pl.xAxis, ...pl.yAxis, ...pl.zAxis].map(n1).join(","))
-  const extra = [p.mitres?.length ? `m:${[...p.mitres].sort().join(",")}` : "", p.assembly ? "glue" : "", p.push ? "push" : "", p.solidCuts?.length ? `solid:${p.solidCuts.length}` : ""].filter(Boolean).join(" ")
+  const extra = [p.mitres?.length ? `m:${[...p.mitres].sort().join(",")}` : "", p.assembly ? "glue" : "", p.push ? "push" : "", p.solidCuts?.length ? `solid:${p.solidCuts.length}` : "", p.pockets?.length ? `k:${setHash(p.pockets.map((k) => JSON.stringify(k, (_, v) => (typeof v === "number" ? Math.round(v * 100) / 100 : v))))}` : ""].filter(Boolean).join(" ")
   return `${p.role}|${p.name}|${n1(p.length)}x${n1(p.width)}x${n1(p.thickness)}|${p.material}|${p.grain}|e${edges}|h${holes}|g${grooves}|c${cutouts}|o${outline}|@${place}${extra ? `|${extra}` : ""}`
 }
 

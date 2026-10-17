@@ -81,7 +81,7 @@ const IGNORED = new Set([
   "SelectWorkpiece",
 ])
 
-const OP_NAME = /^(.+?)_(?:Forat|ForatPassant|Ranura|Caixera|Tall|Contorn)_\d+/
+const OP_NAME = /^(.+?)_(?:Forat|ForatPassant|Ranura|Caixera|Tall|Contorn|Desbast|Acabat)_\d+/
 
 /** El que el lector recorda d'una línia a la següent (pla, geometria activa, eina, estratègies…). */
 interface ParseState {
@@ -90,6 +90,8 @@ interface ParseState {
   active: CamPath | undefined
   building: CamPath | undefined
   toolComment: string
+  /** L'últim comentari d'eina era d'una fresa esfèrica (`//FRESA ESFERICA <nom>`). */
+  ball: boolean
   note: string
   approach: CamOp["approach"]
   strategy: number | undefined
@@ -101,7 +103,7 @@ interface ParseState {
 export function parseXcsPreview(text: string): XcsPreview {
   const lines = text.replace(/^﻿/, "").split(/\r?\n/)
   const res: XcsPreview = { parts: [], ops: [], unknown: 0, unknownLines: [] }
-  const st: ParseState = { res, plane: "Top", active: undefined, building: undefined, toolComment: "", note: "", approach: undefined, strategy: undefined, section: null, lastOp: undefined }
+  const st: ParseState = { res, plane: "Top", active: undefined, building: undefined, toolComment: "", ball: false, note: "", approach: undefined, strategy: undefined, section: null, lastOp: undefined }
 
   const unknown = (line: number, t: string) => {
     res.unknown++
@@ -149,9 +151,10 @@ export function parseXcsPreview(text: string): XcsPreview {
 /** Un comentari (`//`): comentaris d'eina, la llista de peces i d'etiquetes, marge, separació i la nota de la peça. */
 function readComment(st: ParseState, c: string): void {
   const { res } = st
-  const tc = /^\s*(BROCA|FRESA)\s+PLANA\s+(.+?)\s*$/.exec(c)
+  const tc = /^\s*(BROCA|FRESA)\s+(PLANA|ESFERICA)\s+(.+?)\s*$/.exec(c)
   if (tc) {
-    st.toolComment = tc[2]!
+    st.toolComment = tc[3]!
+    st.ball = tc[2] === "ESFERICA"
     return
   }
   const pc = /broca (?:vertical|horitzontal) \S+ \(([^)]+)\)/.exec(c)
@@ -285,7 +288,7 @@ function readCall(st: ParseState, fn: string, args: Arg[], lineNo: number): bool
       const p = pt(1)
       if (!p) return false
       const z = N(3)
-      st.building = { name: S(0) ?? "", kind: "toolpath", start: p, segs: [], closed: false, minZ: Number.isFinite(z) ? z : 0 }
+      st.building = { name: S(0) ?? "", kind: "toolpath", start: p, segs: [], closed: false, minZ: Number.isFinite(z) ? z : 0, ...(Number.isFinite(z) ? { startZ: z } : {}) }
       // El recorregut és de l'operació d'abans (programa del taller: `CreateRoughFinish` + `CreateToolpath`).
       if (st.lastOp && !st.lastOp.toolpath) st.lastOp.toolpath = st.building
       return true
@@ -296,13 +299,14 @@ function readCall(st: ParseState, fn: string, args: Arg[], lineNo: number): bool
       const z = N(2)
       if (!p || !st.building || st.building.kind !== "toolpath") return false
       if (Number.isFinite(z)) st.building.minZ = Math.min(st.building.minZ ?? 0, z)
-      if (fn === "AddSegmentToToolpath") st.building.segs.push({ to: p })
+      const zz = Number.isFinite(z) ? { z } : {}
+      if (fn === "AddSegmentToToolpath") st.building.segs.push({ to: p, ...zz })
       else {
         const r = N(3)
         const cw = B(4)
         const big = B(5)
         if (!ok(r) || cw === undefined) return false
-        st.building.segs.push({ to: p, arc: { c: arcCenter(lastPoint(st.building), p, r, cw, !!big), cw } })
+        st.building.segs.push({ to: p, arc: { c: arcCenter(lastPoint(st.building), p, r, cw, !!big), cw }, ...zz })
       }
       return true
     }
@@ -368,6 +372,7 @@ function pushOp(st: ParseState, o: Omit<CamOp, "n" | "line" | "plane" | "tool">,
     plane: st.plane,
     tool: o.toolArg && o.toolArg !== "-1" ? o.toolArg : st.toolComment || "-1",
     ...(ref ? { ref } : {}),
+    ...(o.kind !== "drill" && st.ball ? { ball: true } : {}),
     ...(o.kind !== "drill" && st.approach ? { approach: st.approach } : {}),
     ...(st.strategy !== undefined && Number.isFinite(st.strategy) ? { maxPass: st.strategy } : {}),
     ...(st.note && small ? { small } : {}),
@@ -375,7 +380,10 @@ function pushOp(st: ParseState, o: Omit<CamOp, "n" | "line" | "plane" | "tool">,
   }
   // Les estratègies no són modals (manual p58): només per a l'operació següent. El comentari de la peça, també.
   st.strategy = undefined
-  if (o.kind !== "drill") st.note = ""
+  if (o.kind !== "drill") {
+    st.note = ""
+    st.ball = false
+  }
   res.ops.push(op)
   return op
 }

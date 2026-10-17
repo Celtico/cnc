@@ -3,6 +3,7 @@ import {
   CompositionSchema,
   duplicateGroup,
   insertPartCopy,
+  isCncBoard,
   materialCategory,
   moveGroupBy,
   newId,
@@ -357,7 +358,7 @@ function summarizeObject(comp: Composition): ObjectSummary {
 /** Materials que es poden triar per a les peces d'un objecte (noms, per categoria). */
 function objectMaterials(settings: Pick<Settings, "materials">): { simulation: string[]; boards: string[] } {
   const list = partChoices(settings.materials)
-  return { simulation: list.filter((m) => materialCategory(m) === "sim").map((m) => m.name), boards: list.filter((m) => materialCategory(m) === "board").map((m) => m.name) }
+  return { simulation: list.filter((m) => materialCategory(m) === "sim").map((m) => m.name), boards: list.filter(isCncBoard).map((m) => m.name) }
 }
 
 interface ObjectPayload {

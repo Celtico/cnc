@@ -104,7 +104,7 @@ export function ToolsTable({ tools, onChange }: { tools: MachineTool[]; onChange
                         <Grid templateColumns={COLS} columnGap={COL_GAP} alignItems="center" py={1.5} opacity={dim ? 0.55 : 1}>
                           <Text fontFamily="mono" fontSize="xs" px={2} truncate>{t.code}</Text>
                           <Box minW={0}>
-                            <Text truncate title={t.mslName ? `${t.name} · a l'MSL: ${t.mslName}` : t.name}>{t.name}{t.manual ? " · a mà" : ""}{isPlaceholderTool(t) ? " · falta el codi" : ""}</Text>
+                            <Text truncate title={t.mslName ? `${t.name} · a l'MSL: ${t.mslName}` : t.name}>{t.name}{t.ball ? " · esfèrica" : ""}{t.manual ? " · a mà" : ""}{isPlaceholderTool(t) ? " · falta el codi" : ""}</Text>
                             <Text fontSize="xs" color="fg.muted" truncate display={BASE_ONLY}>{where(t)}</Text>
                           </Box>
                           <Text textAlign="right">{String(t.diameter).replace(".", ",")}</Text>
@@ -164,6 +164,19 @@ function ToolEditor({ tool: t, codes, onChange, onDelete }: { tool: MachineTool;
       )}
       <NumRow label="Diàmetre" value={t.diameter} min={0} max={400} step={0.5} onChange={(diameter) => onChange({ diameter })} />
       <NumRow label="Fondària útil" help="0 = desconeguda (no es comprova)." value={t.maxDepth} min={0} max={300} step={1} onChange={(maxDepth) => onChange({ maxDepth })} />
+      {t.kind === "router" && (
+        <FormRow label="Punta" help="Esfèrica: la fa servir l'acabat dels buidats amb el fons arrodonit o de forma (piques, relleus 3D). Maestro no ho diu: marca-la a mà.">
+          <ChoiceChips<"flat" | "ball">
+            label="Punta"
+            options={[
+              { id: "flat", label: "Plana" },
+              { id: "ball", label: "Esfèrica" },
+            ]}
+            value={t.ball ? "ball" : "flat"}
+            onChange={(v) => onChange({ ball: v === "ball" || undefined })}
+          />
+        </FormRow>
+      )}
       {t.kind === "blade" && <NumRow label="Gruix del disc" value={t.bladeThickness ?? 0} min={0} max={20} step={0.1} onChange={(bladeThickness) => onChange({ bladeThickness })} />}
       <FormRow label="Exportació">
         <Stack gap={2} pt={1.5}>

@@ -4,7 +4,7 @@
 
 ### Materials
 - **Categories** (`MaterialPref.category`, `materialCategory`, `withCategory`, `MATERIAL_CATEGORIES`): **Taulers** · **Fons** ·
-  **Simulació** (als antics es dedueix de `forBacks` / `cnc`; l'antiga «Metall, pedra i vidre», `hard`, es llegeix com a
+  **Corian** (superfície sòlida; es talla a la CNC com un tauler, `isCncBoard`: va als mateixos selectors) · **Simulació** (als antics es dedueix de `forBacks` / `cnc`; l'antiga «Metall, pedra i vidre», `hard`, es llegeix com a
   Simulació: per decisió de l'usuari és el mateix, no es tallen a la CNC). A Preferències es llisten per
   categoria (camp Categoria en lloc dels interruptors «Per a fons» i «Es talla a la CNC») i el `MaterialSelect` agrupa per
   categoria. Els que no són de CNC (ferro, inox, pedra, vidre) van arribar a la v2 de les preferències. Els de **simulació** (`SIM_MATERIALS`: v3 teixits, vellut, cuir, parquet, rajoles, microciment, pintures,
@@ -83,8 +83,15 @@
   **Corian sorra** i **Corian gris pedra**, de 6 · 12 · 19 mm, sense veta, massissos (`solid`: el cantell és el mateix
   material, polit, no es canteja), acabat de pedra mat (`stone`, gra fi, sense vetes). Es tallen a la CNC com un tauler; la
   pica d'un lavabo (buidat amb fons corbat) és CAM 3D, com les altres formes que no són de fons pla (Exports › Vista CAM).
-  Les preferències d'abans els reben un sol cop (un d'esborrat no torna).
-- **v12, duplicats fora** (`mergeDuplicateMaterials`, additiu i sense perdre res): «Melamina 19» → «Melamina blanca» i
+  Les preferències d'abans els reben un sol cop (un d'esborrat no torna). La pica d'un lavabo és un buidat amb el fons
+  arrodonit que va al programa amb recorreguts 3D (Exports).
+- **v51, la carta de colors de Corian** (`core/model/corianColors.ts`, `CORIAN_CATALOG`; per decisió de l'usuari,
+  2026-10-17: «un apartat nou de materials de Corian», amb el PDF `docs/corian-color.pdf`): categoria **Corian** amb els
+  93 colors de la carta, cada un amb la seva mostra com a foto (`public/textures/corian/<id>.jpg`, 512 px, un tros de
+  92 × 92 mm de la pàgina, a escala; `tileMm: 92`, en mirall) i el color mitjà; 6 · 12 · 19 mm i **38 · 57** (dues o tres
+  planxes de 19 encolades, els blocs dels lavabos i plats de dutxa), massissos, sense veta. Els tres de la v50 passen a
+  la categoria Corian, amb el gra més fi (si no s'havien tocat) i els blocs. La memòria cau de textures del service
+  worker passa a 260 entrades.- **v12, duplicats fora** (`mergeDuplicateMaterials`, additiu i sense perdre res): «Melamina 19» → «Melamina blanca» i
   «DM 10» → «DM (fons)» (eren iguals; només si encara són els inicials, `RETIRED_TEMPLATE_MATERIALS`, i el de sempre hi
   és; els gruixos hi passen) i les fulles «Pi» (`sim-pine`) → «Fulles de pi» (es confonia amb la fusta «Pi» de la
   biblioteca; si el nom és lliure i cap altre material es diu «Pi»; «Pi» no és un àlies general: un moble de fusta de pi es

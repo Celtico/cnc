@@ -1,4 +1,4 @@
-import type { EdgeSide, Panel } from "../../model"
+import { isFlatPocket, pocketPolygon, type EdgeSide, type Panel } from "../../model"
 import { pointInRing, rectsOverlap, signedArea, subtractRects, type Poly2, type Pt2, type Rect2 } from "../region2d"
 import { cutoutFeature, cylPocket, EDGE_TO_FACE, EPS, featureBox, regionMinusRects, type BoxFace, type RoundFeature } from "./features"
 import { blindDepth, type PanelSolid } from "./outlineSolid"
@@ -206,8 +206,15 @@ function boxSolidCuts(run: BoxRun): void {
   const { p, cad, L, W, T, warnings, frames, rounds } = run
   // Booleans 3D (STEP per a TopSolid): prisma de secció poligonal que entra per una cara i
   // en surt per l'oposada (passant) o s'atura a dins (cec). Alineat als eixos de la peça.
+  // Els buidats de qualsevol forma (`pockets`), com un prisma del contorn fins a la fondària (el fons arrodonit o de forma
+  // queda pla: el STEP no el porta).
+  const pockets = (p.pockets ?? []).map((k) => {
+    if (cad && !isFlatPocket(k)) warnings.push(`${p.name} (${p.id}): buidat amb el fons no pla; al STEP surt de fons pla (${Math.round(k.depth * 10) / 10} mm).`)
+    const z0 = k.face === "A" ? T : 0
+    return { points: pocketPolygon(k).map(([x, y]) => [x, y, z0] as V3), dir: [0, 0, k.face === "A" ? -k.depth : k.depth] as V3 }
+  })
   if (cad)
-    for (const sc of p.solidCuts ?? []) {
+    for (const sc of [...(p.solidCuts ?? []), ...pockets]) {
       let pts = sc.points
       let d = sc.dir
       const k = [0, 1, 2].reduce((best, i) => (Math.abs(d[i]!) > Math.abs(d[best]!) ? i : best), 0)

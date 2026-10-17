@@ -1,4 +1,198 @@
 {
+ "store-corian-taulell-amb-escorredor-3": {
+  "panels": 1,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "part|Taulell|1200x500x19|Corian Deep Nocturne|x|e0000|h0|g0|c1:353e01bf|o-|@55bae208|k:3:94e6cb47"
+  ]
+ },
+ "store-corian-accessoris-de-bany-1": {
+  "panels": 1,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "part|Sabonera|140x100x19|Corian Glacier White|x|e0000|h0|g0|c1:32f0a723|o-|@50f4ba0c|k:1:1f62b43a"
+  ]
+ },
+ "store-corian-accessoris-de-bany-2": {
+  "panels": 1,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "part|Safata|400x200x19|Corian Deep Nocturne|x|e0000|h0|g0|c0|o-|@817a964f|k:1:6c0f8502"
+  ]
+ },
+ "store-corian-accessoris-de-bany-3": {
+  "panels": 1,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "part|Prestatge de dutxa|500x140x12|Corian Cameo White|x|e0000|h0|g0|c5:84b1a7ad|o-|@584501fa"
+  ]
+ },
+ "store-exterior-taula-exterior-1": {
+  "panels": 1,
+  "extras": 4,
+  "warnings": [
+   "table"
+  ],
+  "p": [
+   "top|dalt|2000x950x30|Roure massís / xapat|x|e1111|h0|g0|c0|o-|@6f7c3573"
+  ]
+ },
+ "store-exterior-taula-exterior-2": {
+  "panels": 0,
+  "extras": 3,
+  "warnings": [],
+  "p": []
+ },
+ "store-exterior-taula-exterior-3": {
+  "panels": 1,
+  "extras": 4,
+  "warnings": [
+   "table"
+  ],
+  "p": [
+   "top|dalt|1800x950x30|Roure massís / xapat|x|e1111|h0|g0|c0|oaaad18ab|@6f7c3573"
+  ]
+ },
+ "store-exterior-banc-exterior-1": {
+  "panels": 3,
+  "extras": 0,
+  "warnings": [
+   "mitre"
+  ],
+  "p": [
+   "side|lat d|450x420x30|Roure massís / xapat|x|e0010|h0|g0|c0|o-|@b3bd3ff1|m:right",
+   "side|lat e|450x420x30|Roure massís / xapat|x|e1000|h0|g0|c0|o-|@84a01218|m:right",
+   "top|dalt|1800x420x30|Roure massís / xapat|x|e1000|h0|g0|c0|o-|@948cd610|m:left,right"
+  ]
+ },
+ "store-exterior-banc-exterior-2": {
+  "panels": 9,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "back|trassera|1400x390x10|DM (fons)|none|e0000|h0|g0|c0|o-|@00f6ae24",
+   "bottom|baix|1362x470x19|Roure massís / xapat|x|e0010|h6:57d3b39d|g0|c0|o-|@a575e97d",
+   "flap|abatible|1396x386x19|Roure massís / xapat|y|e1111|h2:fd500cfb|g0|c2:b0b28d40|o-|@1c357b54",
+   "plinth|socol|1400x55x19|Roure massís / xapat|x|e1111|h0|g0|c0|o-|@c474303b",
+   "plinth|socol|441x55x19|Roure massís / xapat|x|e1010|h0|g0|c0|o-|@75889bd2",
+   "plinth|socol|441x55x19|Roure massís / xapat|x|e1010|h0|g0|c0|o-|@a3e16376",
+   "side|lat d|470x390x19|Roure massís / xapat|y|e0011|h24:c1bf599a|g0|c0|o-|@cf6d0c21",
+   "side|lat e|470x390x19|Roure massís / xapat|y|e0110|h24:c1bf599a|g0|c0|o-|@440e5a29",
+   "top|dalt|1362x470x19|Roure massís / xapat|x|e1000|h6:57d3b39d|g0|c0|o-|@1e8db413"
+  ]
+ },
+ "store-exterior-banc-exterior-3": {
+  "panels": 1,
+  "extras": 6,
+  "warnings": [
+   "table"
+  ],
+  "p": [
+   "top|dalt|1600x400x30|Roure massís / xapat|x|e1111|h0|g0|c0|o-|@948cd610"
+  ]
+ },
+ "store-exterior-moble-auxiliar-exterior-1": {
+  "panels": 26,
+  "extras": 1,
+  "warnings": [],
+  "p": [
+   "back|trassera|1400x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@97330a66",
+   "bottom|baix|1362x590x19|Roure massís / xapat|x|e0010|h9:ec2ba216|g0|c0|o-|@11a485b9",
+   "divider|divisor|781x590x19|Roure massís / xapat|x|e1000|h55:c77c40ca|g0|c0|o-|@d7595f29",
+   "door|porta d|796x346.8x19|Roure massís / xapat|x|e1111|h2:cbd8bae5|g0|c2:e687efb6|o-|@c31e04b6",
+   "door|porta e|796x346.8x19|Roure massís / xapat|x|e1111|h2:d254e0ad|g0|c2:a0d982b8|o-|@96cf7341",
+   "drawerBack|darrere calaix|614.5x208x16|Roure massís / xapat|x|e1000|h4:1d27214c|g0|c0|o-|@2df95594",
+   "drawerBack|darrere calaix|614.5x208x16|Roure massís / xapat|x|e1000|h4:1d27214c|g0|c0|o-|@6e9c1d56",
+   "drawerBack|darrere calaix|614.5x208x16|Roure massís / xapat|x|e1000|h4:1d27214c|g0|c0|o-|@d59ec358",
+   "drawerBottom|fons calaix|629.5x557x10|DM (fons)|none|e0000|h0|g0|c0|o-|@283a1148",
+   "drawerBottom|fons calaix|629.5x557x10|DM (fons)|none|e0000|h0|g0|c0|o-|@2c095b8c",
+   "drawerBottom|fons calaix|629.5x557x10|DM (fons)|none|e0000|h0|g0|c0|o-|@4379c93a",
+   "drawerFront|frontal calaix|696.5x263x19|Roure massís / xapat|x|e1111|h4:9565e4a0|g1:021ad8bc|c2:bc315efb|o-|@3ef55957",
+   "drawerFront|frontal calaix|696.5x263x19|Roure massís / xapat|x|e1111|h4:9565e4a0|g1:021ad8bc|c2:bc315efb|o-|@508f7e59",
+   "drawerFront|frontal calaix|696.5x263x19|Roure massís / xapat|x|e1111|h4:9565e4a0|g1:021ad8bc|c2:bc315efb|o-|@90c09411",
+   "drawerSide|lateral calaix|550x230x16|Roure massís / xapat|x|e1000|h6:8eff3916|g1:43be8519|c0|o-|@0ab252ba",
+   "drawerSide|lateral calaix|550x230x16|Roure massís / xapat|x|e1000|h6:8eff3916|g1:43be8519|c0|o-|@5133408e",
+   "drawerSide|lateral calaix|550x230x16|Roure massís / xapat|x|e1000|h6:8eff3916|g1:43be8519|c0|o-|@8f35cecc",
+   "drawerSide|lateral calaix|550x230x16|Roure massís / xapat|x|e1000|h6:96f60673|g1:43be8519|c0|o-|@78da1a5f",
+   "drawerSide|lateral calaix|550x230x16|Roure massís / xapat|x|e1000|h6:96f60673|g1:43be8519|c0|o-|@a1882851",
+   "drawerSide|lateral calaix|550x230x16|Roure massís / xapat|x|e1000|h6:96f60673|g1:43be8519|c0|o-|@e4b7b1ad",
+   "plinth|socol|1400x75x19|Roure massís / xapat|x|e1111|h0|g0|c0|o-|@e66e67a9",
+   "plinth|socol|551x75x19|Roure massís / xapat|x|e1010|h0|g0|c0|o-|@a3e16376",
+   "plinth|socol|551x75x19|Roure massís / xapat|x|e1010|h0|g0|c0|o-|@f461b094",
+   "shelf|estanter|670.5x570x19|Roure massís / xapat|x|e0010|h0|g0|c0|o-|@c643af47",
+   "side|lat d|800x590x19|Roure massís / xapat|x|e0110|h9:61dae49a|g0|c0|o-|@332dee19",
+   "side|lat e|800x590x19|Roure massís / xapat|x|e1100|h49:9ffa1d73|g0|c0|o-|@4de0a145"
+  ]
+ },
+ "store-exterior-moble-auxiliar-exterior-2": {
+  "panels": 5,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "bottom|baix|762x450x19|Roure massís / xapat|x|e0010|h6:c7879c36|g0|c0|o-|@527f0bed",
+   "shelf|estanter|761x430x19|Roure massís / xapat|x|e0010|h0|g0|c0|o-|@19690606",
+   "side|lat d|700x450x19|Roure massís / xapat|x|e0110|h6:5929d5f0|g0|c0|o-|@9b5324d0",
+   "side|lat e|700x450x19|Roure massís / xapat|x|e1100|h6:5929d5f0|g0|c0|o-|@2071405d",
+   "top|dalt|762x450x19|Roure massís / xapat|x|e1000|h6:c7879c36|g0|c0|o-|@d70795d1"
+  ]
+ },
+ "store-exterior-moble-auxiliar-exterior-3": {
+  "panels": 4,
+  "extras": 0,
+  "warnings": [
+   "mitre"
+  ],
+  "p": [
+   "back|trassera|500x500x10|DM (fons)|none|e0000|h0|g0|c0|o-|@d3864258",
+   "bottom|baix|500x490x19|MDF lacat terracota|x|e0010|h0|g0|c0|o-|@55bae208|m:left,right",
+   "side|lat d|500x490x19|MDF lacat terracota|x|e0110|h26:7c5c6fc0|g0|c0|o-|@a6de9528|m:left",
+   "side|lat e|500x490x19|MDF lacat terracota|x|e1100|h26:7c5c6fc0|g0|c0|o-|@641cff2b|m:left"
+  ]
+ },
+ "store-exterior-emmagatzematge-exterior-1": {
+  "panels": 14,
+  "extras": 0,
+  "warnings": [
+   "material-heat",
+   "material-heat"
+  ],
+  "p": [
+   "back|trassera|1600x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@0da4fb81",
+   "back|trassera|1600x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@9007caf2",
+   "bottom|baix|562x490x19|Roure massís / xapat|x|e0010|h6:217a74fc|g0|c0|o-|@5fd3667a",
+   "bottom|baix|562x490x19|Roure massís / xapat|x|e0010|h6:217a74fc|g0|c0|o-|@6d6839c6",
+   "grille|reixeta|1596x596x19|Roure massís / xapat|x|e1111|h3:1e4e56ca|g0|c29:db42a961|o-|@fad787ea",
+   "grille|reixeta|1596x596x19|Roure massís / xapat|x|e1111|h3:d4ccdbbb|g0|c29:db42a961|o-|@dafbde3c",
+   "shelf|estanter|561x470x19|Roure massís / xapat|x|e0010|h0|g0|c0|o-|@638af291",
+   "shelf|estanter|561x470x19|Roure massís / xapat|x|e0010|h0|g0|c0|o-|@6ab2810d",
+   "side|lat d|1600x490x19|Roure massís / xapat|x|e0110|h100:c033fcaa|g0|c0|o-|@11f80926",
+   "side|lat d|1600x490x19|Roure massís / xapat|x|e0110|h100:c033fcaa|g0|c0|o-|@66be147b",
+   "side|lat e|1600x490x19|Roure massís / xapat|x|e1100|h100:c033fcaa|g0|c0|o-|@3b9d7c9f",
+   "side|lat e|1600x490x19|Roure massís / xapat|x|e1100|h100:c033fcaa|g0|c0|o-|@4de0a145",
+   "top|dalt|562x490x19|Roure massís / xapat|x|e1000|h6:217a74fc|g0|c0|o-|@534b7617",
+   "top|dalt|562x490x19|Roure massís / xapat|x|e1000|h6:217a74fc|g0|c0|o-|@59812aa3"
+  ]
+ },
+ "store-exterior-emmagatzematge-exterior-2": {
+  "panels": 9,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "back|trassera|1200x590x10|DM (fons)|none|e0000|h0|g0|c0|o-|@00f6ae24",
+   "bottom|baix|1162x590x19|Roure massís / xapat|x|e0010|h6:42d3b4c1|g0|c0|o-|@4ef2ef7f",
+   "flap|abatible|1196x586x19|Roure massís / xapat|y|e1111|h2:ea0cbdd1|g0|c2:bb7320ea|o-|@7fceda9c",
+   "plinth|socol|1200x55x19|Roure massís / xapat|x|e1111|h0|g0|c0|o-|@833e1f08",
+   "plinth|socol|561x55x19|Roure massís / xapat|x|e1010|h0|g0|c0|o-|@50dfa635",
+   "plinth|socol|561x55x19|Roure massís / xapat|x|e1010|h0|g0|c0|o-|@729c1b04",
+   "side|lat d|590x590x19|Roure massís / xapat|x|e0110|h36:fcde4dd5|g0|c0|o-|@4d09b809",
+   "side|lat e|590x590x19|Roure massís / xapat|x|e1100|h36:fcde4dd5|g0|c0|o-|@6ae7bd8f",
+   "top|dalt|1162x590x19|Roure massís / xapat|x|e1000|h6:42d3b4c1|g0|c0|o-|@6386d739"
+  ]
+ },
  "store-exterior-emmagatzematge-exterior-3": {
   "panels": 15,
   "extras": 0,

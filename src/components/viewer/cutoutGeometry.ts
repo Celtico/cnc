@@ -1,6 +1,6 @@
 import { BufferGeometry, ExtrudeGeometry, Float32BufferAttribute, Matrix4, MeshBasicMaterial, Path, Shape, Vector3, type Material } from "three"
 import { Brush, Evaluator, SUBTRACTION } from "three-bvh-csg"
-import { ccw, flatten, type Panel } from "../../core/model"
+import { ccw, flatten, pocketSolids, type Panel } from "../../core/model"
 
 const S = 0.001
 
@@ -188,7 +188,7 @@ export function mitreGeometry(p: Panel): BufferGeometry {
 
 /** La peça té forma (contorn, talls o booleans 3D): es dibuixa extruïda, amb [cares, cantells]. */
 export function isShaped(p: Panel): boolean {
-  return !!p.cutouts?.length || !!p.outline || !!p.solidCuts?.length
+  return !!p.cutouts?.length || !!p.outline || !!p.solidCuts?.length || !!p.pockets?.length
 }
 
 /**
@@ -197,7 +197,15 @@ export function isShaped(p: Panel): boolean {
  * les parets dels forats), com els costats de la caixa a `panelMaterials`.
  */
 export function shapedGeometry(p: Panel): BufferGeometry {
-  return splitEdgeGroups(p.solidCuts?.length ? solidCutGeometry(p) : cutoutGeometry(p), p)
+  return splitEdgeGroups(p.solidCuts?.length || p.pockets?.length ? solidCutGeometry(p) : cutoutGeometry(p), p)
+}
+
+/**
+ * La geometria per dibuixar les arestes d'una peça amb booleans 3D o buidats: la peça sense restar (el booleà deixa
+ * triangles prims i arestes en T que es veurien com a ratlles a la cara). `null` si no cal (la mateixa de la peça).
+ */
+export function edgeSourceGeometry(p: Panel): BufferGeometry | null {
+  return p.solidCuts?.length || p.pockets?.length ? cutoutGeometry(p) : null
 }
 
 /** Reparteix els triangles dels cantells (grup 1) entre «amb cantell» (1) i «sense» (2) segons `Panel.edges`. */
@@ -289,8 +297,25 @@ function solidCutGeometry(p: Panel): BufferGeometry {
   ev.attributes = ["position", "uv", "normal"]
   let a = new Brush(base, [face, edge])
   a.updateMatrixWorld()
-  for (const sc of p.solidCuts ?? []) {
-    const b = new Brush(prismGeometry(sc), edge)
+  // Els buidats (`pockets`): el prisma de la paret recta i, si el fons no és pla, el sòlid del mapa d'alçades.
+  const cutters: BufferGeometry[] = (p.solidCuts ?? []).map(prismGeometry)
+  for (const pk of p.pockets ?? []) {
+    const sol = pocketSolids(pk, p.thickness)
+    if (sol.wall) cutters.push(prismGeometry(sol.wall))
+    if (sol.field) {
+      const g = new BufferGeometry()
+      g.setAttribute("position", new Float32BufferAttribute(sol.field.positions.map((v) => v * S), 3))
+      g.setIndex(sol.field.index)
+      // Normals suaus (amb els vèrtexs compartits): el fons corbat no es veu a facetes.
+      g.computeVertexNormals()
+      const flat = g.toNonIndexed()
+      g.dispose()
+      flat.setAttribute("uv", new Float32BufferAttribute(new Float32Array((flat.getAttribute("position").count) * 2), 2))
+      cutters.push(flat)
+    }
+  }
+  for (const cg of cutters) {
+    const b = new Brush(cg, edge)
     b.updateMatrixWorld()
     const next = ev.evaluate(a, b, SUBTRACTION)
     b.geometry.dispose()

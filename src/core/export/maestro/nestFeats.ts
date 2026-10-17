@@ -6,6 +6,7 @@ import type { Placement } from "../../nesting/nest"
 import { closedPolyline, cutLoop, dedupePolyline, grooveRouterPath, insideCircleClockwise, maxToolDiameter, rectPts, sharpCorners, slotPts } from "./geometry"
 import { toBoard, toBoardPts, type Feat, type NestPart, type PartPlace } from "./nestModel"
 import { contourLine, contourPasses, cutWhat, grooveStrategy, grooveWhat, holeWhat, passDepths, pocketLine, pocketLines, rampLines, rampStart } from "./ops"
+import { pocketMachining, pocketWhat } from "./pockets"
 import { comment, cs, HEAD, num, toolArg } from "./script"
 
 /**
@@ -111,6 +112,7 @@ export function partFeats(run: NestRun, bd: NestBoardRun, p: Panel, pl: Placemen
   const part: PartRun = { run, p, pl, ref, place, T, through, router, feats, tr, warn, name, drill, outline, area }
   faceHoles(part)
   grooves(part)
+  pockets(part)
   cutouts(part)
   contour(part)
 }
@@ -216,6 +218,35 @@ function grooves(part: PartRun): void {
       ],
       op: { program: "A", plane: "Top", kind: "route", tool: t.code, depth, points: pts, what: grooveWhat(g), ref, stage: "groove", passes: passDepths(depth, rules.grooves.maxPass) },
     })
+  }
+}
+
+/** Buidats de qualsevol forma de la cara A (caixeres i relleus 3D, `pockets.ts`). */
+function pockets(part: PartRun): void {
+  const { p, warn, tr, name, place, feats, ref } = part
+  const { m, rp, warnings } = part.run
+  for (const pk of p.pockets ?? []) {
+    if (pk.face !== "A") continue
+    const res = pocketMachining(p, pk, m, rp, tr, (pts) => toBoardPts(place, pts), name)
+    for (const w of res.warnings) warnings.push(`${ref} (${p.label}): ${w}`)
+    if (res.skip) {
+      warn(pocketWhat(pk), res.skip.why, res.skip.tool)
+      continue
+    }
+    for (const st of res.steps) {
+      const a = st.points[0] ?? [0, 0]
+      const b = st.points[st.points.length - 1] ?? a
+      feats.push({
+        stage: "groove",
+        key: `${st.kind}:${st.tool.code}`,
+        start: [a[0], a[1]],
+        end: [b[0], b[1]],
+        area: 0,
+        tool: { kind: "FRESA", name: toolMslName(st.tool) },
+        lines: st.lines,
+        op: { program: "A", plane: "Top", kind: st.kind, tool: st.tool.code, depth: st.depth, points: st.points, what: `${pocketWhat(pk)}: ${st.label}`, ref, stage: "groove" },
+      })
+    }
   }
 }
 

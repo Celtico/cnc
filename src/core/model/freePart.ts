@@ -55,6 +55,8 @@ export const FreePartSchema = z.object({
    * travessa en la direcció del seu gruix, amb la seva forma (com els objectes que tallen).
    */
   effect: z.literal("cut").optional(),
+  /** Que talla sense travessar: radi del fons del buidat (una pica; `RefObject.round`). */
+  round: z.number().positive().optional(),
   /**
    * **Flat-pack** («Encaixos» de la peça): true = fa encaixos (pestanyes, mitja fusta, dits, espigues) amb les altres
    * peces que també en fan. Opció expressa: absent o false, la peça va sola (a qualsevol moble).

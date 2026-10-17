@@ -107,6 +107,22 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   (`CreateContour`/`CreateContourPocket`/`CreateRoughFinish`) i el Maestro calcula el recorregut. El parser del taller només
   veu els `CreateRoughFinish`. Test: `core/export/tallerXcs.roundtrip.test.ts`
   (`TALLER_DIR=/tmp/claude-0/taller pnpm exec vitest run src/core/export/tallerXcs.roundtrip.test.ts`; se salta sense el repo).
+- **Buidats de qualsevol forma** (`Panel.pockets`, `export/maestro/pockets.ts`; per decisió de l'usuari, 2026-10-17:
+  «buidats de qualsevol forma vagin al programa de la CNC»): els de **fons pla**, una caixera `CreateContourPocket` sobre el
+  contorn (amb els arcs; la fresa de la regla de Caixeres si hi cap, si no la més grossa que hi cap); els de **fons
+  arrodonit** (una pica) **o de forma** (una malla), **recorreguts explícits** com el programa real del taller (polilínia
+  d'un punt + `SetAttribute("DEPTH")` + `CreateRoughFinish` de farciment + `CreateToolpath`/`AddSegmentToToolpath` amb Z,
+  0 a la cara i negativa a dins, a 5 mm de seguretat entre trams, de 3000 punts com a molt cada un). El càlcul
+  (`core/machine/relief.ts`, sobre una graella de fondàries d'1 mm, `pocketGrid`): **desbast** amb la fresa de les caixeres
+  per nivells (la passada màxima de les ranures), contorns concèntrics de dins cap a fora (45 % de solapament) deixant
+  0,4 mm al fons i 0,8 de costat, i entrada en **rampa** pel primer contorn de cada nivell; **acabat** amb la **fresa
+  esfèrica** (Preferències › Màquines › Eines › Punta «Esfèrica», `MachineTool.ball`; comentari `//FRESA ESFERICA <eina>`)
+  o, si no n'hi ha, la plana (avís: queden graons per polir): parets per nivells (`waterline`, cada 0,5 / 0,8 mm) i fons en
+  passades paral·leles a X (`raster`), sempre amb la punta on la superfície ja «engreixada» pel radi de l'eina
+  (`erode`, «drop cutter»): l'eina no es menja la forma. Els de la cara B, al programa «Volt» (girat); al nesting, els de
+  la cara A. La Vista CAM llegeix els recorreguts amb la Z (`toolpath3`) i la simulació els segueix punt a punt, amb la
+  forma de la bola si és esfèrica. DXF: capa `POCKET_P<fondària>` (`_B`, `_3D`); STEP de CAD: el contorn fins a la fondària
+  (fons pla, amb avís); JSON del taller: el contorn com a `pockets`.
 - **Pendent de validar amb el taller** (llista a `docs/maestro-xcs.md`): pontets/pell de les peces petites, martiri, zones de
   buit, etiquetes, prova a la màquina (`PROVA_ORIENTACIO.xcs`), UTF-8 amb BOM (el real és ASCII sense BOM), noms de totes les
   eines al Maestro 2.0.5, bits de `MechanicalOptions` i el −20, disc o fresa per a les ranures, fixació, eines que falten al

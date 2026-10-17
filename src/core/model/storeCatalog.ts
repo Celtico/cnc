@@ -507,6 +507,100 @@ function wardrobe(name: string, o: { bodies: ("hang" | "hang2" | "drawers" | "sh
 const stoneTop = (x: number, W: number, D: number, y: number, t = 20): FreePart => metal({ name: "Taulell de pedra", orient: "flat", material: STONE, w: W, h: D, thickness: t, x, y, z: 0 })
 const glassShelf = (x: number, W: number, D: number, y: number): FreePart => metal({ name: "Prestatge de vidre", orient: "flat", material: GLASS, w: W, h: D, thickness: 8, x, y, z: 10 })
 
+// --- Corian --------------------------------------------------------------------------------------
+
+/*
+ * Peces de Corian (superfície sòlida; per decisió de l'usuari, 2026-10-17: «tot el que es pugui fer amb Corian, que hi
+ * pugui passar l'aigua»). Un bloc (planxes de 19 encolades: 38 o 57) o una planxa, i les peces que tallen: la pica amb
+ * el fons arrodonit (`round`, desbast i acabat 3D al programa), el desguàs que travessa, les ranures d'escórrer.
+ */
+const CW = "Corian Glacier White"
+const CC = "Corian Cameo White"
+const CR = "Corian Rain Cloud"
+const CN = "Corian Deep Nocturne"
+const CS = "Corian Sand Storm"
+
+/** Una peça estirada que talla (de `y0` a `y0 + t`) amb la forma `shape` (w × hh) a (x, z); `round`: el radi del fons. */
+const cut = (name: string, mat: string, x: number, z: number, w: number, hh: number, y0: number, t: number, shape: PNode[], round?: number): FreePart =>
+  part({ name, orient: "flat", material: mat, effect: "cut", w, h: hh, thickness: t, x, y: y0, z, shape, ...(round ? { round } : {}) })
+
+/** Bloc de Corian estirat de W × D × T a l'alçada y. */
+const corianSlab = (name: string, mat: string, W: number, D: number, T: number, y = 0, x = 0, z = 0): FreePart => part({ name, orient: "flat", material: mat, w: W, h: D, thickness: T, x, y, z })
+
+interface BasinOpts {
+  mat: string
+  W: number
+  D: number
+  T: number
+  /** Piques (una o dues), de bw × bd amb les cantonades de radi `corner`, `depth` de fons i el fons de radi `round`. */
+  n?: number
+  bw: number
+  bd: number
+  corner: number
+  depth: number
+  round: number
+  /** Alçada de la cara de sota del bloc. */
+  y?: number
+  /** Desguàs (Ø). */
+  drain?: number
+}
+
+/** Un bloc amb la pica (o dues) fresada i el desguàs: el lavabo massís. */
+function corianBasins(name: string, o: BasinOpts): FreePart[] {
+  const y = o.y ?? 0
+  const n = o.n ?? 1
+  const out: FreePart[] = [corianSlab(name, o.mat, o.W, o.D, o.T, y)]
+  const dr = o.drain ?? 40
+  for (let i = 0; i < n; i++) {
+    const cx = (o.W * (2 * i + 1)) / (2 * n)
+    const cz = o.D / 2 + 10
+    out.push(cut(`Pica${n > 1 ? ` ${i + 1}` : ""}`, o.mat, cx - o.bw / 2, cz - o.bd / 2, o.bw, o.bd, y + o.T - o.depth, o.depth + 20, rounded(o.bw, o.bd, o.corner), o.round))
+    // Des de sota fins al fons de la pica (+2): un buidat per la cara B que s'hi obre, no un forat de tot el gruix (les
+    // freses del taller no hi arriben; i si baixés més, tallaria el moble de sota).
+    out.push(cut(`Desguàs${n > 1 ? ` ${i + 1}` : ""}`, o.mat, cx - dr / 2, cz - dr / 2, dr, dr, y, o.T - o.depth + 2, oval(dr, dr)))
+  }
+  return out
+}
+
+/** Plat de dutxa: un bloc amb el fons en pendent suau cap al desguàs (un buidat amb el fons de radi gran). */
+function showerTray(name: string, o: { mat: string; W: number; D: number; T: number; drain: "centre" | "lineal" }): FreePart[] {
+  const m = 40
+  const out: FreePart[] = [corianSlab(name, o.mat, o.W, o.D, o.T)]
+  out.push(cut("Pendent", o.mat, m, m, o.W - 2 * m, o.D - 2 * m, o.T - 12, 32, rounded(o.W - 2 * m, o.D - 2 * m, 60), Math.min(o.W, o.D) / 2))
+  // El desguàs, al punt més baix (el mig): per sota fins al fons (+2), com el dels lavabos.
+  const low = o.T - 10 + 2
+  if (o.drain === "centre") out.push(cut("Desguàs", o.mat, o.W / 2 - 45, o.D / 2 - 45, 90, 90, 0, low, oval(90, 90)))
+  else out.push(cut("Reixeta lineal", o.mat, o.W / 2 - 150, o.D / 2 - 30, 300, 60, 0, low, rounded(300, 60, 10)))
+  return out
+}
+
+/** Taulell de cuina de Corian amb la pica sota (forat) i les ranures d'escórrer fresades (fons arrodonit). */
+function drainBoard(name: string, o: { mat: string; W: number; D: number; sinkW: number; sinkD: number; grooves: number }): FreePart[] {
+  const T = 19
+  const sinkX = o.W - o.sinkW - 120
+  const out: FreePart[] = [corianSlab(name, o.mat, o.W, o.D, T), cut("Forat de la pica", o.mat, sinkX, (o.D - o.sinkD) / 2, o.sinkW, o.sinkD, -10, T + 20, rounded(o.sinkW, o.sinkD, 40))]
+  const gx0 = sinkX - 400
+  for (let i = 0; i < o.grooves; i++) out.push(cut(`Ranura ${i + 1}`, o.mat, gx0, (o.D - o.sinkD) / 2 + 30 + i * ((o.sinkD - 60) / Math.max(1, o.grooves - 1)) - 8, 360, 16, T - 5, 15, rounded(360, 16, 8), 8))
+  return out
+}
+
+/** Peça petita amb una cubeta (sabonera, safata): un buidat de fons arrodonit i una ranura per on surt l'aigua. */
+function dish(name: string, o: { mat: string; W: number; D: number; T: number; depth: number; slot?: boolean }): FreePart[] {
+  const m = 15
+  const out: FreePart[] = [corianSlab(name, o.mat, o.W, o.D, o.T), cut("Cubeta", o.mat, m, m, o.W - 2 * m, o.D - 2 * m, o.T - o.depth, o.depth + 10, rounded(o.W - 2 * m, o.D - 2 * m, Math.min(25, (o.D - 2 * m) / 2)), o.depth)]
+  if (o.slot) out.push(cut("Escorredor", o.mat, o.W / 2 - 30, o.D / 2 - 8, 60, 16, -10, o.T + 20, rounded(60, 16, 8)))
+  return out
+}
+
+/** Prestatge de dutxa (racó o recte) amb ranures passants perquè no s'hi aturi l'aigua. */
+function showerShelf(name: string, o: { mat: string; W: number; D: number; y: number }): FreePart[] {
+  const T = 12
+  const out: FreePart[] = [corianSlab(name, o.mat, o.W, o.D, T, o.y)]
+  const n = Math.max(2, Math.floor((o.W - 60) / 80))
+  for (let i = 0; i < n; i++) out.push(cut(`Ranura ${i + 1}`, o.mat, 40 + i * ((o.W - 80 - 16) / Math.max(1, n - 1)), 30, 16, o.D - 60, o.y - 10, T + 20, rounded(16, o.D - 60, 8)))
+  return out
+}
+
 // --- Catàleg --------------------------------------------------------------------------------------
 
 export const STORE_CATALOG: StoreCategory[] = [
@@ -876,6 +970,37 @@ export const STORE_CATALOG: StoreCategory[] = [
         { name: "Tovalloler", style: "Escandinau", materials: "freixe", colors: "freixe", use: "Prestatgeria oberta per a tovalloles", audience: "banys", price: 190, make: () => one(box("Tovalloler", { w: 450, h: 1200, d: 300, mat: ASH, base: legs(100), back: "none" }, fixed(3))) },
         { name: "Roba bruta", style: "Minimalista", materials: "melamina blanca", colors: "blanc", use: "Moble amb abatible per a la roba bruta", audience: "banys familiars", price: 220, make: () => one(box("Auxiliar", { w: 500, h: 900, d: 380, mat: WHITE, base: plinth(60, 20) }, h(["auto", 200], [flap("down"), drawers(1)]))) },
         { name: "Tamboret", style: "Organic modern", materials: "roure", colors: "roure natural", use: "Tamboret de bany de panells", audience: "banys amb dutxa", price: 120, make: () => waterfall("Tamboret", { w: 450, h: 450, d: 300, mat: OAK, t: 30 }) },
+      ]),
+    ],
+  },
+  {
+    id: "corian",
+    name: "Corian",
+    types: [
+      items("corian", "Lavabo massís", [
+        { name: "Bloc", style: "Minimalista", materials: "Corian Glacier White (3 planxes de 19 encolades)", colors: "blanc", use: "Lavabo d'un bloc amb la pica fresada (fons arrodonit) i el desguàs", audience: "banys de disseny", price: 890, kind: "lliure", make: () => loose(corianBasins("Lavabo", { mat: CW, W: 600, D: 460, T: 57, bw: 440, bd: 300, corner: 70, depth: 34, round: 34 })) },
+        { name: "Doble", style: "Contemporani", materials: "Corian Cameo White (bloc de 57)", colors: "blanc trencat", use: "Lavabo de dues piques en un sol bloc", audience: "banys de suite", price: 1490, kind: "lliure", make: () => loose(corianBasins("Lavabo doble", { mat: CC, W: 1200, D: 480, T: 57, n: 2, bw: 420, bd: 300, corner: 80, depth: 34, round: 34 })) },
+        { name: "Nit", style: "Modern luxe", materials: "Corian Deep Nocturne (bloc de 38)", colors: "negre", use: "Lavabo baix de pica ampla i poc fonda", audience: "lavabos de cortesia", price: 790, kind: "lliure", make: () => loose(corianBasins("Lavabo", { mat: CN, W: 500, D: 400, T: 38, bw: 380, bd: 260, corner: 120, depth: 30, round: 30 })) },
+      ]),
+      items("corian", "Moble de lavabo", [
+        { name: "Suspès", style: "Minimalista", materials: "melamina blanca amb el front de Corian Glacier White i el sobre de 38 amb la pica fresada", colors: "blanc", use: "Moble penjat d'un calaix amb el sobre-pica d'una peça", audience: "banys moderns", price: 1290, make: () => one(box("Moble", { w: 800, h: 420, d: 460, mat: WHITE, front: CW, base: hung(430), top: { kind: "none" }, push: true }, drawers(1)), { parts: corianBasins("Sobre-pica", { mat: CW, W: 800, D: 480, T: 38, y: 850, bw: 500, bd: 320, corner: 80, depth: 28, round: 26 }) }) },
+        { name: "Pedra", style: "Contemporani", materials: "melamina gris amb els fronts de Corian Rain Cloud i el sobre de 57", colors: "gris pedra", use: "Moble penjat de dos calaixos amb la pica massissa", audience: "banys familiars", price: 1490, make: () => one(box("Moble", { w: 1000, h: 450, d: 470, mat: GREY, front: CR, base: hung(400), top: { kind: "none" }, push: true }, v(auto(2), [drawers(2), drawers(2)])), { parts: corianBasins("Sobre-pica", { mat: CR, W: 1000, D: 490, T: 57, y: 850, bw: 560, bd: 320, corner: 90, depth: 34, round: 34 }) }) },
+        { name: "Roure", style: "Escandinau", materials: "roure xapat amb el sobre de Corian Sand Storm de 38", colors: "roure, sorra", use: "Moble penjat amb nínxol obert i el sobre-pica d'una peça", audience: "banys lluminosos", price: 1190, make: () => one(box("Moble", { w: 900, h: 450, d: 460, mat: OAK, base: hung(400), top: { kind: "none" } }, h(["auto", 200], [open(), drawers(1)])), { parts: corianBasins("Sobre-pica", { mat: CS, W: 900, D: 480, T: 38, y: 850, bw: 520, bd: 320, corner: 80, depth: 28, round: 26 }) }) },
+      ]),
+      items("corian", "Plat de dutxa", [
+        { name: "Centre", style: "Minimalista", materials: "Corian Glacier White (bloc de 38)", colors: "blanc", use: "Plat de 1200 × 800 enrasat, amb pendent cap al desguàs del mig", audience: "dutxes a peu pla", price: 990, kind: "lliure", make: () => loose(showerTray("Plat de dutxa", { mat: CW, W: 1200, D: 800, T: 38, drain: "centre" })) },
+        { name: "Lineal", style: "Contemporani", materials: "Corian Sand Storm (bloc de 38)", colors: "sorra", use: "Plat de 1400 × 900 amb reixeta lineal al mig", audience: "banys grans", price: 1190, kind: "lliure", make: () => loose(showerTray("Plat de dutxa", { mat: CS, W: 1400, D: 900, T: 38, drain: "lineal" })) },
+        { name: "Quadrat", style: "Funcional", materials: "Corian Cameo White (bloc de 38)", colors: "blanc trencat", use: "Plat de 900 × 900 per a racó, amb desguàs al mig", audience: "banys petits", price: 790, kind: "lliure", make: () => loose(showerTray("Plat de dutxa", { mat: CC, W: 900, D: 900, T: 38, drain: "centre" })) },
+      ]),
+      items("corian", "Taulell amb escorredor", [
+        { name: "Cuina", style: "Funcional", materials: "Corian Glacier White de 19", colors: "blanc", use: "Taulell de 2000 amb el forat de la pica i cinc ranures d'escórrer fresades", audience: "cuines", price: 1190, kind: "lliure", make: () => loose(drainBoard("Taulell", { mat: CW, W: 2000, D: 620, sinkW: 500, sinkD: 400, grooves: 5 })) },
+        { name: "Office", style: "Industrial elegant", materials: "Corian Rain Cloud de 19", colors: "gris", use: "Taulell de 1400 amb pica i escorredor", audience: "offices i bars", price: 890, kind: "lliure", make: () => loose(drainBoard("Taulell", { mat: CR, W: 1400, D: 600, sinkW: 400, sinkD: 360, grooves: 4 })) },
+        { name: "Barra", style: "Modern luxe", materials: "Corian Deep Nocturne de 19", colors: "negre", use: "Taulell de bar de 1200 amb pica petita i escorredor", audience: "bars i bodegues", price: 790, kind: "lliure", make: () => loose(drainBoard("Taulell", { mat: CN, W: 1200, D: 500, sinkW: 340, sinkD: 300, grooves: 3 })) },
+      ]),
+      items("corian", "Accessoris de bany", [
+        { name: "Sabonera", style: "Minimalista", materials: "Corian Glacier White de 19", colors: "blanc", use: "Sabonera amb cubeta fresada i escorredor", audience: "banys", price: 49, kind: "lliure", make: () => loose(dish("Sabonera", { mat: CW, W: 140, D: 100, T: 19, depth: 10, slot: true })) },
+        { name: "Safata", style: "Contemporani", materials: "Corian Deep Nocturne de 19", colors: "negre", use: "Safata de 400 × 200 per al taulell del lavabo", audience: "banys de disseny", price: 89, kind: "lliure", make: () => loose(dish("Safata", { mat: CN, W: 400, D: 200, T: 19, depth: 9 })) },
+        { name: "Prestatge de dutxa", style: "Funcional", materials: "Corian Cameo White de 12", colors: "blanc", use: "Prestatge amb ranures passants perquè l'aigua no s'hi aturi", audience: "dutxes", price: 79, kind: "lliure", make: () => loose(showerShelf("Prestatge de dutxa", { mat: CC, W: 500, D: 140, y: 1300 })) },
       ]),
     ],
   },

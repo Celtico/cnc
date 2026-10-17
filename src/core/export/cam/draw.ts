@@ -1,5 +1,5 @@
 import { toolMslName, type Machine, type MachineTool } from "../../model/machine"
-import { dist, flattenPath, offsetPolyline, signedArea } from "./geometry"
+import { dist, flattenPath, offsetPolyline, signedArea, toolpath3 } from "./geometry"
 import type { CamOp, CamOpKind, Pt } from "./types"
 
 /** Què dibuixar de cada operació, la llegenda d'eines i la llista compacta. */
@@ -25,6 +25,8 @@ export interface CamDraw {
   width?: number
   /** Caixera: tota l'àrea es buida. */
   fill: boolean
+  /** Recorregut amb Z (relleus 3D, `CreateToolpath`): punts del centre de l'eina amb la Z (0 a la cara de dalt). */
+  centre3?: [number, number, number][]
 }
 
 /** Què dibuixar d'una operació de fresa (no forats): la geometria, el centre de l'eina al costat bo i l'amplada. */
@@ -32,7 +34,8 @@ export function camDraw(op: CamOp, width: number | undefined): CamDraw | null {
   if (op.kind === "drill") return null
   if (op.toolpath) {
     const tp = flattenPath(op.toolpath)
-    return { outline: op.path ? flattenPath(op.path) : tp, closed: !!op.path?.closed, centre: tp, ...(width ? { width } : {}), fill: false }
+    const c3 = toolpath3(op.toolpath)
+    return { outline: op.path ? flattenPath(op.path) : tp, closed: !!op.path?.closed, centre: tp, ...(width ? { width } : {}), fill: false, ...(c3 ? { centre3: c3 } : {}) }
   }
   if (!op.path) return null
   const outline = flattenPath(op.path)

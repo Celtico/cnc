@@ -222,7 +222,8 @@ describe("programes de l'app (toMaestroNestXcs) amb el context real", () => {
             expect([r.x, r.y], w).toEqual([+o.points[0]![0].toFixed(3), +o.points[0]![1].toFixed(3)])
             return
           }
-          const pts = flattenPath(r.path!)
+          // Els recorreguts explícits (relleus 3D): el recorregut, no la polilínia de farciment.
+          const pts = flattenPath(r.toolpath ?? r.path!)
           const a = bbox(pts)
           const e = bbox(o.points)
           for (const k of ["x0", "x1", "y0", "y1"] as const) expect(a[k], `${w} ${k}`).toBeCloseTo(e[k], 1)

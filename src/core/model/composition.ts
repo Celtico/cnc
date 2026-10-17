@@ -387,6 +387,7 @@ export function partCutters(comp: Composition): RefObject[] {
         shape: "profile" as const,
         axis: (["x", "y", "z"] as const)[ax.n],
         profile: scaleProfile(profile, p.shape ? size[ax.u]! : size[ax.u]!, size[ax.v]!),
+        ...(p.round ? { round: p.round } : {}),
       }
     })
 }

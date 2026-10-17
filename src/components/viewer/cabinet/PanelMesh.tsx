@@ -5,7 +5,7 @@ import { Matrix4, Vector3, type Group, type Material } from "three"
 import type { HwSolid } from "../../../core/build/hardwareSolids"
 import type { Hole, MaterialPref, Panel } from "../../../core/model"
 import { useKeyed } from "../../../lib/useKeyed"
-import { isShaped, mitreGeometry, shapedGeometry } from "../cutoutGeometry"
+import { edgeSourceGeometry, isShaped, mitreGeometry, shapedGeometry } from "../cutoutGeometry"
 import { cutoutMaterials, panelMaterials, panelVisualKey, visualPanel } from "../exportablePanel"
 import { PanelFittings, PanelHardware } from "../Hardware"
 import { disposeMaterial } from "../textures"
@@ -121,6 +121,8 @@ export const PanelMesh = memo(function PanelMesh({
   // amb tirador continua sent un prisma a 45°.
   const vis = useMemo(() => visualPanel(vpanel), [vpanel])
   const cut = useMemo(() => (isShaped(vis) ? shapedGeometry(vis) : vis.mitres?.length ? mitreGeometry(vis) : null), [vis])
+  const edgeGeo = useMemo(() => (edges ? edgeSourceGeometry(vis) : null), [vis, edges])
+  useEffect(() => () => edgeGeo?.dispose(), [edgeGeo])
   const cutMats = useMemo(() => {
     if (!cut) return null
     const m = veil(cutoutMaterials(vpanel, materialMode, materials, dimmed || see !== undefined), see)
@@ -172,7 +174,7 @@ export const PanelMesh = memo(function PanelMesh({
           onPointerOut={onHover ? () => onHover(panel, false) : undefined}
         >
           {!cut && <boxGeometry args={[L, W, T]} />}
-          {edges && <Edges color={wire ? "#2b2418" : dimmed || see !== undefined ? "#a08a6a" : "#6b5a3e"} threshold={15} />}
+          {edges && <Edges color={wire ? "#2b2418" : dimmed || see !== undefined ? "#a08a6a" : "#6b5a3e"} threshold={15} {...(edgeGeo ? { geometry: edgeGeo } : {})} />}
         </mesh>
         {showHoles && vpanel.holes.length > 0 && (proposedTags?.length ? (
           <>

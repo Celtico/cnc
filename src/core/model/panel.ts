@@ -127,6 +127,34 @@ export const CutoutSchema = z.discriminatedUnion("kind", [
 ])
 export type Cutout = z.infer<typeof CutoutSchema>
 
+/**
+ * Buidat cec de qualsevol forma (per decisió de l'usuari, 2026-10-17: «buidats de qualsevol forma vagin al programa de
+ * la CNC»): el contorn a la cara (`points`, antihorari, coordenades locals; bulge per als arcs) fins a `depth` des de la
+ * cara `face`. Sense fons: de fons pla (caixera, `CreateContourPocket`). Amb `round`: el fons arrodonit com una pica (la
+ * paret baixa recta fins a `depth − round` i fa un quart de cercle fins al fons). Amb `map`: el fons de qualsevol forma
+ * (una malla que talla): la fondària a cada node d'una graella (mm des de la cara; 0 = no hi toca). Els de fons
+ * arrodonit o amb mapa es fan amb recorreguts 3D (desbast i acabat, `core/machine/relief.ts`).
+ */
+const PocketMapSchema = z.object({
+  x0: z.number(),
+  y0: z.number(),
+  step: z.number().positive(),
+  nx: z.number().int().min(2),
+  ny: z.number().int().min(2),
+  /** Fondària a cada node, fila a fila (y creixent), de `nx` per fila. */
+  d: z.array(z.number().min(0)),
+})
+
+export const PocketSchema = z.object({
+  points: z.array(BPtSchema).min(3),
+  depth: z.number().positive(),
+  face: z.enum(["A", "B"]),
+  round: z.number().positive().optional(),
+  map: PocketMapSchema.optional(),
+  tag: z.string().optional(),
+})
+export type Pocket = z.infer<typeof PocketSchema>
+
 export function cutoutArea(c: Cutout): number {
   if (c.kind === "circle") return (Math.PI * c.diameter * c.diameter) / 4
   if (c.kind === "rect") return c.w * c.h
@@ -179,6 +207,8 @@ export const PanelSchema = z.object({
   grooves: z.array(GrooveSchema),
   /** Talls passants. Opcional: la majoria de peces no en tenen. */
   cutouts: z.array(CutoutSchema).optional(),
+  /** Buidats cecs de qualsevol forma (`PocketSchema`): caixeres, piques, relleus. Opcional. */
+  pockets: z.array(PocketSchema).optional(),
   /**
    * Contorn de la peça si no és un rectangle (p. ex. un tauler de taula oval): punts amb
    * bulge, en coordenades locals dins de llarg × ample. Sense: el rectangle.

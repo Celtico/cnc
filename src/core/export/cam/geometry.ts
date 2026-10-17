@@ -132,3 +132,25 @@ export function offsetPolyline(ptsIn: Pt[], closed: boolean, s: number): Pt[] {
   }
   return out
 }
+
+/**
+ * Un recorregut amb Z (`CreateToolpath`) com a punts 3D (x, y, z; z 0 a la cara de dalt): els arcs en trossos, amb la Z
+ * repartida. `null` si no porta cap Z.
+ */
+export function toolpath3(p: CamPath, stepDeg = 5): [number, number, number][] | null {
+  if (p.startZ === undefined && !p.segs.some((s) => s.z !== undefined)) return null
+  let z = p.startZ ?? 0
+  const out: [number, number, number][] = [[p.start[0], p.start[1], z]]
+  let cur = p.start
+  for (const s of p.segs) {
+    const z1 = s.z ?? z
+    if (s.arc) {
+      const pts = flattenPath({ name: "", kind: "polyline", start: cur, segs: [{ to: s.to, arc: s.arc }], closed: false }, stepDeg)
+      pts.slice(1, -1).forEach((q, k) => out.push([q[0], q[1], z + ((z1 - z) * (k + 1)) / (pts.length - 1)]))
+    }
+    out.push([s.to[0], s.to[1], z1])
+    cur = s.to
+    z = z1
+  }
+  return out
+}

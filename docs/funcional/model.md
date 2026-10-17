@@ -447,6 +447,9 @@
     rectangle al pla de la peça (forat, o osca del contorn a les peces lliures i les que no són de CNC; avisa si la parteix);
     si no, **booleà 3D**: `Panel.solidCuts` (prismes locals) que el visor, l'AR i el render resten amb three-bvh-csg
     (`solidCutGeometry`); a les peces de CNC avisa que no es mecanitza. També talla les peces que no són de CNC.
+    **Sense travessar** (entra per una cara i s'atura): un buidat de qualsevol forma (`Panel.pockets`, `PocketSchema`: contorn,
+    fondària, cara i, si no és pla, `round` o `map`) que va al programa de la CNC; amb **«Fons arrodonit»** (`round`, a
+    Efecte, com als objectes de referència) el fons és arrodonit, com una pica (vegeu Fabricació).
   - **Materials que no són de CNC** (`MaterialPref.cnc = false`: ferro, inox, pedra, vidre…): la peça porta `nest: false`
     (en triar-lo) i va a `build.extras`: es veu, surt a Peces › «Elements sense nesting» i no va al nesting ni als fitxers
     del taller, ni fa encaixos. Mides sempre Ample · Alt · Fondària (X · Y · Z); de CNC, el gruix es tria entre els del

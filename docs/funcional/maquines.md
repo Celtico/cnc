@@ -13,7 +13,7 @@
   defecte o a una nova (`addPgmxTools`). Un sol avís amb el resum. Tests amb els fitxers reals (`maestroImport.test.ts`).
 - Lectura (`core/machine/maestro.ts`, lector XML propi `xml.ts`, .cfgx = zip amb `DecompressionStream`, `core/file/zip.ts`):
   eines (`MachineTool`: codi, nom, broca/fresa/disc/agregat/palpador, vertical/horitzontal, Ø, fondària útil, gruix del disc,
-  sentit, capçal i mandrins, `mounted`, `auto`), versió, camp de treball, àrees, capçalera. Model a `core/model/machine.ts`.
+  sentit, capçal i mandrins, `mounted`, `auto`; la punta **esfèrica** de les freses, `ball`, es marca a mà a la taula d'eines: la fa servir l'acabat dels relleus 3D, `pickBallRouter`), versió, camp de treball, àrees, capçalera. Model a `core/model/machine.ts`.
 - Desat a `Settings.machines` (**preferències v10**, additiu); **una per defecte** (`defaultMachine`, ★): la de l'export .xcs
   i la que dona la separació i el marge del nesting. Detall: nom, sèrie, configuració, Maestro, camp, per defecte, «Projecte
   de Maestro (.pgmx)», «Programes .xcs» (àrea de treball, repeticions, taula, cicle continu, passants de més, broques,

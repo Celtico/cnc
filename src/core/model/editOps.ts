@@ -18,7 +18,7 @@ import { cloneZone, removeZone, updateZone } from "./zoneOps"
 import { hungBack } from "./hungBack"
 import { partSize, partsBox, type FreePart } from "./freePart"
 import { modelFootprint } from "./models"
-import { materialCategory, type MaterialPref } from "./settings"
+import { isCncBoard, materialCategory, type MaterialPref } from "./settings"
 
 /**
  * Còpia d'un mòdul just després de `afterId` (o al final). Una illa («Al terra» amb X pròpia) es posa al costat de
@@ -473,7 +473,7 @@ export function setMultiMaterial(comp: Composition, items: readonly MultiItem[],
     return (m && materialCategory(m) === "sim") || object ? { ...out, nest: false } : out
   }
   // Als mòduls, el material del cos (només els taulers de la CNC).
-  const board = !!m && materialCategory(m) === "board"
+  const board = !!m && isCncBoard(m)
   return {
     ...comp,
     modules: comp.modules.map((x) => (board && inMulti(items, "module", x.id) ? { ...x, carcass: { ...x.carcass, material: name } } : x)),

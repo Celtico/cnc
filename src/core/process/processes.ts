@@ -36,9 +36,9 @@ const nums = (sides: readonly (typeof EDGE_SIDES)[number][]): string =>
     .sort((a, b) => a - b)
     .join("+")
 
-/** Té mecanitzats a la cara B (forats o ranures): cal un segon programa amb la peça girada. */
+/** Té mecanitzats a la cara B (forats, ranures o buidats): cal un segon programa amb la peça girada. */
 export function needsSecondFace(p: Panel): boolean {
-  return p.holes.some((h) => h.face === "B") || p.grooves.some((g) => g.face === "B")
+  return p.holes.some((h) => h.face === "B") || p.grooves.some((g) => g.face === "B") || !!p.pockets?.some((k) => k.face === "B")
 }
 
 /** Nom del programa de 2a cara, com el de TopSolid: la ref + «Volt». */
