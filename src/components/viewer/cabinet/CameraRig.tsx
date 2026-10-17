@@ -34,7 +34,7 @@ const SETTLE_MS = 1500
  * des del 3/4 («Enquadrar») o del costat de la vista triada (`viewDir`), amb transició suau. Editar el moble (mides,
  * mòduls, objectes) no la mou: es queda on l'has deixat.
  */
-export function CameraRig({ size, viewDir, fitKey, onFramedChange, initialCamera, onCameraChange, cameraGoto }: { size: CabinetViewerProps["size"]; viewDir: ViewName | null; fitKey: number; onFramedChange?: (framed: boolean) => void; initialCamera?: CameraPose; onCameraChange?: (camera: CameraPose) => void; cameraGoto?: { pose: CameraPose; n: number } | null }) {
+export function CameraRig({ size, viewDir, fitKey, onFramedChange, initialCamera, onCameraChange, cameraGoto, cameraFly }: { size: CabinetViewerProps["size"]; viewDir: ViewName | null; fitKey: number; onFramedChange?: (framed: boolean) => void; initialCamera?: CameraPose; onCameraChange?: (camera: CameraPose) => void; cameraGoto?: { pose: CameraPose; n: number } | null; /** Volar (amb animació) a una càmera: anar a un avís. */ cameraFly?: { pose: CameraPose; n: number } | null }) {
   const controls = useRef<OrbitControlsImpl>(null)
   usePanModifierCursor()
   const { camera, size: viewport, invalidate } = useThree()
@@ -43,7 +43,7 @@ export function CameraRig({ size, viewDir, fitKey, onFramedChange, initialCamera
   const d = size.depth * S
   const targetY = h * 0.5
   const aspect = viewport.width / Math.max(viewport.height, 1)
-  const goal = useRef<{ pos: Vector3 } | null>(null)
+  const goal = useRef<{ pos: Vector3; target?: Vector3 } | null>(null)
   const goalRunning = useRef(false)
   const lastPos = useRef<Vector3 | null>(null)
   // Enquadrat = la càmera és on l'ha deixat l'últim enquadrament i el moble té la mateixa mida.
@@ -187,6 +187,18 @@ export function CameraRig({ size, viewDir, fitKey, onFramedChange, initialCamera
   // eslint-disable-next-line react-hooks/exhaustive-deps -- es va a la vista demanada només quan arriba una petició nova (`cameraGoto`)
   }, [cameraGoto?.n])
 
+  // Volar a una càmera (un avís): la posició i el punt mirat s'hi acosten junts; en arribar, es desa com una òrbita.
+  useEffect(() => {
+    if (!cameraFly || viewDir) return
+    const p = cameraFly.pose
+    restored.current = null
+    reportAfterGoal.current = true
+    goal.current = { pos: new Vector3(...p.position), target: new Vector3(...p.target) }
+    setFramed(false)
+    invalidate()
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- només amb una petició nova
+  }, [cameraFly?.n])
+
   useFrame((st, dt) => {
     const g = goal.current
     if (!g) {
@@ -195,11 +207,12 @@ export function CameraRig({ size, viewDir, fitKey, onFramedChange, initialCamera
     }
     const k = Math.min(1, animStep(goalRunning, dt) * 6)
     camera.position.lerp(g.pos, k)
+    if (g.target) controls.current?.target.lerp(g.target, k)
     controls.current?.update()
     // Arribat, o encallat (els controls no la deixen anar més enllà, p. ex. el límit d'angle): s'acaba.
     const stuck = lastPos.current !== null && camera.position.distanceToSquared(lastPos.current) < 1e-14
     lastPos.current = (lastPos.current ?? new Vector3()).copy(camera.position)
-    if (stuck || camera.position.distanceTo(g.pos) < 0.002) {
+    if (stuck || (camera.position.distanceTo(g.pos) < 0.002 && (!g.target || (controls.current?.target.distanceTo(g.target) ?? 0) < 0.002))) {
       goal.current = null
       goalRunning.current = false
       lastPos.current = null

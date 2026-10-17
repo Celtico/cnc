@@ -72,6 +72,15 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   (també els mòduls, `reorderModule`, des del 2026-10-15: abans un mòdul deixat fora del grup s'hi quedava); la zona
   «Treure del grup» surt **just a sota del grup** mentre se n'arrossega un element (peces, models i mòduls; el mòdul queda
   solt al mateix lloc). També «Treure del grup» al menú ⋯ de cada element.
+- **Avisos de fusteria** (`InspectorAlerts`, al peu de l'inspector; per decisió de l'usuari, 2026-10-17: «que es vegi on
+  és el fallo i què cal tocar»): agrupats per mòdul, primer els que cal arreglar i després els informatius (`INFO`), i els
+  repetits un sol cop amb «× n». Cada un porta **«Anar-hi · on s'arregla»** (`warningTarget.ts`): tria el compartiment, el
+  mòdul, l'objecte o la peça; la càmera hi vola (`useEditorCamera.focusAlert` → `CameraRig cameraFly`, `framePose`); les
+  peces de l'avís es marquen amb un contorn vermell i la resta es veu translúcida (`CabinetViewer alertPanels`) fins que
+  es tria una altra cosa; i s'obre la secció on es corregeix (taula `FIX` per codi: p. ex. `back-groove` → Caixa › Fons,
+  `drawer-bottom` → Materials, `shelf-span` → Opcions de l'interior), també les subseccions (`components/foldOpen.ts`
+  `openFolds`: el `FoldItem` s'obre pel seu acordió, es mostra i s'il·lumina un moment, `data-flash`). Un avís del mòdul
+  sense peça marca les del tipus de què parla (`ROLE_HINT`: el fons, els laterals…) o, si no, enquadra tot el mòdul.
 - **Propietats** del que hi ha seleccionat i **només d'això**, en seccions plegables amb **una sola oberta alhora** (per decisió de l'usuari, 2026-10-13, i a tota l'app des del 2026-10-14: `FoldGroup` a l'inspector, recordada a la sessió `mobles:inspector-open`; les subseccions `size="sm"` de dins, una oberta entre elles; vegeu UI):
   - Moble: Resum (i avisos de fusteria), **Suport general** (si hi ha mòduls de terra; `SupportForm`: el suport de tots
     els mòduls de terra —Directe a terra · Sòcol · Potes vistes—, l'alçada, la pota, la retirada, fusta o alumini, el

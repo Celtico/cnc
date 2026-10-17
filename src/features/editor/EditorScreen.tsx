@@ -16,6 +16,9 @@ import { useDebouncedSave } from "../../lib/useDebouncedSave"
 import { compositionEdits, hardwareCommands } from "./editorCommands"
 import { EditorInspector } from "./EditorInspector"
 import { EditorViewport } from "./EditorViewport"
+import { framePose, warningTarget } from "./warningTarget"
+import { openFolds } from "../../components/foldOpen"
+import type { CompositionWarning } from "../../core/build/buildComposition"
 import { ElevationView } from "./ElevationView"
 import { SceneView } from "./SceneView"
 import { ViewerToolbar } from "./ViewerToolbar"
@@ -105,6 +108,24 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   // Teclat: copiar, enganxar, duplicar, esborrar, agrupar i moure amb les fletxes.
   useEditorKeys({ comp, setComp, selection, select, module, zone, selectionLocked, absParts: scene.absParts, edits, duplicateHardware, removeHardware })
   const picks = viewerPicks({ comp, build, selection, select, selectModule, pick, shiftRef })
+  // «Anar-hi» d'un avís (per decisió de l'usuari, 2026-10-17): tria on és, la càmera hi vola amb les peces marcades i
+  // s'obre la secció on s'arregla. El marcatge es treu quan es tria una altra cosa.
+  const gotoWarning = (w: CompositionWarning) => {
+    const t = warningTarget(w, comp, build)
+    if (t.select) select(t.select)
+    if (opts.viewTab !== "3d") opts.setViewTab("3d")
+    camera.focusAlert(new Set(t.panels), t.box ? framePose(t.box, scene.frameSize) : null, JSON.stringify(t.select ?? selection))
+    ws.setPropsHidden(false)
+    if (t.fix) {
+      setInspectorOpen([t.fix.folds[0]!])
+      openFolds(t.fix.folds)
+    }
+  }
+  const { alert, clearAlert } = camera
+  useEffect(() => {
+    if (alert && JSON.stringify(selection) !== alert.sel) clearAlert()
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- només quan canvia la selecció
+  }, [selection])
   const handles = useViewerHandles()
 
   return (
@@ -152,6 +173,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             setPhotoControls={setPhotoControls}
             edits={edits}
             hardwareActions={hardwareActions}
+            onGotoWarning={gotoWarning}
           />
         }
         // Mobles i objectes: el mateix xat amb les eines de cada tipus (un objecte només té peces lliures). Els `lliure`

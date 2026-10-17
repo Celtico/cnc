@@ -103,4 +103,8 @@ export interface CabinetViewerProps {
   onCameraChange?: (camera: CameraPose) => void
   /** Posa la càmera en aquesta posició (desfer/refer d'una càmera): cada `n` nou hi va, sense animació ni desar-la. */
   cameraGoto?: { pose: CameraPose; n: number } | null
+  /** Vola (amb animació) a aquesta càmera: anar a un avís. */
+  cameraFly?: { pose: CameraPose; n: number } | null
+  /** Les peces d'un avís (ids): es marquen en vermell i la resta es veu translúcida. */
+  alertPanels?: ReadonlySet<string>
 }

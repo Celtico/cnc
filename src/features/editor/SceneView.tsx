@@ -44,7 +44,7 @@ export function SceneView({
 }) {
   const { shownPanels, frameSize, viewerModules, ghosts, openOnly, cutPartIds, collidingRefs, cuttingRefs, highlightZone, solidParts } = scene
   const { exploded, showHoles, viewer, viewerState, quality, hardware } = opts
-  const { viewDir, fitKey, setFramed, cameraRef, saveCamera, cameraGoto } = camera
+  const { viewDir, fitKey, setFramed, cameraRef, saveCamera, cameraGoto, cameraFly, alert } = camera
   const { selectFrom3D, selectPartFrom3D, selectModelFrom3D } = picks
   const { moveGroup, movePart, moveModel, moveRef } = edits
   // Un objecte de referència deixat sobre els mòduls d'una fila: s'avisa i es pot fer-li lloc entre ells (`makeRoomForRef`).
@@ -96,6 +96,8 @@ export function SceneView({
       initialCamera={cameraRef.current}
       onCameraChange={saveCamera}
       cameraGoto={cameraGoto}
+      cameraFly={cameraFly}
+      alertPanels={alert?.panels}
       onMoveRef={selectionLocked ? undefined : (id, pos) => (id.startsWith("part:") ? movePart(id.slice(5), pos) : dropRef(id, pos))}
       hardware={hardware}
       onSceneAccess={onSceneAccess}

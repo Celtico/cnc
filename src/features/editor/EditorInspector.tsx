@@ -15,6 +15,7 @@ import { RefInspector } from "../composition/RefInspector"
 import type { Selection } from "../composition/StructureTree"
 import type { CompositionEdits } from "./editorCommands"
 import { InspectorAlerts } from "./InspectorAlerts"
+import type { CompositionWarning } from "../../core/build/buildComposition"
 import { InspectorHeader } from "./InspectorHeader"
 import { ModuleSections, SceneFinishFields, ZoneSection } from "./InspectorSections"
 import { ModulePositionSection, ModuleTypeSection } from "./ModuleTypeSection"
@@ -30,6 +31,7 @@ import type { SceneData } from "./useSceneData"
  */
 export function EditorInspector({
   inspectorOpen,
+  onGotoWarning,
   setInspectorOpen,
   comp,
   setComp,
@@ -52,6 +54,8 @@ export function EditorInspector({
   hardwareActions,
 }: {
   inspectorOpen: string[]
+  /** «Anar-hi» d'un avís. */
+  onGotoWarning?: (w: CompositionWarning) => void
   setInspectorOpen: (v: string[]) => void
   comp: Composition
   setComp: SetComp
@@ -250,7 +254,7 @@ export function EditorInspector({
         </Stack>
       ) : null}
 
-        <InspectorAlerts comp={comp} selection={selection} select={select} module={module} warnings={warnings} collisions={collisions} photo={project.photo} />
+        <InspectorAlerts comp={comp} selection={selection} module={module} warnings={warnings} collisions={collisions} photo={project.photo} onGoto={onGotoWarning} />
       </FoldGroup>
     </Stack>
   )

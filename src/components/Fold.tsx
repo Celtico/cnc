@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useId, useRef, useState, useSyncE
 import type { IconType } from "react-icons"
 import { LuChevronRight } from "react-icons/lu"
 import { readSessionFlag, readSessionList, writeSessionFlag } from "./sessionState"
+import { useFoldRequest } from "./foldOpen"
 import { FoldContext, STATIC_VARIANTS, sectionKey, type FoldGroupState, type FoldVariant } from "./foldContext"
 
 /**
@@ -193,8 +194,26 @@ function rootProps(variant: FoldVariant, className?: string): AccordionRootProps
 function FoldItemBody({ id, children, group, ...p }: FoldItemProps & { group: FoldGroupState }) {
   const { variant, size } = group
   const stat = STATIC_VARIANTS.has(variant)
+  // Obrir des de fora (`openFolds`: un avís que porta on s'arregla): s'obre (sol o dins d'un grup, pel seu acordió) i, la
+  // de més endins, es mostra i s'il·lumina un moment.
+  const api = useAccordionContext()
+  const req = useFoldRequest(id)
+  useEffect(() => {
+    if (!req) return
+    if (!api.value.includes(id)) api.setValue([id])
+    if (!req.last) return
+    const t = window.setTimeout(() => {
+      const el = document.querySelector<HTMLElement>(`[data-fold-id="${CSS.escape(id)}"]`)
+      if (!el) return
+      el.scrollIntoView({ block: "start", behavior: reducedMotion() ? "auto" : "smooth" })
+      el.setAttribute("data-flash", "")
+      window.setTimeout(() => el.removeAttribute("data-flash"), 1800)
+    }, FOLD_MS + 80)
+    return () => window.clearTimeout(t)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- només amb una petició nova
+  }, [req?.n])
   return (
-    <Accordion.Item value={id} {...itemStyle(variant)}>
+    <Accordion.Item value={id} data-fold-id={id} {...itemStyle(variant)} css={FLASH}>
       <FoldHead {...p} id={id} variant={variant} size={size} />
       <FoldContent id={id} form={stat}>
         {/* Dins del contingut, un FoldItem sol torna a ser independent (no és del grup de fora). */}
@@ -292,6 +311,12 @@ function FoldContent({ id, form, children }: { id: string; form: boolean; childr
     </chakra.div>
   )
 }
+
+/** Una secció oberta des d'un avís s'il·lumina un moment (`data-flash`). */
+const FLASH = {
+  transition: "background-color 600ms ease",
+  "&[data-flash]": { bgColor: "orange.subtle", transition: "background-color 150ms ease" },
+} as const
 
 function itemStyle(variant: FoldVariant) {
   if (variant === "section") return { borderBottomWidth: "1px" }

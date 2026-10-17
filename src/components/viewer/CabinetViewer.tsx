@@ -23,6 +23,11 @@ import { ModelMesh } from "./cabinet/ModelMesh"
 import { MoveHandle } from "./cabinet/MoveHandle"
 import { CableMarks, HoverCursor, ZoneHighlight } from "./cabinet/Highlights"
 import { CameraRig } from "./cabinet/CameraRig"
+import { panelBox } from "../../core/build/geometry"
+
+/** Anar a un avís: el contorn de les seves peces i la transparència de la resta. */
+const ALERT_COLOR = "#dc2626"
+const ALERT_VEIL = 0.22
 
 // Peces que fan servir altres pantalles (Preferències › Ferratges, la foto realista).
 export { MovingPanel } from "./cabinet/motion"
@@ -74,6 +79,8 @@ export function CabinetViewer({
   initialCamera,
   onCameraChange,
   cameraGoto,
+  cameraFly,
+  alertPanels,
   sceneFinish,
 }: CabinetViewerProps) {
   // Per distingir un clic a l'espai buit d'un gir de càmera (arrossegar).
@@ -173,7 +180,8 @@ export function CabinetViewer({
                 place={k?.place}
                 exploded={exploded}
                 showHoles={holesShown}
-                seeThrough={wire ? WIRE_OPACITY : seeThroughAll}
+                // Un avís: les seves peces sòlides i la resta translúcida (es veu on és).
+                seeThrough={wire ? WIRE_OPACITY : alertPanels?.size && !alertPanels.has(p.id) ? ALERT_VEIL : seeThroughAll}
                 wire={wire}
                 // Mòdul triat: sòlid amb el contorn taronja. Translúcid només amb un compartiment triat (per veure'l a dins).
                 dimmed={q.guides && !!highlightZone && highlightZone.veil !== false && selectedIndex !== undefined && p.module === selectedIndex}
@@ -281,6 +289,15 @@ export function CabinetViewer({
           </ExplodeWith>
         ))}
         {highlightZone && <ZoneHighlight box={highlightZone} />}
+        {/* Les peces d'un avís, amb un contorn vermell que es veu sempre. */}
+        {alertPanels?.size ? panels.filter((p) => alertPanels.has(p.id)).slice(0, 40).map((p) => {
+          const b = panelBox(p)
+          return (
+            <group key={`alert-${p.id}`} position={[((b.min[0] + b.max[0]) / 2) * S, ((b.min[1] + b.max[1]) / 2) * S, ((b.min[2] + b.max[2]) / 2) * S]}>
+              <BoxFrame w={(b.max[0] - b.min[0] + 4) * S} h={(b.max[1] - b.min[1] + 4) * S} d={(b.max[2] - b.min[2] + 4) * S} strong color={ALERT_COLOR} />
+            </group>
+          )
+        }) : null}
         {(() => {
           const hm = hoverModule !== null && hoverModule !== selectedIndex && !moduleDrag ? modules?.find((m) => m.index === hoverModule) : undefined
           return hm ? (
@@ -317,7 +334,7 @@ export function CabinetViewer({
           resolution={q.contactResolution}
         />
       )}
-      <CameraRig size={size} viewDir={viewDir} fitKey={fitKey} onFramedChange={onFramedChange} initialCamera={initialCamera} onCameraChange={onCameraChange} cameraGoto={cameraGoto} />
+      <CameraRig size={size} viewDir={viewDir} fitKey={fitKey} onFramedChange={onFramedChange} initialCamera={initialCamera} onCameraChange={onCameraChange} cameraGoto={cameraGoto} cameraFly={cameraFly} />
       {onSceneAccess && <SceneAccess onAccess={onSceneAccess} />}
     </Canvas>
   )

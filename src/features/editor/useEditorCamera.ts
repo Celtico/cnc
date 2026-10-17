@@ -36,7 +36,18 @@ export function useEditorCamera({ projectId, initial, setDoc, histCam }: { proje
     setViewDir(dir)
     setFitKey((k) => k + 1)
   }
-  return { fitKey, cameraRef, saveCamera, cameraGoto, framed, setFramed, viewDir, frameFrom }
+  // Anar a un avís (per decisió de l'usuari, 2026-10-17): la càmera hi vola i les peces de l'avís es marquen (la resta,
+  // translúcida) fins que es tria una altra cosa. `sel`: la selecció que s'hi ha fet (si canvia, el marcatge es treu).
+  const [cameraFly, setCameraFly] = useState<{ pose: CameraPose; n: number } | null>(null)
+  const [alert, setAlert] = useState<{ panels: ReadonlySet<string>; sel: string } | null>(null)
+  const focusAlert = (panels: ReadonlySet<string>, pose: CameraPose | null, sel: string) => {
+    setAlert({ panels, sel })
+    if (pose) {
+      setViewDir(null)
+      setCameraFly((f) => ({ pose, n: (f?.n ?? 0) + 1 }))
+    }
+  }
+  return { fitKey, cameraRef, saveCamera, cameraGoto, framed, setFramed, viewDir, frameFrom, cameraFly, alert, focusAlert, clearAlert: () => setAlert(null) }
 }
 
 export type EditorCamera = ReturnType<typeof useEditorCamera>
