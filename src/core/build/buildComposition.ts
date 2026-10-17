@@ -14,6 +14,7 @@ import { buildFreeParts, type PartJoint } from "./freeParts"
 import { resolveHoleClashes } from "./holeClash"
 import { applyHardwarePlacements } from "./hardwarePlace"
 import { activeIslands, islandEndPanels } from "./islands"
+import { fmtNum } from "../../lib/format"
 
 export interface CompositionWarning extends BuildWarning {
   moduleId?: string
@@ -249,7 +250,7 @@ export function buildComposition(input: Composition): CompositionBuild {
         warnings.push({
           code: "overlap",
           moduleId: b.m.id,
-          message: `Els mòduls «${a.m.name}» i «${b.m.name}» es trepitgen (${ov.map((o) => String(Math.round(o * 10) / 10).replace(".", ",")).join(" × ")} mm): mou-ne un o canvia'n les mides.`,
+          message: `Els mòduls «${a.m.name}» i «${b.m.name}» es trepitgen (${ov.map((o) => fmtNum(o, 1)).join(" × ")} mm): mou-ne un o canvia'n les mides.`,
         })
       }
   }

@@ -2,7 +2,8 @@ import { Badge, Box, Image, Stack, Table, Text } from "@chakra-ui/react"
 import { LuBookOpen, LuLayers2, LuListOrdered, LuPackageOpen, LuRoute, LuCircleDot } from "react-icons/lu"
 import { FoldItem } from "../../components/Fold"
 import { FormRow } from "../../components/FormRow"
-import { KIT_BACKS, KIT_CLOSINGS, KIT_LEVEL_LABEL, fmtMm, type HardwareItem, type HardwareKit, type KitItemRef, type KitWhen } from "../../core/model"
+import { KIT_BACKS, KIT_CLOSINGS, KIT_LEVEL_LABEL, type HardwareItem, type HardwareKit, type KitItemRef, type KitWhen } from "../../core/model"
+import { fmtNum } from "../../lib/format"
 
 /**
  * Seccions de l'editor d'un **joc paramètric** (Preferències › Ferratges › Calaixos de doble paret): el que s'ha llegit
@@ -31,7 +32,7 @@ export function KitSections({ item, kit }: { item: HardwareItem; kit: HardwareKi
         )}
         <FormRow label="Sistema">
           <Text fontSize="sm" pt="6px">
-            {kit.maker} {kit.series} · calaix de doble paret, classe <strong>{kit.heightClass.code}</strong>: lateral de {fmtMm(kit.heightClass.boxSideHeight)} mm, darrere de fusta de {fmtMm(kit.heightClass.backHeight)} mm.
+            {kit.maker} {kit.series} · calaix de doble paret, classe <strong>{kit.heightClass.code}</strong>: lateral de {fmtNum(kit.heightClass.boxSideHeight)} mm, darrere de fusta de {fmtNum(kit.heightClass.backHeight)} mm.
           </Text>
         </FormRow>
         {kit.source && (
@@ -98,7 +99,7 @@ export function KitSections({ item, kit }: { item: HardwareItem; kit: HardwareKi
       <FoldItem id="kit-rules" icon={LuRoute} title="Regles de tria" badge={`LT = NL + ${kit.rules.depthMargin}`}>
         <FormRow label="Llargada" help="La llargada nominal més gran que hi cap darrere del front (la fondària interior LT ha de ser almenys NL + marge) i que es vengui amb el tancament triat.">
           <Text fontSize="sm" pt="6px">
-            LT = NL + {kit.rules.depthMargin} · guia a {fmtMm(kit.rules.slideSetback)} del cantell de davant · vora inferior de la guia a {fmtMm(kit.rules.baseAboveFront)} del cantell de baix del front
+            LT = NL + {kit.rules.depthMargin} · guia a {fmtNum(kit.rules.slideSetback)} del cantell de davant · vora inferior de la guia a {fmtNum(kit.rules.baseAboveFront)} del cantell de baix del front
           </Text>
         </FormRow>
         <FormRow label="Amplada (KB)" help="Taula del catàleg per amplada del moble (KB = llum + 2 × 16): si cal estabilitzador (tancament suau) o barra de sincronització (push-open).">
@@ -167,18 +168,18 @@ export function KitSections({ item, kit }: { item: HardwareItem; kit: HardwareKi
       <FoldItem id="kit-machining" icon={LuCircleDot} title="Mecanitzats del joc" badge="prebroques">
         <FormRow label="Lateral" help="Cargols de la guia: a les columnes de cada NL i a aquestes alçades per sobre de la vora inferior de la guia (mirall al lateral dret).">
           <Text fontSize="sm" pt="6px">
-            fileres a {kit.machining.side.rows.map(fmtMm).join(" i ")} mm
+            fileres a {kit.machining.side.rows.map((v) => fmtNum(v)).join(" i ")} mm
           </Text>
         </FormRow>
         <FormRow label="Front" help="Suports de davant, al darrere del front: a aquesta distància de la cara interior de cada lateral del moble i a aquestes alçades del joc; el de baix a almenys la distància mínima del cantell de baix del front.">
           <Text fontSize="sm" pt="6px">
-            a {fmtMm(kit.machining.front.x)} de cada lateral · alçades {kit.machining.front.ys.map(fmtMm).join(" · ")} · mín. {fmtMm(kit.machining.front.minFromBottom)} de baix
+            a {fmtNum(kit.machining.front.x)} de cada lateral · alçades {kit.machining.front.ys.map((v) => fmtNum(v)).join(" · ")} · mín. {fmtNum(kit.machining.front.minFromBottom)} de baix
           </Text>
         </FormRow>
         {kit.machining.back && (
           <FormRow label="Darrere" help="Suports de darrere, a la cara de darrere del darrere de fusta.">
             <Text fontSize="sm" pt="6px">
-              a {fmtMm(kit.machining.back.xFromEdge)} de cada cantell · alçades {kit.machining.back.ys.map(fmtMm).join(" · ")} des de baix
+              a {fmtNum(kit.machining.back.xFromEdge)} de cada cantell · alçades {kit.machining.back.ys.map((v) => fmtNum(v)).join(" · ")} des de baix
             </Text>
           </FormRow>
         )}

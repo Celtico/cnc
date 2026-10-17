@@ -1,5 +1,6 @@
 import { arcOf, bulgeOf, ccwB, flatten, type Hole, type Panel } from "../../model"
-import { pointInRing, rectsOverlap, type Pt2, type Rect2 } from "../region2d"
+import { pointInPolygon } from "../../model/polygon"
+import { rectsOverlap, type Pt2, type Rect2 } from "../region2d"
 import { cutoutFeature, cylPocket } from "./features"
 import { stepReal } from "./writer"
 import { cross, neg, sub, unit, X, Z, type CylFace, type Face, type Loop, type PlaneFace, type V3 } from "./vec"
@@ -65,7 +66,7 @@ export function outlineSolid(p: Panel, cad = false): PanelSolid {
     const taken: Rect2[] = []
     let skipped = p.grooves.length + p.holes.filter((h) => h.face === "edge").length
     const place = (bbox: Rect2, probe: Pt2[]): boolean => {
-      if (!probe.every((q) => pointInRing(q, ring))) return false
+      if (!probe.every((q) => pointInPolygon(q, ring))) return false
       if (taken.some((r) => rectsOverlap(r, bbox, 0.01))) return false
       taken.push(bbox)
       return true

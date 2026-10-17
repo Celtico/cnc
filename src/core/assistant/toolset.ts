@@ -62,6 +62,3 @@ export function toolFailure(name: string, e: unknown): { ok: false; error: strin
   if (e instanceof ToolError) return { ok: false, error: e.message }
   return { ok: false, error: `Error intern a ${name}: ${e instanceof Error ? e.message : String(e)}` }
 }
-
-/** Un número de mm arrodonit (els resums no porten decimals llargs). */
-export const r1 = (v: number) => Math.round(v * 10) / 10

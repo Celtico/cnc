@@ -1,4 +1,4 @@
-import { Badge, Box, Button, HStack, IconButton, Input, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
+import { Badge, Box, Button, HStack, Input, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
 import { useContext, useEffect, useRef, useState, type ReactNode, type RefObject } from "react"
 import { LuCopy, LuFactory, LuImagePlus, LuLayers2, LuLayers3, LuPaintbrush, LuSprayCan, LuStar, LuSwatchBook, LuTrash2, LuGem } from "react-icons/lu"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
@@ -26,6 +26,7 @@ import { readPickedTextureSet } from "./textureMaterials"
 import { useDraft } from "../../lib/useDraft"
 import { useLatest } from "../../lib/useLatest"
 import { useCloseWhenGone } from "./useCloseWhenGone"
+import { IconAction } from "../../components/IconAction"
 
 /** Icones de les categories (com els apartats de les pàgines principals). */
 const CATEGORY_ICONS: Record<MaterialCategory, IconType> = { board: LuLayers3, back: LuLayers2, corian: LuGem, sim: LuSprayCan }
@@ -90,18 +91,18 @@ export function MaterialsList({ materials, onChange, onRename, onDelete, footer,
     addMaterial(only && only !== "board" ? withCategory(base, only) : base)
   }
   const fromLibrary = ({ group: _g, ...item }: LibraryItem) => addMaterial({ ...structuredClone(item), id: newId("mat"), name: uniqueName(item.name) })
-  // «Joc de textures…» de la biblioteca: un material de foto amb relleu i brillantor, amb el nom (i, si és de Poly Haven
-  // i hi ha connexió, la mida real) del joc. De Simulació (una textura no diu si és un tauler): la Categoria es canvia a
+  // «Conjunt de textures…» de la biblioteca: un material de foto amb relleu i brillantor, amb el nom (i, si és de Poly Haven
+  // i hi ha connexió, la mida real) del conjunt. De Simulació (una textura no diu si és un tauler): la Categoria es canvia a
   // l'editor.
   const fromTextureSet = async () => {
     const picked = await pickFiles({ multiple: true, accept: "image/*,.zip,.exr", testId: "library-texture-files" })
     if (!picked.length) return
-    const wait = toaster.create({ title: "Llegint el joc de textures…", type: "loading" })
+    const wait = toaster.create({ title: "Llegint el conjunt de textures…", type: "loading" })
     try {
       const r = await readPickedTextureSet(picked)
       toaster.dismiss(wait)
       if (!r.finish) {
-        toaster.create({ title: "No s'ha trobat el joc de textures", description: `Falta la foto de color (diff, color, albedo…).${r.set.ignored.length ? ` Fitxers: ${r.set.ignored.slice(0, 6).join(", ")}.` : ""}`, type: "warning", duration: 10000 })
+        toaster.create({ title: "No s'ha trobat el conjunt de textures", description: `Falta la foto de color (diff, color, albedo…).${r.set.ignored.length ? ` Fitxers: ${r.set.ignored.slice(0, 6).join(", ")}.` : ""}`, type: "warning", duration: 10000 })
         return
       }
       const name = uniqueName(r.name)
@@ -110,7 +111,7 @@ export function MaterialsList({ materials, onChange, onRename, onDelete, footer,
       toaster.create({ title: `Material «${name}» afegit a Simulació`, description: textureSetSummary(r.set) + size, type: "success", duration: 8000 })
     } catch (e) {
       toaster.dismiss(wait)
-      toaster.create({ title: "No s'ha pogut carregar el joc de textures", description: e instanceof Error ? e.message : String(e), type: "error", duration: 8000 })
+      toaster.create({ title: "No s'ha pogut carregar el conjunt de textures", description: e instanceof Error ? e.message : String(e), type: "error", duration: 8000 })
     }
   }
   const q = fold(query.trim())
@@ -370,12 +371,12 @@ function MaterialCard({ m, dirty, footer, onChange, onRename, nameError, onDupli
           )}
         </Stack>
         <HStack gap={0} flexShrink={0} pt={1.5}>
-          <IconButton aria-label="Duplicar material" title="Duplicar" size="sm" variant="ghost" onClick={onDuplicate}>
+          <IconAction label="Duplicar material" tip="Duplicar" size="sm" variant="ghost" onClick={onDuplicate}>
             <LuCopy />
-          </IconButton>
-          <IconButton aria-label="Eliminar material" title="Eliminar" size="sm" variant="ghost" colorPalette="red" disabled={!canDelete} onClick={onDelete}>
+          </IconAction>
+          <IconAction label="Eliminar material" tip="Eliminar" size="sm" variant="ghost" colorPalette="red" disabled={!canDelete} onClick={onDelete}>
             <LuTrash2 />
-          </IconButton>
+          </IconAction>
         </HStack>
       </HStack>
 

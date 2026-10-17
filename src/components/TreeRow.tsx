@@ -1,7 +1,9 @@
-import { Box, HStack, IconButton, Menu, Portal, Spinner, Text } from "@chakra-ui/react"
+import { Box, HStack, Spinner, Text } from "@chakra-ui/react"
 import { useEffect, useRef, type ReactNode } from "react"
-import { LuEllipsis, LuEye, LuEyeOff, LuLock, LuLockOpen, LuPlus } from "react-icons/lu"
+import { LuEye, LuEyeOff, LuLock, LuLockOpen, LuPlus } from "react-icons/lu"
 import { SectionLabel } from "./SectionLabel"
+import { ActionsMenu } from "./ActionsMenu"
+import { IconAction } from "./IconAction"
 
 /**
  * Fila i títol de grup dels arbres (com l'outliner de Figma o Fusion): l'Estructura de l'editor (`StructureTree`) i la
@@ -173,12 +175,12 @@ export function TreeRow({
       )}
       {flags && (
         <HStack gap={0} flexShrink={0} onClick={(e) => e.stopPropagation()}>
-          <IconButton aria-label={flags.locked ? `Desbloquejar «${label}»` : `Bloquejar «${label}»`} title={flags.locked ? "Bloquejat: no es pot moure" : "Bloquejar (que no es pugui moure)"} size="2xs" variant="ghost" opacity={flags.locked ? 1 : 0} _groupHover={{ opacity: 1 }} _focusVisible={{ opacity: 1 }} css={TOUCH_VISIBLE} onClick={flags.onLock}>
+          <IconAction label={flags.locked ? `Desbloquejar «${label}»` : `Bloquejar «${label}»`} tip={flags.locked ? "Bloquejat: no es pot moure" : "Bloquejar (que no es pugui moure)"} size="2xs" variant="ghost" opacity={flags.locked ? 1 : 0} _groupHover={{ opacity: 1 }} _focusVisible={{ opacity: 1 }} css={TOUCH_VISIBLE} onClick={flags.onLock}>
             {flags.locked ? <LuLock /> : <LuLockOpen />}
-          </IconButton>
-          <IconButton aria-label={flags.hidden ? `Mostrar «${label}»` : `Amagar «${label}»`} title={flags.hidden ? "Amagat a l'editor (es fabrica igual)" : "Amagar a l'editor"} size="2xs" variant="ghost" opacity={flags.hidden ? 1 : 0} _groupHover={{ opacity: 1 }} _focusVisible={{ opacity: 1 }} css={TOUCH_VISIBLE} onClick={flags.onHide}>
+          </IconAction>
+          <IconAction label={flags.hidden ? `Mostrar «${label}»` : `Amagar «${label}»`} tip={flags.hidden ? "Amagat a l'editor (es fabrica igual)" : "Amagar a l'editor"} size="2xs" variant="ghost" opacity={flags.hidden ? 1 : 0} _groupHover={{ opacity: 1 }} _focusVisible={{ opacity: 1 }} css={TOUCH_VISIBLE} onClick={flags.onHide}>
             {flags.hidden ? <LuEyeOff /> : <LuEye />}
-          </IconButton>
+          </IconAction>
         </HStack>
       )}
       {menu && (
@@ -193,18 +195,9 @@ export function TreeRow({
 /** Menú ⋯ d'una fila de l'arbre (surt en passar per sobre o amb la fila triada). */
 export function TreeRowMenu({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <Menu.Root positioning={{ placement: "bottom-end" }}>
-      <Menu.Trigger asChild>
-        <IconButton aria-label={label} size="2xs" variant="ghost">
-          <LuEllipsis />
-        </IconButton>
-      </Menu.Trigger>
-      <Portal>
-        <Menu.Positioner>
-          <Menu.Content>{children}</Menu.Content>
-        </Menu.Positioner>
-      </Portal>
-    </Menu.Root>
+    <ActionsMenu label={label} size="2xs">
+      {children}
+    </ActionsMenu>
   )
 }
 
@@ -220,28 +213,20 @@ export function TreeSection({ children, onAdd, addLabel, busy, menu, hideAdd }: 
         <SectionLabel>{children}</SectionLabel>
       </HStack>
     )
-  const plus = (
-    <IconButton aria-label={addLabel} title={busy ? "Optimitzant el model…" : addLabel} size="2xs" variant="ghost" onClick={onAdd} disabled={busy} aria-busy={busy}>
-      {busy ? <Spinner size="xs" /> : <LuPlus />}
-    </IconButton>
-  )
+  const tip = busy ? "Optimitzant el model…" : addLabel
+  const icon = busy ? <Spinner size="xs" /> : <LuPlus />
   return (
     <HStack justify="space-between" pt={3} pb={1} px={1}>
       <SectionLabel>{children}</SectionLabel>
       {/* Amb `menu`, el + obre un menú (les opcions per afegir-ne); si no, afegeix directament. */}
       {menu ? (
-        <Menu.Root positioning={{ placement: "bottom-end" }}>
-          <Menu.Trigger asChild>{plus}</Menu.Trigger>
-          <Portal>
-            <Menu.Positioner>
-              <Menu.Content maxW="340px" maxH="70vh" overflowY="auto">
-                {menu}
-              </Menu.Content>
-            </Menu.Positioner>
-          </Portal>
-        </Menu.Root>
+        <ActionsMenu label={addLabel} tip={tip} icon={icon} size="2xs" disabled={busy} trigger={{ "aria-busy": busy }} contentProps={{ maxW: "340px", maxH: "70vh", overflowY: "auto" }}>
+          {menu}
+        </ActionsMenu>
       ) : (
-        plus
+        <IconAction label={addLabel} tip={tip} size="2xs" variant="ghost" onClick={onAdd} disabled={busy} aria-busy={busy}>
+          {icon}
+        </IconAction>
       )}
     </HStack>
   )

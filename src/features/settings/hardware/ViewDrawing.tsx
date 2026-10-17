@@ -1,8 +1,9 @@
 import { Box, Stack, Text } from "@chakra-ui/react"
 import { useMemo } from "react"
 import { viewBounds, type HardwareView } from "../../../core/import/views"
-import { dimFont, fmtMm, layoutDims, viewCircles } from "../../../components/dims"
+import { dimFont, layoutDims, viewCircles } from "../../../components/dims"
 import { DimLayer } from "../../../components/DimLine"
+import { fmtNum } from "../../../lib/format"
 
 const VIEW_LABEL: Record<HardwareView["name"], string> = { front: "Vista frontal", side: "Vista lateral", top: "Vista de dalt" }
 
@@ -17,7 +18,7 @@ export function ViewDrawing({ view }: { view: HardwareView }) {
     if (!b) return null
     const box = { x0: b.x0, y0: -b.y1, x1: b.x1, y1: -b.y0 }
     const fs = dimFont(box)
-    const feats = viewCircles(view.lines).map((c) => ({ x: c.x, y: -c.y, hx: c.r, hy: c.r, label: `Ø${fmtMm(Math.round(c.r * 20) / 10)}` }))
+    const feats = viewCircles(view.lines).map((c) => ({ x: c.x, y: -c.y, hx: c.r, hy: c.r, label: `Ø${fmtNum(Math.round(c.r * 20) / 10)}` }))
     return { fs, l: layoutDims(box, feats, fs, { ...(view.registered ? { ref: [0, 0] as [number, number] } : {}), title: VIEW_LABEL[view.name] }) }
   }, [view])
   if (!layout) return null

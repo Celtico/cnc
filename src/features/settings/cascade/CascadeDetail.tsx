@@ -1,4 +1,4 @@
-import { Badge, Box, Button, HStack, IconButton, Input, Popover, Portal, SimpleGrid, Stack, Text, Textarea } from "@chakra-ui/react"
+import { Badge, Box, Button, HStack, Input, Popover, Portal, SimpleGrid, Stack, Text, Textarea } from "@chakra-ui/react"
 import type { ReactNode } from "react"
 import { LuArrowRight, LuChevronDown, LuPlus, LuRotateCcw, LuTrash2, LuTriangleAlert } from "react-icons/lu"
 import { ChoiceChips, FormRow } from "../../../components/FormRow"
@@ -20,6 +20,7 @@ import {
   type DraftNodeKind,
 } from "../../../core/model"
 import { CASCADE_ICONS } from "./cascadeIcons"
+import { IconAction } from "../../../components/IconAction"
 
 const KINDS = (Object.keys(DRAFT_KIND_LABEL) as DraftNodeKind[]).map((id) => ({ id, label: DRAFT_KIND_LABEL[id] }))
 const EDGE_KINDS = (Object.keys(DRAFT_EDGE_LABEL) as DraftEdgeKind[]).map((id) => ({ id, label: DRAFT_EDGE_LABEL[id] }))
@@ -46,7 +47,7 @@ export function CascadeDetail({ draft, diff, node, edge, many, actions }: { draf
       <Stack gap={3} p={4}>
         <Text fontWeight="medium">{many} triats</Text>
         <Button size="sm" variant="outline" colorPalette="red" onClick={actions.remove}>
-          <LuTrash2 /> Esborrar-los
+          <LuTrash2 /> Eliminar-los
         </Button>
       </Stack>
     )
@@ -91,7 +92,7 @@ function NodeDetail({ node, diff, actions }: { node: DraftNode; diff: DraftDiff;
           <LuPlus /> Afegir a dins
         </Button>
         <Button size="sm" variant="outline" colorPalette="red" onClick={actions.remove}>
-          <LuTrash2 /> Esborrar
+          <LuTrash2 /> Eliminar
         </Button>
       </HStack>
       {!added && <AppInfo node={node} changed={changed} onRevert={() => changed && actions.updateNode(node.id, changed.before)} />}
@@ -121,9 +122,9 @@ function IconPick({ node, onPick }: { node: DraftNode; onPick: (icon: string) =>
                   const I = CASCADE_ICONS[id]
                   return (
                     <Popover.CloseTrigger key={id} asChild>
-                      <IconButton size="sm" aria-label={id} title={id} variant={I === Current ? "solid" : "ghost"} colorPalette="wood" onClick={() => onPick(id)}>
+                      <IconAction size="sm" label={id} variant={I === Current ? "solid" : "ghost"} colorPalette="wood" onClick={() => onPick(id)}>
                         <I />
-                      </IconButton>
+                      </IconAction>
                     </Popover.CloseTrigger>
                   )
                 })}
@@ -196,7 +197,7 @@ function EdgeDetail({ edge, draft, actions }: { edge: DraftEdge; draft: CascadeD
         <ChoiceChips label="Què fa" value={edge.kind} options={EDGE_KINDS} onChange={(k) => actions.setEdgeKind(edge.id, k)} />
       </FormRow>
       <Button size="sm" variant="outline" colorPalette="red" alignSelf="flex-start" onClick={actions.remove}>
-        <LuTrash2 /> Esborrar la fletxa
+        <LuTrash2 /> Eliminar la fletxa
       </Button>
     </Stack>
   )

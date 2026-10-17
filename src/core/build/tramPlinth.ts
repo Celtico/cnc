@@ -2,11 +2,10 @@ import { floorTrams, isApplianceModule, moduleFootprint, moduleFrontFace, module
 import type { LinearPiece } from "./linearOrders"
 import type { BuildWarning, VentInlet } from "./module/types"
 import { aluPlinth, plinthPieces, woodPlinthPanels, type PlinthFrame } from "./plinth"
+import { fmtNum, roundTo } from "../../lib/format"
 
 /** Marge a cada costat de la reixeta d'entrada d'aire (com la del moble, `appliances.ts`). */
 const VENT_MARGIN = 30
-const r1 = (v: number) => Math.round(v * 10) / 10
-const num = (n: number): string => String(r1(n)).replace(".", ",")
 
 interface TramPlinthBuild {
   panels: Panel[]
@@ -40,8 +39,8 @@ export function buildTramPlinths(comp: Composition, places: ModulePlacement[], m
       out.warnings.push({
         code: "layout",
         moduleId: w.module.id,
-        message: `«${w.module.name}» arriba a ${num(w.top)} mm del terra i els baixos del costat a ${num(w.expected)} mm: el taulell no quedarà pla. Canvia-li l'alçada a ${num(w.module.carcass.height + w.expected - w.top)} mm.`,
-        options: [{ text: `Posar l'alçada del mòdul a ${num(w.module.carcass.height + w.expected - w.top)} mm.`, where: "dims" }],
+        message: `«${w.module.name}» arriba a ${fmtNum(w.top, 1)} mm del terra i els baixos del costat a ${fmtNum(w.expected, 1)} mm: el taulell no quedarà pla. Canvia-li l'alçada a ${fmtNum(w.module.carcass.height + w.expected - w.top, 1)} mm.`,
+        options: [{ text: `Posar l'alçada del mòdul a ${fmtNum(w.module.carcass.height + w.expected - w.top, 1)} mm.`, where: "dims" }],
       })
   if (s.kind !== "plinth") return out
   const pl = s.plinth
@@ -85,13 +84,13 @@ export function buildTramPlinths(comp: Composition, places: ModulePlacement[], m
         const alu = aluPlinth(frame, pl.hardware, prefix, moduleNumber, { front: 2 * ms.length, back: 2 * ms.length })
         out.extras.push(...alu.extras.map((p) => ({ ...p, module: moduleNumber })))
         out.linear.push(...alu.pieces)
-        if (alu.height > H + 0.5) out.warnings.push({ code: "hardware", message: `«${pl.hardware.name}» fa ${num(alu.height)} mm d'alçada i les potes ${num(H)}: no hi cap. Posa les potes a ${num(alu.height)} mm o més (Moble › Suport general) o tria un sòcol més baix.` })
-        else if (H - alu.height > 20) out.warnings.push({ code: "hardware", message: `«${pl.hardware.name}» fa ${num(alu.height)} mm d'alçada i les potes ${num(H)}: queda un forat de ${num(H - alu.height)} mm sota els mòduls. Baixa les potes o tria un sòcol més alt.` })
+        if (alu.height > H + 0.5) out.warnings.push({ code: "hardware", message: `«${pl.hardware.name}» fa ${fmtNum(alu.height, 1)} mm d'alçada i les potes ${fmtNum(H, 1)}: no hi cap. Posa les potes a ${fmtNum(alu.height, 1)} mm o més (Moble › Suport general) o tria un sòcol més baix.` })
+        else if (H - alu.height > 20) out.warnings.push({ code: "hardware", message: `«${pl.hardware.name}» fa ${fmtNum(alu.height, 1)} mm d'alçada i les potes ${fmtNum(H, 1)}: queda un forat de ${fmtNum(H - alu.height, 1)} mm sota els mòduls. Baixa les potes o tria un sòcol més alt.` })
       } catch (err) {
         out.warnings.push({ code: "hardware", message: `Sòcol: ${err instanceof Error ? err.message : String(err)}. No es fa.` })
       }
     } else {
-      const h = r1(H - 5)
+      const h = roundTo(H - 5, 1)
       if (h <= 0) continue
       const t = pl.thickness ?? first.carcass.thickness
       const f: PlinthFrame = { ...frame, h, t, corners: pl.corners ?? "butt" }
@@ -109,8 +108,8 @@ export function buildTramPlinths(comp: Composition, places: ModulePlacement[], m
         const w = Math.floor(Math.abs(v.x1 - v.x0) - 2 * VENT_MARGIN)
         const vh = Math.ceil((v.cm2 * 100) / Math.max(1, w))
         const front = pieces.find((p) => p.label.startsWith("Sòcol") && !/darrere|esquerre|dret/.test(p.label) && p.placement.origin[0] - p.length <= cx - w / 2 && p.placement.origin[0] >= cx + w / 2)
-        if (front && vh <= front.width - 20) (front.cutouts ??= []).push({ kind: "rect", x: r1(front.placement.origin[0] - (cx + w / 2)), y: r1((front.width - vh) / 2), w, h: vh, tag: "vent" })
-        else out.warnings.push({ code: "layout", moduleId: m.id, message: `Cal una entrada d'aire de ${num(v.cm2)} cm² pel sòcol (${num(w)} × ${num(vh)} mm) i no cap al sòcol${front ? ` (${num(front.width)} mm)` : ""}: fes el sòcol més alt o posa-hi una reixeta (${v.src}).` })
+        if (front && vh <= front.width - 20) (front.cutouts ??= []).push({ kind: "rect", x: roundTo(front.placement.origin[0] - (cx + w / 2), 1), y: roundTo((front.width - vh) / 2, 1), w, h: vh, tag: "vent" })
+        else out.warnings.push({ code: "layout", moduleId: m.id, message: `Cal una entrada d'aire de ${fmtNum(v.cm2, 1)} cm² pel sòcol (${fmtNum(w, 1)} × ${fmtNum(vh, 1)} mm) i no cap al sòcol${front ? ` (${fmtNum(front.width, 1)} mm)` : ""}: fes el sòcol més alt o posa-hi una reixeta (${v.src}).` })
       }
       for (const q of pieces) out.panels.push({ ...q, module: moduleNumber })
       if (f.corners === "mitre" && plinthPieces(f).some((p) => p.mitres.length)) mitreNote = true
@@ -153,10 +152,10 @@ function splitLong(p: Panel, joints: number[]): Panel[] {
       ...rest,
       id: `${p.id}-${k + 1}`,
       label: `${p.label} (${k + 1}/${n})`,
-      length: r1(b - a),
+      length: roundTo(b - a, 1),
       edges: { ...p.edges, left: p.edges.left && keep("left"), right: p.edges.right && keep("right") },
       ...(mitres?.length ? { mitres } : {}),
-      placement: { ...p.placement, origin: [r1(o[0] + ax[0] * a), r1(o[1] + ax[1] * a), r1(o[2] + ax[2] * a)] },
+      placement: { ...p.placement, origin: [roundTo(o[0] + ax[0] * a, 1), roundTo(o[1] + ax[1] * a, 1), roundTo(o[2] + ax[2] * a, 1)] },
     }
   })
 }
@@ -175,7 +174,7 @@ function legFeet(out: TramPlinthBuild, s: NonNullable<Composition["support"]>, s
   const check = (label: string, at: number, insetKey: string, from: string) => {
     const legAt = inset(insetKey)
     if (at + t > legAt - foot + 0.5)
-      out.warnings.push({ code: "hardware", message: `El sòcol ${label} (a ${num(at)} mm ${from}) toca el peu de les potes (a ${num(legAt)} mm, Ø${num(foot * 2)}): retira'l fins a ${num(Math.max(0, legAt - foot - t))} mm com a molt o posa les potes més endins.` })
+      out.warnings.push({ code: "hardware", message: `El sòcol ${label} (a ${fmtNum(at, 1)} mm ${from}) toca el peu de les potes (a ${fmtNum(legAt, 1)} mm, Ø${fmtNum(foot * 2, 1)}): retira'l fins a ${fmtNum(Math.max(0, legAt - foot - t), 1)} mm com a molt o posa les potes més endins.` })
   }
   check("del davant", front, "insetFront", "del davant de la caixa")
   if (sides.back) check("del darrere", ss, "insetBack", "del darrere")

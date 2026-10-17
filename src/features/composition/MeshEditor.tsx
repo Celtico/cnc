@@ -4,11 +4,10 @@ import { LuArrowUpFromLine, LuGrid3X3, LuRedo2, LuSlash, LuSquareDashedMousePoin
 import { ChoiceChips } from "../../components/FormRow"
 import { FloatingWindow } from "../../components/FloatingWindow"
 import { Tooltip } from "../../components/ui/tooltip"
-import { boxCage, extrudeFaces, MAX_CAGE_POINTS, mirrorPairs, normalizeCage, refineCage, START_SHAPES, toggleCrease, type MeshCage } from "../../core/model"
+import { boxCage, extrudeFaces, MAX_CAGE_POINTS, mirrorPairs, normalizeCage, refineCage, START_SHAPES, toggleCrease, type MeshCage, type ObjectBox } from "../../core/model"
 import { useHistory, useUndoKeys } from "../history/useHistory"
 import { MeshEditorCanvas } from "./MeshEditorScene"
 
-type Box3 = { x: number; y: number; z: number; w: number; h: number; d: number }
 
 /**
  * Editor de la forma lliure d'un objecte (per decisió de l'usuari, 2026-10-17: «un editor de malla com el de SolidWorks»):
@@ -17,7 +16,7 @@ type Box3 = { x: number; y: number; z: number; w: number; h: number; d: number }
  * «Més detall» parteix la caixa (més punts per modelar); «Extrudir» aixeca les cares triades amb costats nous; «Aresta viva»
  * fa recte el cantell entre els punts triats; «Començar amb» tria una forma de partida (coixí, caixa, cilindre, pica…). En aplicar, la caixa de l'objecte s'ajusta a la forma.
  */
-export function MeshEditor({ open, box, initial, onClose, onApply }: { open: boolean; box: Box3; initial: MeshCage | undefined; onClose: () => void; onApply: (p: Box3 & { mesh: MeshCage }) => void }) {
+export function MeshEditor({ open, box, initial, onClose, onApply }: { open: boolean; box: ObjectBox; initial: MeshCage | undefined; onClose: () => void; onApply: (p: ObjectBox & { mesh: MeshCage }) => void }) {
   const start = initial ?? boxCage()
   const hist = useHistory<MeshCage>(start)
   const cage = hist.value

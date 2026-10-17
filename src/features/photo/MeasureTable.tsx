@@ -1,7 +1,9 @@
-import { Badge, Box, Button, HStack, IconButton, Input, Menu, Portal, Stack, Table, Text } from "@chakra-ui/react"
+import { Badge, Box, Button, HStack, Input, Menu, Stack, Table, Text } from "@chakra-ui/react"
 import { LuCircleCheck, LuEye, LuMoveHorizontal, LuRectangleHorizontal, LuTrash2, LuWand } from "react-icons/lu"
 import type { ApplyTarget } from "./applyTargets"
 import type { Measure, MeasureValue } from "../../core/photo/measure"
+import { IconAction } from "../../components/IconAction"
+import { ActionsMenu } from "../../components/ActionsMenu"
 
 const fmt = (v: number | null | undefined): string => (v === null || v === undefined ? "" : Math.round(v).toLocaleString("ca-ES"))
 const fmtRel = (v: number): string => v.toLocaleString("ca-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -116,45 +118,34 @@ export function MeasureTable({
                 </Table.Cell>
                 <Table.Cell px={0}>
                   <HStack gap={0}>
-                    <Menu.Root>
-                      <Menu.Trigger asChild>
-                        <IconButton aria-label="Aplicar al moble" title="Aplicar al moble" size="xs" variant="ghost" disabled={!v || v.total === null || !targets.length}>
-                          <LuWand />
-                        </IconButton>
-                      </Menu.Trigger>
-                      <Portal>
-                        <Menu.Positioner>
-                          <Menu.Content maxH="50vh" overflowY="auto">
-                            {v?.total2 !== undefined && v.total2 !== null && (
-                              <Text fontSize="xs" color="fg.muted" px={3} py={1}>
-                                Amplada {fmt(v.total)}
-                              </Text>
-                            )}
-                            {targets.map((t) => (
-                              <Menu.Item key={t.id} value={t.id} onClick={() => v?.total !== null && v && onApply(m, t, v.total, "main")}>
-                                {t.label}
-                              </Menu.Item>
-                            ))}
-                            {v?.total2 !== undefined && v.total2 !== null && (
-                              <>
-                                <Menu.Separator />
-                                <Text fontSize="xs" color="fg.muted" px={3} py={1}>
-                                  Alçada {fmt(v.total2)}
-                                </Text>
-                                {targets.map((t) => (
-                                  <Menu.Item key={`2${t.id}`} value={`2${t.id}`} onClick={() => onApply(m, t, v.total2!, "second")}>
-                                    {t.label}
-                                  </Menu.Item>
-                                ))}
-                              </>
-                            )}
-                          </Menu.Content>
-                        </Menu.Positioner>
-                      </Portal>
-                    </Menu.Root>
-                    <IconButton aria-label="Eliminar mesura" size="xs" variant="ghost" colorPalette="red" onClick={() => onRemove(m.id)}>
+                    <ActionsMenu label="Aplicar al moble" tip="Aplicar al moble" icon={<LuWand />} disabled={!v || v.total === null || !targets.length} contentProps={{ maxH: "50vh", overflowY: "auto" }}>
+                      {v?.total2 !== undefined && v.total2 !== null && (
+                        <Text fontSize="xs" color="fg.muted" px={3} py={1}>
+                          Amplada {fmt(v.total)}
+                        </Text>
+                      )}
+                      {targets.map((t) => (
+                        <Menu.Item key={t.id} value={t.id} onClick={() => v?.total !== null && v && onApply(m, t, v.total, "main")}>
+                          {t.label}
+                        </Menu.Item>
+                      ))}
+                      {v?.total2 !== undefined && v.total2 !== null && (
+                        <>
+                          <Menu.Separator />
+                          <Text fontSize="xs" color="fg.muted" px={3} py={1}>
+                            Alçada {fmt(v.total2)}
+                          </Text>
+                          {targets.map((t) => (
+                            <Menu.Item key={`2${t.id}`} value={`2${t.id}`} onClick={() => onApply(m, t, v.total2!, "second")}>
+                              {t.label}
+                            </Menu.Item>
+                          ))}
+                        </>
+                      )}
+                    </ActionsMenu>
+                    <IconAction label="Eliminar mesura" size="xs" variant="ghost" colorPalette="red" onClick={() => onRemove(m.id)}>
                       <LuTrash2 />
-                    </IconButton>
+                    </IconAction>
                   </HStack>
                 </Table.Cell>
               </Table.Row>

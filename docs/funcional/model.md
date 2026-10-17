@@ -6,7 +6,7 @@
 - **Tipus de moble** (`Composition.kind`, `compositionKind`, `features/composition/kinds.ts`; per decisió de l'usuari,
   **sense selector «Tipus»**): ve de la plantilla i no canvia; «+ Nou moble» crea
   directament un moble del tipus Moble (`blankMoble("moble")`, **buit**: cap mòdul; per decisió de l'usuari, sense menú de
-  tipus; `NEW_MOBLE_KINDS` queda sense UI). Només decideix l'etiqueta de la targeta i la cerca, i a la
+  tipus; els noms d'inici, `NEW_MOBLE_NAMES` a `features/projects/blank.ts`, «Moble nou», des de `ProjectsScreen.tsx`). Només decideix l'etiqueta de la targeta i la cerca, i a la
   Taula «Afegir mòdul» fa un `tableModule` (tauler + dos laterals de panell, sense base ni fons, cantonades a inglet; el
   Taula nova comença buida com les altres). Els antics: cuina si tenen `runs`, si no moble. Objecte (`objecte`, vegeu Objectes). **`lliure`**
   (el Flat-pack d'abans, «Peces lliures» a la targeta): ja no es crea; els que hi ha (i els llits, capçals i taules de pedra
@@ -208,7 +208,7 @@
     `ledProfile`, categories «Penjar» i «Llums» —els perfils de LED, a «Llums» des de la v40, no a «Perfils i marcs»—), no interruptors de fusta. `Zone.rail` / `Zone.led` =
     `{ hardware?: HardwareItem }` (`ZoneAccessory`: hi és amb el del mòdul, «Com el mòdul», o amb una còpia pròpia; els
     `true`/`false` d'abans es llegeixen com a `{}` / cap). El mòdul en porta el per defecte als llocs opcionals
-    `Module.hardware.rail/led/glassFrame` (`ACCESSORY_SLOTS`; sense, l'item d'inici, `moduleSlotItem`).
+    `Module.hardware.rail/led/glassFrame` (`HARDWARE_SLOTS`, amb penjador i regleta de penjar; sense, l'item d'inici, `moduleSlotItem`).
     - **Barra de penjar** (item d'inici `rail-inox-25`: Ø25 a 50 mm del sostre, `railSpec`): tub d'inox de lateral a
       lateral; va a `ModuleBuild.extras` → «Elements sense nesting». Avís `rail` si el compartiment fa menys de 900 mm.
       Sense mecanitzat (suports: pendent del taller, ho diu el `label` del target).
@@ -264,7 +264,7 @@
     fusta** (per decisió de l'usuari, v41): la frontissa de perfil **Metallamat A** (`hinge-hafele-metallamat-a`) porta la
     **placa en creu** (316.51.526) al lateral de les frontisses (la placa de la frontissa triada, `cupSpec().plate`; `glassHinges` a `buildModule`: la quantitat per
     alçada, a `endOffset` dels extrems i al mig de dos forats seguits de la filera; dos forats Ø5 × 12 a ±16 a 37 del
-    davant, `plateHoles`/`addPlate`, tota o res; els que cauen a la filera passen a ser de la placa, tag `plate`). **Tot es veu** (per decisió de l'usuari, 2026-10-14: «aquí igual s'ha de veure tot», «això s'ha de veure»): a cada frontissa col·locada, la cassoleta de la frontissa triada al darrere del perfil del costat de les frontisses (`Hole` tag `hinge` amb `edge` = el cantell de les frontisses al perfil, que és a `extras`: no va a la CNC; el STEP de CAD els treu) i `hardwareSolids` en dibuixa la cassoleta, el braç (s'obren amb la porta) i la placa al lateral (`fixedSolids`), com a les portes de fusta; el tirador (`glassPull`, el llarg del `pitch` + 25) i, a l'abatible de vidre, un braç a cada lateral (`glassHingeBody`, `glassArm`, `hwBox`: `extras` rol `hardware`, al 3D i al render; no són de CNC). **Tiradors de vitrina Häfele** (v42, `HAFELE_GLASS_PULLS`: 563.25.995 plata i 563.25.095 inox; motor `barHandle` sense forats, es claven al perfil) es trien al «Tirador». Test
+    davant, `plateHoles`/`addPlate`, tota o res; els que cauen a la filera passen a ser de la placa, tag `plate`). **Tot es veu** (per decisió de l'usuari, 2026-10-14: «aquí igual s'ha de veure tot», «això s'ha de veure»): a cada frontissa col·locada, la cassoleta de la frontissa triada al darrere del perfil del costat de les frontisses (`Hole` tag `hinge` amb `edge` = el cantell de les frontisses al perfil, que és a `extras`: no va a la CNC; el STEP de CAD els treu) i `hardwareSolids` en dibuixa la cassoleta, el braç (s'obren amb la porta) i la placa al lateral (`fixedSolids`), com a les portes de fusta; el tirador (`glassPull`, el llarg del `pitch` + 25) i, a l'abatible de vidre, les frontisses al perfil del cantell de gir amb la placa a la tapa o a la base (`glassFlapHinges`) i un braç a cada lateral (`glassArm`, `hwBox`, `core/build/module/fronts.ts`: `extras` rol `hardware`, al 3D i al render; no són de CNC). **Tiradors de vitrina Häfele** (v42, `HAFELE_GLASS_PULLS`: 563.25.995 plata i 563.25.095 inox; motor `barHandle` sense forats, es claven al perfil) es trien al «Tirador». Test
     `build/hafeleCatalog.test.ts`.
   - **Ferratges de marc d'alumini** (`isFrameHardware`, `FRAME_HINGE_IDS`; per decisió de l'usuari, 2026-10-14: «les
     opcions no compatibles no han de sortir»): a una porta o abatible de vidre, a «Frontissa» i «Tirador» només surten les
@@ -302,8 +302,7 @@
     d'ara: el **joc** del fabricant llegit del catàleg, no un STEP): a Front › **Guia** es pot triar, en lloc de la guia,
     un joc de **calaix de doble paret** (DTC MAGIC-PRO N/M/K/C/F, MAGIC-STAR ULTRA M/K/C/F, DRAGON-PRO M/B/D/C/F i
     PURE-PRO HK M/K/C, `HardwareItem.kit`, motor `drawerKit`), amb
-    **Tancament** (suau · push-open · push + suau, els que ven cada joc), **Darrere** (fusta · metàl·lic) i **Acabat** dels
-    laterals (blanc seda · gris mat · negre mat, els del joc; només el color del 3D) (`Front.kit`; res amagat compta: amb una guia normal no es llegeixen). El joc també
+    **Tancament** (suau · push-open · push + suau, els que ven cada joc), **Darrere** (fusta · metàl·lic) i **Color dels laterals** (blanc seda · gris mat · negre mat, els del joc; només el color del 3D) (`Front.kit`; res amagat compta: amb una guia normal no es llegeixen). El joc també
     pot ser la **«Guia de calaix» del mòdul** (`module.hardware.slide`, sense UI des del 2026-10-08; `slotAccepts`, `slotSpec` el
     deixa passar amb l'item = el joc): tots els calaixos sense guia pròpia es fan amb el joc, igual que triat al front (el
     front hi llegeix les opcions, «Com el mòdul (joc de calaix)» al selector). El gruix del fons el **demana el joc** (16,
@@ -370,7 +369,7 @@
 - **Illes** (`Composition.islands`, `IslandSchema`, `core/build/islands.ts`; per decisió de l'usuari, 2026-10-13: «les
   opcions que diuen els professionals»: dues files de mòduls d'esquena cargolades, fronts enrasats, remats als costats):
   **sense UI des del 2026-10-13** (per decisió de l'usuari: «treu l'opció illa, això és més fàcil amb peces lliures»;
-  treure ≠ esborrar: les que hi ha es conserven i es fabriquen igual; `IslandsForm` es queda sense ús). Era la secció
+  treure ≠ esborrar: les que hi ha es conserven i es fabriquen igual; `IslandsForm` s'ha tret). Era la secció
   «Illes» del moble (amb ≥ 2 mòduls). Davant · Darrere (tots dos
   «Lliure al terra»; «Afegir illa» els hi posa), «Pas de cables» (`gap`), Remat esquerre / dret, gruix (19) i material
   («Com els fronts»). El de darrere es gira 180° i es posa sol a la mateixa X, enganxat al darrere del de davant
@@ -386,11 +385,10 @@
   defecte; la plantilla «Cuina greige amb illa», `mag:greige-kitchen`, a inglet).
 - **Peces corregudes** (`comp.runs`, `core/build/runs.ts`, `activeRuns`; **sense UI des del 2026-10-13**, per decisió de
   l'usuari: la secció «Taulell i sòcol» del moble ja no surt; treure ≠ esborrar: les que hi ha es conserven i es fabriquen
-  igual, i `RunsForm` es queda sense ús; per decisió de l'usuari no es converteixen en peces lliures: es perdria el llarg, el voladís i els forats
+  igual, i `RunsForm` s'ha tret; per decisió de l'usuari no es converteixen en peces lliures: es perdria el llarg, el voladís i els forats
   automàtics). Interruptor «Es fa» (`Run.off`): els d'un moble que no era cuina (abans es guardaven sense fer-se) es migren
-  apagats en llegir (`migrateRuns`, a `normalizeComposition` i al `.moble`; els nous porten `off: false`); `RunsForm`: cada peça és un
-  plegable (`FoldItem` variant `card`) amb un resum —de → fins a · gruix · forats—, dins del taulell cada forat també; una oberta alhora, la nova
-  s'obre sola):
+  apagats en llegir (`migrateRuns`, a `normalizeComposition` i al `.moble`; els nous porten `off: false`); el `RunsForm` d'abans (tret) feia cada peça un
+  plegable amb un resum —de → fins a · gruix · forats—):
   **taulell** d'una peça sobre els baixos de la fila (voladís, forats d'encastar de placa, pica o a mida → talls passants).
   Es numera com un mòdul més (n + 1) per a les refs. No arriba a les illes (`freeX`) llevat que la peça sigui només de
   l'illa; un forat que travessa el contorn no es fa i s'avisa. Els **sòcols correguts** d'abans passen al sòcol de cada
@@ -416,7 +414,7 @@
   d'alumini amb els metres). Els **perfils LED** ja es tallen a mida per un altre camí (el perfil de l'app a «Elements
   sense nesting»; la barra Loox, a la comanda dels llums amb `cutLength`): no s'hi han passat (un ferratge nou per metres
   només cal que porti `linear` i la regla que el posa). Test `build/linearOrders.test.ts` (clips, barres, trossos).
-- **Objectes de referència** (`RefObject`): caixa, cilindre, **perfil 2D** o **forma lliure** (`shape: "mesh"`, `RefObject.mesh`: la caixa de control de `meshShape.ts`, vèrtexs de 0 a 1 dins de la caixa w × h × d, suavitzada amb Catmull-Clark; vegeu Editor › Forma lliure), per veure mides i, amb efecte:
+- **Objectes de referència** (`RefObject`): caixa, cilindre, **perfil 2D** o **forma lliure** (`shape: "mesh"`, `RefObject.mesh`: la caixa de control de `meshShape.ts`, vèrtexs de 0 a 1 dins de la caixa w × h × d, suavitzada amb Catmull-Clark; vegeu Editor › Forma lliure) o **relleu d'imatge** (`shape: "image"`, `RefObject.image`: una imatge en grisos com a alçades dins de la caixa, `core/model/imageRelief.ts`; vegeu Editor › Relleu d'imatge), per veure mides i, amb efecte:
   **Obstacle** (avisa si xoca; el cilindre amb la seva secció, `refTouchesBox`; sobre els mòduls d'una fila, «Fer-li lloc» l'hi posa entre ells, `model/refRow.ts`, vegeu Editor › Moure) o **Talla** (`build/refCuts.ts`,
   `applyRefCuts`): forat passant a cada peça perpendicular a la seva direcció (z: fons i portes; y: base, tapa, prestatges;
   x: laterals); si arriba a la vora (una **columna de la casa** a la cantonada o a la paret), **la peça es retalla amb la forma de l'objecte** (per decisió de l'usuari, 2026-10-14: «el moble s'ha d'adaptar a la columna»; `notch`, `polygon-clipping`: rectangle, cercle de 64 costats o el perfil; `Panel.outline`, que fan servir el 3D, el nesting —el rectangle—, el DXF, el STEP i el .xcs) i els forats i les ranures que queien a la part treta es treuen (res surt de les peces; una ranura retallada que encara és un rectangle es queda); si la partiria en trossos o se la menjaria, avís `ref-cut`. **De costat** (el fons i els laterals que la columna travessa pel seu pla), un objecte de referència només talla si la travessa de cara a cara amb secció recta (una columna quadrada; `sidewaysCut` `exactOnly`): forat o osca; un tub rodó de costat no fa res, com abans. La vora retallada no es canteja (queda contra la columna): si la columna se'n menja una franja sencera o la parteix, cada tros es fa a la seva mida (`trimTo`; el nesting no reserva la part que s'ha menjat) i el costat del tall perd el cantell (`cutEdges`); els trams del contorn que són el tall queden a `Panel.rawSides` i el 3D els dibuixa sense cantell (`shapedGeometry` reparteix els cantells en [1] amb cantell i [2] sense, segons `edges` als costats rectes i `rawSides`; `cutoutMaterials` = [cares, cantell, tauler vist]); una peça partida (un fons amb la columna al mig) fa **una peça per tros** (`notch` → `added`, ids `<peça>-2`…), amb els seus forats i ranures. Tests `build/refCuts.test.ts` i, als programes, `export/maestroNestXcs.test.ts`. **El moble es tanca al voltant de la columna** (per decisió de l'usuari: «ha de fer les ranures i les traseres que falten i moure la pota»; `core/build/columnWalls.ts`, a `buildComposition` després dels talls): una columna que és una caixa vertical (`axis: "y"`) i entra pel darrere d'un mòdul hi afegeix **fons nous** a les seves cares que queden dins (la del davant i les dels costats; `Fons columna n`, rol `back`, el tauler i el gruix del fons, a la retirada del fons, `backSetback`, de la columna) i, amb el fons en ranura, les **ranures** a la base i a la tapa (fondària i joc de la ranura de sempre); amb el fons cargolat o encastat, sense ranures. Només les que pugen de terra (`y` ≤ 1; una pica o una placa del taulell no compten). Una columna que no arriba a la tapa, que no toca el darrere o que travessa tot el mòdul no s'hi tanca (avís `ref-cut`, que diu què cal canviar); les rodones i de perfil, tampoc (de moment). **Calaixos**: els d'un tram per on entra la columna es fan més curts (per decisió de l'usuari: «les guies i els calaixos haurien de ser més curts»; `columnRearLimits` → `buildModule(m, { rearLimits })`, `Builder.rearAt`): la guia i la caixa (o la NL del joc) es trien amb la fondària que queda davant del fons nou de la columna, i no es retallen. **Potes**: amb la base retallada, una a cada cantonada que sobresurt del contorn i cap a l'osca, mai dues a menys de 110 mm (`LEG_MIN_GAP`: es trepitjarien; per decisió de l'usuari) (`legPoints`, `ViewerModule.legs.points`, `ModuleLegs points`); els forats d'una pota importada només es fan a les quatre de sempre (els de l'osca es treuen); les de l'app dibuixades (la AXILO 78) es tornen a posar a cada un d'aquests punts amb els seus forats i el mirall de la dreta (`relayLegs`, a `buildComposition` després de `columnWalls`; la placa sencera dins de la base o aquella pota no es fa, avís `hardware`). Test `build/columnWalls.test.ts`. Els **passacables** dels mòduls ja no
@@ -436,7 +434,7 @@
     cada peça pren el valor que tenia (el camp vell `joints` es treu) i la fabricació és idèntica
     (`flatPackOption.test.ts`). Entra i hi acaba →
     pestanyes + mortalles (passants o ranures cegues `tag: "mortise"`); s'encreuen → mitja fusta; totes dues hi acaben →
-    dits; cantell contra cara → espigues. `Composition.joinery` (`DEFAULT_JOINERY`): joc, Ø de fresa dels **dogbones**,
+    dits; cantell contra cara → espigues. `Composition.joinery` (`DEFAULT_JOINERY`): folgança (l'etiqueta «Folgança» de la peça), Ø de fresa dels **dogbones**,
     ample de pestanya. Contorn amb `polygon-clipping`; `build.joints` els llista.
   - **Grups** (`FreePart.group`, `moveGroupBy`, `duplicateGroup`, `movePartToGroup`, `reorderPart`, `removePartFromGroup`). **Els mòduls també en fan** (`Module.group`, per decisió de l'usuari, 2026-10-14; el mateix espai de noms: `groupItems` dona mòduls, peces i models d'un grup): a l'arbre, plegables dins de la seva fila, menú ⋯ «Agrupar en un grup nou» · «Posar a» · «Treure del grup», arrossegar un mòdul sobre un grup, ⌘G; el grup es mou (els mòduls, per la seva fila), s'amaga, es bloqueja, **es copia i es duplica** (els mòduls de la còpia, a continuació a la seva fila; `clipOps.ts`) i s'esborra sencer; al 3D el primer clic tria el grup.
   - **Enganxada a un mòdul** (`FreePart.module`, `resolveParts`, `partOffset`): x/y/z relatives al mòdul (el taulell de
@@ -452,7 +450,7 @@
     Efecte, com als objectes de referència) el fons és arrodonit, com una pica (vegeu Fabricació).
   - **Materials que no són de CNC** (`MaterialPref.cnc = false`: ferro, inox, pedra, vidre…): la peça porta `nest: false`
     (en triar-lo) i va a `build.extras`: es veu, surt a Peces › «Elements sense nesting» i no va al nesting ni als fitxers
-    del taller, ni fa encaixos. Mides sempre Ample · Alt · Fondària (X · Y · Z); de CNC, el gruix es tria entre els del
+    del taller, ni fa encaixos. Mides sempre Amplada · Alçada · Fondària (X · Y · Z); de CNC, el gruix es tria entre els del
     tauler; si no, les tres lliures i sense Veta ni encaixos.
 - **Models 3D** (`Composition.models`, `ModelObject` a `model/composition.ts`: `src` = id de `MODEL_ASSETS` (`model/models.ts`)
   o `user-…`, cantonada x/y/z i caixa w/h/d en mm, `rot` en graus al voltant del vertical): malles `.glb` que **només es

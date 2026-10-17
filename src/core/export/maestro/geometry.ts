@@ -1,4 +1,4 @@
-import { arcOf, bulgeOf, flatten, type BPt, type Cutout, type EdgeSide, type Hole, type Panel } from "../../model"
+import { arcOf, bulgeOf, distToPolygon, flatten, type BPt, type Cutout, type EdgeSide, type Hole, type Panel } from "../../model"
 import type { CutMode } from "../../model/machine"
 import { cs, num } from "./script"
 
@@ -230,21 +230,6 @@ export function sharpCorners(pts: BPt[], side: "inside" | "outside"): number {
   return count
 }
 
-/** Distància d'un punt a un contorn (polígon tancat). */
-function distToOutline(flat: [number, number][], x: number, y: number): number {
-  let best = Infinity
-  for (let i = 0; i < flat.length; i++) {
-    const a = flat[i]!
-    const b = flat[(i + 1) % flat.length]!
-    const dx = b[0] - a[0]
-    const dy = b[1] - a[1]
-    const l2 = dx * dx + dy * dy
-    const t = l2 > 0 ? Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / l2)) : 0
-    best = Math.min(best, Math.hypot(a[0] + t * dx - x, a[1] + t * dy - y))
-  }
-  return best
-}
-
 /**
  * Un forat de cantell d'una peça amb forma només es pot fer a la cara estàndard si el contorn toca la caixa
  * en aquell punt (tot el diàmetre del forat): si no, la broca entraria a l'aire o en una corba.
@@ -258,7 +243,7 @@ export function edgeHoleOnFace(p: Pick<Panel, "length" | "width" | "outline">, h
     : edge === "top" ? [[h.x - r, p.width], [h.x, p.width], [h.x + r, p.width]]
     : edge === "left" ? [[0, h.y - r], [0, h.y], [0, h.y + r]]
     : [[p.length, h.y - r], [p.length, h.y], [p.length, h.y + r]]
-  return along.every(([x, y]) => distToOutline(flat, x, y) < 0.05)
+  return along.every(([x, y]) => distToPolygon(x, y, flat) < 0.05)
 }
 
 /**

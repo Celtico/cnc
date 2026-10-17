@@ -132,7 +132,7 @@ export function AmbientViewOptions({
         tiles={
           tab === "plan" ? (
             <>
-              <ViewTile label="Encabir" icon={<LuVideo />} on={planFramed} onClick={onFit} tip="Encabir el plànol" />
+              <ViewTile label="Enquadrar" icon={<LuVideo />} on={planFramed} onClick={onFit} tip="Enquadrar el plànol" />
               <ViewTile label="Graella" icon={<LuGrid3X3 />} on={showGrid} onClick={() => setShowGrid((v) => !v)} />
               <ViewTile label="Mides" icon={<LuRuler />} on={showDims} onClick={() => setShowDims((v) => !v)} tip="Mides de les parets" />
               <ViewTile label="Noms" icon={<LuTag />} on={showLabels} onClick={() => setShowLabels((v) => !v)} tip="Noms i mides dels elements" />

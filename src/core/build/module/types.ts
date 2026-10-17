@@ -48,6 +48,8 @@ export interface BuildWarning {
     | "unknown-material"
     | "thickness-not-listed"
     | "inner-drawers"
+    // Buidats més fons que la fresa més llarga de la màquina (`pocketReachIssues`, fora del build, com els materials).
+    | "pocket-reach"
     // Prestatges retirats més del que diu el compartiment perquè no toquin el pistó d'un abatible.
     | "shelf-strut"
   message: string

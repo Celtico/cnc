@@ -1,4 +1,5 @@
 import { cutoutArea, type Cutout, type GrillePattern } from "../model"
+import { roundTo } from "../../lib/format"
 
 /**
  * Patró de reixeta sobre una peça de `length` × `width` (coordenades locals de la
@@ -20,7 +21,6 @@ export interface Rect {
   h: number
 }
 
-const r2 = (v: number): number => Math.round(v * 100) / 100
 
 function overlaps(a: Rect, b: Rect): boolean {
   return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
@@ -32,7 +32,7 @@ function centered(total: number, size: number, gap: number): number[] {
   if (count <= 0) return []
   const span = count * size + (count - 1) * gap
   const start = (total - span) / 2
-  return Array.from({ length: count }, (_, i) => r2(start + i * (size + gap)))
+  return Array.from({ length: count }, (_, i) => roundTo(start + i * (size + gap), 2))
 }
 
 export function grilleCutouts(
@@ -78,8 +78,8 @@ export function grilleCutouts(
       const spanX = (cols - 1) * pitch + d + offset
       const x0 = m + (innerL - spanX) / 2 + d / 2 + offset
       for (let c = 0; c < cols; c++) {
-        const cx = r2(x0 + c * pitch)
-        const cy = r2(y0 + r * rowStep)
+        const cx = roundTo(x0 + c * pitch, 2)
+        const cy = roundTo(y0 + r * rowStep, 2)
         const rect: Rect = { x: cx - d / 2, y: cy - d / 2, w: d, h: d }
         if (!blocked(rect)) cutouts.push({ kind: "circle", x: cx, y: cy, diameter: d, tag: "grille" })
       }
@@ -87,7 +87,7 @@ export function grilleCutouts(
   }
 
   const open = cutouts.reduce((s, c) => s + cutoutArea(c), 0)
-  return { cutouts, openRatio: r2(open / (length * width) * 10000) / 10000 }
+  return { cutouts, openRatio: roundTo(open / (length * width) * 10000, 2) / 10000 }
 }
 
 /**
@@ -106,13 +106,13 @@ function splitAround(rect: Rect, exclude: Rect[], axis: "x" | "y", minLen: numbe
       if (axis === "x") {
         const left: Rect = { ...piece, w: e.x - piece.x }
         const right: Rect = { ...piece, x: e.x + e.w, w: piece.x + piece.w - (e.x + e.w) }
-        if (left.w >= minLen) next.push({ ...left, w: r2(left.w) })
-        if (right.w >= minLen) next.push({ ...right, x: r2(right.x), w: r2(right.w) })
+        if (left.w >= minLen) next.push({ ...left, w: roundTo(left.w, 2) })
+        if (right.w >= minLen) next.push({ ...right, x: roundTo(right.x, 2), w: roundTo(right.w, 2) })
       } else {
         const bottom: Rect = { ...piece, h: e.y - piece.y }
         const top: Rect = { ...piece, y: e.y + e.h, h: piece.y + piece.h - (e.y + e.h) }
-        if (bottom.h >= minLen) next.push({ ...bottom, h: r2(bottom.h) })
-        if (top.h >= minLen) next.push({ ...top, y: r2(top.y), h: r2(top.h) })
+        if (bottom.h >= minLen) next.push({ ...bottom, h: roundTo(bottom.h, 2) })
+        if (top.h >= minLen) next.push({ ...top, y: roundTo(top.y, 2), h: roundTo(top.h, 2) })
       }
     }
     pieces = next

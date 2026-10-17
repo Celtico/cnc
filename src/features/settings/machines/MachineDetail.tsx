@@ -1,4 +1,4 @@
-import { Button, IconButton, Input, Stack, Switch, Text } from "@chakra-ui/react"
+import { Button, Input, Stack, Switch, Text } from "@chakra-ui/react"
 import { LuCopy, LuFactory, LuStar, LuTrash2, LuUpload } from "react-icons/lu"
 import { FormRow } from "../../../components/FormRow"
 import { SettingsGroup } from "../../../components/SettingsGroup"
@@ -6,6 +6,7 @@ import type { Machine } from "../../../core/model"
 import { NestingGroup } from "./NestingGroup"
 import { ToolsTable } from "./ToolsTable"
 import { XcsGroup } from "./XcsGroup"
+import { IconAction } from "../../../components/IconAction"
 
 /**
  * El detall d'una màquina: les dades (nom, sèrie, camp de treball, per defecte), el projecte de Maestro, les opcions dels
@@ -37,28 +38,26 @@ export function MachineDetail({
         summary={[m.serial, m.model].filter(Boolean).join(" · ") || "Màquina"}
         actions={
           <>
-            <IconButton aria-label="Màquina per defecte" title="Màquina per defecte (exportació .xcs i separació del nesting)" size="xs" variant="ghost" colorPalette={m.isDefault ? "wood" : undefined} onClick={() => onDefault()}>
+            <IconAction label="Màquina per defecte" tip="Màquina per defecte (exportació .xcs i separació del nesting)" size="xs" variant="ghost" colorPalette={m.isDefault ? "wood" : undefined} onClick={() => onDefault()}>
               <LuStar fill={m.isDefault ? "currentColor" : "none"} />
-            </IconButton>
-            <IconButton
-              aria-label="Duplicar màquina"
-              title="Duplicar màquina"
+            </IconAction>
+            <IconAction
+              label="Duplicar màquina"
               size="xs"
               variant="ghost"
               onClick={onDuplicate}
             >
               <LuCopy />
-            </IconButton>
-            <IconButton
-              aria-label="Eliminar màquina"
-              title="Eliminar màquina"
+            </IconAction>
+            <IconAction
+              label="Eliminar màquina"
               size="xs"
               variant="ghost"
               colorPalette="red"
               onClick={onDelete}
             >
               <LuTrash2 />
-            </IconButton>
+            </IconAction>
           </>
         }
       >

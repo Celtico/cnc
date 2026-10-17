@@ -1,7 +1,8 @@
 import type { EdgeSide, Hole, HoleFace, Panel, Placement, Vec3 } from "../model"
+import { roundTo } from "../../lib/format"
 
 /** Arrodoneix a la centèsima per evitar soroll de coma flotant. */
-export const r = (v: number): number => Math.round(v * 100) / 100
+export const r = (v: number): number => roundTo(v, 2)
 
 export const X: Vec3 = [1, 0, 0]
 export const Y: Vec3 = [0, 1, 0]
@@ -12,7 +13,6 @@ export function placement(origin: Vec3, xAxis: Vec3, yAxis: Vec3, zAxis: Vec3, e
   return { origin: origin.map(r) as Vec3, xAxis, yAxis, zAxis, explodeDir }
 }
 
-/** Caixa englobant d'una peça (coordenades de la composició). */
 /** El mínim d'una peça per saber-ne la caixa: col·locació i mides. */
 export interface Placed {
   placement: { origin: readonly number[]; xAxis: readonly number[]; yAxis: readonly number[]; zAxis: readonly number[] }
@@ -21,6 +21,7 @@ export interface Placed {
   thickness: number
 }
 
+/** Caixa englobant d'una peça (coordenades de la composició). */
 export function panelBox(p: Placed): { min: Vec3; max: Vec3 } {
   const { origin: o, xAxis: x, yAxis: y, zAxis: z } = p.placement
   const min: [number, number, number] = [Infinity, Infinity, Infinity]

@@ -1,5 +1,7 @@
 import type { CamOp, Pt, XcsPreview } from "../../core/export/xcsPreview"
-import { fmtMm, opLabel, type CamSheetView } from "./camDrawing"
+import { bounds, polylineLength } from "../../core/model"
+import { opLabel, type CamSheetView } from "./camDrawing"
+import { fmtNum } from "../../lib/format"
 
 type CamPart = XcsPreview["parts"][number]
 
@@ -35,27 +37,6 @@ interface Box {
   y1: number
 }
 
-export function bbox(pts: Pt[]): Box {
-  let x0 = Infinity
-  let y0 = Infinity
-  let x1 = -Infinity
-  let y1 = -Infinity
-  for (const [x, y] of pts) {
-    x0 = Math.min(x0, x)
-    y0 = Math.min(y0, y)
-    x1 = Math.max(x1, x)
-    y1 = Math.max(y1, y)
-  }
-  return { x0, y0, x1, y1 }
-}
-
-export function pathLength(pts: Pt[], closed: boolean): number {
-  let l = 0
-  for (let i = 1; i < pts.length; i++) l += Math.hypot(pts[i]![0] - pts[i - 1]![0], pts[i]![1] - pts[i - 1]![1])
-  if (closed && pts.length > 2) l += Math.hypot(pts[0]![0] - pts[pts.length - 1]![0], pts[0]![1] - pts[pts.length - 1]![1])
-  return l
-}
-
 /** Distàncies d'una caixa (o un punt) als quatre cantells d'una altra. */
 export function edgeGaps(inner: Box, outer: Box) {
   return { left: inner.x0 - outer.x0, right: outer.x1 - inner.x1, bottom: inner.y0 - outer.y0, top: outer.y1 - inner.y1 }
@@ -63,7 +44,7 @@ export function edgeGaps(inner: Box, outer: Box) {
 
 const partBox = (q: CamPart): Box => ({ x0: q.x, y0: q.y, x1: q.x + q.w, y1: q.y + q.h })
 const EPS = 0.05
-const mm = (n: number) => `${fmtMm(n)} mm`
+const mm = (n: number) => `${fmtNum(n)} mm`
 
 /** Cotes dels cantells més propers: d'`inner` al cantell esquerre o dret i al de baix o de dalt d'`outer`. */
 function gapDims(inner: Box, outer: Box): { dims: CamDim[]; text: string } {
@@ -75,16 +56,16 @@ function gapDims(inner: Box, outer: Box): { dims: CamDim[]; text: string } {
   const bottom = g.bottom <= g.top
   const gx = left ? g.left : g.right
   const gy = bottom ? g.bottom : g.top
-  if (gx > EPS) dims.push(left ? { a: [outer.x0, yRef], b: [inner.x0, yRef], off: 0, label: fmtMm(gx), title: "Al cantell de la peça" } : { a: [inner.x1, yRef], b: [outer.x1, yRef], off: 0, label: fmtMm(gx), title: "Al cantell de la peça" })
-  if (gy > EPS) dims.push(bottom ? { a: [xRef, outer.y0], b: [xRef, inner.y0], off: 0, label: fmtMm(gy), title: "Al cantell de la peça" } : { a: [xRef, inner.y1], b: [xRef, outer.y1], off: 0, label: fmtMm(gy), title: "Al cantell de la peça" })
-  return { dims, text: `a ${fmtMm(gx)} del cantell ${left ? "esquerre" : "dret"} · a ${fmtMm(gy)} del ${bottom ? "de baix" : "de dalt"}` }
+  if (gx > EPS) dims.push(left ? { a: [outer.x0, yRef], b: [inner.x0, yRef], off: 0, label: fmtNum(gx), title: "Al cantell de la peça" } : { a: [inner.x1, yRef], b: [outer.x1, yRef], off: 0, label: fmtNum(gx), title: "Al cantell de la peça" })
+  if (gy > EPS) dims.push(bottom ? { a: [xRef, outer.y0], b: [xRef, inner.y0], off: 0, label: fmtNum(gy), title: "Al cantell de la peça" } : { a: [xRef, inner.y1], b: [xRef, outer.y1], off: 0, label: fmtNum(gy), title: "Al cantell de la peça" })
+  return { dims, text: `a ${fmtNum(gx)} del cantell ${left ? "esquerre" : "dret"} · a ${fmtNum(gy)} del ${bottom ? "de baix" : "de dalt"}` }
 }
 
 /** Cotes d'amplada (a dalt) i alçada (a la dreta) d'una caixa. */
 function sizeDims(b: Box): CamDim[] {
   const out: CamDim[] = []
-  if (b.x1 - b.x0 > EPS) out.push({ a: [b.x0, b.y1], b: [b.x1, b.y1], off: 16, label: fmtMm(b.x1 - b.x0), title: "Amplada" })
-  if (b.y1 - b.y0 > EPS) out.push({ a: [b.x1, b.y1], b: [b.x1, b.y0], off: 16, label: fmtMm(b.y1 - b.y0), title: "Alçada" })
+  if (b.x1 - b.x0 > EPS) out.push({ a: [b.x0, b.y1], b: [b.x1, b.y1], off: 16, label: fmtNum(b.x1 - b.x0), title: "Amplada" })
+  if (b.y1 - b.y0 > EPS) out.push({ a: [b.x1, b.y1], b: [b.x1, b.y0], off: 16, label: fmtNum(b.y1 - b.y0), title: "Alçada" })
   return out
 }
 
@@ -106,24 +87,24 @@ function inspectPart(view: CamSheetView, q: CamPart): CamInspection {
   const midY = (b.y0 + b.y1) / 2
   const midX = (b.x0 + b.x1) / 2
   const dims = sizeDims(b)
-  if (b.x0 > EPS) dims.push({ a: [0, midY], b: [b.x0, midY], off: 0, label: fmtMm(b.x0), title: "X des de l'origen" })
-  if (b.y0 > EPS) dims.push({ a: [midX, 0], b: [midX, b.y0], off: 0, label: fmtMm(b.y0), title: "Y des de l'origen" })
+  if (b.x0 > EPS) dims.push({ a: [0, midY], b: [b.x0, midY], off: 0, label: fmtNum(b.x0), title: "X des de l'origen" })
+  if (b.y0 > EPS) dims.push({ a: [midX, 0], b: [midX, b.y0], off: 0, label: fmtNum(b.y0), title: "Y des de l'origen" })
   const nOps = view.preview.ops.filter((o) => o.ref === q.ref).length
   const lines = [
-    `X ${fmtMm(b.x0)} · Y ${fmtMm(b.y0)} des de l'origen`,
-    ...(L !== undefined && W !== undefined ? [`a ${fmtMm(L - b.x1)} del cantell dret · a ${fmtMm(W - b.y1)} del de dalt del tauler`] : []),
-    `Llarg ${mm(q.length)} · ample ${fmtMm(q.width)}${q.angle ? ` · girada ${q.angle}°` : ""}`,
+    `X ${fmtNum(b.x0)} · Y ${fmtNum(b.y0)} des de l'origen`,
+    ...(L !== undefined && W !== undefined ? [`a ${fmtNum(L - b.x1)} del cantell dret · a ${fmtNum(W - b.y1)} del de dalt del tauler`] : []),
+    `Llarg ${mm(q.length)} · ample ${fmtNum(q.width)}${q.angle ? ` · girada ${q.angle}°` : ""}`,
     ...(q.name ? [q.name] : []),
     `${nOps} ${nOps === 1 ? "operació" : "operacions"}`,
   ]
-  return { title: `Peça ${q.ref} · ${fmtMm(q.w)} × ${mm(q.h)}`, lines, dims, focus: [midX, midY], ...(view.outlines.has(q.ref) ? { outline: view.outlines.get(q.ref)! } : {}) }
+  return { title: `Peça ${q.ref} · ${fmtNum(q.w)} × ${mm(q.h)}`, lines, dims, focus: [midX, midY], ...(view.outlines.has(q.ref) ? { outline: view.outlines.get(q.ref)! } : {}) }
 }
 
 function depthLine(o: CamOp): string {
-  const parts = [`prof. ${fmtMm(o.depth)}`]
-  if (o.maxPass && o.maxPass > 0 && o.depth > o.maxPass + EPS) parts.push(`${Math.ceil(o.depth / o.maxPass - 1e-6)} passades de ${fmtMm(o.maxPass)}`)
+  const parts = [`prof. ${fmtNum(o.depth)}`]
+  if (o.maxPass && o.maxPass > 0 && o.depth > o.maxPass + EPS) parts.push(`${Math.ceil(o.depth / o.maxPass - 1e-6)} passades de ${fmtNum(o.maxPass)}`)
   if (o.pass) parts.push(`passada ${o.pass.index}/${o.pass.count}`)
-  if (o.overMaterial) parts.push(`sobrant ${fmtMm(o.overMaterial)}`)
+  if (o.overMaterial) parts.push(`sobrant ${fmtNum(o.overMaterial)}`)
   return parts.join(" · ")
 }
 
@@ -134,16 +115,16 @@ function inspectOp(view: CamSheetView, o: CamOp): CamInspection {
   if (o.kind === "drill") {
     const c: Pt = [o.x ?? 0, o.y ?? 0]
     const q = partOf(view, o, c)
-    const lines = [`Ø ${fmtMm(o.diameter ?? 0)} · prof. ${fmtMm(o.depth)}`, `X ${fmtMm(c[0])} · Y ${fmtMm(c[1])} des de l'origen`]
+    const lines = [`Ø ${fmtNum(o.diameter ?? 0)} · prof. ${fmtNum(o.depth)}`, `X ${fmtNum(c[0])} · Y ${fmtNum(c[1])} des de l'origen`]
     let dims: CamDim[] = []
     if (q) {
       const g = gapDims({ x0: c[0], y0: c[1], x1: c[0], y1: c[1] }, partBox(q))
       const all = edgeGaps({ x0: c[0], y0: c[1], x1: c[0], y1: c[1] }, partBox(q))
       dims = g.dims
-      lines.push(g.text, `Peça ${q.ref}: esq. ${fmtMm(all.left)} · dreta ${fmtMm(all.right)} · baix ${fmtMm(all.bottom)} · dalt ${fmtMm(all.top)}`)
+      lines.push(g.text, `Peça ${q.ref}: esq. ${fmtNum(all.left)} · dreta ${fmtNum(all.right)} · baix ${fmtNum(all.bottom)} · dalt ${fmtNum(all.top)}`)
     } else {
-      if (c[0] > EPS) dims.push({ a: [0, c[1]], b: c, off: 0, label: fmtMm(c[0]), title: "X des de l'origen" })
-      if (c[1] > EPS) dims.push({ a: [c[0], 0], b: c, off: 0, label: fmtMm(c[1]), title: "Y des de l'origen" })
+      if (c[0] > EPS) dims.push({ a: [0, c[1]], b: c, off: 0, label: fmtNum(c[0]), title: "X des de l'origen" })
+      if (c[1] > EPS) dims.push({ a: [c[0], 0], b: c, off: 0, label: fmtNum(c[1]), title: "Y des de l'origen" })
     }
     lines.push(`Broca ${tool}`)
     return { title, lines, dims: top ? dims : [], focus: c }
@@ -151,30 +132,30 @@ function inspectOp(view: CamSheetView, o: CamOp): CamInspection {
 
   const d = view.draws.get(o.n)
   const w = view.widths.get(o.n)
-  const toolLine = `Eina ${tool} · Ø ${w ? fmtMm(w) : "?"}`
+  const toolLine = `Eina ${tool} · Ø ${w ? fmtNum(w) : "?"}`
   if (!d || !d.outline.length) return { title, lines: [toolLine, depthLine(o)], dims: [], focus: [0, 0] }
   // Un fresat o una ranura sense compensació (el camí és el centre de l'eina): el que es talla és el camí més mig Ø per
   // banda. Si no, una ranura de fons de 10,8 feta amb una fresa de 8 en dues passades sortia com «8» d'ample i «2,8»
   // d'alt (la distància entre les dues passades).
   const centreline = (o.kind === "rough" || o.kind === "slot") && (!o.side || o.side === "center") && !!w
-  const path = bbox(d.outline)
+  const path = bounds(d.outline)
   const b: Box = centreline ? { x0: path.x0 - w! / 2, y0: path.y0 - w! / 2, x1: path.x1 + w! / 2, y1: path.y1 + w! / 2 } : path
   const focus: Pt = [(b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2]
-  const len = pathLength(d.outline, d.closed)
+  const len = polylineLength(d.outline, d.closed)
   const circle = o.path?.circle
-  const size = circle ? `Ø ${fmtMm(2 * circle.r)}` : `${fmtMm(b.x1 - b.x0)} × ${fmtMm(b.y1 - b.y0)}`
+  const size = circle ? `Ø ${fmtNum(2 * circle.r)}` : `${fmtNum(b.x1 - b.x0)} × ${fmtNum(b.y1 - b.y0)}`
   const lines: string[] = []
   if (centreline) {
     const long = Math.max(b.x1 - b.x0, b.y1 - b.y0)
     const wide = Math.min(b.x1 - b.x0, b.y1 - b.y0)
-    const passes = wide > w! + EPS ? ` (${fmtMm(w!)} d'eina + ${fmtMm(wide - w!)} entre passades)` : ""
-    lines.push(`Amplada ${fmtMm(wide)}${passes} · llargada ${mm(long)}`, `Recorregut ${mm(len)}`)
+    const passes = wide > w! + EPS ? ` (${fmtNum(w!)} d'eina + ${fmtNum(wide - w!)} entre passades)` : ""
+    lines.push(`Amplada ${fmtNum(wide)}${passes} · llargada ${mm(long)}`, `Recorregut ${mm(len)}`)
   } else if (o.kind === "pocket" || o.kind === "rough" || o.kind === "slot") {
     const long = o.kind === "pocket" ? Math.max(b.x1 - b.x0, b.y1 - b.y0) : len
     const wide = o.kind === "pocket" ? Math.min(b.x1 - b.x0, b.y1 - b.y0) : (w ?? 0)
-    lines.push(`Amplada ${wide ? fmtMm(wide) : "?"} · llargada ${mm(long)}`)
+    lines.push(`Amplada ${wide ? fmtNum(wide) : "?"} · llargada ${mm(long)}`)
   } else lines.push(`${size} mm · llargada ${mm(len)}`)
-  lines.push(toolLine, depthLine(o), `X ${fmtMm(b.x0)} · Y ${fmtMm(b.y0)} des de l'origen`)
+  lines.push(toolLine, depthLine(o), `X ${fmtNum(b.x0)} · Y ${fmtNum(b.y0)} des de l'origen`)
   const dims = sizeDims(b)
   const q = partOf(view, o, focus)
   if (q && !(o.kind === "contour" && o.side === "outside")) {

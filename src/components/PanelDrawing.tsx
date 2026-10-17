@@ -2,9 +2,9 @@ import { Box, Text, VStack } from "@chakra-ui/react"
 import { flatten, type Panel } from "../core/model"
 import { dimFont, layoutDims, type DrawFeature } from "./dims"
 import { DimLayer } from "./DimLine"
+import { fmtNum } from "../lib/format"
 
 /** Mm amb coma i dues xifres com a molt (cotes). */
-const fmt = (v: number) => String(Math.round(v * 100) / 100).replace(".", ",")
 
 /**
  * Plànol 2D d'una peça (el mateix que anirà al DXF): contorn, forats i ranures,
@@ -112,10 +112,10 @@ export function PanelDrawing({
         {dim && (
           <g fill="var(--chakra-colors-wood-fg)" fontSize={Math.max(view.w, view.h) / 22} fontFamily="inherit">
             <text x={(dim.ex + dim.cx) / 2} y={W - dim.cy - view.h / 40} textAnchor="middle">
-              {fmt(Math.abs(dim.cx - dim.ex))}
+              {fmtNum(Math.abs(dim.cx - dim.ex))}
             </text>
             <text x={dim.cx + dim.r + view.h / 40} y={W - (dim.ey + dim.cy) / 2} dominantBaseline="middle">
-              {fmt(Math.abs(dim.cy - dim.ey))}
+              {fmtNum(Math.abs(dim.cy - dim.ey))}
             </text>
           </g>
         )}
@@ -131,17 +131,16 @@ export function PanelDrawing({
 /** Les cotes de tota la peça (y cap avall: `W − y`): forats, talls i ranures. */
 function fullDims(panel: Panel) {
   const { length: L, width: W } = panel
-  const n = (v: number) => String(Math.round(v * 100) / 100).replace(".", ",")
   const feats: DrawFeature[] = []
   for (const h of panel.holes) {
     const r = h.diameter / 2
-    feats.push({ x: h.x, y: W - h.y, hx: r, hy: r, label: `Ø${n(h.diameter)} × ${n(h.depth)}${h.face === "B" ? " (B)" : h.face === "edge" ? " cantell" : ""}` })
+    feats.push({ x: h.x, y: W - h.y, hx: r, hy: r, label: `Ø${fmtNum(h.diameter)} × ${fmtNum(h.depth)}${h.face === "B" ? " (B)" : h.face === "edge" ? " cantell" : ""}` })
   }
   for (const c of panel.cutouts ?? []) {
-    if (c.kind === "circle") feats.push({ x: c.x, y: W - c.y, hx: c.diameter / 2, hy: c.diameter / 2, label: `Ø${n(c.diameter)} passant` })
-    else if (c.kind !== "polygon") feats.push({ x: c.x + c.w / 2, y: W - c.y - c.h / 2, hx: c.w / 2, hy: c.h / 2, label: `${n(c.w)} × ${n(c.h)} passant` })
+    if (c.kind === "circle") feats.push({ x: c.x, y: W - c.y, hx: c.diameter / 2, hy: c.diameter / 2, label: `Ø${fmtNum(c.diameter)} passant` })
+    else if (c.kind !== "polygon") feats.push({ x: c.x + c.w / 2, y: W - c.y - c.h / 2, hx: c.w / 2, hy: c.h / 2, label: `${fmtNum(c.w)} × ${fmtNum(c.h)} passant` })
   }
-  for (const g of panel.grooves) feats.push({ x: g.x + g.w / 2, y: W - g.y - g.h / 2, hx: g.w / 2, hy: g.h / 2, label: `R ${n(Math.min(g.w, g.h))} × ${n(g.depth)}`, skipX: g.w >= L - 0.05, skipY: g.h >= W - 0.05 })
+  for (const g of panel.grooves) feats.push({ x: g.x + g.w / 2, y: W - g.y - g.h / 2, hx: g.w / 2, hy: g.h / 2, label: `R ${fmtNum(Math.min(g.w, g.h))} × ${fmtNum(g.depth)}`, skipX: g.w >= L - 0.05, skipY: g.h >= W - 0.05 })
   const box = { x0: 0, y0: 0, x1: L, y1: W }
   const fs = dimFont(box)
   return { fs, layout: layoutDims(box, feats, fs, { title: panel.label }) }

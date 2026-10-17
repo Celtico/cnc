@@ -1,11 +1,12 @@
-import { Box, Button, Editable, HStack, IconButton, Stack, Text } from "@chakra-ui/react"
+import { Box, Button, Editable, HStack, Menu, Stack, Text } from "@chakra-ui/react"
 import { useState } from "react"
-import { LuBox, LuCopy, LuExternalLink, LuMove, LuMoveDiagonal, LuRotateCcw, LuRotateCw, LuSofa, LuTrash2 } from "react-icons/lu"
+import { LuBox, LuCopy, LuExternalLink, LuMove, LuMoveDiagonal, LuMoveDiagonal2, LuMoveHorizontal, LuMoveVertical, LuRotateCcw, LuRotateCw, LuSofa, LuTrash2 } from "react-icons/lu"
 import { ChoiceChips, FormRow } from "../../../components/FormRow"
 import { FoldItem } from "../../../components/Fold"
 import { NumRow } from "../../../components/NumRow"
 import { toaster } from "../../../components/ui/toaster"
-import { Tooltip } from "../../../components/ui/tooltip"
+import { ActionsMenu } from "../../../components/ActionsMenu"
+import { AxisLabel } from "../../../components/AxisLabel"
 import { BlockShapeSchema, CompositionSchema, resizeComposition, type AmbientItem, type BlockItem, type Composition, type MaterialPref } from "../../../core/model"
 import { compositionOf, updateProjectComposition } from "../../../db/compositionStore"
 import type { Project } from "../../../db/db"
@@ -18,10 +19,11 @@ const SHAPE_LABEL: Record<BlockItem["shape"], string> = { box: "Caixa", sofa: "S
 function Placement({ item, onPatch }: { item: AmbientItem; onPatch: (p: Partial<AmbientItem>) => void }) {
   return (
     <FoldItem id="amb-place" title="Posició" icon={LuMove}>
-      <NumRow label="X (centre)" value={item.x} step={10} onChange={(x) => Number.isFinite(x) && onPatch({ x })} />
-      <NumRow label="Y (centre)" value={item.y} step={10} onChange={(y) => Number.isFinite(y) && onPatch({ y })} />
+      {/* Els mateixos rètols que a l'editor: el plànol és la vista de dalt (la seva Y és la fondària, Z). */}
+      <NumRow label={<AxisLabel icon={LuMoveHorizontal} name="De costat" axis="X" hint="El centre, d'esquerra a dreta del plànol" />} ariaLabel="De costat (X)" help="El centre de l'element." value={item.x} step={10} onChange={(x) => Number.isFinite(x) && onPatch({ x })} />
+      <NumRow label={<AxisLabel icon={LuMoveVertical} name="Alçada" axis="Y" hint="Des del terra" />} ariaLabel="Alçada (Y)" help="Des del terra fins a la cara de sota." value={item.elevation ?? 0} min={0} step={10} onChange={(elevation) => Number.isFinite(elevation) && onPatch({ elevation: elevation || undefined })} />
+      <NumRow label={<AxisLabel icon={LuMoveDiagonal2} name="Fondària" axis="Z" hint="El centre, de dalt a baix del plànol" />} ariaLabel="Fondària (Z)" help="El centre de l'element." value={item.y} step={10} onChange={(y) => Number.isFinite(y) && onPatch({ y })} />
       <NumRow label="Gir" suffix="°" value={item.rot} step={15} onChange={(rot) => Number.isFinite(rot) && onPatch({ rot: ((rot % 360) + 360) % 360 })} />
-      <NumRow label="Del terra" value={item.elevation ?? 0} min={0} step={10} onChange={(elevation) => Number.isFinite(elevation) && onPatch({ elevation: elevation || undefined })} />
       <HStack gap={2}>
         <Button size="xs" variant="outline" onClick={() => onPatch({ rot: (item.rot + 270) % 360 })}>
           <LuRotateCcw /> −90°
@@ -73,16 +75,16 @@ export function ItemInspector({
             {name}
           </Text>
         )}
-        <Tooltip content="Duplicar (Ctrl/⌘ D)">
-          <IconButton aria-label="Duplicar" size="xs" variant="ghost" onClick={onDuplicate}>
-            <LuCopy />
-          </IconButton>
-        </Tooltip>
-        <Tooltip content="Treure de l'ambient (Supr)">
-          <IconButton aria-label="Treure de l'ambient" size="xs" variant="ghost" colorPalette="red" onClick={onDelete}>
-            <LuTrash2 />
-          </IconButton>
-        </Tooltip>
+        {/* El menú ⋯ de l'inspector, com a l'editor (Duplicar · Eliminar). */}
+        <ActionsMenu label={`Accions de «${name}»`}>
+          <Menu.Item value="dup" onClick={onDuplicate}>
+            <LuCopy /> Duplicar
+          </Menu.Item>
+          <Menu.Separator />
+          <Menu.Item value="del" color="fg.error" onClick={onDelete}>
+            <LuTrash2 /> Eliminar
+          </Menu.Item>
+        </ActionsMenu>
       </HStack>
 
       {item.kind === "moble" ? (
@@ -110,8 +112,8 @@ export function ItemInspector({
           <FormRow label="Forma">
             <ChoiceChips label="Forma" options={BlockShapeSchema.options.map((s) => ({ id: s, label: SHAPE_LABEL[s] }))} value={item.shape} onChange={(shape) => onPatch({ shape })} />
           </FormRow>
-          <NumRow label="Ample" value={item.w} min={10} step={10} onChange={(w) => w >= 10 && onPatch({ w })} />
-          <NumRow label="Alt" value={item.h} min={5} step={10} onChange={(h) => h >= 5 && onPatch({ h })} />
+          <NumRow label="Amplada" value={item.w} min={10} step={10} onChange={(w) => w >= 10 && onPatch({ w })} />
+          <NumRow label="Alçada" value={item.h} min={5} step={10} onChange={(h) => h >= 5 && onPatch({ h })} />
           <NumRow label="Fondària" value={item.d} min={10} step={10} onChange={(d) => d >= 10 && onPatch({ d })} />
           <MaterialPick label="Material" value={item.material} materials={materials} onChange={(material) => onPatch({ material })} />
           {(item.shape === "bed" || item.shape === "sofa") && (
@@ -167,8 +169,8 @@ function MobleDims({ project, geo, onResize }: { project: Project; geo: ItemGeom
           if (!e.currentTarget.contains(e.relatedTarget as Node | null)) void apply()
         }}
       >
-      <NumRow label="Ample" value={draft.w} min={100} step={10} onChange={(w) => setDraft({ ...draft, w })} />
-      <NumRow label="Alt" value={draft.h} min={100} step={10} onChange={(h) => setDraft({ ...draft, h })} />
+      <NumRow label="Amplada" value={draft.w} min={100} step={10} onChange={(w) => setDraft({ ...draft, w })} />
+      <NumRow label="Alçada" value={draft.h} min={100} step={10} onChange={(h) => setDraft({ ...draft, h })} />
       <NumRow label="Fondària" value={draft.d} min={100} step={10} onChange={(d) => setDraft({ ...draft, d })} />
       {dirty && (
         <HStack gap={2}>

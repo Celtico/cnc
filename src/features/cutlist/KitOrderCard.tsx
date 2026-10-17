@@ -1,7 +1,7 @@
 import { Badge, Box, Button, Card, Clipboard, HStack, Stack, Text, Wrap } from "@chakra-ui/react"
 import { LuBox, LuCheck, LuCopy, LuLayers2 } from "react-icons/lu"
 import type { KitGroup } from "../../core/build/kitOrders"
-import { fmtMm } from "../../core/model"
+import { fmtNum } from "../../lib/format"
 
 /**
  * El títol del grup («DTC MAGIC-PRO HT14 F · NL 550 · Tancament suau · … · 4 calaixos (mòduls 2, 4)») partit per pintar-lo:
@@ -56,7 +56,7 @@ export function KitOrderCard({ group: g }: { group: KitGroup }) {
       <Card.Body p={0}>
         <Stack gap={0} separator={<Box borderTopWidth="1px" borderColor="border.muted" />}>
           {g.lines.map((l, i) => {
-            const note = [l.cutLength !== undefined ? `tallar a ${fmtMm(l.cutLength)} mm` : "", l.note ?? ""].filter(Boolean).join(" · ")
+            const note = [l.cutLength !== undefined ? `tallar a ${fmtNum(l.cutLength)} mm` : "", l.note ?? ""].filter(Boolean).join(" · ")
             return (
               <HStack key={i} align="start" gap={3} px={4} py={2.5}>
                 <Text fontWeight="bold" fontSize="md" minW="2.5rem" textAlign="end" fontVariantNumeric="tabular-nums" color="wood.fg" lineHeight="1.75rem">
@@ -102,7 +102,7 @@ export function KitOrderCard({ group: g }: { group: KitGroup }) {
                       {w.name}
                     </Text>
                     <Text fontSize="sm" fontFamily="mono" color="fg.muted">
-                      {fmtMm(w.width)} × {fmtMm(w.depth ?? w.height ?? 0)} × {fmtMm(w.thickness)} mm
+                      {fmtNum(w.width)} × {fmtNum(w.depth ?? w.height ?? 0)} × {fmtNum(w.thickness)} mm
                     </Text>
                     {w.note && (
                       <Text fontSize="xs" color="fg.subtle">

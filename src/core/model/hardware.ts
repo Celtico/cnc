@@ -8,6 +8,7 @@ import type { LightKit } from "./lightKit"
 import { applianceSummary } from "./appliance"
 import { HARDWARE_SLOTS, HardwareItemSchema, ModuleHardwareKitSchema, isDamagedImport, isPendingImport, type HardwareItem, type HardwareSlot } from "./hardwareSchema"
 import { migrateModuleHardware } from "./hardwareLibrary"
+import { fmtNum } from "../../lib/format"
 
 /**
  * Biblioteca de ferratges (vegeu `hardwareSchema.ts`): el model a `hardwareSchema.ts`, els paràmetres de l'editor a
@@ -26,15 +27,14 @@ export function hardwareVars(item: HardwareItem, extra: Record<string, number> =
 /** Resum d'una línia (targeta i capçalera de l'editor): els forats que fa i on. */
 /** «Ø55 × 12 · 3 W · 3000 K · cada 400 mm» (un joc de llum). */
 function lightSummary(k: LightKit, p: Record<string, number>): string {
-  const n = (v: number) => String(Math.round(v * 10) / 10).replace(".", ",")
-  const recess = k.recess.shape === "round" ? `Ø${n(k.recess.size)} × ${n(p.depth ?? k.recess.depth)}` : k.recess.shape === "square" ? `${n(k.recess.size)} × ${n(k.recess.size)} × ${n(p.depth ?? k.recess.depth)}` : `ranura ${n(k.recess.size)} × ${n(p.depth ?? k.recess.depth)}`
-  const watts = k.bars ? `${n(k.bars[0]!.watts)} W/m` : `${n(k.watts)} W`
-  return [recess, watts, k.colour, k.kind === "bar" ? "tallada a mida" : `cada ${n(p.spacing ?? 400)} mm`].join(" · ")
+  const recess = k.recess.shape === "round" ? `Ø${fmtNum(k.recess.size, 1)} × ${fmtNum(p.depth ?? k.recess.depth, 1)}` : k.recess.shape === "square" ? `${fmtNum(k.recess.size, 1)} × ${fmtNum(k.recess.size, 1)} × ${fmtNum(p.depth ?? k.recess.depth, 1)}` : `ranura ${fmtNum(k.recess.size, 1)} × ${fmtNum(p.depth ?? k.recess.depth, 1)}`
+  const watts = k.bars ? `${fmtNum(k.bars[0]!.watts, 1)} W/m` : `${fmtNum(k.watts, 1)} W`
+  return [recess, watts, k.colour, k.kind === "bar" ? "tallada a mida" : `cada ${fmtNum(p.spacing ?? 400, 1)} mm`].join(" · ")
 }
 
 export function hardwareSummary(item: HardwareItem): string {
   const v = hardwareVars(item, { pitch: item.pitch ? stepValue(item.pitch, Infinity) : 0 })
-  const n = (x: number) => (Number.isFinite(x) ? String(Math.round(x * 100) / 100).replace(".", ",") : "?")
+  const n = (x: number) => (Number.isFinite(x) ? fmtNum(x) : "?")
   const ops = item.engine === "drawerKit" && !((item.params.pilotDiameter ?? 0) > 0) ? [] : item.targets.flatMap((t) => t.ops)
   const holes = [...new Set(ops.map((o) => (o.kind === "through" ? `Ø${n(tryExpr(o.d, v))} passant` : `Ø${n(tryExpr(o.d, v))} × ${n(tryExpr(o.depth, v))}`)))]
   const p = item.params

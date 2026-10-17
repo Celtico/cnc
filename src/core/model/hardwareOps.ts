@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { signedArea } from "./polygon"
 import { repairAtomically } from "./repair"
+import { fmtNum, roundTo } from "../../lib/format"
 
 /**
  * **Generador de mecanitzats** dels ferratges (millores v1 F4, `docs/ferratges-import.md` §8): el que el ferratge fa a la
@@ -125,24 +126,22 @@ interface GenTool {
   label?: string
 }
 
-const n = (v: number) => String(Math.round(v * 100) / 100).replace(".", ",")
 
 /** El contorn és un rectangle d'eixos (es pot fer com una caixera cega): la caixa [p0, q0, p1, q1], o `null`. */
 export function axisRect(pts: readonly (readonly [number, number])[]): [number, number, number, number] | null {
   const ps = dedupe(pts)
   if (ps.length !== 4) return null
-  const xs = [...new Set(ps.map((p) => round(p[0])))]
-  const ys = [...new Set(ps.map((p) => round(p[1])))]
+  const xs = [...new Set(ps.map((p) => roundTo(p[0], 3)))]
+  const ys = [...new Set(ps.map((p) => roundTo(p[1], 3)))]
   if (xs.length !== 2 || ys.length !== 2) return null
   // Els quatre vèrtexs, cadascun una cantonada diferent, i els costats d'eixos (no en diagonal).
   for (let i = 0; i < 4; i++) {
     const a = ps[i]!
     const b = ps[(i + 1) % 4]!
-    if (round(a[0]) !== round(b[0]) && round(a[1]) !== round(b[1])) return null
+    if (roundTo(a[0], 3) !== roundTo(b[0], 3) && roundTo(a[1], 3) !== roundTo(b[1], 3)) return null
   }
   return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]
 }
-const round = (v: number) => Math.round(v * 1000) / 1000
 function dedupe(pts: readonly (readonly [number, number])[]): [number, number][] {
   const out: [number, number][] = []
   for (const p of pts) {
@@ -173,9 +172,9 @@ export function machiningProblems(ops: readonly GenOp[], tools?: readonly GenToo
     ids.add(op.id)
     const size = (v: number | undefined, what: string, max = 3000) => {
       if (v === undefined || !(v > 0)) add(`Falta ${what}.`)
-      else if (v > max) add(`${what[0]!.toUpperCase()}${what.slice(1)} de ${n(v)} mm: massa gran.`)
+      else if (v > max) add(`${what[0]!.toUpperCase()}${what.slice(1)} de ${fmtNum(v)} mm: massa gran.`)
     }
-    if (!op.through && !(op.depth > 0 && op.depth <= 100)) add(`Fondària de ${n(op.depth)} mm.`)
+    if (!op.through && !(op.depth > 0 && op.depth <= 100)) add(`Fondària de ${fmtNum(op.depth)} mm.`)
     if (op.face === "edge") {
       if (op.kind !== "drill") add("Al cantell només hi van forats.")
       if (!op.edge) add("Falta el cantell.")
@@ -190,7 +189,7 @@ export function machiningProblems(ops: readonly GenOp[], tools?: readonly GenToo
     if (op.kind === "pocket") {
       size(op.w, "la mida al llarg", 2000)
       size(op.h, "la mida a través", 2000)
-      if (op.r !== undefined && op.w && op.h && op.r > Math.min(op.w, op.h) / 2 + 1e-9) add(`Radi de ${n(op.r)} mm: més gran que mitja caixera.`)
+      if (op.r !== undefined && op.w && op.h && op.r > Math.min(op.w, op.h) / 2 + 1e-9) add(`Radi de ${fmtNum(op.r)} mm: més gran que mitja caixera.`)
     }
     if (op.kind === "contour") {
       const pts = op.points ?? []
@@ -207,14 +206,14 @@ export function machiningProblems(ops: readonly GenOp[], tools?: readonly GenToo
         const name = t.label ?? t.code
         if (op.kind === "drill") {
           if (t.kind !== "drill") add(`«${name}» no és una broca.`)
-          else if (op.d !== undefined && Math.abs(t.diameter - op.d) > 0.01) add(`La broca «${name}» fa Ø${n(t.diameter)}, no Ø${n(op.d)}.`)
+          else if (op.d !== undefined && Math.abs(t.diameter - op.d) > 0.01) add(`La broca «${name}» fa Ø${fmtNum(t.diameter)}, no Ø${fmtNum(op.d)}.`)
         } else {
           if (t.kind !== "router") add(`«${name}» no és una fresa.`)
           const narrow = op.kind === "groove" ? op.w : op.kind === "pocket" ? Math.min(op.w ?? 0, op.h ?? 0) : undefined
-          if (narrow !== undefined && narrow > 0 && t.diameter > narrow + 0.01) add(`La fresa «${name}» (Ø${n(t.diameter)}) no hi cap (${n(narrow)} mm).`)
-          if (op.kind === "pocket" && op.r !== undefined && op.r + 0.01 < t.diameter / 2) add(`La fresa «${name}» fa les cantonades de radi ${n(t.diameter / 2)} mm (més que ${n(op.r)}).`)
+          if (narrow !== undefined && narrow > 0 && t.diameter > narrow + 0.01) add(`La fresa «${name}» (Ø${fmtNum(t.diameter)}) no hi cap (${fmtNum(narrow)} mm).`)
+          if (op.kind === "pocket" && op.r !== undefined && op.r + 0.01 < t.diameter / 2) add(`La fresa «${name}» fa les cantonades de radi ${fmtNum(t.diameter / 2)} mm (més que ${fmtNum(op.r)}).`)
         }
-        if (!op.through && t.maxDepth > 0 && op.depth > t.maxDepth + 1e-9) add(`«${name}» només arriba a ${n(t.maxDepth)} mm (la fondària és ${n(op.depth)}).`)
+        if (!op.through && t.maxDepth > 0 && op.depth > t.maxDepth + 1e-9) add(`«${name}» només arriba a ${fmtNum(t.maxDepth)} mm (la fondària és ${fmtNum(op.depth)}).`)
       }
     }
   }

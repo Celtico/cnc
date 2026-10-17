@@ -1,6 +1,15 @@
 import { Stack, Text } from "@chakra-ui/react"
 import type { CompositionBuild } from "../../core/build/buildComposition"
 
+/** Colors del plànol (tokens del tema, també en mode fosc): els que diu la llegenda de sota. */
+const K = {
+  cable: "var(--chakra-colors-orange-solid)",
+  driver: "var(--chakra-colors-fg)",
+  lamp: "var(--chakra-colors-yellow-solid)",
+  hole: "var(--chakra-colors-blue-solid)",
+  mains: "var(--chakra-colors-red-solid)",
+}
+
 const fmt = (v: number) => String(Math.round(v)).replace(".", ",")
 
 /**
@@ -23,20 +32,20 @@ export function WiringPlan({ item }: { item: CompositionBuild["wirings"][number]
         <rect x={0} y={0} width={W} height={H} fill="none" stroke="var(--chakra-colors-fg-muted)" strokeWidth={2} />
         {/* Recorreguts dels cables (24 V) fins a l'alimentador. */}
         {w.runs.map((run, i) => (
-          <polyline key={i} points={run.points.map(([x, y]) => `${x},${fy(y)}`).join(" ")} fill="none" stroke="#e8590c" strokeWidth={3} strokeDasharray="10 6" />
+          <polyline key={i} points={run.points.map(([x, y]) => `${x},${fy(y)}`).join(" ")} fill="none" stroke={K.cable} strokeWidth={3} strokeDasharray="10 6" />
         ))}
-        <rect x={w.driver.x0} y={fy(w.driver.y1)} width={w.driver.x1 - w.driver.x0} height={Math.max(16, w.driver.y1 - w.driver.y0)} fill="#2b2d31" />
+        <rect x={w.driver.x0} y={fy(w.driver.y1)} width={w.driver.x1 - w.driver.x0} height={Math.max(16, w.driver.y1 - w.driver.y0)} fill={K.driver} />
         {w.lamps.map((l, i) => (
-          <circle key={i} cx={l.x} cy={fy(l.y)} r={14} fill="#fcc419" stroke="#2b2d31" strokeWidth={2} />
+          <circle key={i} cx={l.x} cy={fy(l.y)} r={14} fill={K.lamp} stroke={K.driver} strokeWidth={2} />
         ))}
         {w.holes.map((h, i) => (
-          <circle key={i} cx={h.x} cy={fy(h.y)} r={6} fill="none" stroke="#1c7ed6" strokeWidth={2} />
+          <circle key={i} cx={h.x} cy={fy(h.y)} r={6} fill="none" stroke={K.hole} strokeWidth={2} />
         ))}
-        {w.switch && <rect x={w.switch.x - 8} y={fy(w.switch.y) - 8} width={16} height={16} fill="#1c7ed6" />}
+        {w.switch && <rect x={w.switch.x - 8} y={fy(w.switch.y) - 8} width={16} height={16} fill={K.hole} />}
         {w.mains && (
           <>
-            <rect x={w.mains.x - 20} y={fy(w.mains.y) - 8} width={40} height={16} fill="none" stroke="#c92a2a" strokeWidth={3} />
-            <line x1={w.mains.x} y1={fy(w.mains.y)} x2={w.mains.x} y2={H + pad * 0.8} stroke="#c92a2a" strokeWidth={3} />
+            <rect x={w.mains.x - 20} y={fy(w.mains.y) - 8} width={40} height={16} fill="none" stroke={K.mains} strokeWidth={3} />
+            <line x1={w.mains.x} y1={fy(w.mains.y)} x2={w.mains.x} y2={H + pad * 0.8} stroke={K.mains} strokeWidth={3} />
           </>
         )}
         <text x={w.driver.x0} y={fy(w.driver.y1) - 8} style={{ fontSize: fs }} fill="currentColor">

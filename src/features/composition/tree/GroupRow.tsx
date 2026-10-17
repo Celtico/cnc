@@ -20,7 +20,7 @@ export function GroupRow({ tree, g, open, hint }: { tree: TreeCtx; g: string; op
       selected={selection.kind === "group" && selection.id === g}
       onClick={() => onSelect({ kind: "group", id: g })}
       menu={
-        <TreeRowMenu label={`Opcions de «${g}»`}>
+        <TreeRowMenu label={`Accions de «${g}»`}>
           <Menu.Item
             value="dup"
             onClick={() => {

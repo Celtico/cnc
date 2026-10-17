@@ -1,5 +1,6 @@
 import { machineRules, toolMslName, type Machine, type MachineRules, type MachineTool } from "../model/machine"
 import { usableTool } from "./tools"
+import { roundTo } from "../../lib/format"
 
 /**
  * Regles de mecanitzat del taller (`Settings.machiningRules`, les mateixes per a totes les màquines; a l'export arriben a
@@ -89,7 +90,7 @@ export class RulePicker {
       return undefined
     }
     if (t.maxDepth > 0 && t.maxDepth + 1e-6 < depth) {
-      this.note(key, `${label}: l'eina «${toolMslName(t)}» no arriba a ${Math.round(depth * 1000) / 1000} mm (fondària útil ${t.maxDepth}); es tria l'eina automàticament`)
+      this.note(key, `${label}: l'eina «${toolMslName(t)}» no arriba a ${roundTo(depth, 3)} mm (fondària útil ${t.maxDepth}); es tria l'eina automàticament`)
       return undefined
     }
     if (t.diameter <= 0 || t.diameter > maxDiameter + 1e-6) return undefined

@@ -70,7 +70,7 @@ export function ModelSection({ tree, show, isObject, uploading, onPick }: { tree
             flags={flagsOf("models", g)}
             dnd={dnd.dnd("model", g.id)}
             menu={
-              <TreeRowMenu label={`Opcions de «${g.name}»`}>
+              <TreeRowMenu label={`Accions de «${g.name}»`}>
                 {isObject && (
                   <Menu.Item
                     value="dup"

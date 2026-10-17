@@ -1,4 +1,4 @@
-import { Box, Button, HStack, IconButton, Stack, Switch, Text } from "@chakra-ui/react"
+import { Box, Button, HStack, Stack, Switch, Text } from "@chakra-ui/react"
 import { LuCheck, LuRoute, LuPlus, LuTrash2 } from "react-icons/lu"
 import { ChoiceChips, FormRow, FormSection } from "../../components/FormRow"
 import { NumberField, NumRow } from "../../components/NumRow"
@@ -6,6 +6,7 @@ import { SettingsGroup } from "../../components/SettingsGroup"
 import { blindRule, cutModeOf, defaultMachine, machineNesting, toolLabel, toolMslName, type CutMode, type Machine, type MachineRules } from "../../core/model"
 import { findRuleTool, missingRuleTools } from "../../core/machine/rules"
 import { usableTool } from "../../core/machine/tools"
+import { IconAction } from "../../components/IconAction"
 
 /**
  * Preferències › Regles de mecanitzat: les regles del taller (`Settings.machiningRules`: eines per tipus de mecanitzat,
@@ -113,9 +114,9 @@ export function MachineRulesGroup({ rules: r, machines, onChange }: { rules: Mac
                       <NumberField label="" ariaLabel="Gruix fins a" value={row.max} min={0} max={200} step={1} onChange={(max) => put({ max })} />
                     </Box>
                   </HStack>
-                  <IconButton size="xs" variant="ghost" aria-label="Treure aquests gruixos" title="Treure aquests gruixos" onClick={() => set({ profile: r.profile.filter((_, j) => j !== k) })}>
+                  <IconAction size="xs" variant="ghost" label="Eliminar aquests gruixos" onClick={() => set({ profile: r.profile.filter((_, j) => j !== k) })}>
                     <LuTrash2 />
-                  </IconButton>
+                  </IconAction>
                 </HStack>
               </FormRow>
               <FormRow label="Fresa">
@@ -170,9 +171,9 @@ export function MachineRulesGroup({ rules: r, machines, onChange }: { rules: Mac
                     <NumberField label="" ariaLabel={`Passada ${k + 1}: XY`} value={p.xy} min={0} max={10} step={0.1} onChange={(xy) => put({ xy })} />
                   </Box>
                 </HStack>
-                <IconButton size="xs" variant="ghost" aria-label="Treure la passada" title="Treure la passada" onClick={() => set({ small: { ...r.small, passes: r.small.passes.filter((_, j) => j !== k) } })}>
+                <IconAction size="xs" variant="ghost" label="Eliminar la passada" onClick={() => set({ small: { ...r.small, passes: r.small.passes.filter((_, j) => j !== k) } })}>
                   <LuTrash2 />
-                </IconButton>
+                </IconAction>
               </HStack>
             </FormRow>
           )

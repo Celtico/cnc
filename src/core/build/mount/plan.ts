@@ -2,6 +2,7 @@ import type { Panel, PanelFitting, Vec3 } from "../../model"
 import { r, toWorld } from "../geometry"
 import { BUILTIN_HINGE, boxOf, fittingBox, holeEntry, mountHoles, worldDir } from "./box"
 import type { HardwareMount } from "./types"
+import { fmtNum } from "../../../lib/format"
 
 // --- El pla (vista de dalt, secció a l'alçada del forat principal) ----------------------------------------------------
 
@@ -55,7 +56,6 @@ export interface MountPlan {
   view: { x: number; z: number; w: number; h: number }
 }
 
-const fmt = (v: number) => String(r(v)).replace(".", ",")
 
 /**
  * El pla del muntatge: vista de dalt amb un tall a l'alçada del forat principal. Les peces que el tall travessa en
@@ -132,17 +132,17 @@ export function mountPlan(m: HardwareMount): MountPlan | null {
     const below = door.z1
     const row = (k: number) => below - door.z1 + 14 + 12 * k
     const k0 = xe - side.x0 > 0.05 ? 1 : 0
-    if (xe - side.x0 > 0.05) dims.push({ a: [side.x0, below], b: [xe, below], offset: row(0), label: fmt(xe - side.x0), title: "Joc: del cantell de fora del lateral al cantell de la porta" })
+    if (xe - side.x0 > 0.05) dims.push({ a: [side.x0, below], b: [xe, below], offset: row(0), label: fmtNum(xe - side.x0), title: "Joc: del cantell de fora del lateral al cantell de la porta" })
     dims.push(
       side.x1 > xe
-        ? { a: [xe, below], b: [side.x1, below], offset: row(k0), label: fmt(side.x1 - xe), title: "Recobriment: quant tapa la porta el cantell del lateral" }
-        : { a: [side.x1, below], b: [xe, below], offset: row(k0), label: fmt(xe - side.x1), title: "Joc entre el lateral i la porta (encastada)" },
+        ? { a: [xe, below], b: [side.x1, below], offset: row(k0), label: fmtNum(side.x1 - xe), title: "Recobriment: quant tapa la porta el cantell del lateral" }
+        : { a: [side.x1, below], b: [xe, below], offset: row(k0), label: fmtNum(xe - side.x1), title: "Joc entre el lateral i la porta (encastada)" },
     )
-    dims.push({ a: [xe, below], b: [cx, below], offset: row(k0 + 1), label: fmt(cx - xe), title: "Del cantell de la porta al centre de la cassoleta" })
-    dims.push({ a: [xe, below], b: [cx - rad, below], offset: row(k0 + 2), label: `C ${fmt(cx - rad - xe)}`, title: "C: del cantell de la porta a la vora de la cassoleta (distància de perforació del fabricant)" })
+    dims.push({ a: [xe, below], b: [cx, below], offset: row(k0 + 1), label: fmtNum(cx - xe), title: "Del cantell de la porta al centre de la cassoleta" })
+    dims.push({ a: [xe, below], b: [cx - rad, below], offset: row(k0 + 2), label: `C ${fmtNum(cx - rad - xe)}`, title: "C: del cantell de la porta a la vora de la cassoleta (distància de perforació del fabricant)" })
     const depth = Math.max(...zs) - Math.min(...zs)
-    dims.push({ a: [cx + rad, door.z0], b: [cx + rad, door.z0 + depth], offset: -10, label: fmt(depth), title: "Fondària de la cassoleta" })
-    if (door.z0 - side.z1 > 0.05) dims.push({ a: [side.x1, side.z1], b: [side.x1, door.z0], offset: 10, label: fmt(door.z0 - side.z1), title: "Joc entre el lateral i la porta" })
+    dims.push({ a: [cx + rad, door.z0], b: [cx + rad, door.z0 + depth], offset: -10, label: fmtNum(depth), title: "Fondària de la cassoleta" })
+    if (door.z0 - side.z1 > 0.05) dims.push({ a: [side.x1, side.z1], b: [side.x1, door.z0], offset: 10, label: fmtNum(door.z0 - side.z1), title: "Joc entre el lateral i la porta" })
     // La filera de la placa (o la del System 32) des del davant del lateral.
     const zMid = (q: [number, number][]) => q.reduce((t, c) => t + c[1], 0) / q.length
     const rowHole = holes
@@ -150,7 +150,7 @@ export function mountPlan(m: HardwareMount): MountPlan | null {
       .sort((a, b) => Number(b.tag === "plate") - Number(a.tag === "plate") || Number(b.cut) - Number(a.cut) || zMid(b.poly!) - zMid(a.poly!))[0]
     if (rowHole?.poly) {
       const z = zMid(rowHole.poly)
-      dims.push({ a: [side.x0, side.z1], b: [side.x0, z], offset: -14, label: fmt(side.z1 - z), title: rowHole.tag === "plate" ? "Placa: del davant del lateral a la filera dels forats" : "Filera System 32: del davant del lateral" })
+      dims.push({ a: [side.x0, side.z1], b: [side.x0, z], offset: -14, label: fmtNum(side.z1 - z), title: rowHole.tag === "plate" ? "Placa: del davant del lateral a la filera dels forats" : "Filera System 32: del davant del lateral" })
     }
   } else if (!m.focus) {
     // Accessori sense forats: la mida de la peça que es veu (la barra, el perfil, el marc) i on és respecte del lateral.
@@ -160,8 +160,8 @@ export function mountPlan(m: HardwareMount): MountPlan | null {
     if (!own.length) own.push(...rects.filter((x) => x.role === "drawerFront"))
     const first = own[0]
     const side = rects.find((x) => x.role === "side")
-    if (first) dims.push({ a: [first.x0, first.z0], b: [first.x1, first.z0], offset: -16, label: fmt(first.x1 - first.x0), title: `${first.label}: llarg` })
-    if (first && side && side.z1 > first.z1 + 0.5) dims.push({ a: [first.x0, first.z1], b: [first.x0, side.z1], offset: -14, label: fmt(side.z1 - first.z1), title: "Del davant del lateral a l'accessori" })
+    if (first) dims.push({ a: [first.x0, first.z0], b: [first.x1, first.z0], offset: -16, label: fmtNum(first.x1 - first.x0), title: `${first.label}: llarg` })
+    if (first && side && side.z1 > first.z1 + 0.5) dims.push({ a: [first.x0, first.z1], b: [first.x0, side.z1], offset: -14, label: fmtNum(side.z1 - first.z1), title: "Del davant del lateral a l'accessori" })
   } else {
     // Qualsevol altre: el forat principal fins als cantells de la seva peça.
     const f = m.focus
@@ -173,23 +173,23 @@ export function mountPlan(m: HardwareMount): MountPlan | null {
       const alongZ = Math.abs(n[2]) > 0.7
       if (!alongZ) {
         const zEdge = Math.abs(E[1] - rect.z0) < Math.abs(E[1] - rect.z1) ? rect.z0 : rect.z1
-        if (Math.abs(zEdge - E[1]) > 0.5) dims.push({ a: [E[0], zEdge], b: [E[0], E[1]], offset: alongX ? -16 : 16, label: fmt(Math.abs(zEdge - E[1])), title: "Del centre del forat al cantell de la peça" })
+        if (Math.abs(zEdge - E[1]) > 0.5) dims.push({ a: [E[0], zEdge], b: [E[0], E[1]], offset: alongX ? -16 : 16, label: fmtNum(Math.abs(zEdge - E[1])), title: "Del centre del forat al cantell de la peça" })
       }
       if (!alongX) {
         const xEdge = Math.abs(E[0] - rect.x0) < Math.abs(E[0] - rect.x1) ? rect.x0 : rect.x1
-        if (Math.abs(xEdge - E[0]) > 0.5) dims.push({ a: [xEdge, E[1]], b: [E[0], E[1]], offset: 16, label: fmt(Math.abs(xEdge - E[0])), title: "Del centre del forat al cantell de la peça" })
+        if (Math.abs(xEdge - E[0]) > 0.5) dims.push({ a: [xEdge, E[1]], b: [E[0], E[1]], offset: 16, label: fmtNum(Math.abs(xEdge - E[0])), title: "Del centre del forat al cantell de la peça" })
       }
       // Dos forats del ferratge al tall, a la mateixa peça (un tirador): la distància entre centres.
       const mates = holes.filter((h) => h.own && h.cut && h.panelId === f.panelId && h.poly)
       if (mates.length === 2) {
         const c = mates.map((h) => [h.poly!.reduce((t, q) => t + q[0], 0) / 4, h.poly!.reduce((t, q) => t + q[1], 0) / 4] as [number, number])
         const [a, b] = c[0]![0] <= c[1]![0] ? [c[0]!, c[1]!] : [c[1]!, c[0]!]
-        dims.push({ a, b, offset: -16, label: fmt(Math.hypot(b[0] - a[0], b[1] - a[1])), title: "Entre els centres dels forats" })
+        dims.push({ a, b, offset: -16, label: fmtNum(Math.hypot(b[0] - a[0], b[1] - a[1])), title: "Entre els centres dels forats" })
       }
       const d = f.hole.depth
       if (alongX || alongZ) {
         const b: [number, number] = [E[0] - n[0] * d, E[1] - n[2] * d]
-        dims.push({ a: E, b, offset: alongX ? 12 : -12, label: fmt(d), title: "Fondària del forat" })
+        dims.push({ a: E, b, offset: alongX ? 12 : -12, label: fmtNum(d), title: "Fondària del forat" })
       }
     }
   }

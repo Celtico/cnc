@@ -2,7 +2,7 @@ import { DEFAULT_CABINET } from "./cabinet"
 import { DEFAULT_HARDWARE_DEFAULTS, DEFAULT_HARDWARE_LIBRARY } from "./hardware"
 import { DEFAULT_KIT_PILOT } from "./hardwareKit"
 import { PHOTO_MATERIALS } from "./textureSets"
-import { CORIAN_CATALOG } from "./corianColors"
+import { CORIAN_CATALOG, CORIAN_THICKNESSES } from "./corianColors"
 import { upgradeToPhoto } from "./photoUpgrade"
 import { defaultMachineRules } from "./machine"
 import { SETTINGS_VERSION, type AssistantPref, type Finish, type MaterialPref, type RefPreset, type Settings } from "./settingsSchema"
@@ -60,9 +60,9 @@ export const NON_CNC_MATERIALS: MaterialPref[] = [
  * tres de 19 encolades (el bloc d'un lavabo massís, on es fresa la pica). Afegits a la v50 (els blocs, a la v51).
  */
 export const CORIAN_MATERIALS: MaterialPref[] = [
-  { id: "corian-white", name: "Corian blanc", thicknesses: [6, 12, 19, 38, 57], hasGrain: false, finish: { kind: "stone", color: "#f1efea", vein: "#e2ded6", veins: 0, size: 600, seed: 7, style: "granite", grain: 0.08, polish: 0.35 }, edge: "", solid: true, category: "corian" },
-  { id: "corian-sand", name: "Corian sorra", thicknesses: [6, 12, 19, 38, 57], hasGrain: false, finish: { kind: "stone", color: "#ddd3c3", vein: "#c4b8a4", veins: 0, size: 600, seed: 13, style: "granite", grain: 0.06, polish: 0.35 }, edge: "", solid: true, category: "corian" },
-  { id: "corian-grey", name: "Corian gris pedra", thicknesses: [6, 12, 19, 38, 57], hasGrain: false, finish: { kind: "stone", color: "#9d9b97", vein: "#85837e", veins: 0, size: 600, seed: 19, style: "granite", grain: 0.08, polish: 0.35 }, edge: "", solid: true, category: "corian" },
+  { id: "corian-white", name: "Corian blanc", thicknesses: [...CORIAN_THICKNESSES], hasGrain: false, finish: { kind: "stone", color: "#f1efea", vein: "#e2ded6", veins: 0, size: 600, seed: 7, style: "granite", grain: 0.08, polish: 0.35 }, edge: "", solid: true, category: "corian" },
+  { id: "corian-sand", name: "Corian sorra", thicknesses: [...CORIAN_THICKNESSES], hasGrain: false, finish: { kind: "stone", color: "#ddd3c3", vein: "#c4b8a4", veins: 0, size: 600, seed: 13, style: "granite", grain: 0.06, polish: 0.35 }, edge: "", solid: true, category: "corian" },
+  { id: "corian-grey", name: "Corian gris pedra", thicknesses: [...CORIAN_THICKNESSES], hasGrain: false, finish: { kind: "stone", color: "#9d9b97", vein: "#85837e", veins: 0, size: 600, seed: 19, style: "granite", grain: 0.08, polish: 0.35 }, edge: "", solid: true, category: "corian" },
 ]
 
 /** Els acabats dels Corian a la v50 (massa gra): la v51 els canvia si no s'han tocat (i hi afegeix els blocs de 38 i 57). */

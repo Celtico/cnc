@@ -1,4 +1,4 @@
-import { Box, HStack, IconButton, Input, Stack, Text } from "@chakra-ui/react"
+import { Box, HStack, Input, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useRef, type RefObject } from "react"
 import { LuCircleDot, LuCopy, LuListOrdered, LuMoveDiagonal, LuRuler, LuSquareDot, LuTrash2 } from "react-icons/lu"
 import { FoldItem } from "../../../components/Fold"
@@ -19,6 +19,7 @@ import { fmt, opText, stepBadge } from "./format"
 import { GeneralSection, ImportedSection } from "./HardwareCardSections"
 import { OpsEditor } from "./OpsEditor"
 import { UpdateNotice } from "./UpdateNotice"
+import { IconAction } from "../../../components/IconAction"
 
 export function HardwareCard({
   item,
@@ -224,12 +225,12 @@ function NameHeader({ item, dirty, onChange, onDuplicate, onDelete, autoFocusNam
         </Text>
       </Stack>
       <HStack gap={0} flexShrink={0} pt={1.5}>
-        <IconButton aria-label="Duplicar ferratge" title="Duplicar" size="sm" variant="ghost" onClick={onDuplicate}>
+        <IconAction label="Duplicar ferratge" tip="Duplicar" size="sm" variant="ghost" onClick={onDuplicate}>
           <LuCopy />
-        </IconButton>
-        <IconButton aria-label="Eliminar ferratge" title="Eliminar" size="sm" variant="ghost" colorPalette="red" onClick={onDelete}>
+        </IconAction>
+        <IconAction label="Eliminar ferratge" tip="Eliminar" size="sm" variant="ghost" colorPalette="red" onClick={onDelete}>
           <LuTrash2 />
-        </IconButton>
+        </IconAction>
       </HStack>
     </HStack>
   )

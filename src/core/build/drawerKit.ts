@@ -7,7 +7,6 @@ import {
   NO_EDGES,
   chooseVariant,
   evalKit,
-  fmtMm,
   isDrawerKit,
   kitApplies,
   kitFinishMaterial,
@@ -27,6 +26,7 @@ import {
   type Vec3,
 } from "../model"
 import { r } from "./geometry"
+import { fmtNum } from "../../lib/format"
 
 /**
  * **Calaix amb joc paramètric** (`HardwareKit`, `docs/ferratges-jocs.md`): el pla d'un calaix fet amb un joc del
@@ -119,12 +119,12 @@ export function planKit(item: HardwareItem, input: KitInput): { plan: KitPlan | 
   const variant = chooseVariant(kit, input.depth, options.closing)
   if (!variant) {
     const nls = kit.variants.filter((v) => v.kit[options.closing]).map((v) => v.nl)
-    warnings.push(`«${item.name}»: cap llargada (${nls.join(", ")}) hi cap en ${fmtMm(input.depth)} mm de fondària darrere del front (cal NL + ${kit.rules.depthMargin}). El calaix es queda només amb el front.`)
+    warnings.push(`«${item.name}»: cap llargada (${nls.join(", ")}) hi cap en ${fmtNum(input.depth)} mm de fondària darrere del front (cal NL + ${kit.rules.depthMargin}). El calaix es queda només amb el front.`)
     return { plan: null, warnings }
   }
   const KB = r(input.LW + 2 * (kit.rules.metalBackSideThickness ?? 16))
   const rule = widthRule(kit, KB)
-  if (!rule) warnings.push(`«${item.name}»: amplada de moble ${fmtMm(KB)} (LW ${fmtMm(input.LW)} + 2 × 16) fora de la taula del catàleg (fins a ${Math.max(...kit.rules.widths.map((w) => w.upTo))}): sense estabilitzador ni barra; comprova-ho amb el fabricant.`)
+  if (!rule) warnings.push(`«${item.name}»: amplada de moble ${fmtNum(KB)} (LW ${fmtNum(input.LW)} + 2 × 16) fora de la taula del catàleg (fins a ${Math.max(...kit.rules.widths.map((w) => w.upTo))}): sense estabilitzador ni barra; comprova-ho amb el fabricant.`)
   const vars0 = kitVars(kit, { LW: input.LW, NL: variant.nl, KB, G: input.G, TB: input.TB })
   const cut = kit.rules.syncRodCut[options.closing]
   const syncRod = cut !== undefined && rule && rule.syncRod >= 1 ? evalKit(cut, vars0) : undefined
@@ -164,8 +164,8 @@ export function planKit(item: HardwareItem, input: KitInput): { plan: KitPlan | 
     })
   }
   if (options.back === "metal" && kit.rules.metalBackSideThickness !== undefined && Math.abs(input.G - kit.rules.metalBackSideThickness) > 0.01)
-    warnings.push(`«${item.name}»: el darrere metàl·lic del catàleg és per a laterals de ${kit.rules.metalBackSideThickness} mm i el mòdul és de ${fmtMm(input.G)}: cal un darrere a mida (o laterals de ${kit.rules.metalBackSideThickness}).`)
-  if (Math.abs(input.TB - 16) > 0.01) warnings.push(`«${item.name}»: el catàleg suposa un fons de calaix de 16 mm i aquest és de ${fmtMm(input.TB)}: comprova l'alçada del darrere (${fmtMm(kit.heightClass.backHeight)}) amb el fabricant.`)
+    warnings.push(`«${item.name}»: el darrere metàl·lic del catàleg és per a laterals de ${kit.rules.metalBackSideThickness} mm i el mòdul és de ${fmtNum(input.G)}: cal un darrere a mida (o laterals de ${kit.rules.metalBackSideThickness}).`)
+  if (Math.abs(input.TB - 16) > 0.01) warnings.push(`«${item.name}»: el catàleg suposa un fons de calaix de 16 mm i aquest és de ${fmtNum(input.TB)}: comprova l'alçada del darrere (${fmtNum(kit.heightClass.backHeight)}) amb el fabricant.`)
 
   const sidePilots: { z: number; y: number }[] = []
   const rows = kit.machining.side.rows
@@ -281,7 +281,7 @@ export function kitSolidPanels(plan: KitPlan, k: number, at: { x0: number; y0: n
 export function kitLineText(l: KitOrderLine): string {
   const parts = [`${l.qty} × ${l.name}`]
   if (l.item) parts.push(l.item)
-  if (l.cutLength !== undefined) parts.push(`tallar a ${fmtMm(l.cutLength)} mm`)
+  if (l.cutLength !== undefined) parts.push(`tallar a ${fmtNum(l.cutLength)} mm`)
   if (l.note) parts.push(l.note)
   return parts.join(" · ")
 }
@@ -289,7 +289,7 @@ export function kitLineText(l: KitOrderLine): string {
 /** Text d'una peça de fusta: «Fons del calaix (A) · 681 × 421 × 16». */
 export function kitWoodText(w: KitWoodSize): string {
   const second = w.depth ?? w.height ?? 0
-  return `${w.name} · ${fmtMm(w.width)} × ${fmtMm(second)} × ${fmtMm(w.thickness)}`
+  return `${w.name} · ${fmtNum(w.width)} × ${fmtNum(second)} × ${fmtNum(w.thickness)}`
 }
 
 /** L'etiqueta de les opcions: «Tancament suau · darrere de fusta · blanc seda». */

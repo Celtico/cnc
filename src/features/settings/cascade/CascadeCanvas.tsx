@@ -9,9 +9,9 @@ const NODE_TYPES = { cascade: CascadeNode }
 
 /** Els textos de React Flow, en català. */
 const LABELS = {
-  "node.a11yDescription.default": "Retorn o espai per triar el node. Supr per esborrar-lo i Esc per cancel·lar.",
-  "node.a11yDescription.keyboardDisabled": "Retorn o espai per triar el node. Supr per esborrar-lo i Esc per cancel·lar.",
-  "edge.a11yDescription.default": "Retorn o espai per triar la fletxa. Supr per esborrar-la i Esc per cancel·lar.",
+  "node.a11yDescription.default": "Retorn o espai per triar el node. Supr per eliminar-lo i Esc per cancel·lar.",
+  "node.a11yDescription.keyboardDisabled": "Retorn o espai per triar el node. Supr per eliminar-lo i Esc per cancel·lar.",
+  "edge.a11yDescription.default": "Retorn o espai per triar la fletxa. Supr per eliminar-la i Esc per cancel·lar.",
   "controls.ariaLabel": "Zoom i encaixar",
   "controls.zoomIn.ariaLabel": "Apropar",
   "controls.zoomOut.ariaLabel": "Allunyar",

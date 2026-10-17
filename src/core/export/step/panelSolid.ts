@@ -1,5 +1,6 @@
 import { isFlatPocket, pocketPolygon, type EdgeSide, type Panel } from "../../model"
-import { pointInRing, rectsOverlap, signedArea, subtractRects, type Poly2, type Pt2, type Rect2 } from "../region2d"
+import { pointInPolygon, signedArea } from "../../model/polygon"
+import { rectsOverlap, subtractRects, type Poly2, type Pt2, type Rect2 } from "../region2d"
 import { cutoutFeature, cylPocket, EDGE_TO_FACE, EPS, featureBox, regionMinusRects, type BoxFace, type RoundFeature } from "./features"
 import { blindDepth, type PanelSolid } from "./outlineSolid"
 import { add, dot, frameFor, mul, neg, newell, rectFace, sub, to2D, to3D, unit, X, Y, Z, type Face, type Frame, type Loop, type V3 } from "./vec"
@@ -322,7 +323,7 @@ function acceptRounds(run: BoxRun, shape: BoxShape): Record<BoxFace, RoundFeatur
     const poly = facePoly(face)
     if (poly) {
       const corners: Pt2[] = [[bbox.a0, bbox.b0], [bbox.a1, bbox.b0], [bbox.a1, bbox.b1], [bbox.a0, bbox.b1]]
-      if (!corners.every((c) => pointInRing(c, poly))) return false
+      if (!corners.every((c) => pointInPolygon(c, poly))) return false
     }
     if (rects[face].some((r) => rectsOverlap(r, bbox, 0.01))) return false
     if (occupied[face].some((r) => rectsOverlap(r, bbox, 0.01))) return false
@@ -378,7 +379,7 @@ function boxFaces(run: BoxRun, shape: BoxShape, accepted: Record<BoxFace, RoundF
       const loops: Loop[] = [poly.outer.map((q) => ({ p: to3D(f, q) }))]
       for (const ring of poly.inners) loops.push(ring.map((q) => ({ p: to3D(f, q) })))
       for (const it of inner[face]) {
-        const host = polys.find((pp) => pointInRing(it.center, pp.outer) && !pp.inners.some((ir) => pointInRing(it.center, ir))) ?? polys[0]
+        const host = polys.find((pp) => pointInPolygon(it.center, pp.outer) && !pp.inners.some((ir) => pointInPolygon(it.center, ir))) ?? polys[0]
         if (host === poly) loops.push(it.loop)
       }
       faces.push({ kind: "plane", loc: to3D(f, poly.outer[0]!), normal: f.n, loops })

@@ -1,4 +1,4 @@
-import { Alert, Button, HStack, IconButton, Text } from "@chakra-ui/react"
+import { Alert, Button, HStack, Text } from "@chakra-ui/react"
 import { LuArrowUpFromLine, LuX } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
 import type { Composition } from "../../core/model"
@@ -6,6 +6,7 @@ import type { Pt } from "../../core/photo/homography"
 import type { PhotoCalibration } from "../../db/db"
 import type { DepthResult, SetCal, Tool } from "./calibration"
 import type { CalibrationScene } from "./useCalibrationScene"
+import { IconAction } from "../../components/IconAction"
 
 const POINT_NAMES = ["baix-esquerra", "baix-dreta", "dalt-dreta", "dalt-esquerra"]
 
@@ -97,9 +98,9 @@ export function DepthAlert({
                 Fondària de «{r.name}»
               </Button>
             ))}
-            <IconButton aria-label="Tancar" size="xs" variant="ghost" onClick={onClose}>
+            <IconAction label="Tancar" size="xs" variant="ghost" onClick={onClose}>
               <LuX />
-            </IconButton>
+            </IconAction>
           </HStack>
         </Alert.Description>
       </Alert.Content>

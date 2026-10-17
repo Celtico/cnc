@@ -1,5 +1,6 @@
 import type { LightKit } from "../model"
 import type { KitOrderLine } from "./drawerKit"
+import { roundTo } from "../../lib/format"
 
 /**
  * **Pla d'un joc de llum** en una peça (la tapa o un prestatge, per la cara de sota): quantes làmpades, on, si s'hi
@@ -44,7 +45,6 @@ interface LightPlan {
   warnings: string[]
 }
 
-const r1 = (v: number) => Math.round(v * 10) / 10
 
 export function planLights(k: LightKit, p: LightParams, span: { length: number; depth: number }, thickness: number): LightPlan {
   const depth = p.depth > 0 ? p.depth : k.recess.depth
@@ -56,17 +56,17 @@ export function planLights(k: LightKit, p: LightParams, span: { length: number; 
     const bars = (k.bars ?? []).slice().sort((a, b) => a.length - b.length)
     const fit = bars.find((b) => b.length >= cut) ?? bars[bars.length - 1]
     if (!fit || cut < 100) {
-      warnings.push(`${k.series}: el compartiment fa ${r1(span.length)} mm, massa estret per a una barra.`)
+      warnings.push(`${k.series}: el compartiment fa ${roundTo(span.length, 1)} mm, massa estret per a una barra.`)
       return { xs: [], z: 0, recessed: false, depth, watts: 0, peakWatts: 0, lines, warnings }
     }
     const short = fit.length < cut
     const profile = short ? fit.length : cut
     const step = k.barStep ?? 50
     const strip = Math.max(step, Math.floor((profile - 5) / step) * step)
-    const watts = r1((fit.watts * strip) / fit.length)
-    if (short) warnings.push(`${k.series}: el compartiment fa ${r1(span.length)} mm i la barra més llarga ${fit.length}: se'n posa una de ${fit.length} centrada.`)
+    const watts = roundTo((fit.watts * strip) / fit.length, 1)
+    if (short) warnings.push(`${k.series}: el compartiment fa ${roundTo(span.length, 1)} mm i la barra més llarga ${fit.length}: se'n posa una de ${fit.length} centrada.`)
     const canRecess = thickness >= depth + 5
-    if (!canRecess) warnings.push(`${k.series}: la peça fa ${r1(thickness)} mm i la ranura ${r1(depth)} de fondària (calen ${r1(depth + 5)}): es munta a sobre, sense ranura.`)
+    if (!canRecess) warnings.push(`${k.series}: la peça fa ${roundTo(thickness, 1)} mm i la ranura ${roundTo(depth, 1)} de fondària (calen ${roundTo(depth + 5, 1)}): es munta a sobre, sense ranura.`)
     lines.push({ component: `bar:${fit.article}`, name: `Barra ${name} (${fit.length} mm)`, qty: 1, item: fit.article, cutLength: profile, note: `tira LED a ${strip} mm (cada ${step}); ${watts} W` })
     return { xs: [span.length / 2], z: p.setback + k.recess.size / 2, recessed: canRecess, depth, ...(canRecess ? {} : { reason: "gruix" }), bar: { length: fit.length, article: fit.article, cut: profile, strip, watts, ...(short ? { short: true } : {}) }, watts, peakWatts: watts, lines, warnings }
   }
@@ -74,24 +74,24 @@ export function planLights(k: LightKit, p: LightParams, span: { length: number; 
   const spacing = p.spacing > 0 ? p.spacing : 400
   const n = Math.max(1, Math.round(span.length / spacing))
   if (span.length < body + 20 || span.depth < body + 20) {
-    warnings.push(`${k.series}: la làmpada (Ø${r1(body)}) no cap al compartiment de ${r1(span.length)} × ${r1(span.depth)} mm.`)
+    warnings.push(`${k.series}: la làmpada (Ø${roundTo(body, 1)}) no cap al compartiment de ${roundTo(span.length, 1)} × ${roundTo(span.depth, 1)} mm.`)
     return { xs: [], z: 0, recessed: false, depth, watts: 0, peakWatts: 0, lines, warnings }
   }
-  const xs = Array.from({ length: n }, (_, i) => r1((span.length * (i + 0.5)) / n))
+  const xs = Array.from({ length: n }, (_, i) => roundTo((span.length * (i + 0.5)) / n, 1))
   const z = Math.min(Math.max(p.setback, k.recess.size / 2 + 10), span.depth - k.recess.size / 2 - 10)
   let recessed = thickness >= depth + 5 && span.length / n >= k.recess.size + 20
   let reason: string | undefined
   if (!recessed) {
-    reason = thickness < depth + 5 ? `la peça fa ${r1(thickness)} mm i el rebaix ${r1(depth)} de fondària (calen ${r1(depth + 5)})` : `no hi cap el rebaix de ${r1(k.recess.size)} amb ${n} làmpades`
+    reason = thickness < depth + 5 ? `la peça fa ${roundTo(thickness, 1)} mm i el rebaix ${roundTo(depth, 1)} de fondària (calen ${roundTo(depth + 5, 1)})` : `no hi cap el rebaix de ${roundTo(k.recess.size, 1)} amb ${n} làmpades`
     if (k.surface) warnings.push(`${k.series}: ${reason}: es munta a sobre (${k.surface.name}), sense rebaix.`)
     else {
       warnings.push(`${k.series}: ${reason} i no es pot muntar a sobre: cap làmpada.`)
       return { xs: [], z, recessed: false, depth, reason, watts: 0, peakWatts: 0, lines, warnings }
     }
   }
-  lines.push({ component: `lamp:${k.article}`, name, qty: n, item: k.article, note: `${r1(k.watts)} W cada una${k.finish ? ` · ${k.finish}` : ""}` })
+  lines.push({ component: `lamp:${k.article}`, name, qty: n, item: k.article, note: `${roundTo(k.watts, 1)} W cada una${k.finish ? ` · ${k.finish}` : ""}` })
   if (!recessed && k.surface) lines.push({ component: `box:${k.surface.article}`, name: k.surface.name, qty: n, item: k.surface.article })
-  return { xs, z, recessed, depth, ...(reason ? { reason } : {}), watts: r1(n * k.watts), peakWatts: r1(n * Math.max(k.watts, k.peakWatts ?? 0)), lines, warnings }
+  return { xs, z, recessed, depth, ...(reason ? { reason } : {}), watts: roundTo(n * k.watts, 1), peakWatts: roundTo(n * Math.max(k.watts, k.peakWatts ?? 0), 1), lines, warnings }
 }
 
 /** Mig cercle per costat: el contorn rodó d'una làmpada (coordenades locals, Ø `d`, centre a (d/2, d/2)). */

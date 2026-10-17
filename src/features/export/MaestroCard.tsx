@@ -5,9 +5,9 @@ import type { Machine } from "../../core/model"
 import { ExportCard } from "./ExportCard"
 import { PostCncList } from "./PostCncList"
 import type { MaestroPrograms } from "./useMaestroPrograms"
+import { fmtNum } from "../../lib/format"
 
 /** Mm amb coma decimal (com a la resta de la UI). */
-const fmt = (n: number) => String(Math.round(n * 100) / 100).replace(".", ",")
 
 /** Targeta de la màquina CNC (Maestro): programes .xcs, Vista CAM, avisos i el que toca després de la CNC. */
 export function MaestroCard({ base, machine, xcs, onXcs, onCam }: { base: string; machine: Machine | undefined; xcs: MaestroPrograms | null; onXcs: () => void; onCam: () => void }) {
@@ -31,8 +31,8 @@ export function MaestroCard({ base, machine, xcs, onXcs, onCam }: { base: string
     >
       {machine && xcs && (
         <Text fontSize="sm" color="fg.muted">
-          Separació entre peces {fmt(xcs.spacing)} mm
-          {xcs.spacingTool ? ` (Ø${fmt(xcs.spacingTool.diameter)} + ${fmt(xcs.spacing - xcs.spacingTool.diameter)}, la fresa de contorn més grossa)` : ""}; marge del tauler, martiri i
+          Separació entre peces {fmtNum(xcs.spacing)} mm
+          {xcs.spacingTool ? ` (Ø${fmtNum(xcs.spacingTool.diameter)} + ${fmtNum(xcs.spacing - xcs.spacingTool.diameter)}, la fresa de contorn més grossa)` : ""}; marge del tauler, martiri i
           regles de mecanitzat a Preferències.
         </Text>
       )}

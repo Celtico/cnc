@@ -3,6 +3,7 @@ import { panelBox } from "../build/geometry"
 import type { Nesting } from "../nesting/nest"
 import { pieceRefs } from "./refs"
 import type { Board, Join, Piece, Role, Side, Solid, UnifiedData } from "./unified.types"
+import { roundTo } from "../../lib/format"
 
 /**
  * Camí B: genera el contracte `UnifiedData` del taller directament des de les
@@ -69,10 +70,9 @@ function sideOf(p: Panel): Side {
 /** Caixa englobant de la peça en coordenades del moble. */
 export function panelAabb(p: Panel): { min: [number, number, number]; size: [number, number, number] } {
   const { min, max } = panelBox(p)
-  const r = (v: number) => Math.round(v * 100) / 100
   return {
-    min: [r(min[0]), r(min[1]), r(min[2])],
-    size: [r(max[0] - min[0]), r(max[1] - min[1]), r(max[2] - min[2])],
+    min: [roundTo(min[0], 2), roundTo(min[1], 2), roundTo(min[2], 2)],
+    size: [roundTo(max[0] - min[0], 2), roundTo(max[1] - min[1], 2), roundTo(max[2] - min[2], 2)],
   }
 }
 
@@ -117,7 +117,7 @@ function toSolid(p: Panel): Solid {
         ] as [number, number][],
       })),
       // Buidats de qualsevol forma: el contorn i la fondària més gran (els de fons no pla, aproximats).
-      ...(p.pockets ?? []).map((k) => ({ depth: k.depth, side: k.face === "A" ? ("a" as const) : ("b" as const), pts: flatten(k.points, Math.PI / 16).map(([x, y]) => [Math.round(x * 100) / 100, Math.round(y * 100) / 100] as [number, number]) })),
+      ...(p.pockets ?? []).map((k) => ({ depth: k.depth, side: k.face === "A" ? ("a" as const) : ("b" as const), pts: flatten(k.points, Math.PI / 16).map(([x, y]) => [roundTo(x, 2), roundTo(y, 2)] as [number, number]) })),
       // Talls passants: pocket de tota la fondària (depth = gruix), des de la cara A.
       ...(p.cutouts ?? []).map((c) => ({ depth: p.thickness, side: "a" as const, pts: cutoutPolygon(c) })),
     ],
@@ -126,7 +126,6 @@ function toSolid(p: Panel): Solid {
 
 /** Perímetre aproximat d'un tall passant (els arcs, per 8 segments per semicercle). */
 export function cutoutPolygon(c: Cutout): [number, number][] {
-  const r2 = (v: number): number => Math.round(v * 100) / 100
   if (c.kind === "rect") {
     return [
       [c.x, c.y],
@@ -135,12 +134,12 @@ export function cutoutPolygon(c: Cutout): [number, number][] {
       [c.x, c.y + c.h],
     ]
   }
-  if (c.kind === "polygon") return flatten(c.points, Math.PI / 16).map(([x, y]) => [r2(x), r2(y)] as [number, number])
+  if (c.kind === "polygon") return flatten(c.points, Math.PI / 16).map(([x, y]) => [roundTo(x, 2), roundTo(y, 2)] as [number, number])
   if (c.kind === "circle") {
     const rad = c.diameter / 2
     return Array.from({ length: 16 }, (_, i) => {
       const a = (i / 16) * Math.PI * 2
-      return [r2(c.x + rad * Math.cos(a)), r2(c.y + rad * Math.sin(a))]
+      return [roundTo(c.x + rad * Math.cos(a), 2), roundTo(c.y + rad * Math.sin(a), 2)]
     })
   }
   const horizontal = c.w >= c.h
@@ -149,7 +148,7 @@ export function cutoutPolygon(c: Cutout): [number, number][] {
   const arc = (cx: number, cy: number, from: number): void => {
     for (let i = 0; i <= 8; i++) {
       const a = from + (i / 8) * Math.PI
-      pts.push([r2(cx + rad * Math.cos(a)), r2(cy + rad * Math.sin(a))])
+      pts.push([roundTo(cx + rad * Math.cos(a), 2), roundTo(cy + rad * Math.sin(a), 2)])
     }
   }
   if (horizontal) {

@@ -1,4 +1,4 @@
-import { Button, HStack, IconButton, Text } from "@chakra-ui/react"
+import { Button, HStack, Text } from "@chakra-ui/react"
 import type { ReactNode } from "react"
 import { LuArrowDownToLine, LuArrowUpFromLine, LuLocateFixed, LuMoveHorizontal, LuPencilLine, LuRectangleHorizontal, LuX } from "react-icons/lu"
 import { FoldItem } from "../../components/Fold"
@@ -7,6 +7,7 @@ import type { Pt } from "../../core/photo/homography"
 import type { PhotoCalibration } from "../../db/db"
 import type { SetCal, Tool } from "./calibration"
 import type { CalibrationScene } from "./useCalibrationScene"
+import { IconAction } from "../../components/IconAction"
 
 /** Secció «Eines»: origen, mesures, línia del terra i fondària. */
 export function ToolsSection({
@@ -50,9 +51,9 @@ export function ToolsSection({
         {toolButton("floor", cal.floorLine ? "Terra" : "Línia del terra", <LuArrowDownToLine />, cal.plane !== "wall")}
         {toolButton("depth", "Fondària", <LuArrowUpFromLine />, !floor)}
         {origin3 && (
-          <IconButton size="xs" variant="ghost" aria-label="Treure l'origen" title="Treure l'origen" onClick={() => setCal((c) => ({ ...c, origin: undefined, originMm: undefined, originScale: undefined, offset: [0, 0], offsetZ: 0 }))}>
+          <IconAction size="xs" variant="ghost" label="Treure l'origen" onClick={() => setCal((c) => ({ ...c, origin: undefined, originMm: undefined, originScale: undefined, offset: [0, 0], offsetZ: 0 }))}>
             <LuX />
-          </IconButton>
+          </IconAction>
         )}
       </HStack>
       <Text fontSize="xs" color="fg.muted">

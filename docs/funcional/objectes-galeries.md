@@ -26,11 +26,12 @@
 
 ### Galeries (Mobles · Ambients · Objectes)
 - **Les tres pàgines fan igual**: capçalera `PageHeader` (títol gran i l'explicació), **cercador amb el botó principal al
-  costat, a l'esquerra** (per decisió de l'usuari: primer els botons i després el cercador; `components/SearchBar`: «+ Nou moble» · «+ Nou objecte» · «+ Nou ambient», `colorPalette="wood"`, **buits** (per
+  costat, a l'esquerra** (per decisió de l'usuari: primer els botons i després el cercador; `components/SearchBar`: «Nou moble» · «Nou objecte» · «Nou ambient» amb la icona + (`LuPlus`), `colorPalette="wood"`, **buits** (per
   decisió de l'usuari: «que no fiqui res»): `projects/blank.ts` (moble sense mòduls, objecte sense peces) i l'ambient
-  sense parets (`EMPTY_AMBIENT`); «+ Nou moble» crea el moble directament (sense menú); amb text a l'ordinador i només la icona al mòbil, amb `aria-label` i tooltip; **«Obrir
+  sense parets (`EMPTY_AMBIENT`); «Nou moble» crea el moble directament (sense menú); amb text a l'ordinador i només la icona al mòbil, amb `aria-label` i tooltip; **«Obrir
   fitxer»** (`LuFolderOpen`, `file/OpenFileButton.tsx`) a les tres, a la mateixa fila, entre el «+» i el cercador (vegeu
-  Desar i fitxers › Obrir fitxer); sense accents; obre les seccions i categories amb resultats) i acordions
+  Desar i fitxers › Obrir fitxer); textos «Cercar mobles: nom, tipus, estil, material, color…», «Cercar objectes: nom,
+  material…» i «Cercar ambients: nom, grup…»; sense accents; obre les seccions i categories amb resultats) i acordions
   **tots tancats** en obrir l'app (estat de la sessió, p. ex. `mobles:gallery`): **Historial**, **Projectes** i **Catàleg**;
   a Mobles, a més, **Col·leccions de mobles**. Les galeries de les finestres «Afegir un moble» / «Afegir un objecte» dels ambients
   (`ambients/AmbientPicker.tsx`) no porten el botó (`add` opcional) ni la fila d'eines, però sí Historial · Projectes (amb els
@@ -81,8 +82,11 @@
 - **Historial i Projectes**: primer l'**Historial** (el que és de pas, sense grup) i a sota **Projectes** (el que es desa en
   un grup, p. ex. un per client; `FolderedGrid show="loose"|"folders"`, `projects/Folders.tsx`: grups plegables amb ⋯
   canviar el nom / desagrupar; la cerca obre els grups amb resultats). Grups: `Project.folder`, `AmbientRow.folder`;
-  `setProjectsFolder`, `setAmbientsFolder`. Menú ⋯ de cada targeta: desar com a fitxer (`.moble`, també els ambients), duplicar, **moure a un grup…**
-  (`MoveToFolderDialog`), esborrar. **«Grup nou»** (nom i després es toquen les targetes) i **«Seleccionar»**
+  `setProjectsFolder`, `setAmbientsFolder`. Menú ⋯ de cada targeta (`projects/CardMenu.tsx`, el mateix a Mobles, Objectes i Ambients; `aria-label`
+  «Accions de «x»», tooltip «Accions»): «Desar com a fitxer…» (`.moble`, també els ambients), «Duplicar» («Duplicar (per a un
+  client)…» als ambients), **«Moure a un grup…»** (`MoveToFolderDialog`) i «Esborrar». **Esborrar** demana confirmació
+  (`ConfirmDialog`): «Esborrar «x»?» · «No es pot desfer.» (si és en algun ambient, ho diu: hi sortirà com a «Element
+  esborrat»; als ambients, que els seus mobles i objectes no s'esborren) i, en acabar, l'avís ««x» esborrat». **«Grup nou»** (nom i després es toquen les targetes) i **«Seleccionar»**
   (`FolderedGrid selection`): diverses targetes → moure-les a un grup o esborrar-les (els mobles i objectes que són en un
   ambient es conserven). **Modificats** (`Project.edited`, de `updateProjectComposition`; `isEdited` per als antics):
   etiqueta «Modificat». **«Esborrar»** de l'Historial (`projects/ClearHistory.tsx`, `title` «Esborrar l'historial»; el

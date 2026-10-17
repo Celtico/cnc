@@ -19,6 +19,7 @@ import {
   type Settings,
   type Zone,
 } from "../model"
+import { roundTo } from "../../lib/format"
 
 /**
  * Resum compacte del moble per a l'assistent IA (`get_moble` i el resultat de cada eina): el que cal per decidir i
@@ -84,7 +85,6 @@ export interface CatalogSummary {
   defaults: { material: string; thickness: number; back_material: string; back_thickness: number }
 }
 
-const r1 = (v: number) => Math.round(v * 10) / 10
 
 function frontSummary(f: Front): Record<string, unknown> {
   const handle = "handle" in f && f.handle === "none" ? { handle: "none (push)" } : {}
@@ -129,7 +129,7 @@ function zoneSummary(m: Module, z: Zone, rects: Map<string, { x0: number; x1: nu
   const walk = (zone: Zone, root: boolean): ZoneSummary => {
     const rect = rects?.get(zone.id)
     const b = bounds.get(zone.id)
-    const out: ZoneSummary = { id: zone.id, ...(rect ? { w: r1(rect.x1 - rect.x0), h: r1(rect.y1 - rect.y0) } : {}) }
+    const out: ZoneSummary = { id: zone.id, ...(rect ? { w: roundTo(rect.x1 - rect.x0, 1), h: roundTo(rect.y1 - rect.y0, 1) } : {}) }
     if (zone.split) {
       out.split = { dir: zone.split.dir, sizes: zone.split.children.map((_, i) => zone.split!.sizes[i] ?? "auto"), children: zone.split.children.map((c) => walk(c, false)) }
       // El front de l'arrel dividida (portes de tot el mòdul) va a `module_doors`.
@@ -178,7 +178,7 @@ export function summarizeMoble(comp: Composition, settings: Pick<Settings, "mate
       id: m.id,
       name: m.name,
       mount: mountOf(m),
-      ...(mb ? { at: { x: r1(mb.x), y: r1(mb.y), z: r1(mb.z) } } : {}),
+      ...(mb ? { at: { x: roundTo(mb.x, 1), y: roundTo(mb.y, 1), z: roundTo(mb.z, 1) } } : {}),
       width: m.carcass.width,
       height: m.carcass.height,
       depth: m.carcass.depth,

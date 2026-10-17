@@ -1,5 +1,6 @@
 import { toolMslName, type Machine, type MachineTool } from "../../model/machine"
-import { dist, flattenPath, offsetPolyline, signedArea, toolpath3 } from "./geometry"
+import { signedArea } from "../../model/polygon"
+import { dist, flattenPath, offsetPolyline, toolpath3 } from "./geometry"
 import type { CamOp, CamOpKind, Pt } from "./types"
 
 /** Què dibuixar de cada operació, la llegenda d'eines i la llista compacta. */

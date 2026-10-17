@@ -5,7 +5,6 @@ import {
   KIT_CLOSINGS,
   KIT_FINISHES,
   KIT_LEVEL_LABEL,
-  fmtMm,
   hardwareSummary,
   isDrawerKit,
   kitOptionsOf,
@@ -18,6 +17,7 @@ import type { KitOrder } from "../../../core/build/buildModule"
 import { kitBottomThickness, kitLineText, kitWoodText } from "../../../core/build/drawerKit"
 import { NumberField } from "../../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../../components/FormRow"
+import { fmtNum } from "../../../lib/format"
 
 /**
  * Alçada del front de cada calaix, de baix a dalt, com les mides de la Divisió (`SplitSizes`): «Alçada 1»… amb «Auto» o
@@ -38,7 +38,7 @@ export function DrawerHeights({ front, real, onChange }: { front: Extract<Front,
           <FormRow key={i} optionId="zone.front.drawers.height" label={label}>
             {i === front.n - 1 ? (
               <Text fontSize="sm" color="fg.muted">
-                {mm !== undefined ? `${fmtMm(mm)} mm` : "—"} (el que sobra)
+                {mm !== undefined ? `${fmtNum(mm)} mm` : "—"} (el que sobra)
               </Text>
             ) : (
               <HStack gap={3}>
@@ -53,7 +53,7 @@ export function DrawerHeights({ front, real, onChange }: { front: Extract<Front,
                   </Box>
                 ) : mm !== undefined ? (
                   <Text fontSize="sm" color="fg.muted">
-                    {fmtMm(mm)} mm
+                    {fmtNum(mm)} mm
                   </Text>
                 ) : null}
               </HStack>
@@ -119,8 +119,8 @@ export function KitFields({ front, kit, kits, onChange }: { front: Extract<Front
         <ChoiceChips label="Darrere" value={o.back} options={kit.kit.options.back.map((b) => ({ id: b, label: KIT_BACKS.find((x) => x.id === b)!.short }))} onChange={(back) => setKit({ back })} />
       </FormRow>
       {finishes.length > 1 && o.finish && (
-        <FormRow optionId="zone.front.drawers.kit.finish" label="Acabat" help="Color dels laterals de doble paret (només canvia el 3D; els números d'article són els mateixos).">
-          <ChoiceChips label="Acabat" value={o.finish} options={finishes.map((f) => ({ id: f, label: KIT_FINISHES.find((x) => x.id === f)!.short }))} onChange={(finish) => setKit({ finish })} />
+        <FormRow optionId="zone.front.drawers.kit.finish" label="Color dels laterals" help="Els laterals de doble paret (només canvia el 3D; els números d'article són els mateixos).">
+          <ChoiceChips label="Color dels laterals" value={o.finish} options={finishes.map((f) => ({ id: f, label: KIT_FINISHES.find((x) => x.id === f)!.short }))} onChange={(finish) => setKit({ finish })} />
         </FormRow>
       )}
       <FormRow optionId="zone.front.drawers.kit.bottom" label="Fons del calaix" help={`El joc demana un fons del calaix de ${TB} mm (catàleg): el gruix no es tria. El material, a Materials › «Fons del calaix» (sense, el del fons del mòdul adaptat al gruix, o el del cos si fa ${TB} mm).`}>
@@ -144,7 +144,7 @@ export function KitFields({ front, kit, kits, onChange }: { front: Extract<Front
             ))}
             {first.rule && (
               <Text fontSize="xs" color="fg.muted">
-                Estabilitzador {KIT_LEVEL_LABEL[first.rule.stabilizer]} · barra {KIT_LEVEL_LABEL[first.rule.syncRod]}{first.syncRod !== undefined ? ` (tallar a ${fmtMm(first.syncRod)})` : ""}
+                Estabilitzador {KIT_LEVEL_LABEL[first.rule.stabilizer]} · barra {KIT_LEVEL_LABEL[first.rule.syncRod]}{first.syncRod !== undefined ? ` (tallar a ${fmtNum(first.syncRod)})` : ""}
               </Text>
             )}
           </Stack>

@@ -7,7 +7,7 @@ import { loadTextureFiles, loadTextureSet, withTextureSet, type ImageFinish, typ
 
 /**
  * «Afegir les textures a Materials»: els jocs de textures d'un model importat (o d'un zip de textures) com a materials de
- * Simulació amb foto de color, relleu i brillantor (com «Joc PBR» de l'editor de materials).
+ * Simulació amb foto de color, relleu i brillantor (com «Conjunt PBR» de l'editor de materials).
  */
 
 /** Nom del material d'un joc: el de Poly Haven si n'hi ha un sol joc; si no, el del fitxer («potted plant 04» → «Potted plant 04»). */
@@ -45,7 +45,7 @@ export async function materialsFromTextures(textures: Map<string, Blob>, opts: {
   return { added, skipped }
 }
 
-/** Mida real d'una repetició si no se'n sap res (la de «Joc PBR» de sempre). */
+/** Mida real d'una repetició si no se'n sap res (la de «Conjunt PBR» de sempre). */
 const DEFAULT_SET_TILE_MM = 800
 
 interface PickedTextureSet {

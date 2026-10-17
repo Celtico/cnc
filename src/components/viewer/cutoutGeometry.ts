@@ -1,6 +1,6 @@
 import { BufferGeometry, ExtrudeGeometry, Float32BufferAttribute, Matrix4, MeshBasicMaterial, Path, Shape, Vector3, type Material } from "three"
 import { Brush, Evaluator, SUBTRACTION } from "three-bvh-csg"
-import { ccw, flatten, pocketSolids, type Panel } from "../../core/model"
+import { ccw, flatten, pocketKey, pocketSolids, type Panel } from "../../core/model"
 
 const S = 0.001
 
@@ -200,7 +200,8 @@ export function shapedGeometry(p: Panel): BufferGeometry {
   if (!(p.solidCuts?.length || p.pockets?.length)) return splitEdgeGroups(cutoutGeometry(p), p)
   // Els booleans 3D són lents (un relleu gran, ~1 s): la mateixa peça (cada cop que es reconstrueix el moble en surt un
   // objecte nou) es treu de la memòria. Es torna una còpia: qui la rep la pot alliberar.
-  const key = JSON.stringify(p)
+  // Només el que canvia la forma (no la col·locació, el nom ni els forats): la mateixa peça en un altre lloc la reaprofita.
+  const key = JSON.stringify([p.length, p.width, p.thickness, p.outline, p.rawSides, p.cutouts, p.edges, p.mitres, p.solidCuts, p.pockets?.map(pocketKey) ?? null])
   const hit = CSG_CACHE.get(key)
   if (hit) {
     CSG_CACHE.delete(key)
@@ -209,7 +210,7 @@ export function shapedGeometry(p: Panel): BufferGeometry {
   }
   const g = splitEdgeGroups(solidCutGeometry(p), p)
   CSG_CACHE.set(key, g)
-  while (CSG_CACHE.size > 32) {
+  while (CSG_CACHE.size > 64) {
     const old = CSG_CACHE.keys().next().value!
     CSG_CACHE.get(old)?.dispose()
     CSG_CACHE.delete(old)
@@ -217,7 +218,7 @@ export function shapedGeometry(p: Panel): BufferGeometry {
   return g.clone()
 }
 
-/** Les últimes peces amb booleans 3D (clau: la peça en JSON). */
+/** Les últimes peces amb booleans 3D (clau: la forma de la peça; els mapes, resumits). */
 const CSG_CACHE = new Map<string, BufferGeometry>()
 
 /**

@@ -1,6 +1,7 @@
 import { applyGenOp, frameSpan, mirrorOpP, partFrame, placeAt, refPoints } from "../../core/build/hardwarePlace"
 import type { CompositionWarning } from "../../core/build/buildComposition"
 import { AXIS_ENDS, AXIS_NAME, isPlaceable, machiningParts, newId, partKindForRole, PART_KINDS, type Composition, type HardwareItem, type HardwarePlacement, type Panel, type PartKind, type PlacePos, type PlacementTarget, type WorldAxis } from "../../core/model"
+import { roundTo } from "../../lib/format"
 
 /**
  * Ferratges col·locats a mà (Editor › mòdul o peça lliure › «Ferratges»): utilitats sense React per a
@@ -124,7 +125,7 @@ export function simplifyPlacement(pl: HardwarePlacement, panel: Panel | undefine
   const pos = (k: "p" | "q"): PlacePos => {
     const cur = pl[k]
     const now = panel ? placePosValue(cur, panel, k) : null
-    if (now !== null) return { from: "min", at: Math.round(now * 100) / 100 }
+    if (now !== null) return { from: "min", at: roundTo(now, 2) }
     const { expr: _e, pct: _p, ...keep } = cur
     return keep.from === "ratio" ? { from: "min", at: keep.at } : keep
   }

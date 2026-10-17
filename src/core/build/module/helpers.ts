@@ -13,9 +13,6 @@ import {
 import { toWorld } from "../geometry"
 import { applyHardware, type SlotSpec } from "../hardware"
 
-/** Mm per als avisos: un decimal com a molt, amb coma. */
-export const num = (n: number): string => String(Math.round(n * 10) / 10).replace(".", ",")
-
 /** Perfil del tauler (mm, amb la seva mida) escalat a llarg × ample i passat a rectes i arcs. */
 export function shapeOutline(shape: PNode[], length: number, width: number): BPt[] {
   // Extensió real de la corba (les cúbiques poden sortir dels nodes): si no, la peça

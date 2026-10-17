@@ -1,9 +1,10 @@
-import { Box, Breadcrumb, Editable, HStack, IconButton } from "@chakra-ui/react"
+import { Box, Breadcrumb, Editable, HStack } from "@chakra-ui/react"
 import { createContext, useContext, type ReactNode } from "react"
 import { createPortal } from "react-dom"
 import { LuChevronLeft, LuChevronRight, LuSettings } from "react-icons/lu"
 import { renameProject } from "../db/db"
 import { useProject } from "../features/useProject"
+import { IconAction } from "./IconAction"
 
 /**
  * Barra superior del moble obert, com a les apps professionals (Figma, Onshape, Notion):
@@ -68,9 +69,9 @@ export function DocBar({ onBack, onSettings, actionsRef, menu, tabs, rootLabel, 
     >
       <HStack gap={1} minW={0} flex={1}>
         {/* Mòbil: fletxa enrere. Escriptori: molla de pa «Mobles ›». */}
-        <IconButton display={{ base: "inline-flex", md: "none" }} aria-label={`Tornar a ${rootLabel}`} variant="ghost" size="sm" onClick={onBack}>
+        <IconAction display={{ base: "inline-flex", md: "none" }} label={`Tornar a ${rootLabel}`} variant="ghost" size="sm" onClick={onBack}>
           <LuChevronLeft />
-        </IconButton>
+        </IconAction>
         {/* La molla de pa de Chakra: «Mobles ›» (només a l'ordinador) i el nom, que s'edita amb un clic. */}
         <Breadcrumb.Root aria-label="Ruta" minW={0} flex={1}>
           <Breadcrumb.List gap={1} flexWrap="nowrap" minW={0}>
@@ -114,9 +115,9 @@ export function DocBar({ onBack, onSettings, actionsRef, menu, tabs, rootLabel, 
       <HStack gap={1} flexShrink={0} flex={tabs ? { md: 1 } : undefined} justify="flex-end">
         <HStack gap={1} ref={actionsRef} />
         {menu}
-        <IconButton display={{ base: "inline-flex", md: "none" }} aria-label="Preferències" variant="ghost" size="sm" onClick={onSettings}>
+        <IconAction display={{ base: "inline-flex", md: "none" }} label="Preferències" variant="ghost" size="sm" onClick={onSettings}>
           <LuSettings />
-        </IconButton>
+        </IconAction>
       </HStack>
     </HStack>
   )

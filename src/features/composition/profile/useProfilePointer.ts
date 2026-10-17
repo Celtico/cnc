@@ -1,7 +1,8 @@
 import { useRef, type PointerEvent as ReactPointerEvent } from "react"
 import { bendEdge, moveHandle, snapAngle45, splitEdge, type PNode, type Vec2 } from "../../../core/model"
-import { LIVE, r1 } from "./profileGeometry"
+import { LIVE} from "./profileGeometry"
 import type { ProfileShape } from "./useProfileShape"
+import { roundTo } from "../../../lib/format"
 
 /**
  * El punter sobre el dibuix del perfil: ploma (nodes nous), arrossegar nodes, manegadors i costats, i els clics de Corbar i
@@ -20,7 +21,7 @@ export function useProfilePointer(shape: ProfileShape, unit: number, minor: numb
     const q = pt.matrixTransform(el.getScreenCTM()!.inverse())
     return [q.x, -q.y]
   }
-  const snap = (v: number, fine: boolean) => (fine ? r1(v) : Math.round(v / minor) * minor)
+  const snap = (v: number, fine: boolean) => (fine ? roundTo(v, 1) : Math.round(v / minor) * minor)
 
   const capture = (e: ReactPointerEvent) => {
     e.stopPropagation()
@@ -45,7 +46,7 @@ export function useProfilePointer(shape: ProfileShape, unit: number, minor: numb
     const prev = nodes[nodes.length - 1]
     const fine = e.ctrlKey || e.metaKey
     const p: PNode = e.shiftKey && prev
-      ? (([dx, dy]) => ({ x: r1(prev.x + dx), y: r1(prev.y + dy) }))(snapAngle45([x - prev.x, y - prev.y]))
+      ? (([dx, dy]) => ({ x: roundTo(prev.x + dx, 1), y: roundTo(prev.y + dy, 1) }))(snapAngle45([x - prev.x, y - prev.y]))
       : { x: snap(x, fine), y: snap(y, fine) }
     setNodes((cur) => [...cur, p], LIVE)
     setDrag({ kind: "pen", i: nodes.length, x: e.clientX, y: e.clientY, moved: false })
@@ -67,7 +68,7 @@ export function useProfilePointer(shape: ProfileShape, unit: number, minor: numb
       set(drag.i, { ...n, x: snap(x, fine), y: snap(y, fine) }, LIVE)
     } else if (drag.kind === "handle") {
       const n = nodes[drag.i]!
-      const raw: Vec2 = [r1(x - n.x), r1(y - n.y)]
+      const raw: Vec2 = [roundTo(x - n.x, 1), roundTo(y - n.y, 1)]
       const h: Vec2 = e.shiftKey ? snapAngle45(raw) : raw
       set(drag.i, moveHandle(e.altKey ? { ...n, t: "corner" } : n, drag.which, h), LIVE)
     } else if (drag.kind === "edge") {
@@ -75,7 +76,7 @@ export function useProfilePointer(shape: ProfileShape, unit: number, minor: numb
     } else {
       // Ploma arrossegant: manegadors simètrics del node nou.
       const n = nodes[drag.i]!
-      const raw: Vec2 = [r1(x - n.x), r1(y - n.y)]
+      const raw: Vec2 = [roundTo(x - n.x, 1), roundTo(y - n.y, 1)]
       const h: Vec2 = e.shiftKey ? snapAngle45(raw) : raw
       set(drag.i, { x: n.x, y: n.y, out: h, in: [-h[0], -h[1]], t: "symmetric" }, LIVE)
     }

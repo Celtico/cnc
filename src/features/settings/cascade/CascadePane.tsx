@@ -1,7 +1,7 @@
 import { Box, Button, Dialog, HStack, IconButton, Menu, Portal, Spinner, Splitter, Stack, Switch, Text } from "@chakra-ui/react"
 import { ReactFlowProvider } from "@xyflow/react"
 import { useContext, useRef, useState } from "react"
-import { LuCheck, LuChevronsDownUp, LuCircleAlert, LuChevronsUpDown, LuDownload, LuEllipsis, LuRefreshCw, LuTrash2, LuUpload, LuWorkflow } from "react-icons/lu"
+import { LuCheck, LuChevronsDownUp, LuCircleAlert, LuChevronsUpDown, LuRefreshCw, LuSave, LuTrash2, LuUpload, LuWorkflow } from "react-icons/lu"
 import { PanelSplit, SplitHandle } from "../../../components/PanelSplit"
 import { SearchBar } from "../../../components/SearchBar"
 import { UndoRedo } from "../../../components/UndoRedo"
@@ -16,6 +16,7 @@ import { CascadeCanvas } from "./CascadeCanvas"
 import { CascadeDetail } from "./CascadeDetail"
 import type { DraftSaveState } from "./useCascadeDraft"
 import { useCascadeEditor } from "./useCascadeEditor"
+import { ActionsMenu } from "../../../components/ActionsMenu"
 
 /**
  * Preferències › **Opcions en cascada** (per decisió de l'usuari, 2026-10-15): un **esborrany** de la cascada d'opcions de
@@ -63,8 +64,8 @@ function CascadeEditor() {
           extra={
             <HStack gap={1}>
               <UndoRedo canUndo={history.canUndo} canRedo={history.canRedo} undo={history.undo} redo={history.redo} />
-              <Tooltip content="Esborrar el triat (Supr)">
-                <IconButton aria-label="Esborrar el triat" size="sm" variant="ghost" disabled={!ed.selected.count} onClick={ed.removeSelected}>
+              <Tooltip content="Eliminar el triat (Supr)">
+                <IconButton aria-label="Eliminar el triat" size="sm" variant="ghost" disabled={!ed.selected.count} onClick={ed.removeSelected}>
                   <LuTrash2 />
                 </IconButton>
               </Tooltip>
@@ -86,32 +87,18 @@ function CascadeEditor() {
           <SaveButton state={ed.save} />
           <Tooltip content="Un fitxer JSON amb el dibuix i les diferències amb l'app (es pot tornar a importar)">
             <Button size="sm" variant="outline" onClick={exportDraft}>
-              <LuDownload /> Guardar a fitxer
+              <LuSave /> Desar com a fitxer…
             </Button>
           </Tooltip>
-          <Menu.Root positioning={{ placement: "bottom-end" }}>
-            <Menu.Trigger asChild>
-              <IconButton aria-label="Més accions" size="sm" variant="ghost">
-                <LuEllipsis />
-              </IconButton>
-            </Menu.Trigger>
-            <Portal>
-              <Menu.Positioner>
-                <Menu.Content>
-                  <Menu.Item value="export" onClick={exportDraft}>
-                    <LuDownload /> Exportar JSON (amb les diferències)
-                  </Menu.Item>
-                  <Menu.Item value="import" onClick={() => fileInput.current?.click()}>
-                    <LuUpload /> Importar JSON…
-                  </Menu.Item>
-                  <Menu.Separator />
-                  <Menu.Item value="reload" onClick={() => setAsking(true)}>
-                    <LuRefreshCw /> Tornar a carregar des de l'app…
-                  </Menu.Item>
-                </Menu.Content>
-              </Menu.Positioner>
-            </Portal>
-          </Menu.Root>
+          <ActionsMenu label="Més accions" size="sm">
+            <Menu.Item value="import" onClick={() => fileInput.current?.click()}>
+              <LuUpload /> Importar JSON…
+            </Menu.Item>
+            <Menu.Separator />
+            <Menu.Item value="reload" onClick={() => setAsking(true)}>
+              <LuRefreshCw /> Tornar a carregar des de l'app…
+            </Menu.Item>
+          </ActionsMenu>
         </HStack>
         <HStack gap={4} fontSize="sm">
           <ViewSwitch label="Fa aparèixer / desaparèixer" checked={view.showLinks} onChange={view.setShowLinks} />
@@ -185,7 +172,7 @@ function ViewSwitch({ label, checked, onChange }: { label: string; checked: bool
  * desar, ho desa ara mateix.
  */
 function SaveButton({ state }: { state: DraftSaveState }) {
-  const tip = state === "failed" ? "No s'ha pogut desar en aquest navegador (navegació privada?): guarda'l a fitxer" : "Es desa sol a cada canvi, en aquest navegador"
+  const tip = state === "failed" ? "No s'ha pogut desar en aquest navegador (navegació privada?): desa'l com a fitxer" : "Es desa sol a cada canvi, en aquest navegador"
   return (
     <Tooltip content={tip}>
       <Button

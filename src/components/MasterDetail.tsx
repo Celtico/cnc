@@ -43,7 +43,12 @@ export function MasterDetail({
   detailMaxW = "680px",
   head,
   footer,
+  searchPlaceholder,
+  searchLabel,
 }: {
+  /** Texte i `aria-label` del cercador (què es cerca). */
+  searchPlaceholder?: string
+  searchLabel?: string
   /** A dalt de la llista (títol de la pàgina): així el detall comença a dalt de tot, a l'altura del menú. */
   head?: ReactNode
   /** Sota el detall (opcions de tota la llista, p. ex. els materials per defecte). */
@@ -125,7 +130,7 @@ export function MasterDetail({
       {/* Cercador i filtres sempre a dalt de la llista (la llista es desplaça per sota). */}
       <Stack gap={2} position="sticky" top={0} zIndex={1} bg="bg" pb={1}>
       {/* Només la icona: la columna és estreta i el cercador té més lloc (el text surt al tooltip). */}
-      <SearchBar value={query} onChange={onQuery} maxW="none" iconOnly add={{ label: addLabel, onClick: onAdd }} />
+      <SearchBar value={query} onChange={onQuery} placeholder={searchPlaceholder} ariaLabel={searchLabel} maxW="none" iconOnly add={{ label: addLabel, onClick: onAdd }} />
       {/* Categories en pastilles a la seva fila (salten de línia si no hi caben). */}
       {filters && (
         <ChoiceChips

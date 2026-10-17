@@ -8,7 +8,7 @@ import type { ModuleBuild } from "../../core/build/buildModule"
 import { splitChildSizes } from "../../core/build/layout"
 import { carcassBounds, coveringZone, moduleApplianceCarcass, freeX, hasDrawers, moduleHasInnerPieces, moduleRot, moduleRows, moduleSlotItem, mountOf, rowOf, setModuleMount, system32RowPlace, visibleModule, zoneBounds, type Composition, type FloorSupport, type Module, type Settings, type Zone } from "../../core/model"
 import { CarcassForm, InnerClearanceRow, JointForm, MaterialsForm } from "../composition/CarcassForm"
-import { AxisLabel } from "../composition/RefInspector"
+import { AxisLabel } from "../../components/AxisLabel"
 import { System32Pick } from "../composition/HardwarePick"
 import { ModuleDoorsSection, ZonePanel } from "../composition/ZonePanel"
 import { zoneLabel } from "../composition/zoneLabel"
@@ -134,8 +134,8 @@ export function ModulePositionFields({ comp, module, moduleX, updateModule }: { 
  * Les seccions del mòdul que la construcció llegeix (`moduleRows`): Electrodomèstic (sense dividir), Caixa, Portes de
  * tot el mòdul (dividit), Unió i Materials.
  * Per decisió de l'usuari (2026-10-08) no hi ha secció «Acabats»: cada fila és a la secció del que toca, un sol
- * lloc per decisió i només el que la construcció llegeix (`moduleRows`): el fons, l'estil, les folgances i el
- * retranqueig a la Caixa; el material dels fronts a Materials; l'espiga a Unió. Els ferratges per defecte del
+ * lloc per decisió i només el que la construcció llegeix (`moduleRows`): el fons, l'estil, les folgances i
+ * la retirada a la Caixa; el material dels fronts a Materials; l'espiga a Unió. Els ferratges per defecte del
  * mòdul no surten: cada compartiment tria el seu (o «Com el mòdul»).
  */
 export function ModuleSections({ module, updateModule, support, onOpenSupport, moble }: { module: Module; updateModule: (m: Module) => void; /** El cos del moble (el més repetit dels mòduls): «Com el moble» a Materials. */ moble?: { material: string; thickness: number }; /** El suport dels mòduls de terra (Moble › Suport general): la Caixa el diu. */ support?: FloorSupport; /** Porta a l'opció global (Moble › Suport general). */ onOpenSupport?: () => void }) {

@@ -1,14 +1,15 @@
-import { Button, IconButton, Menu, Portal, Stack, Text } from "@chakra-ui/react"
-import { LuCopy, LuEllipsis, LuMove, LuMoveDiagonal, LuMoveDiagonal2, LuMoveHorizontal, LuMoveVertical, LuPalette, LuSprout, LuTrash2 } from "react-icons/lu"
+import { Button, Menu, Stack, Text } from "@chakra-ui/react"
+import { LuCopy, LuMove, LuMoveDiagonal, LuMoveDiagonal2, LuMoveHorizontal, LuMoveVertical, LuPalette, LuSprout, LuTrash2 } from "react-icons/lu"
 import { FoldItem } from "../../components/Fold"
 import { NumRow } from "../../components/NumRow"
 import { FormRow } from "../../components/FormRow"
 import { insertModelCopy, type Composition, type ModelObject } from "../../core/model"
 import { ModelUploadButton } from "./ModelUpload"
 import { useModelAssets } from "./useModelAssets"
-import { AxisLabel } from "./RefInspector"
+import { AxisLabel } from "../../components/AxisLabel"
 import { MaterialSelect } from "../settings/MaterialSelect"
 import { useSettings } from "../settings/SettingsContext"
+import { ActionsMenu } from "../../components/ActionsMenu"
 
 /** Propietats d'un model 3D (`Composition.models`): quin model, mides de la caixa i posició (com una peça lliure). */
 export function ModelInspector({ comp, id, onChange }: { comp: Composition; id: string; onChange: (c: Composition) => void }) {
@@ -44,8 +45,8 @@ export function ModelInspector({ comp, id, onChange }: { comp: Composition; id: 
         </FormRow>
       </FoldItem>
       <FoldItem id="model-size" title="Mides" icon={LuMoveDiagonal} badge={`${Math.round(g.w)} × ${Math.round(g.h)}`}>
-        <NumRow label="Ample" value={g.w} min={1} max={20000} step={10} onChange={(w) => w > 0 && update({ w })} />
-        <NumRow label="Alt" value={g.h} min={1} max={20000} step={10} onChange={(h) => h > 0 && update({ h })} />
+        <NumRow label="Amplada" value={g.w} min={1} max={20000} step={10} onChange={(w) => w > 0 && update({ w })} />
+        <NumRow label="Alçada" value={g.h} min={1} max={20000} step={10} onChange={(h) => h > 0 && update({ h })} />
         <NumRow label="Fondària" value={g.d} min={1} max={20000} step={10} onChange={(d) => d > 0 && update({ d })} />
         {asset && (
           <FormRow label="" help={`Mida real del model: ${asset.size.join(" × ")} mm.`}>
@@ -73,39 +74,28 @@ export function ModelActions({ comp, id, onChange, onRemoved, onSelected }: { co
   const g = comp.models?.find((m) => m.id === id)
   if (!g) return null
   return (
-    <Menu.Root positioning={{ placement: "bottom-end" }}>
-      <Menu.Trigger asChild>
-        <IconButton size="xs" variant="ghost" aria-label="Accions del model">
-          <LuEllipsis />
-        </IconButton>
-      </Menu.Trigger>
-      <Portal>
-        <Menu.Positioner>
-          <Menu.Content>
-            <Menu.Item
-              value="dup"
-              onClick={() => {
-                const res = insertModelCopy(comp, g)
-                onChange(res.comp)
-                onSelected?.(res.id)
-              }}
-            >
-              <LuCopy /> Duplicar
-            </Menu.Item>
-            <Menu.Separator />
-            <Menu.Item
-              value="del"
-              color="fg.error"
-              onClick={() => {
-                onChange({ ...comp, models: (comp.models ?? []).filter((m) => m.id !== id) })
-                onRemoved()
-              }}
-            >
-              <LuTrash2 /> Eliminar
-            </Menu.Item>
-          </Menu.Content>
-        </Menu.Positioner>
-      </Portal>
-    </Menu.Root>
+    <ActionsMenu label="Accions del model">
+      <Menu.Item
+        value="dup"
+        onClick={() => {
+          const res = insertModelCopy(comp, g)
+          onChange(res.comp)
+          onSelected?.(res.id)
+        }}
+      >
+        <LuCopy /> Duplicar
+      </Menu.Item>
+      <Menu.Separator />
+      <Menu.Item
+        value="del"
+        color="fg.error"
+        onClick={() => {
+          onChange({ ...comp, models: (comp.models ?? []).filter((m) => m.id !== id) })
+          onRemoved()
+        }}
+      >
+        <LuTrash2 /> Eliminar
+      </Menu.Item>
+    </ActionsMenu>
   )
 }

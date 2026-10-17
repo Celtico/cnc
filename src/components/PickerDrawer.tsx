@@ -25,7 +25,7 @@ export function PickerDrawer({
   title: string
   query: string
   onQuery: (q: string) => void
-  /** El text del cercador («Buscar un material»). */
+  /** El text del cercador («Cercar un material»). */
   placeholder: string
   /** Amplada a l'ordinador (les targetes dels ferratges, `md`). */
   size?: "sm" | "md"

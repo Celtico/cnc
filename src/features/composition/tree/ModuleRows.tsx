@@ -87,7 +87,7 @@ export function ModuleRows({ tree, openId, toggle }: { tree: TreeCtx; openId: st
               dnd={dnd.dnd("module", m.id)}
               flags={flagsOf("modules", m)}
               menu={
-                <TreeRowMenu label={`Opcions de «${m.name}»`}>
+                <TreeRowMenu label={`Accions de «${m.name}»`}>
                   <Menu.Item value="up" disabled={neighbourIndex(i, -1) < 0} onClick={() => move(i, -1)}>
                     <LuArrowLeft /> Moure a l'esquerra
                   </Menu.Item>

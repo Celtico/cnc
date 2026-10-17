@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { evalExpr, type Expr } from "./expr"
+import { fmtNum } from "../../lib/format"
 
 /**
  * **Joc de ferratges paramètric** (`HardwareKit`, `docs/ferratges-jocs.md`): un sistema sencer del fabricant (el primer,
@@ -295,7 +296,5 @@ export function kitItemNumber(ref: KitItemRef, variant: KitVariant, closing: Kit
 export function kitSummary(kit: HardwareKit): string {
   const nls = kit.variants.map((v) => v.nl).sort((a, b) => a - b)
   const closings = kit.options.closing.length
-  return `${kit.heightClass.code} · lateral ${fmtMm(kit.heightClass.boxSideHeight)} · NL ${nls[0]}–${nls.at(-1)} · ${closings} ${closings === 1 ? "tancament" : "tancaments"} · darrere ${kit.options.back.map((b) => KIT_BACKS.find((x) => x.id === b)!.short.toLowerCase()).join(" o ")}`
+  return `${kit.heightClass.code} · lateral ${fmtNum(kit.heightClass.boxSideHeight)} · NL ${nls[0]}–${nls.at(-1)} · ${closings} ${closings === 1 ? "tancament" : "tancaments"} · darrere ${kit.options.back.map((b) => KIT_BACKS.find((x) => x.id === b)!.short.toLowerCase()).join(" o ")}`
 }
-
-export const fmtMm = (v: number): string => String(Math.round(v * 100) / 100).replace(".", ",")

@@ -1,5 +1,6 @@
 import { Alert, Badge, Box, Button, HStack, IconButton, Slider, Stack, Switch, Text } from "@chakra-ui/react"
-import { LuBrickWall, LuHouse, LuImageUp, LuPalette, LuPencilRuler, LuPlus, LuTrash2, LuWarehouse } from "react-icons/lu"
+import { LuBrickWall, LuHouse, LuImageUp, LuMoveDiagonal2, LuMoveHorizontal, LuPalette, LuPencilRuler, LuPlus, LuTrash2, LuWarehouse } from "react-icons/lu"
+import { AxisLabel } from "../../../components/AxisLabel"
 import { ChoiceChips, FormRow } from "../../../components/FormRow"
 import { FoldItem } from "../../../components/Fold"
 import { NumRow } from "../../../components/NumRow"
@@ -62,15 +63,15 @@ function RoofSection({ amb, materials, onChange }: { amb: Ambient; materials: Ma
                 <Text fontSize="xs" fontWeight="semibold" color="fg.muted" flex={1}>
                   Claraboia {i + 1}
                 </Text>
-                <Tooltip content="Treure la claraboia">
-                  <IconButton size="2xs" variant="ghost" aria-label="Treure la claraboia" onClick={() => set({ skylights: sky.filter((_, j) => j !== i) })}>
+                <Tooltip content="Eliminar la claraboia">
+                  <IconButton size="2xs" variant="ghost" aria-label="Eliminar la claraboia" onClick={() => set({ skylights: sky.filter((_, j) => j !== i) })}>
                     <LuTrash2 />
                   </IconButton>
                 </Tooltip>
               </HStack>
-              <NumRow label="X (centre)" value={k.x} step={10} onChange={(x) => Number.isFinite(x) && setSky(i, { x })} />
-              <NumRow label="Y (centre)" value={k.y} step={10} onChange={(y) => Number.isFinite(y) && setSky(i, { y })} />
-              <NumRow label="Ample" value={k.w} min={100} max={5000} step={10} onChange={(w) => w >= 100 && setSky(i, { w })} />
+              <NumRow label={<AxisLabel icon={LuMoveHorizontal} name="De costat" axis="X" hint="El centre, d'esquerra a dreta del plànol" />} ariaLabel="De costat (X)" value={k.x} step={10} onChange={(x) => Number.isFinite(x) && setSky(i, { x })} />
+              <NumRow label={<AxisLabel icon={LuMoveDiagonal2} name="Fondària" axis="Z" hint="El centre, de dalt a baix del plànol" />} ariaLabel="Fondària (Z)" value={k.y} step={10} onChange={(y) => Number.isFinite(y) && setSky(i, { y })} />
+              <NumRow label="Amplada" value={k.w} min={100} max={5000} step={10} onChange={(w) => w >= 100 && setSky(i, { w })} />
               <NumRow label="Fondària" value={k.d} min={100} max={5000} step={10} onChange={(d) => d >= 100 && setSky(i, { d })} />
             </Stack>
           ))}
@@ -146,7 +147,7 @@ export function AmbientInspector({
                 <Stack gap={2} align="flex-start">
                   <Text>S'han esborrat de la llista de Mobles o d'Objectes: a l'ambient no es veuen.</Text>
                   <Button size="xs" variant="outline" onClick={onRemoveMissing}>
-                    <LuTrash2 /> Treure'ls de l'ambient
+                    <LuTrash2 /> Eliminar-los de l'ambient
                   </Button>
                 </Stack>
               </Alert.Description>

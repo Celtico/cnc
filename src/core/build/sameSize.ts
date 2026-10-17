@@ -1,3 +1,4 @@
+// ADORMIT: l'app no el fa servir (només els tests); es guarda per si el taller torna a casar el CSV amb el STEP per mida.
 import { flatten, type Panel } from "../model"
 
 /**

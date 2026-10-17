@@ -1,7 +1,8 @@
-import { Badge, Button, IconButton, Menu, Portal, Text } from "@chakra-ui/react"
-import { LuCheck, LuCopy, LuEllipsis, LuFolderInput, LuHouse, LuPencil, LuPlus, LuSave, LuTrash2 } from "react-icons/lu"
+import { Badge, Button, Text } from "@chakra-ui/react"
+import { LuCheck, LuHouse, LuPencil, LuPlus } from "react-icons/lu"
 import { useEffect } from "react"
 import { CardDate, GalleryCard } from "./GalleryCard"
+import { CardMenu } from "./CardMenu"
 import { SnapshotThumb } from "../../components/SnapshotThumb"
 import { useSettings } from "../settings/SettingsContext"
 import { needsThumb, requestProjectThumb } from "./projectThumbs"
@@ -69,7 +70,7 @@ export function ProjectCard({
           <>
             {/* A l'historial, els modificats porten la marca: esborrar-los perdria els canvis. */}
             {!project.folder && isEdited(project) && (
-              <Badge size="xs" variant="subtle" colorPalette="orange" title="L'has modificat: guarda'l en un grup si el vols conservar">
+              <Badge size="xs" variant="subtle" colorPalette="orange" title="L'has modificat: desa'l en un grup si el vols conservar">
                 <LuPencil /> Modificat
               </Badge>
             )}
@@ -123,43 +124,8 @@ export function ProjectCard({
           </Button>
         ) : (
           (onSaveFile || onDuplicate || onDelete || onMove) && (
-            // Les accions del document en un menú ⋯, com a «Les teves plantilles» i als ambients.
-            <Menu.Root positioning={{ placement: "bottom-end" }}>
-              <Menu.Trigger asChild>
-                <IconButton aria-label={`Opcions de «${project.name}»`} size="xs" variant="ghost">
-                  <LuEllipsis />
-                </IconButton>
-              </Menu.Trigger>
-              <Portal>
-                <Menu.Positioner>
-                  <Menu.Content>
-                    {onSaveFile && (
-                      <Menu.Item value="file" onClick={onSaveFile}>
-                        <LuSave /> Desar com a fitxer
-                      </Menu.Item>
-                    )}
-                    {onDuplicate && (
-                      <Menu.Item value="dup" onClick={onDuplicate}>
-                        <LuCopy /> Duplicar
-                      </Menu.Item>
-                    )}
-                    {onMove && (
-                      <Menu.Item value="move" onClick={onMove}>
-                        <LuFolderInput /> Moure a un grup…
-                      </Menu.Item>
-                    )}
-                    {onDelete && (
-                      <>
-                        <Menu.Separator />
-                        <Menu.Item value="del" color="fg.error" onClick={onDelete}>
-                          <LuTrash2 /> Esborrar
-                        </Menu.Item>
-                      </>
-                    )}
-                  </Menu.Content>
-                </Menu.Positioner>
-              </Portal>
-            </Menu.Root>
+            // Les accions del document en un menú ⋯, el mateix a totes les galeries.
+            <CardMenu name={project.name} onSaveFile={onSaveFile} onDuplicate={onDuplicate} onMove={onMove} onDelete={onDelete} />
           )
         )}
         </>

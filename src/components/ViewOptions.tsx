@@ -1,5 +1,5 @@
 import { CloseButton, Drawer, IconButton, Popover, Portal, SimpleGrid, Stack, useBreakpointValue } from "@chakra-ui/react"
-import { Children, Fragment, isValidElement, type ReactNode } from "react"
+import { Children, Fragment, isValidElement, useId, type ReactNode } from "react"
 import { LuSlidersVertical } from "react-icons/lu"
 import { Tooltip } from "./ui/tooltip"
 import { segItem } from "./segmented"
@@ -36,6 +36,7 @@ export function ViewOptions({
   open?: boolean
   onOpenChange?: (open: boolean) => void
 }) {
+  const triggerId = useId()
   const control = open === undefined ? {} : { open, onOpenChange: (e: { open: boolean }) => onOpenChange?.(e.open) }
   const n = Math.max(1, countTiles(tiles))
   const rows = Math.ceil(n / 5)
@@ -56,7 +57,7 @@ export function ViewOptions({
     </Stack>
   )
   const trigger = (
-    <IconButton aria-label="Opcions de vista" title="Opcions de vista" size="sm" variant="surface" colorPalette="wood">
+    <IconButton aria-label="Opcions de vista" size="sm" variant="surface" colorPalette="wood">
       <LuSlidersVertical />
     </IconButton>
   )
@@ -86,8 +87,11 @@ export function ViewOptions({
       </Drawer.Root>
     )
   return (
-    <Popover.Root positioning={{ placement: "bottom-end" }} {...control}>
-      <Popover.Trigger asChild>{trigger}</Popover.Trigger>
+    <Popover.Root ids={{ trigger: triggerId }} positioning={{ placement: "bottom-end" }} {...control}>
+      {/* El tooltip i el popover comparteixen l'id del botó (el patró de Chakra). Al mòbil (calaix, tàctil), sense. */}
+      <Tooltip ids={{ trigger: triggerId }} content="Opcions de vista">
+        <Popover.Trigger asChild>{trigger}</Popover.Trigger>
+      </Tooltip>
       <Portal>
         <Popover.Positioner>
           <Popover.Content w="300px" aria-label="Opcions de vista">

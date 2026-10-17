@@ -62,6 +62,9 @@ el codi només porta els valors inicials.
   (`import()` a `features/assistant/claudeClient.ts`, en obrir el xat o provar la clau): no és al bloc d'entrada.
 - **`@xyflow/react`** (React Flow, aprovat per l'usuari el 2026-10-15): només el dibuix de Preferències › Opcions en
   cascada, carregat a demanda (`lazy`).
+- **`@google/model-viewer`** (el visor d'AR de «Veure a casa», `ArDialog`) i **`oidn-web`** (el denoise del Render).
+  `next-themes` i `@emotion/react` són dependències de Chakra (el tema dia/nit, `components/ui/color-mode.tsx`, i els
+  estils); no les facis servir per a res més.
 - Lint: `oxlint`. **Mai prettier.**
 
 ## Arquitectura
@@ -160,7 +163,7 @@ Les etiquetes i les ajudes de la UI fan servir sempre aquestes paraules (auditor
 |---|---|
 | **Cos** | la caixa del mòdul (laterals, base, tapa, fons) i el seu material («Com el cos») |
 | **Fons** | la peça del darrere del mòdul (el `trassera` del taller); **Fons del calaix**, la del calaix (fila del joc, avís `drawer-bottom`, material propi a Materials; el nom de peça `fons calaix` i l'etiqueta `Fons calaix n` no canvien: són els dels fitxers del taller) |
-| **Tipus** | el del mòdul: Moble · Electrodomèstic (Mòdul › Tipus, el primer; on va —arrambat, penjat, lliure al terra— és a Mòdul › **Posició**); el del moble (Moble · Cuina · Armari · Taula) es tria en crear-lo |
+| **Tipus** | el del mòdul: Moble · Electrodomèstic (Mòdul › Tipus, el primer; on va —arrambat, penjat, lliure al terra— és a Mòdul › **Posició**); el del moble (Moble · Cuina · Armari · Taula) ve de la plantilla i no canvia; «Nou moble» crea un Moble (sense menú de tipus) |
 | **Suport** / **Base** | Suport: on seu el mòdul, **el mateix per a tots els mòduls de terra** (Moble › Suport general: directe a terra, sòcol sobre potes, potes vistes); el penjat, des de Posició. Base: la peça de baix de la caixa (Sencera · Sense base) |
 | **Tram** | els mòduls de terra que es toquen; el sòcol és una peça per tram, mai una per mòdul |
 | **Fondària** | l'eix Z i la mida en Z (mai «Fons Z») |
@@ -197,7 +200,8 @@ Les etiquetes i les ajudes de la UI fan servir sempre aquestes paraules (auditor
   - **De punta a punta**: una opció nova es comprova a tots els llocs on té efecte (visor, miniatura, previsualització,
     render, GLB/USDZ, exports, `.moble`) abans de donar-la per feta. Si una previsualització no la pot mostrar, ho diu.
   - **Una dada, una font**: l'`accept` d'un selector de fitxers surt de la mateixa taula que el lector que els classifica
-    (`IMPORT_FORMATS` → `IMPORT_ACCEPT`), no d'una llista escrita a mà al component.
+    (`TEXT_EXTS` → `attachKind` i `ATTACH_ACCEPT` dels adjunts del xat, `features/assistant/attachments.ts`; també
+    `IMPORT_FORMATS` → `IMPORT_ACCEPT` de la importació adormida), no d'una llista escrita a mà al component.
   - **Opcions en cascada** (per decisió de l'usuari: «les opcions de més avall s'adapten a les de més amunt»): a cada
     inspector, cada opció depèn només de les de més amunt; canviar-ne una de dalt fa aparèixer o desaparèixer les de
     sota, mai al revés (Laterals abans de Parets i Cantonades; l'imant de la reixeta després de Muntatge i Trapa;
@@ -227,7 +231,7 @@ Les etiquetes i les ajudes de la UI fan servir sempre aquestes paraules (auditor
 pnpm dev         # servidor de desenvolupament
 pnpm build       # build de producció + service worker
 pnpm test        # vitest (UPDATE_GOLDEN=1 per refer les proves d'or)
-pnpm typecheck   # tsc --noEmit
+pnpm typecheck   # tsc -b --noEmit
 pnpm lint        # oxlint, 0 avisos
 pnpm deadcode    # knip: fitxers, exports i dependències sense ús
 pnpm cycles      # madge: imports circulars

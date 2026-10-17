@@ -5,7 +5,7 @@ import { FoldItem } from "../../Fold"
 import { LOW_MEMORY } from "../deviceLimits"
 import { BACKDROPS, saveBackdropPhoto, type BackdropKind, type Panorama } from "./backdrops"
 import type { EngineKind } from "./engine"
-import { Range, Sec, Toggle } from "./RenderControls"
+import { Range, Sec, SwitchRow } from "./RenderControls"
 import { FOCALS, FORMATS, LOW_MEMORY_MAX, MOODS, RESOLUTIONS, resolutionAllowed, type Background, type Format, type Look, type Mood, type Resolution } from "./renderConfig"
 import { WIDE } from "./renderLayout"
 import type { RenderOpts, RenderRoom } from "./sceneData"
@@ -77,7 +77,7 @@ function CameraSection({ settings }: { settings: RenderSettings }) {
         <ChoiceChips label="Format" options={(Object.keys(FORMATS) as Format[]).map((k) => ({ id: k, label: k === "view" ? "Visor" : k }))} value={format} onChange={setFormat} />
       </FormRow>
       <FormRow label="Verticals rectes" help="Com les fotos d'interiors: la càmera s'anivella i les parets i els mobles no «cauen». Mirant molt de dalt no es fa.">
-        <Toggle label="Verticals rectes" checked={opts.straight !== false} onChange={(straight) => set({ straight })} />
+        <SwitchRow label="Verticals rectes" checked={opts.straight !== false} onChange={(straight) => set({ straight })} />
       </FormRow>
       <FormRow label="Objectiu" help="Equivalent de 35 mm: 24 angular (habitacions petites), 35 interiors, 50 detall i mobles sols. «Visor»: l'angle del visor 3D.">
         <ChoiceChips<string>
@@ -200,7 +200,7 @@ function LightSection({ settings, setLook }: { settings: RenderSettings; setLook
         </FoldItem>
         <FoldItem id="render-light-lamps" size="sm" title="Llum" icon={LuLamp} badge={opts.lamps !== false ? "Enceses" : "Apagades"} badgePalette={opts.lamps !== false ? "wood" : "gray"}>
           <FormRow label="Llums enceses" help="Les pantalles de lli i les bombetes dels llums fan llum (materials «Pantalla de lli» i «Bombeta»).">
-            <Toggle label="Llums enceses" checked={opts.lamps !== false} onChange={(lamps) => set({ lamps })} />
+            <SwitchRow label="Llums enceses" checked={opts.lamps !== false} onChange={(lamps) => set({ lamps })} />
           </FormRow>
           {opts.lamps !== false && <Range label="Llums · intensitat" value={opts.lampIntensity ?? 1} min={0.1} max={5} step={0.1} format={x} onChange={(v) => set({ lampIntensity: v })} />}
           {opts.lamps !== false && <Range label="Llums · com es veuen" help="Com es veuen les pantalles i bombetes a la foto (la llum que fan a l'habitació no canvia). Més baix, es veu la tela de la pantalla; a 1×, una taca blanca com en una foto sense retocar." value={opts.lampView ?? 0.35} min={0.05} max={1} step={0.05} format={x} onChange={(v) => set({ lampView: v })} />}
@@ -214,10 +214,10 @@ function ImageSection({ look, setLook, denoiser, scheduleDenoise }: { look: Look
   return (
     <Sec id="image" title="Imatge" icon={LuImage} hint="S'aplica a l'instant, sense tornar a començar." badge={look.denoise ? "Sense soroll" : undefined}>
       <FormRow label="Exposició automàtica">
-        <Toggle label="Exposició automàtica" checked={look.auto} onChange={(auto) => setLook({ auto })} />
+        <SwitchRow label="Exposició automàtica" checked={look.auto} onChange={(auto) => setLook({ auto })} />
       </FormRow>
       <FormRow label="Reduir el soroll" help={denoiser === "oidn" ? "Amb Open Image Denoise (IA, a la GPU): a les 4, 16, 64, 256… passades i en aturar." : "Filtre guiat per l'albedo i les normals."}>
-        <Toggle
+        <SwitchRow
           label="Reduir el soroll"
           checked={look.denoise}
           onChange={(denoise) => {
@@ -227,7 +227,7 @@ function ImageSection({ look, setLook, denoiser, scheduleDenoise }: { look: Look
         >
           {/* Quin filtre fa servir (discret) */}
           <Text fontSize="xs" color="fg.subtle">{denoiser === "oidn" ? "Intel OIDN" : "bàsic"}</Text>
-        </Toggle>
+        </SwitchRow>
       </FormRow>
       <FormRow label="Corba de color" help="AgX: natural, com les fotos (les llums es tornen blanques suaument). ACES: més contrast i color.">
         <ChoiceChips<ToneCurve>

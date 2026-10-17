@@ -1,4 +1,5 @@
 import { z } from "zod"
+import type { ObjectBox } from "./meshShape"
 
 /**
  * Relleu d'una imatge en blanc i negre (per decisió de l'usuari, 2026-10-17: «importar imatges en blanc i negre perquè
@@ -38,20 +39,24 @@ export function encodeLevels(levels: Uint8Array): string {
 
 /**
  * La superfície d'alçades dins de la caixa (0 a 1 a cada eix): punts i triangles (antihoraris vistos de dalt). x = columna
- * de la imatge, z = de la paret (fila 0, dalt de la imatge) cap a davant, y = l'alçada.
+ * de la imatge, z = de la paret (fila 0, dalt de la imatge) cap a davant, y = l'alçada. Amb `maxSide`, se'n pren un píxel
+ * de cada `k` (com a molt `maxSide` punts per costat; el visor en fa servir 160).
  */
-function reliefSurface(img: ImageRelief): { positions: V3[]; triangles: [number, number, number][] } {
+export function reliefSurface(img: ImageRelief, maxSide?: number): { positions: V3[]; triangles: [number, number, number][] } {
   const lv = reliefLevels(img)
+  const k = maxSide ? Math.max(1, Math.ceil(Math.max(img.w, img.h) / maxSide)) : 1
+  const nx = Math.ceil(img.w / k), nz = Math.ceil(img.h / k)
   const positions: V3[] = []
-  for (let j = 0; j < img.h; j++)
-    for (let i = 0; i < img.w; i++) {
-      const g = lv[j * img.w + i]!
-      positions.push([i / (img.w - 1), img.invert ? 1 - g : g, j / (img.h - 1)])
+  for (let j = 0; j < nz; j++)
+    for (let i = 0; i < nx; i++) {
+      const si = Math.min(img.w - 1, i * k), sj = Math.min(img.h - 1, j * k)
+      const g = lv[sj * img.w + si]!
+      positions.push([si / (img.w - 1), img.invert ? 1 - g : g, sj / (img.h - 1)])
     }
   const triangles: [number, number, number][] = []
-  for (let j = 0; j < img.h - 1; j++)
-    for (let i = 0; i < img.w - 1; i++) {
-      const a = j * img.w + i, b = a + 1, c = a + img.w, d = c + 1
+  for (let j = 0; j < nz - 1; j++)
+    for (let i = 0; i < nx - 1; i++) {
+      const a = j * nx + i, b = a + 1, c = a + nx, d = c + 1
       // Vist des de dalt (+y), antihorari: x cap a la dreta, z cap a davant.
       triangles.push([a, c, b], [b, c, d])
     }
@@ -59,7 +64,7 @@ function reliefSurface(img: ImageRelief): { positions: V3[]; triangles: [number,
 }
 
 /** Els triangles de la superfície en coordenades de la composició (mm). */
-export function reliefWorldTriangles(o: { x: number; y: number; z: number; w: number; h: number; d: number; image?: ImageRelief }): [V3, V3, V3][] {
+export function reliefWorldTriangles(o: ObjectBox & { image?: ImageRelief }): [V3, V3, V3][] {
   if (!o.image) return []
   const s = reliefSurface(o.image)
   const pts = s.positions.map((p): V3 => [o.x + p[0] * o.w, o.y + p[1] * o.h, o.z + p[2] * o.d])

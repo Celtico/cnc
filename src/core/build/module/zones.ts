@@ -2,8 +2,9 @@ import { type CableHole, NO_EDGES, type EdgeBanding, type Front, type Panel, typ
 import { X, Y, Z, addFaceHole, dowelJoint, dowelsAlong, neg, placement, r, snap, system32Ys, threeAlong, toLocal } from "../geometry"
 import { layoutZones, type Layout, type ZoneRect } from "../layout"
 import { AppliancesBuilder } from "./appliances"
-import { num, edges, near } from "./helpers"
+import { edges, near } from "./helpers"
 import type { VerticalRef, HorizontalRef } from "./types"
+import { fmtNum } from "../../../lib/format"
 
 /** Zones: divisors, prestatges, fileres, fronts de cada zona i passacables. Última capa del constructor. */
 export class Builder extends AppliancesBuilder {
@@ -287,17 +288,17 @@ export class Builder extends AppliancesBuilder {
     const own = flush ? 0 : (zone.shelves!.setback ?? c.shelfSetback)
     const strut = this.strutClearance(zone)
     const setback = strut !== undefined && own < strut ? strut : own
-    if (setback !== own) this.warnings.push({ code: "shelf-strut", info: true, message: `Prestatges retirats ${num(setback)} mm del davant (en lloc de ${num(own)}) perquè no toquin el pistó de l'abatible al lateral.`, zoneId: zone.id })
+    if (setback !== own) this.warnings.push({ code: "shelf-strut", info: true, message: `Prestatges retirats ${fmtNum(setback, 1)} mm del davant (en lloc de ${fmtNum(own, 1)}) perquè no toquin el pistó de l'abatible al lateral.`, zoneId: zone.id })
     if (setback !== c.shelfSetback && !flush) this.shelfSetbackOf.set(zone.id, setback)
     // El del mòdul ja ho avisa (`carcass.ts`); el propi, aquí.
-    if (zone.shelves!.setback !== undefined && blocked && setback < d.t) this.warnings.push({ code: "inset", message: `Prestatges retirats ${num(setback)} mm i el front encastat entra ${num(d.t)} mm: hi toparien. Retira'ls almenys ${num(d.t)} mm (Opcions de l'interior › Retranqueig).`, zoneId: zone.id })
+    if (zone.shelves!.setback !== undefined && blocked && setback < d.t) this.warnings.push({ code: "inset", message: `Prestatges retirats ${fmtNum(setback, 1)} mm i el front encastat entra ${fmtNum(d.t, 1)} mm: hi toparien. Retira'ls almenys ${fmtNum(d.t, 1)} mm (Opcions de l'interior › Retirada).`, zoneId: zone.id })
     const depth = d.availDepth - setback
     const innerH = rect.y1 - rect.y0
     const gap = (innerH - n * T) / (n + 1)
     if (width > 800 && t <= 19 && !hollow) {
       this.warnings.push({
         code: "shelf-span",
-        message: `Prestatge de ${num(t)} mm amb una llum de ${num(width)} mm: es vinclarà (màxim recomanat 800).`,
+        message: `Prestatge de ${fmtNum(t, 1)} mm amb una llum de ${fmtNum(width, 1)} mm: es vinclarà (màxim recomanat 800).`,
         zoneId: zone.id,
         options: [
           { text: "Dividir el compartiment amb un divisor vertical al mig.", where: "divide" },
@@ -326,7 +327,7 @@ export class Builder extends AppliancesBuilder {
     if (ys.length < n)
       this.warnings.push({
         code: "shelves",
-        message: `Hi caben ${ys.length} de ${n} prestatges ${zone.shelves!.adjustable ? "regulables (cada un en una filera lliure sense trepitjar-ne cap altre)" : "(amb almenys 10 mm entre ells)"} en ${num(innerH)} mm: se'n fan ${ys.length}.`,
+        message: `Hi caben ${ys.length} de ${n} prestatges ${zone.shelves!.adjustable ? "regulables (cada un en una filera lliure sense trepitjar-ne cap altre)" : "(amb almenys 10 mm entre ells)"} en ${fmtNum(innerH, 1)} mm: se'n fan ${ys.length}.`,
         zoneId: zone.id,
       })
     for (const y of ys) {

@@ -59,7 +59,7 @@ export const MOBLE = group("moble", "Moble", { icon: "moble", code: UI.inspector
     ]),
   ]),
   section("moble.joinery", "Encaixos", { icon: "joinery", code: UI.inspector, showIf: "Alguna peça lliure fa encaixos" }, [
-    field("moble.joinery.clearance", "Joc", { code: UI.part, control: "number", default: 0.2 }),
+    field("moble.joinery.clearance", "Folgança", { code: UI.part, control: "number", default: 0.2 }),
     field("moble.joinery.tool", "Diàmetre fresa (Ø)", { code: UI.part, control: "number", default: 6 }),
     field("moble.joinery.tabWidth", "Pestanya", { code: UI.part, control: "number", default: 50 }),
     field("moble.joinery.dogbones", "Dogbones", { code: UI.part, control: "switch", default: true, choices: [{ value: "on", label: "A les cantonades interiors" }] }),

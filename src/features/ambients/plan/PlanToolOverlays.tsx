@@ -48,13 +48,13 @@ export function PlanToolOverlays({
               <g>
                 <line x1={ends[0]![0]} y1={ends[0]![1]} x2={ends[1]![0]} y2={ends[1]![1]} stroke={C.accent} strokeWidth={px(1)} />
                 {ends.map((q, i) => (
-                  <rect key={i} x={q[0] - r} y={q[1] - r} width={2 * r} height={2 * r} transform={`rotate(45 ${q[0]} ${q[1]})`} fill="white" stroke={C.accent} strokeWidth={px(1.5)} />
+                  <rect key={i} x={q[0] - r} y={q[1] - r} width={2 * r} height={2 * r} transform={`rotate(45 ${q[0]} ${q[1]})`} fill={C.item} stroke={C.accent} strokeWidth={px(1.5)} />
                 ))}
               </g>
             )
           })()}
           {chain.map((p, i) => (
-            <circle key={i} cx={p[0]} cy={p[1]} r={px(4)} fill={i === 0 ? C.accent : "white"} stroke={C.accent} strokeWidth={px(1.5)} />
+            <circle key={i} cx={p[0]} cy={p[1]} r={px(4)} fill={i === 0 ? C.accent : C.item} stroke={C.accent} strokeWidth={px(1.5)} />
           ))}
           {cursor && (
             <text x={cursor[0] + px(10)} y={cursor[1] - px(10)} style={{ fontSize: px(12) }} fill={C.accentFg} fontWeight={600}>

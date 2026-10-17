@@ -28,14 +28,17 @@
   `TreeSection onAdd`, el + obre la galeria de Mobles o d'Objectes), cadascun amb els seus elements i grups (els blocs
   d'abans, a Objectes; un moble que ja no hi és, a Mobles, amb `LuTriangleAlert`). **Un grup amb mobles i objectes surt
   als dos apartats**, a cadascun amb els seus (plegat per apartat); triar-lo des de qualsevol tria tot el grup (les dues
-  files queden marcades). **Selecció múltiple** (Maj + clic a l'arbre, al plànol o al 3D, com a l'editor; `Selection` `{ kind: "multi", ids }`, `selIds`; **també les parets**, `selWallIds`: a l'arbre i al plànol, es mouen —arrossegant-ne una de triada, fletxes, X/Y—, s'agrupen i s'eliminen amb els elements; `moveWalls`; les parets poden ser de grups, `Wall.group`, el mateix espai de noms que els elements, `groupWallIds`, `setWallGroup`, plegables dins de «Parets»): moure (arrossegar, fletxes, X/Y del centre), girar, duplicar, eliminar, **Alineació** al plànol (X i Y: inici, mig, final; «Repartir» amb tres o més i amb un «Espai entre ells»; `alignItems`, `distributeItems` amb la petjada de cada element) i el **Grup** de tots (`MultiInspector` dels Ambients; ⌘G grup nou, ⇧⌘G fora del grup, com a l'editor). **Arrossegar per ordenar** (per decisió de l'usuari, 2026-10-14, com les peces lliures de
+  files queden marcades). **Selecció múltiple** (Maj + clic a l'arbre, al plànol o al 3D, com a l'editor; `Selection` `{ kind: "multi", ids }`, `selIds`; **també les parets**, `selWallIds`: a l'arbre i al plànol, es mouen —arrossegant-ne una de triada, fletxes, «De costat (X)» / «Fondària (Z)»—, s'agrupen i s'eliminen amb els elements; `moveWalls`; les parets poden ser de grups, `Wall.group`, el mateix espai de noms que els elements, `groupWallIds`, `setWallGroup`, plegables dins de «Parets»): moure (arrossegar, fletxes, «De costat (X)» i «Fondària (Z)» del centre), girar, **Alineació** al plànol («De costat (X)» i «Fondària (Z)»: inici, mig, final; «Repartir» amb tres o més i amb un «Espai entre ells»; `alignItems`, `distributeItems` amb la petjada de cada element) i el **Grup** de tots i **Triats** (`LuListChecks`: la llista dels triats i els botons Duplicar · Eliminar, com a l'editor) (`MultiInspector` dels Ambients; ⌘G grup nou, ⇧⌘G fora del grup, com a l'editor). **Arrossegar per ordenar** (per decisió de l'usuari, 2026-10-14, com les peces lliures de
   l'editor; `reorderItems`, `moveItemToGroup` a `core/model/ambient.ts`): un element deixat al costat d'un altre n'agafa
   el grup, sobre la fila d'un grup hi entra, la fila del grup arrossega el grup sencer i, mentre s'arrossega un element d'un
   grup, surt la zona «Treure del grup». Un moble buit (sense mòduls ni peces, `isEmptyGeometry`) diu «Buit» a l'arbre, al plànol és el
   requadre discontinu de 600 × 600 (com un esborrat) i l'inspector diu que s'ha de fer a l'editor (sense Mides generals). Inspector (element, bloc,
-  paret, grup, ambient) en `FoldItem`; el de l'ambient comença amb **Resum** (com el del moble: parets, m² de terra de
+  paret, grup, ambient) en `FoldItem`; l'element i la paret porten a la capçalera el menú ⋯ com a l'Editor (`ActionsMenu`,
+  tooltip «Accions», `aria-label` «Accions de «x»»: Duplicar · Eliminar a l'element, Eliminar a la paret); la posició de
+  l'element és «De costat (X)» i «Fondària (Z)» (el centre al plànol) i «Alçada (Y)» (des del terra), amb `AxisLabel`, i les
+  mides «Amplada» · «Alçada» · «Fondària»; el de l'ambient comença amb **Resum** (com el del moble: parets, m² de terra de
   les habitacions tancades —`floorArea`, als eixos—, caixa, mobles, objectes, finestres, portes, vidrieres, grups i un
-  avís amb «Treure'ls de l'ambient» si en falta algun; `ambientSummary` a `core/model/ambient.ts`), després Parets noves,
+  avís amb «Eliminar-los de l'ambient» si en falta algun; `ambientSummary` a `core/model/ambient.ts`), després Parets noves,
   Acabats, Plànol de fons.
 - **Plànol** (`PlanCanvas`, com Figma): roda o dos dits per desplaçar, Ctrl/⌘ + roda o pessigar per fer zoom al punt, espai
   + arrossegar; − / + i l'escala (1:50…) a baix a la dreta; la barra d'eines flota a dalt. Eines en columna a l'esquerra: **Seleccionar** (V), **Paret** (P,
@@ -51,25 +54,25 @@
   Ctrl/⌘ D, desfer/refer (Ctrl/⌘ Z, Maj+Ctrl/⌘ Z, Ctrl Y; el comú, 100 passos, arrossegar = un pas). **Ctrl/⌘ C · X · V** (plànol i 3D): els elements seleccionats
   (o el grup) a `localStorage` `mobles:ambient-clipboard` (`AmbientClip`, `parseAmbientClip`), també d'un ambient a un
   altre; `pasteItems`: ids nous, desplaçats 300 mm si els originals hi són (i 300 més a cada enganxada), si no al mateix
-  lloc; grups com «Duplicar». Els mobles enganxats són el mateix moble enllaçat (com «Duplicar»). Es desa sol. «Encabir» deixa l'habitació fora de les eines i barres (`PLAN_INSETS`); noms i mides
+  lloc; grups com «Duplicar». Els mobles enganxats són el mateix moble enllaçat (com «Duplicar»). Es desa sol. «Enquadrar» deixa l'habitació fora de les eines i barres (`PLAN_INSETS`); noms i mides
   només si hi caben. **Plànol de fons**: imatge (2400 px JPEG) escalada amb la calibració, opacitat i bloqueig. La vista del
   plànol no es recorda.
 - **Finestres i portes** (`Wall.openings`: finestra amb ampit de pedra, porta amb fulla, vidriera amb travessers):
   `nearestWall`, `addOpening` amb `OPENING_DEFAULTS`, `clampOpening` (no trepitja les que hi ha: forat lliure més proper o
   avís); es queden al seu lloc en moure extrems o escurçar la paret (`setWallEnds`); s'arrosseguen al llarg de la paret;
-  inspector de la paret: tipus, centre, ample, alt, ampit, fulles i material propi (`Wall.material`). 3D: `wallOpenings`,
+  inspector de la paret: tipus, «Centre (des de l'inici)», «Amplada», «Alçada», «Ampit (del terra)», fulles i material propi (`Wall.material`). 3D: `wallOpenings`,
   `wallSegments`; el vidre porta `userData.glass` i `baseOpacity`.
 - **Grups d'elements** (`AmbientItem.group`; `setItemGroup`, `moveItems`, `rotateItems`, `duplicateItems`, `removeItems`):
-  la llista és com l'arbre de l'editor (grups plegables, menú ⋯: duplicar, grup nou, posar a un grup, treure, obrir a
-  l'editor, treure de l'ambient). El primer clic a un element agrupat (plànol o 3D) tria el grup i el segon l'element; Supr,
+  la llista és com l'arbre de l'editor (grups plegables, menú ⋯ «Accions de «x»»: Duplicar · Grup nou · Posar a «grup» · Treure del grup ·
+  Obrir a l'editor · Eliminar; el d'un grup: Duplicar el grup · Desagrupar · Eliminar el grup). El primer clic a un element agrupat (plànol o 3D) tria el grup i el segon l'element; Supr,
   Ctrl/⌘ D, R i fletxes valen per a tot el grup (duplicar un sol element el deixa al grup; el grup sencer en fa un de nou);
   inspector del grup.
-- **Opcions de vista** (les mateixes `ViewOptions`/`ViewTile`): al plànol encabir, graella, mides, noms, peces, imant, plànol
+- **Opcions de vista** (les mateixes `ViewOptions`/`ViewTile`): al plànol enquadrar, graella, mides, noms, peces, imant, plànol
   de fons i render; al 3D enquadrar, interior, casa de nines, sostre, ombres i render.
 - **3D** (`Ambient3D`): terra i parets amb `surfaceMaterial` (textura a mida real); les parets entre la càmera i l'habitació es
   fan transparents (casa de nines). La mateixa navegació que l'editor; clic per seleccionar (caixa taronja; Supr, Ctrl/⌘ D, R
   i fletxes); **es mou amb les fletxes del gizmo** (`MoveGizmo`, X i Z, i la bola del mig lliure pel terra, X i Z alhora; quadrícula, imant a les parets només en la direcció
-  de la fletxa amb un sol element, Alt sense imant, un pas de desfer). **La verda (Y) mou l'alçada** («Del terra», mai
+  de la fletxa amb un sol element, Alt sense imant, un pas de desfer). **La verda (Y) mou l'alçada** («Alçada (Y)», mai
   sota 0; per decisió de l'usuari): amb l'imant, a 60 mm s'enganxa al terra o a sobre d'un altre element que tingui a
   sota (planta que se solapa: una taula, un moble). Ratolí a sobre: contorn prim (`BoxFrame`); seleccionat, gruixut. Les peces d'un
   element només es refan si en canvia la geometria o els materials (moure'l només en canvia la posició) i les que ja no es
@@ -86,8 +89,8 @@
 - **Teulada** (`Ambient.roof`, `RoofSchema`, `roofBox`; `features/ambients/roof3d.ts`, `roofGroup`; per decisió de l'usuari,
   2026-10-14: «la teulada, recta o amb forma de casa en V, o amb claraboies»): Propietats de l'ambient › **Teulada**
   (`LuWarehouse`): Tipus Cap · Plana · Una aigua · Dues aigües, Pendent (°), Carener (al llarg de X / Y), Voladís, Gruix,
-  Alçada (sense valor, la paret més alta), Material («Formigó» per defecte) i **Claraboies** (centre X/Y al plànol, ample en X
-  i fondària en Y; les que no caben a un pla, a 50 mm de les vores, no es fan). Cobreix la caixa de les parets amb el
+  Alçada (sense valor, la paret més alta), Material («Formigó» per defecte) i **Claraboies** («De costat (X)» i «Fondària (Z)», el centre al plànol, «Amplada» en X
+  i «Fondària» en Y; les que no caben a un pla, a 50 mm de les vores, no es fan). Cobreix la caixa de les parets amb el
   voladís; a dues aigües i a una aigua, les puntes (i a una aigua la paret alta) es tanquen fins a la teulada amb el
   material de les parets. Al 3D: les peces compten com a parets al render (`userData.room = "wall"`) i cada claraboia
   porta un vidre que fa de portal; el sostre de dins (amb el seu material) es queda, just sota la paret més baixa; amb la casa de nines, des de fora es
@@ -114,7 +117,7 @@
 - **Ambients per a clients**: menú ⋯ › «Duplicar (per a un client)…» (`duplicateAmbient`): «escena · client», duplica els
   mobles i objectes enllaçats i ho posa tot al grup del client: dos clients no comparteixen cap moble (`remapMobleItems`,
   el mateix que en obrir un `.ambient`).
-- **Desar com a fitxer** (`.moble`, vegeu Desar i fitxers › Fitxer d'ambient): menú ⋯ de la targeta i ⋯ de la barra de l'ambient obert.
+- **«Desar com a fitxer…»** (`.moble`, vegeu Desar i fitxers › Fitxer d'ambient): menú ⋯ de la targeta i ⋯ de la barra de l'ambient obert.
 - **Assistent IA** (`docs/xat-ia.md`; el mateix xat que l'Editor, vegeu Editor › Assistent IA): pestanya «Assistent» a la
   columna de la dreta (`Workspace extra`; al mòbil, la tercera pestanya). Eines (`core/assistant/ambientTools.ts`, pures
   i asíncrones; instruccions `AMBIENT_SYSTEM_PROMPT`: mm, plànol x a la dreta i y avall, elements pel centre, gir en graus

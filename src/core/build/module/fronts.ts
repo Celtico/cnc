@@ -4,8 +4,9 @@ import { MIN_OPEN_RATIO, grilleCutouts, type Rect } from "../grille"
 import { applyHardware, type SlotSpec } from "../hardware"
 import type { ZoneRect } from "../layout"
 import { FittingsBuilder } from "./fittings"
-import { num, edges, frontMaterialOf } from "./helpers"
+import { edges, frontMaterialOf } from "./helpers"
 import type { VerticalRef, GlassHinge } from "./types"
+import { fmtNum } from "../../../lib/format"
 
 /** Fronts: portes (de fusta i de vidre), abatibles i reixetes. */
 export class FrontsBuilder extends FittingsBuilder {
@@ -14,7 +15,7 @@ export class FrontsBuilder extends FittingsBuilder {
     this.doorZones += 1
     const suffix = this.doorZones === 1 ? "" : `-${this.doorZones}`
     const doorH = r(ter.y1 - ter.y0)
-    if (doorH > 2200) this.warnings.push({ code: "door-too-tall", message: `Porta de ${num(doorH)} mm d'alçada (màxim recomanat 2.200).`, zoneId: zone.id })
+    if (doorH > 2200) this.warnings.push({ code: "door-too-tall", message: `Porta de ${fmtNum(doorH, 1)} mm d'alçada (màxim recomanat 2.200).`, zoneId: zone.id })
 
     // La frontissa triada a la porta (si no, la del mòdul); la de vidre no en porta.
     // (Els llocs es llegeixen a demanda: la porta de vidre no toca ni la frontissa ni el tirador.)
@@ -23,7 +24,7 @@ export class FrontsBuilder extends FittingsBuilder {
     // El tirador triat a la porta (si no, el del mòdul).
     const handleHw = this.frontHandle(front.handle, zone.id)
     const make = (id: string, name: string, label: string, x0: number, w: number, hinge: "left" | "right") => {
-      if (w > 600) this.warnings.push({ code: "door-too-wide", message: `Porta de ${num(w)} mm d'amplada (màxim recomanat 600).`, zoneId: zone.id })
+      if (w > 600) this.warnings.push({ code: "door-too-wide", message: `Porta de ${fmtNum(w, 1)} mm d'amplada (màxim recomanat 600).`, zoneId: zone.id })
       if (front.glass) return this.glassDoor(id, label, x0, ter.y0, w, doorH, this.frontHardware("glassFrame", front.frame, zone.id), { hinge: hingeHw, side: hinge, panel: hinge === "left" ? left : right, rowYs, zoneId: zone.id }, handleHw.push ? undefined : handleHw.item)
       const door = this.frontPanel(id, name, label, "door", x0, ter.y0, w, doorH)
       this.addCups(door, doorH, hinge, w, rowYs, ter.y0, zone.id, hingeHw, hinge === "left" ? left : right)
@@ -34,7 +35,7 @@ export class FrontsBuilder extends FittingsBuilder {
       const hd = handleHw.spec
       const cupBand = hingeHw.spec.cupOffset + hingeHw.spec.cupDiameter / 2 + hd.diameter / 2 + hd.margin
       if (w - hd.inset < cupBand)
-        this.warnings.push({ code: "handle", message: `${door.label} de ${num(w)} mm d'amplada: el tirador cauria sobre les frontisses (calen ${num(cupBand + hd.inset)} mm). No es fan els forats: posa-hi un pom o un tirador de cantell.`, zoneId: zone.id, panelId: door.id })
+        this.warnings.push({ code: "handle", message: `${door.label} de ${fmtNum(w, 1)} mm d'amplada: el tirador cauria sobre les frontisses (calen ${fmtNum(cupBand + hd.inset, 1)} mm). No es fan els forats: posa-hi un pom o un tirador de cantell.`, zoneId: zone.id, panelId: door.id })
       else this.handle(door, doorH / 2, hinge === "left" ? w - hd.inset : hd.inset, "x", handleHw, zone.id)
     }
     if (front.mode === "single") {
@@ -153,7 +154,7 @@ export class FrontsBuilder extends FittingsBuilder {
       }
     }
     if (placed.length < count)
-      this.warnings.push({ code: "hinge", message: `${label} de vidre de ${num(h)} mm: només hi caben ${placed.length} de ${count} plaques de frontissa al lateral${why.size ? ` (${[...why].join(" ")})` : ""}.`, zoneId: g.zoneId })
+      this.warnings.push({ code: "hinge", message: `${label} de vidre de ${fmtNum(h, 1)} mm: només hi caben ${placed.length} de ${count} plaques de frontissa al lateral${why.size ? ` (${[...why].join(" ")})` : ""}.`, zoneId: g.zoneId })
     return placed
   }
 
@@ -246,7 +247,7 @@ export class FrontsBuilder extends FittingsBuilder {
       const l = toLocal(p, [xFace, yB + u, zB])
       const face = faceAt(p, l)
       if (!face || face === "edge" || l[0] - dd / 2 < 0 || l[0] + dd / 2 > p.length || l[1] - dd / 2 < 0 || l[1] + dd / 2 > p.width) {
-        this.warnings.push({ code: "hardware", message: `«${item.name}»: el bracket d'armari no cap al ${p.label.toLowerCase()} (a ${num(G)} mm del cantell de gir); no es fa.`, zoneId })
+        this.warnings.push({ code: "hardware", message: `«${item.name}»: el bracket d'armari no cap al ${p.label.toLowerCase()} (a ${fmtNum(G, 1)} mm del cantell de gir); no es fa.`, zoneId })
         return true
       }
       holes.push({ x: l[0], y: l[1], diameter: dd, depth: Math.min(item.params.depth ?? 12, p.thickness - 1), face, tag: "flap" })
@@ -317,7 +318,7 @@ export class FrontsBuilder extends FittingsBuilder {
     // mínim un Ø de matèria entre ells); més estret encara, no se'n fan i s'avisa.
     const fitsAlong = along >= f.offset + f.diameter / 2 + 1
     const ys = !fitsAlong ? [] : across >= 2 * f.endOffset + 2 * f.diameter ? [f.endOffset, r(across - f.endOffset)] : across >= 4 * f.diameter ? [r(across / 4), r((3 * across) / 4)] : []
-    if (!ys.length) this.warnings.push({ code: "hinge", message: `Abatible de ${num(across)} × ${num(along)} mm: no hi caben els forats de les frontisses.`, zoneId: zone.id, panelId: flap.id })
+    if (!ys.length) this.warnings.push({ code: "hinge", message: `Abatible de ${fmtNum(across, 1)} × ${fmtNum(along, 1)} mm: no hi caben els forats de les frontisses.`, zoneId: zone.id, panelId: flap.id })
     for (const y of ys) {
       // Ancoratge al cantell de gir (x local = alçada): avall, el de baix; amunt, el de dalt.
       flap.holes.push(...applyHardware(arm.item, "flap", {}, { at: { x: 0, y }, ...(front.dir === "down" ? {} : { mirrorX: along }) }).holes)

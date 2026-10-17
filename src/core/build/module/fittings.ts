@@ -12,9 +12,10 @@ import {
 import { X, Y, Z, faceAt, neg, placement, r, snap, toLocal } from "../geometry"
 import { applyHardware, legSpec, slotSpec, type SlotSpec } from "../hardware"
 import type { ZoneRect } from "../layout"
-import { num, edges, near, frontMaterialOf, addHandle } from "./helpers"
+import { edges, near, frontMaterialOf, addHandle } from "./helpers"
 import { LightsBuilder } from "./lights"
 import type { VerticalRef, HandleChoice } from "./types"
+import { fmtNum } from "../../../lib/format"
 
 /** Ferratges col·locats: tiradors, frontisses (cassoletes i plaques) i potes. */
 /** Fins on es mou cap a dins una placa de pota que no hi cap just a la seva distància dels cantells (`buildLegs`). */
@@ -63,7 +64,7 @@ export class FittingsBuilder extends LightsBuilder {
         return
       }
       if (!addHandle(p, cx, cy, along, item, spec)) {
-        this.warnings.push({ code: "handle", message: `${p.label} de ${num(p.width)} × ${num(p.length)} mm: massa petit per als forats del tirador (o toparien amb les cassoletes). No es fan: posa-hi un pom o un tirador de cantell.`, panelId: p.id })
+        this.warnings.push({ code: "handle", message: `${p.label} de ${fmtNum(p.width, 1)} × ${fmtNum(p.length, 1)} mm: massa petit per als forats del tirador (o toparien amb les cassoletes). No es fan: posa-hi un pom o un tirador de cantell.`, panelId: p.id })
         return
       }
       this.order(item, 1)
@@ -132,7 +133,7 @@ export class FittingsBuilder extends LightsBuilder {
     // Porta massa estreta: la cassoleta (a `cupOffset` del cantell) o un cargol sortiria per l'altre costat.
     const minW = across + h.margin
     if (doorW < minW || nearEdge < 0) {
-      this.warnings.push({ code: "hinge", message: `${door.label} de ${num(doorW)} mm d'amplada: no hi cap la cassoleta de la frontissa (calen ${num(minW)} mm). Fes-la més ampla o posa-hi un front fix.`, zoneId, panelId: door.id })
+      this.warnings.push({ code: "hinge", message: `${door.label} de ${fmtNum(doorW, 1)} mm d'amplada: no hi cap la cassoleta de la frontissa (calen ${fmtNum(minW, 1)} mm). Fes-la més ampla o posa-hi un front fix.`, zoneId, panelId: door.id })
       return 0
     }
     const minGap = dia + h.gap
@@ -200,14 +201,14 @@ export class FittingsBuilder extends LightsBuilder {
       const face = faceAt(p, l)
       const rad = hole.d / 2
       if (!face || face === "edge" || l[0] - rad < 0 || l[0] + rad > p.length || l[1] - rad < 0 || l[1] + rad > p.width)
-        return { error: `Placa de «${item.name}»: un forat Ø${num(hole.d)} surt del ${p.label.toLowerCase()}.` }
+        return { error: `Placa de «${item.name}»: un forat Ø${fmtNum(hole.d, 1)} surt del ${p.label.toLowerCase()}.` }
       // Unions de la base, la tapa i els prestatges fixos que topen a aquesta cara: espigues i cantell.
       const joint = this.horizontals.find((hz) => (near(hz.xL, xFace) || near(hz.xR, xFace)) && w[1] + rad > hz.yBottom && w[1] - rad < hz.yTop && w[2] + rad > hz.zRear && w[2] - rad < hz.zFront)
       if (joint) return { error: `Placa de «${item.name}»: un forat cau a la unió amb ${joint.panel.label.toLowerCase()}.` }
       let depth = hole.depth
       if (depth > p.thickness - 1) {
         depth = Math.max(0.5, Math.floor((p.thickness - 1) * 2) / 2)
-        notes.push(`Placa de «${item.name}»: un forat de ${num(hole.depth)} mm és massa fondo per al ${p.label.toLowerCase()} de ${num(p.thickness)} mm; es fa de ${num(depth)} mm (1 mm de pell). Comprova que la placa hi aguanta.`)
+        notes.push(`Placa de «${item.name}»: un forat de ${fmtNum(hole.depth, 1)} mm és massa fondo per al ${p.label.toLowerCase()} de ${fmtNum(p.thickness, 1)} mm; es fa de ${fmtNum(depth, 1)} mm (1 mm de pell). Comprova que la placa hi aguanta.`)
       }
       holes.push({ x: l[0], y: l[1], diameter: hole.d, depth, face, tag: hole.tag ?? "plate" })
     }
@@ -262,7 +263,7 @@ export class FittingsBuilder extends LightsBuilder {
     const { d } = this
     const legLen = item.imported?.bbox?.max[2]
     if (legLen !== undefined && Math.abs(legLen - base.height) > 1)
-      this.hardwareWarning(`«${item.name}» fa ${num(legLen)} mm d'alçada i la base «Potes» en diu ${num(base.height)}: el moble quedarà a una altra alçada (posa-hi ${num(legLen)}).`)
+      this.hardwareWarning(`«${item.name}» fa ${fmtNum(legLen, 1)} mm d'alçada i la base «Potes» en diu ${fmtNum(base.height, 1)}: el moble quedarà a una altra alçada (posa-hi ${fmtNum(legLen, 1)}).`)
     // La base: la peça de baix amb la cara a Y = 0 (la de fora, si les parets són buides).
     const bottom = this.panels.find((p) => p.role === "bottom" && faceAt(p, toLocal(p, [d.W / 2, d.baseY, d.D / 2])) !== null)
     if (!bottom) {
@@ -325,7 +326,7 @@ export class FittingsBuilder extends LightsBuilder {
             }
           }
       if (!found) {
-        this.hardwareWarning(`«${item.name}»: la placa d'alguna pota no hi cap sencera a la base (a ${num(inset)} mm dels cantells, amb ${margin} mm de marge i sense trepitjar altres forats, ni movent-la ${LEG_NUDGE} mm cap a dins). No es fa cap forat de les potes: canvia «Als cantells» de la pota.`)
+        this.hardwareWarning(`«${item.name}»: la placa d'alguna pota no hi cap sencera a la base (a ${fmtNum(inset, 1)} mm dels cantells, amb ${margin} mm de marge i sense trepitjar altres forats, ni movent-la ${LEG_NUDGE} mm cap a dins). No es fa cap forat de les potes: canvia «Als cantells» de la pota.`)
         return
       }
       if (found.at[0] !== lx || found.at[1] !== lz) moved = Math.max(moved, Math.abs(found.at[0] - lx), Math.abs(found.at[1] - lz))
@@ -333,10 +334,10 @@ export class FittingsBuilder extends LightsBuilder {
       holes.push(...found.holes)
     }
     if (!legs.length) return
-    if (moved) this.hardwareWarning(`«${item.name}»: alguna placa no hi cabia just a la seva distància dels cantells (el fons o un altre forat hi tocava) i s'ha mogut ${num(moved)} mm cap a dins.`)
+    if (moved) this.hardwareWarning(`«${item.name}»: alguna placa no hi cabia just a la seva distància dels cantells (el fons o un altre forat hi tocava) i s'ha mogut ${fmtNum(moved, 1)} mm cap a dins.`)
     bottom.holes.push(...holes)
     this.order(item, legs.length, item.tags?.some((t) => t.startsWith("Tub")) ? "el tub amb el peu es demana a part per l'alçada (notes del ferratge)" : undefined)
-    if (deep) this.hardwareWarning(`«${item.name}»: els forats de les potes són més fondos que la base: es fan a ${num(T - 1)} mm (1 mm de pell).`)
+    if (deep) this.hardwareWarning(`«${item.name}»: els forats de les potes són més fondos que la base: es fan a ${fmtNum(T - 1, 1)} mm (1 mm de pell).`)
     const imp = item.imported
     // Una pota de la biblioteca sense model (la AXILO 78): es dibuixa amb sòlids de l'app (`legSolids`), la placa amb les
     // mides de l'item (`plateU0`…; a la dreta, en mirall) i el tub fins a terra.

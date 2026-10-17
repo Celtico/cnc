@@ -1,7 +1,8 @@
 import type { Hole, Panel, Vec3 } from "../../model"
 import { addFaceHole, r, toLocal, toWorld } from "../geometry"
 import { CarcassBuilder } from "./carcass"
-import { near, num } from "./helpers"
+import { near} from "./helpers"
+import { fmtNum } from "../../../lib/format"
 
 /**
  * Com s'aguanta el mòdul penjat: els **penjadors** amb la seva **regleta** de paret (v45). El sòcol no és del mòdul: és el
@@ -47,8 +48,8 @@ export class MountingBuilder extends CarcassBuilder {
       const wrongSide = holes.some((h) => (std ? h.w[2] + h.hole.diameter / 2 > backRear + 0.5 : h.w[2] - h.hole.diameter / 2 < d.backInnerZ - 0.5))
       const copy: Panel = { ...v.panel, holes: [...v.panel.holes] }
       if (wrongSide || !holes.every((h) => addFaceHole(copy, h.w, h.hole))) {
-        const where = std ? `${num(spec.behindBack!)} darrere del fons` : `${num(spec.fromBack)} del darrere${wrongSide ? ", darrere del fons" : ""}`
-        this.hardwareWarning(`«${item.name}»: els forats del penjador ${side === "left" ? "esquerre" : "dret"} no hi caben (a ${num(spec.fromTop)} de dalt i ${where}). No es fan: revisa el penjador a Preferències › Ferratges o la retirada del fons.`)
+        const where = std ? `${fmtNum(spec.behindBack!, 1)} darrere del fons` : `${fmtNum(spec.fromBack, 1)} del darrere${wrongSide ? ", darrere del fons" : ""}`
+        this.hardwareWarning(`«${item.name}»: els forats del penjador ${side === "left" ? "esquerre" : "dret"} no hi caben (a ${fmtNum(spec.fromTop, 1)} de dalt i ${where}). No es fan: revisa el penjador a Preferències › Ferratges o la retirada del fons.`)
         continue
       }
       v.panel.holes = copy.holes
@@ -86,7 +87,7 @@ export class MountingBuilder extends CarcassBuilder {
     if (room < spec.gap && (placed.length || std))
       this.warnings.push({
         code: "hanging",
-        message: `Penjadors: ${std ? "el penjador i la regleta van" : "la regleta i el ganxo van"} entre la paret i el fons i hi calen ${num(spec.gap)} mm; ${c.back === "screwed" ? "el fons cargolat darrere no en deixa" : `el fons en deixa ${num(room)}`}. Posa el fons en ranura amb la «Ranura del fons» a ${num(spec.gap)} mm o més (o encastat retirat) a ${"Mòdul › Caixa"}.`,
+        message: `Penjadors: ${std ? "el penjador i la regleta van" : "la regleta i el ganxo van"} entre la paret i el fons i hi calen ${fmtNum(spec.gap, 1)} mm; ${c.back === "screwed" ? "el fons cargolat darrere no en deixa" : `el fons en deixa ${fmtNum(room, 1)}`}. Posa el fons en ranura amb la «Ranura del fons» a ${fmtNum(spec.gap, 1)} mm o més (o encastat retirat) a ${"Mòdul › Caixa"}.`,
       })
     if (placed.length) this.buildWallRail(r(topY - spec.railTop))
   }

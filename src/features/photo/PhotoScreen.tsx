@@ -116,7 +116,7 @@ export function PhotoScreen({
             </Button>
             {project.photo && (
               <Button size={embedded ? "sm" : "md"} variant="ghost" colorPalette="red" onClick={() => void removeProjectPhoto(projectId)}>
-                <LuTrash2 /> Esborrar
+                <LuTrash2 /> Eliminar
               </Button>
             )}
           </HStack>

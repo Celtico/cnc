@@ -1,6 +1,7 @@
 import { Box, HStack, Stack, Text } from "@chakra-ui/react"
 import { SectionLabel } from "../../components/SectionLabel"
-import { fmtMm, type CamSheetView } from "./camDrawing"
+import { type CamSheetView } from "./camDrawing"
+import { fmtNum } from "../../lib/format"
 
 /** Llegenda: una eina per color. */
 export function CamToolLegend({ view }: { view: CamSheetView }) {
@@ -14,7 +15,7 @@ export function CamToolLegend({ view }: { view: CamSheetView }) {
             <Box w="12px" h="12px" rounded={t.kind === "drill" ? "full" : "sm"} style={{ background: t.color }} flexShrink={0} />
             <Text>
               {t.kind === "drill" ? "Broca" : t.kind === "blade" ? "Disc" : "Fresa"} {t.name}
-              {t.diameter ? ` · Ø${fmtMm(t.diameter)}` : " · Ø ?"} · {t.count}
+              {t.diameter ? ` · Ø${fmtNum(t.diameter)}` : " · Ø ?"} · {t.count}
               {t.kind === "drill" ? (t.count === 1 ? " forat" : " forats") : t.count === 1 ? " op." : " op."}
             </Text>
           </HStack>

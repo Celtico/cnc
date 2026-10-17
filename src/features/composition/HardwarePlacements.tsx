@@ -1,4 +1,4 @@
-import { Badge, Box, Button, chakra, HStack, IconButton, Stack, Text } from "@chakra-ui/react"
+import { Badge, Box, Button, chakra, HStack, Stack, Text } from "@chakra-ui/react"
 import type { IconType } from "react-icons"
 import { LuCopy, LuPencil, LuTrash2, LuWrench } from "react-icons/lu"
 import { FoldItem } from "../../components/Fold"
@@ -7,13 +7,15 @@ import type { RuleHardwareCount } from "../../core/build/hardwareSummary"
 import { HARDWARE_ICONS } from "../settings/hardwareIcons"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { NumberField } from "../../components/NumRow"
-import { dimFont, fmtMm, layoutDims } from "../../components/dims"
+import { dimFont, layoutDims } from "../../components/dims"
 import { DimLayer } from "../../components/DimLine"
 import { HardwareSelect } from "../settings/HardwareSelect"
 import { placeableOn } from "../settings/hardwareGroups"
 import { UI_PATHS, hardwareSummary, isPendingImport, machiningParts, type Composition, type HardwareItem, type HardwarePlacement, type Panel, type PlacePos } from "../../core/model"
 import type { CompositionWarning } from "../../core/build/buildComposition"
 import { panelAxes, partLabel, placeableItems, placementAdvanced, placementPreview, placementScope, placementWarnings, placePosValue, roleFor, scopePanels, scopePlacements, simplifyPlacement, updatePlacement, type PlacementScope } from "./placements"
+import { fmtNum } from "../../lib/format"
+import { IconAction } from "../../components/IconAction"
 
 /**
  * **Ferratges col·locats a mà** (millores v1 F4; Editor › mòdul o peça lliure › «Ferratges»): només els **«només 3D»**
@@ -152,16 +154,16 @@ export function PlacementButtons({ id, name, actions, edit = true }: { id: strin
   return (
     <HStack gap={0} flexShrink={0}>
       {edit && (
-        <IconButton aria-label={`Editar «${name}»`} title="Editar" size="2xs" variant="ghost" onClick={() => actions.onEdit(id)}>
+        <IconAction label={`Editar «${name}»`} tip="Editar" size="2xs" variant="ghost" onClick={() => actions.onEdit(id)}>
           <LuPencil />
-        </IconButton>
+        </IconAction>
       )}
-      <IconButton aria-label={`Duplicar «${name}»`} title="Duplicar" size="2xs" variant="ghost" onClick={() => actions.onDuplicate(id)}>
+      <IconAction label={`Duplicar «${name}»`} tip="Duplicar" size="2xs" variant="ghost" onClick={() => actions.onDuplicate(id)}>
         <LuCopy />
-      </IconButton>
-      <IconButton aria-label={`Eliminar «${name}»`} title="Eliminar" size="2xs" variant="ghost" colorPalette="red" onClick={() => actions.onRemove(id)}>
+      </IconAction>
+      <IconAction label={`Eliminar «${name}»`} tip="Eliminar" size="2xs" variant="ghost" colorPalette="red" onClick={() => actions.onRemove(id)}>
         <LuTrash2 />
-      </IconButton>
+      </IconAction>
     </HStack>
   )
 }
@@ -230,7 +232,7 @@ function PlacementEditor({ pl, here, items, onChange }: { pl: HardwarePlacement;
         </FormRow>
       )}
       {parts.length > 1 && (
-        <FormRow label="Mecanitzats de" help="Quin grup de mecanitzats de l'item es fa a aquesta peça.">
+        <FormRow label="Mecanitzats de" help="Quin grup de mecanitzats del ferratge es fa a aquesta peça.">
           <ChoiceChips label="Mecanitzats de" value={main.part} options={parts.map((p) => ({ id: p, label: partLabel(p) }))} onChange={(part) => onChange({ ...pl, targets: [{ ...main, part }, ...pl.targets.slice(1).filter((t) => t.part !== part)] })} />
         </FormRow>
       )}
@@ -253,7 +255,7 @@ function PlacementEditor({ pl, here, items, onChange }: { pl: HardwarePlacement;
         const choices = here.filter((h) => h.part === part || part === "part")
         const cur = pl.targets.find((t, i) => i > 0 && t.part === part)
         return (
-          <FormRow key={part} label={`També: ${partLabel(part)}`} help={`L'item també té mecanitzats per a ${partLabel(part).toLowerCase()}: només es fan si tries la peça (amb la mateixa posició).`}>
+          <FormRow key={part} label={`També: ${partLabel(part)}`} help={`El ferratge també té mecanitzats per a ${partLabel(part).toLowerCase()}: només es fan si tries la peça (amb la mateixa posició).`}>
             <ChoiceChips
               label={`També: ${partLabel(part)}`}
               value={cur ? key(cur) : "none"}
@@ -280,7 +282,7 @@ function PlacePosRow({ axis, names, pos, panel, onChange }: { axis: "p" | "q"; n
   const from0 = names.ends[0] === "esquerra" ? "l'esquerra" : names.ends[0]
   const from1 = names.ends[1] === "dreta" ? "la dreta" : names.ends[1]
   return (
-    <FormRow label={names.name} help={`On va el punt de referència del ferratge (la creu de la previsualització): des d'un cantell o del mig de la peça, més la distància. ${now !== null ? `Ara: a ${fmtMm(now)} mm de ${from0}.` : ""}`}>
+    <FormRow label={names.name} help={`On va el punt de referència del ferratge (la creu de la previsualització): des d'un cantell o del mig de la peça, més la distància. ${now !== null ? `Ara: a ${fmtNum(now)} mm de ${from0}.` : ""}`}>
       <Stack gap={1.5}>
         <ChoiceChips
           label={names.name}
@@ -350,7 +352,7 @@ function PlacementPreview({ pl, panel }: { pl: HardwarePlacement; panel: Panel }
       <Text fontSize="xs" color={pv.error ? "orange.fg" : "fg.muted"}>
         {pv.error
           ? `No hi cap: ${pv.error}. No es fa cap mecanitzat del ferratge.`
-          : `${panel.label} de ${fmtMm(W)} × ${fmtMm(H)} mm (${axes.p.name.toLowerCase()} × ${axes.q.name.toLowerCase()}): ${pv.refs.length === 1 ? "1 ferratge" : `${pv.refs.length} còpies`}${pv.mirrored.length ? ` i ${pv.mirrored.length} al mirall` : ""}${pv.otherSide ? " (i les mateixes a la peça de l'altre costat)" : ""}. Segueix la peça si el moble canvia de mida.`}
+          : `${panel.label} de ${fmtNum(W)} × ${fmtNum(H)} mm (${axes.p.name.toLowerCase()} × ${axes.q.name.toLowerCase()}): ${pv.refs.length === 1 ? "1 ferratge" : `${pv.refs.length} còpies`}${pv.mirrored.length ? ` i ${pv.mirrored.length} al mirall` : ""}${pv.otherSide ? " (i les mateixes a la peça de l'altre costat)" : ""}. Segueix la peça si el moble canvia de mida.`}
       </Text>
     </Stack>
   )

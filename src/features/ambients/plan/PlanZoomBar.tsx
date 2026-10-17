@@ -1,6 +1,7 @@
-import { Box, HStack, IconButton, Text } from "@chakra-ui/react"
+import { Box, HStack, Text } from "@chakra-ui/react"
 import { LuMinus, LuPlus } from "react-icons/lu"
 import { formatLength, useUnit } from "../../../lib/units"
+import { IconAction } from "../../../components/IconAction"
 
 /** L'escala (a baix a l'esquerra) i els botons − / + amb l'escala de pantalla (a baix a la dreta). */
 export function PlanZoomBar({ s, onZoom }: { s: number; onZoom: (k: number) => void }) {
@@ -9,16 +10,16 @@ export function PlanZoomBar({ s, onZoom }: { s: number; onZoom: (k: number) => v
       {/* Escala. */}
       <ScaleBar s={s} />
       <HStack position="absolute" right={3} bottom={3} gap={1} bg="bg.panel" rounded="md" borderWidth="1px" p={0.5} onPointerDown={(e) => e.stopPropagation()}>
-        <IconButton aria-label="Allunyar" title="Allunyar" size="xs" variant="ghost" onClick={() => onZoom(1 / 1.4)}>
+        <IconAction label="Allunyar" size="xs" variant="ghost" onClick={() => onZoom(1 / 1.4)}>
           <LuMinus />
-        </IconButton>
+        </IconAction>
         {/* Escala de pantalla (96 ppp: 1 px = 0,2646 mm), com als plànols: 1:50, 1:100… */}
         <Text fontSize="xs" color="fg.muted" minW="52px" textAlign="center" title="Escala a la pantalla">
           1:{Math.max(1, Math.round(1 / (s * 0.2646)))}
         </Text>
-        <IconButton aria-label="Apropar" title="Apropar" size="xs" variant="ghost" onClick={() => onZoom(1.4)}>
+        <IconAction label="Apropar" size="xs" variant="ghost" onClick={() => onZoom(1.4)}>
           <LuPlus />
-        </IconButton>
+        </IconAction>
       </HStack>
     </>
   )

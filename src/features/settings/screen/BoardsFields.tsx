@@ -1,4 +1,4 @@
-import { Box, Button, Grid, IconButton, Stack, Switch, Text } from "@chakra-ui/react"
+import { Box, Button, Grid, Stack, Switch, Text } from "@chakra-ui/react"
 import { Fragment } from "react"
 import { LuFactory, LuLayoutGrid, LuPlus, LuRotateCw, LuTrash2 } from "react-icons/lu"
 import { SettingsGroup } from "../../../components/SettingsGroup"
@@ -6,6 +6,7 @@ import { FormRow } from "../../../components/FormRow"
 import { NumberField } from "../../../components/NumRow"
 import { backChoices, type Machine, type MaterialPref, type Settings } from "../../../core/model"
 import { MaterialSelect } from "../MaterialSelect"
+import { IconAction } from "../../../components/IconAction"
 
 /** Preferències › Taulers: el camp de treball de la màquina, les mides de tauler de fàbrica i la distribució. */
 export function BoardsFields({ boards, materials, machine, onChange }: { boards: Settings["boards"]; materials: MaterialPref[]; machine: Machine | undefined; onChange: (boards: Settings["boards"]) => void }) {
@@ -43,9 +44,9 @@ export function BoardsFields({ boards, materials, machine, onChange }: { boards:
             </Box>
             <NumberField label="" ariaLabel="Llarg" value={s.w} min={300} max={6000} step={10} onChange={(w) => update({ w })} />
             <NumberField label="" ariaLabel="Ample" value={s.h} min={300} max={6000} step={10} onChange={(h) => update({ h })} />
-            <IconButton aria-label="Eliminar tauler" size="sm" variant="ghost" colorPalette="red" disabled={boards.sheets.length <= 1} onClick={() => onChange({ ...boards, sheets: boards.sheets.filter((_, k) => k !== i) })}>
+            <IconAction label="Eliminar tauler" size="sm" variant="ghost" colorPalette="red" disabled={boards.sheets.length <= 1} onClick={() => onChange({ ...boards, sheets: boards.sheets.filter((_, k) => k !== i) })}>
               <LuTrash2 />
-            </IconButton>
+            </IconAction>
           </Fragment>
         )
       })}

@@ -128,7 +128,7 @@ export function AmbientTree({
               change(removeItems(amb, [it.id]), true)
               if (sel?.kind === "item" && sel.id === it.id) setSel(null)
             }}>
-              <LuTrash2 /> Treure de l'ambient
+              <LuTrash2 /> Eliminar
             </Menu.Item>
           </TreeRowMenu>
         }

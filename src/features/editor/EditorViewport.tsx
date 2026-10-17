@@ -1,10 +1,11 @@
-import { Box, IconButton, SegmentGroup } from "@chakra-ui/react"
+import { Box, SegmentGroup } from "@chakra-ui/react"
 import type { ReactNode } from "react"
 import { LuBox, LuCamera, LuLayoutPanelLeft, LuMaximize2, LuMinimize2 } from "react-icons/lu"
 import { Tooltip } from "../../components/ui/tooltip"
 import { RoleLegend } from "../../components/viewer/roleColors"
 import type { Panel } from "../../core/model"
 import type { ViewTab, ViewerOptions } from "./useViewerOptions"
+import { IconAction } from "../../components/IconAction"
 
 /**
  * El visor del mig: pestanyes 3D · Alçat · Foto, la llegenda de colors, ampliar (mòbil), plegar els panells (`chrome`)
@@ -86,13 +87,13 @@ export function EditorViewport({
         </SegmentGroup.Root>
       </Box>}
       {/* Mòbil: ampliar el visor (amaga les pestanyes de sota). */}
-      <IconButton
+      <IconAction
         position="absolute"
         top={3}
         left={3}
         zIndex={2}
         display={{ base: "inline-flex", md: "none" }}
-        aria-label={formHidden ? "Mostrar els panells" : "Ampliar el visor"}
+        label={formHidden ? "Mostrar els panells" : "Ampliar el visor"}
         aria-expanded={!formHidden}
         size="sm"
         variant="surface"
@@ -100,7 +101,7 @@ export function EditorViewport({
         onClick={() => setFormHidden((v) => !v)}
       >
         {formHidden ? <LuMinimize2 /> : <LuMaximize2 />}
-      </IconButton>
+      </IconAction>
       {/* Ordinador: plegar/desplegar l'arbre (esquerra) i les propietats (dreta). */}
       {chrome}
       {toolbar}

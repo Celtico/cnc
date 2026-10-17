@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { fmtNum } from "../../lib/format"
 
 /**
  * Màquina CNC del taller (SCM amb Xilog Maestro), importada del context de màquina que exporta
@@ -381,7 +382,7 @@ export const toolMslName = (t: MachineTool): string => t.mslName ?? t.code
  */
 export function toolLabel(t: MachineTool): string {
   const name = (t.mslName ?? t.name ?? "").trim()
-  const d = String(Math.round(t.diameter * 100) / 100).replace(".", ",")
+  const d = fmtNum(t.diameter)
   return [t.code, name && name !== t.code ? name : "", `Ø${d}`].filter(Boolean).join(" · ")
 }
 

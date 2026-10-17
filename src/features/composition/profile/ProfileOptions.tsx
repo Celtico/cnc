@@ -1,4 +1,4 @@
-import { Button, HStack, IconButton, Kbd, Stack, Text } from "@chakra-ui/react"
+import { Button, HStack, Kbd, Stack, Text } from "@chakra-ui/react"
 import { LuCircleHelp, LuMousePointer2, LuSpline, LuSquircle, LuTrash2 } from "react-icons/lu"
 import { edgeOf, filletNode } from "../../../core/model"
 import { NumberField, NumRow } from "../../../components/NumRow"
@@ -6,6 +6,7 @@ import { ChoiceChips, FormRow } from "../../../components/FormRow"
 import { FoldItem } from "../../../components/Fold"
 import { MOD } from "../../../components/modKey"
 import type { ProfileShape } from "./useProfileShape"
+import { IconAction } from "../../../components/IconAction"
 
 /** Què fa cada tipus de node (ajuda de «Manegadors»). */
 const HANDLE_HELP: Record<"corner" | "smooth" | "symmetric", string> = {
@@ -32,9 +33,9 @@ export function ProfileOptions({ shape, axes, radius, setRadius, minor }: { shap
         actions={
           // Treure el node: al costat de la capçalera (mai a dins: un botó dins d'un botó no és vàlid).
           !drawing && selNode ? (
-            <IconButton aria-label="Treure el node" title="Treure el node" size="xs" variant="ghost" disabled={nodes.length <= 3} onClick={() => remove(sel!)}>
+            <IconAction label="Eliminar el node" size="xs" variant="ghost" disabled={nodes.length <= 3} onClick={() => remove(sel!)}>
               <LuTrash2 />
-            </IconButton>
+            </IconAction>
           ) : undefined
         }
       >

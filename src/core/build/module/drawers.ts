@@ -14,8 +14,9 @@ import { kitBottomThickness, kitFamily, kitHeight, kitSolidPanels, planKit, type
 import { X, Y, Z, addFaceHole, dowelJoint, dowelsAlong, neg, placement, r } from "../geometry"
 import { fitSizes, mismatchMessage, type ZoneRect } from "../layout"
 import { FrontsBuilder } from "./fronts"
-import { num, edges, frontMaterialOf, drawerBottomMaterial, snapAutoHeights } from "./helpers"
+import { edges, frontMaterialOf, drawerBottomMaterial, snapAutoHeights } from "./helpers"
 import type { VerticalRef, HandleChoice } from "./types"
+import { fmtNum } from "../../../lib/format"
 
 /** On comencen els suplements dels calaixos interiors, des del davant de la caixa (mm): darrere de la placa de la frontissa. */
 const SHIM_FROM_FRONT = 60
@@ -39,7 +40,7 @@ export class DrawersBuilder extends FrontsBuilder {
     const bg = m.fronts.betweenGap
     const want = r(inner.n * inner.height + (inner.n - 1) * bg)
     if (want > rect.y1 - rect.y0 + 0.5)
-      this.warnings.push({ code: "layout", message: `Els ${inner.n} calaixos interiors fan ${num(want)} mm i el compartiment ${num(rect.y1 - rect.y0)}: l'últim es fa més baix. Posa'n menys o fes-los més baixos.`, zoneId: zone.id })
+      this.warnings.push({ code: "layout", message: `Els ${inner.n} calaixos interiors fan ${fmtNum(want, 1)} mm i el compartiment ${fmtNum(rect.y1 - rect.y0, 1)}: l'últim es fa més baix. Posa'n menys o fes-los més baixos.`, zoneId: zone.id })
     const y1 = r(Math.min(rect.y1, rect.y0 + want))
     const faceZ = r(d.D - (inner.setback ?? 25))
     const S = inner.shim ?? c.thickness
@@ -64,7 +65,7 @@ export class DrawersBuilder extends FrontsBuilder {
         this.warnings.push({ code: "inner-drawers", message: `Calaixos interiors sense suplement al costat de les frontisses (${side === "left" ? "esquerra" : "dreta"}): el braç i la placa de la frontissa hi topen en obrir. Posa-hi el suplement (el gruix del cos).`, zoneId: zone.id })
     if (L !== left || R !== right)
       if (!this.warnings.some((w) => w.code === "inner-drawers" && w.message.includes("es cargola")))
-        this.warnings.push({ code: "inner-drawers", info: true, message: `Calaixos interiors: el suplement (${num(S)} mm${inner.shim === undefined ? ", el gruix del cos" : ""}) es cargola al lateral pel costat de dins abans de posar-hi la guia.`, zoneId: zone.id })
+        this.warnings.push({ code: "inner-drawers", info: true, message: `Calaixos interiors: el suplement (${fmtNum(S, 1)} mm${inner.shim === undefined ? ", el gruix del cos" : ""}) es cargola al lateral pel costat de dins abans de posar-hi la guia.`, zoneId: zone.id })
     const box: ZoneRect = { ...rect, x0: L !== left ? L!.xR : rect.x0, x1: R !== right ? R!.xL : rect.x1, y1 }
     const front: Extract<Front, { kind: "drawers" }> = {
       kind: "drawers",
@@ -205,7 +206,7 @@ export class DrawersBuilder extends FrontsBuilder {
     const minInner = 2 * 20 + 10
     const narrowBox = boxW - 2 * bt < minInner
     if (n > 0 && narrowBox)
-      this.warnings.push({ code: "drawer-box", message: `Calaixos massa estrets: entre els laterals de la caixa només queden ${num(boxW - 2 * bt)} mm (en calen ${num(minInner)}). No es fa la caixa (només el front).`, zoneId: zone.id })
+      this.warnings.push({ code: "drawer-box", message: `Calaixos massa estrets: entre els laterals de la caixa només queden ${fmtNum(boxW - 2 * bt, 1)} mm (en calen ${fmtNum(minInner, 1)}). No es fa la caixa (només el front).`, zoneId: zone.id })
 
     for (let i = 0; i < n; i++) {
       this.drawerCount += 1
@@ -282,7 +283,7 @@ export class DrawersBuilder extends FrontsBuilder {
     if (lowBox !== null)
       this.warnings.push({
         code: "drawer-box",
-        message: `Calaixos massa baixos: la caixa faria ${num(lowBox)} mm d'alçada i en calen almenys ${num(minBox)} (fons a ${num(hw.bottomOffset)} mm + ${num(tbb)} mm de fons + 30). No es fa la caixa (només el front): fes els fronts més alts o posa'n menys.`,
+        message: `Calaixos massa baixos: la caixa faria ${fmtNum(lowBox, 1)} mm d'alçada i en calen almenys ${fmtNum(minBox, 1)} (fons a ${fmtNum(hw.bottomOffset, 1)} mm + ${fmtNum(tbb, 1)} mm de fons + 30). No es fa la caixa (només el front): fes els fronts més alts o posa'n menys.`,
         zoneId: zone.id,
       })
     if (noDowel)
@@ -375,7 +376,7 @@ export class DrawersBuilder extends FrontsBuilder {
       const pick = fits(i, own.kit) ? { sib: chosen, plan: own } : lower.find((x) => fits(i, x.plan.kit))
       if (!pick) {
         const least = lower.at(-1)
-        this.hardwareWarning(`«${chosen.name}» no cap al calaix ${k} (front de ${num(fh)} mm)${least ? `, ni tampoc el joc més baix de la sèrie («${least.sib.name}», ${num(kitHeight(least.plan.kit))} mm d'alçada)` : ""}: només es fa el front. Fes més alt el front, posa menys calaixos o tria una guia més baixa per a aquest calaix.`, zone.id)
+        this.hardwareWarning(`«${chosen.name}» no cap al calaix ${k} (front de ${fmtNum(fh, 1)} mm)${least ? `, ni tampoc el joc més baix de la sèrie («${least.sib.name}», ${fmtNum(kitHeight(least.plan.kit), 1)} mm d'alçada)` : ""}: només es fa el front. Fes més alt el front, posa menys calaixos o tria una guia més baixa per a aquest calaix.`, zone.id)
         continue
       }
       const kitItemUsed = pick.sib
@@ -420,7 +421,7 @@ export class DrawersBuilder extends FrontsBuilder {
         const fh = r(y0 - y + kitHeight(kit))
         this.extras.push(this.basePanel(`drawer-${k}-kit-innerFront`, "front interior metàl·lic", `Front interior metàl·lic calaix ${k}`, "hardware", r(LW - 4), fh, 2, "Acer fosc", "none", { ...NO_EDGES }, placement([r(rect.x0 + 2), r(y + fh), this.inner!.faceZ], X, neg(Y), neg(Z), Z)))
       }
-      const lines = frontPanel ? kitPlan.lines : [...kitPlan.lines, { component: "innerFront", name: "Front interior metàl·lic del fabricant", qty: 1, note: `Per a ${num(LW)} mm de llum: demanar-lo al distribuïdor (no és al catàleg de l'app).` }]
+      const lines = frontPanel ? kitPlan.lines : [...kitPlan.lines, { component: "innerFront", name: "Front interior metàl·lic del fabricant", qty: 1, note: `Per a ${fmtNum(LW, 1)} mm de llum: demanar-lo al distribuïdor (no és al catàleg de l'app).` }]
       this.hardwareKits.push({ zoneId: zone.id, drawer: k, item: kitItemUsed.name, kit: `${kit.maker} ${kit.series} ${kit.heightClass.code}`, nl: kitPlan.nl, options: kitPlan.options, lines, wood: kitPlan.wood, ...(kitPlan.rule ? { rule: kitPlan.rule } : {}), ...(kitPlan.syncRod !== undefined ? { syncRod: kitPlan.syncRod } : {}) })
     }
   }

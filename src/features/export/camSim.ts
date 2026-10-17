@@ -267,9 +267,11 @@ export interface SimCursor {
 
 /**
  * Porta el mapa d'alçades al temps `t`: endavant, només el que s'ha tallat des de l'última vegada; enrere, de zero.
+ * Amb `budgetMs`, s'atura quan s'acaba el temps (un salt al final d'un relleu són desenes de milers de moviments: tot en
+ * un fotograma penjava la pantalla) i `cur.t` queda per sota de `t`: es continua al fotograma següent.
  * Retorna si s'ha hagut de refer tot.
  */
-export function advanceSim(hf: Heightfield, prog: SimProgram, cur: SimCursor, t: number): boolean {
+export function advanceSim(hf: Heightfield, prog: SimProgram, cur: SimCursor, t: number, budgetMs = Infinity): boolean {
   let rebuilt = false
   if (t < cur.t - 1e-9) {
     resetHeightfield(hf)
@@ -277,15 +279,20 @@ export function advanceSim(hf: Heightfield, prog: SimProgram, cur: SimCursor, t:
     cur.fin = 0
     rebuilt = true
   }
+  const deadline = budgetMs === Infinity ? Infinity : performance.now() + budgetMs
+  let done = Math.max(cur.t, t)
   if (t > cur.t) {
     for (let k = moveAt(prog, cur.t); k < prog.moves.length; k++) {
       const m = prog.moves[k]!
       if (m.t0 >= t) break
-      if (m.kind !== "cut") continue
-      stampSegment(hf, lerp(m, Math.max(cur.t, m.t0)), lerp(m, Math.min(t, m.t1)), m.r, m.ball, m.relief)
+      if (m.kind === "cut") stampSegment(hf, lerp(m, Math.max(cur.t, m.t0)), lerp(m, Math.min(t, m.t1)), m.r, m.ball, m.relief)
+      if (m.t1 < t && performance.now() > deadline) {
+        done = m.t1
+        break
+      }
     }
   }
-  while (cur.fin < prog.finished.length && prog.finished[cur.fin]!.t <= t) tintPolygon(hf, prog.finished[cur.fin++]!.outline)
-  cur.t = Math.max(cur.t, t)
+  while (cur.fin < prog.finished.length && prog.finished[cur.fin]!.t <= done) tintPolygon(hf, prog.finished[cur.fin++]!.outline)
+  cur.t = Math.max(cur.t, done)
   return rebuilt
 }

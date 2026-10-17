@@ -5,7 +5,7 @@
 ### Preferències
 - **Com la Configuració de macOS / Figma** (`SettingsPages` + `Pane` a `SettingsScreen`): a l'esquerra els apartats per
   categories (`SETTINGS_GROUPS`; no és un acordió): **Fabricació** — Màquines CNC, Regles de mecanitzat, Ferratges
-  (biblioteca, vegeu més avall), Folgances per defecte (fronts, prestatges i fons —amb el «Joc de la ranura» del fons— i **Divisions** › «Peces de dins», 1 mm:
+  (biblioteca, vegeu més avall), Folgances per defecte (fronts, prestatges i fons —amb la «Folgança de la ranura» del fons— i **Divisions** › «Peces de dins», 1 mm:
   tots els divisors i prestatges fixos d'un mòdul dividit), Materials, **Taulers** (camp de treball de la màquina per
   defecte o «importa-la a Màquines CNC»; «Mides de tauler de fàbrica» per material; «Distribució»: girar les peces amb veta;
   sense «Tall»: separació i marge són de la màquina; sense avís si el tauler passa del camp: 2800 × 2070 sobre 5020 × 1905 va
@@ -20,12 +20,15 @@
   (`useSessionString`). Les referències creuades als textos diuen «Preferències › <títol de la pàgina>».
 - **Llista i detall** (`components/MasterDetail`: llista agrupada amb mostra; `SearchBar` amb «Afegir» (només icona,
   `iconOnly`) i a sota les categories; `head` = títol de la pàgina a dalt de la llista —`PaneHeadContext` a les pàgines `wide`—; `footer` = sota el
-  detall) a Objectes de referència i Màquines CNC.
+  detall) a Objectes de referència i Màquines CNC. Eliminar un objecte de referència (`ReferencesList`, `LuTrash2` a la
+  fila) també demana confirmació (`ConfirmDialog`: «Eliminar «x»?» · «Surt de la llista d'objectes de referència. No es pot
+  desfer.»).
 - **Materials: graella de targetes i edició en una finestra** (per decisió de l'usuari, com la finestra del Render;
   `settings/MaterialsPane.tsx`, `MaterialsList`): a dalt el cercador (sense accents, `fold`) i «Afegir» (biblioteca); a sota,
   les categories en el mateix **acordió** que els apartats de les galeries (`gallery-accordion` tancat amb vora, icona, nom,
-  comptador i, sota el nom, per a què serveix: Taulers i Fons, per al nesting; Simulació, decoratius per a objectes i
-  ambients; `lazyMount`: les targetes només es munten en obrir la categoria). Per defecte, oberts els Taulers; la cerca obre
+  comptador i, sota el nom, per a què serveix, `MATERIAL_CATEGORIES.hint`: Taulers i Fons, per al nesting; **Corian**
+  (`LuGem`), superfície sòlida de la carta de colors de Corian que es fresa a la CNC com un tauler, sense veta i sense
+  cantejar (el cantell és el mateix material, polit); Simulació, decoratius per a objectes i ambients; `lazyMount`: les targetes només es munten en obrir la categoria). Per defecte, oberts els Taulers; la cerca obre
   les que tenen resultats; les obertes es recorden durant la sessió (`mobles:md-open:materials`). Dins, una graella
   `GALLERY_COLS` de **`GalleryCard`** (marge `--gallery-px`): la mostra del material de debò (`MaterialSwatch`, 3:2, CSS de
   `previewStyle` a escala fixa: sense canvas per targeta, les procedurals es pinten un cop i es recorden), nom de dues línies,
@@ -49,7 +52,7 @@
     tira al costat; al mòbil, bola quadrada a tota l'amplada i la tira a sota (3:1); el formulari (760 px com a molt) a
     sota, tot es desplaça. Les targetes de la graella es queden en CSS. Formulari (`MaterialCard`): nom editable amb Duplicar/Eliminar i
     les seccions plegables (`FoldItem` sols, recordats a la sessió; només **Aspecte** obert d'entrada; insígnia amb
-    l'acabat i la categoria) **Aspecte** (`LuSwatchBook`; Acabat, Color/Espècie/Foto, mapes de relleu i brillantor, Rajola, Textura, Joc PBR) i
+    l'acabat i la categoria) **Aspecte** (`LuSwatchBook`; Acabat, Color/Espècie/Foto, mapes de relleu i brillantor, Rajola, Textura, Conjunt PBR) i
     **Fabricació** (`LuFactory`; Gruixos `ThicknessChips`, Cantell, Veta, Categoria; als de simulació només Categoria) i, als taulers i
     fons, **«Per defecte als mòduls nous»** (`LuStar`, `DefaultPick`). Esc i ✕ tornen a la graella; **Esc amb el nom a mig escriure
     només el desfà** (no tanca). El focus va al ✕ (al mòbil no surt el teclat), llevat d'un material nou.
@@ -108,7 +111,7 @@
   **Plànols acotats** (`components/dims.ts` `layoutDims` + `components/DimLine.tsx` `DimLine`/`DimLayer`, el mateix
   primitiu que el Pla del muntatge): mida total, cotes encadenades des dels cantells, entre forats i amb el punt de
   referència, i l'etiqueta de cada element (Ø × fondària, ranura, caixera) on no tapi res (els textos que no caben pugen
-  de fila, `shift`); al dibuix del generador (i a sota, la llista «referència … · cantells …», `opPlace`), a les vistes
+  de fila, `shift`); a les vistes
   DXF del fabricant (cercles `viewCircles` amb el Ø) i a la peça d'exemple (`PanelDrawing dims="full"`). Lletra
   proporcional (`dimFont`), `style={{ fontSize }}`. Test `components/dims.test.ts`.
   Un «només 2D» (sense STEP): la vista frontal del DXF a la targeta. L'editor (la `FloatingWindow` `split`, com Materials) comença amb **«Com va muntat»** (vegeu
@@ -137,8 +140,8 @@
   amb el mateix id i un altre contingut (un mòdul d'abans amb una cassoleta de 30) és la que es fabrica i no es toca.
   «Restaurar valors inicials» torna biblioteca i per defecte. **A l'editor, un sol selector** (per decisió de l'usuari: «el
   selector a Mobles que surti amb un drawer com fa la col·locació de materials i objectes als ambients»):
-  `settings/HardwareSelect.tsx` (`HardwareSelect` = botó amb la miniatura 3D de la targeta i el nom; `HardwarePicker` = la
-  finestra de tria) sobre el calaix de tria comú `components/PickerDrawer.tsx` (`PickerDrawer`, `PickerButton`,
+  `settings/HardwareSelect.tsx` (`HardwareSelect` = botó amb la miniatura 3D de la targeta i el nom; `HardwareDrawer` = el
+  calaix de tria) sobre el calaix de tria comú `components/PickerDrawer.tsx` (`PickerDrawer`, `PickerButton`,
   `PickerRow`; el mateix que el `MaterialSelect`): cercador (`hardwareMatches`), categories › sèries (`seriesGroups`, a
   `settings/hardwareGroups.ts`, com Preferències) i `GalleryCard` amb la miniatura (`settings/HardwareThumb.tsx`, mòdul
   d'exemple `useMountBase`: les mateixes miniatures desades). Frontissa, guia, braç, tirador de cada front
@@ -202,19 +205,19 @@
     **doble clic al node**; el node no es mou de la pantalla. «Plegar tot» / «Desplegar tot» (encaixa). D'entrada, obertes
     les arrels (els inspectors) i la resta plegat.
   - **Editar**: «Afegir» (`SearchBar`: un node a dins del triat —una tria si és una opció— o, sense res triat, una secció
-    solta; **doble clic al buit**: un node solt allà), esborrar amb **Supr / ⌫** o el botó (un node s'emporta el que té a
+    solta; **doble clic al buit**: un node solt allà), eliminar amb **Supr / ⌫** o el botó («Eliminar el triat») (un node s'emporta el que té a
     dins), desfer/refer (`useHistory`, ⌘Z; moure és un sol pas en deixar-lo). El **panell del costat** (`CascadeDetail`,
     `PanelSplit`, amplada recordada; al mòbil, a sota): del node triat, Nom, Tipus (`ChoiceChips`), Surt quan, Nota (per a
-    tu) i Revisar (la incoherència; buida = resolta), «Afegir a dins», «Esborrar» i **«A l'app ara»** (com és al codi: el
+    tu) i Revisar (la incoherència; buida = resolta), «Afegir a dins», «Eliminar» i **«A l'app ara»** (com és al codi: el
     nom, la condició, el fitxer de la UI, el per defecte, «Com a l'app»); de la fletxa triada, què fa (A dins de · Fa
     aparèixer · Fa desaparèixer) i els dos extrems; sense res triat, com es fa servir i la llista de diferències. La
     **cerca** obre el camí fins als que coincideixen, els marca i hi va.
   - **Diferències amb l'app** (`diffDraft`, interruptor «Diferències (n)»): nodes **Nou** (verd) i **Canviat** (lila: el
     nom, el tipus o la condició; la nota i la incoherència no compten), fletxes noves en verd i les de l'app que s'han tret,
-    puntejades «· treta»; els nodes trets, a la llista del panell amb «Recuperar» (també les fletxes). **Exportar JSON**
-    (menú «…», `opcions-en-cascada.json`): l'esborrany i les diferències (nodes afegits, trets i canviats amb l'abans i
-    l'ara, fletxes afegides i tretes, notes) per fer-les després al codi; **Importar JSON**; **«Tornar a carregar des de
-    l'app»** (confirmació, es pot desfer): l'esborrany torna a ser el que fa el codi ara.
+    puntejades «· treta»; els nodes trets, a la llista del panell amb «Recuperar» (també les fletxes). **«Desar com a fitxer…»**
+    (botó `LuSave` de la barra, `opcions-en-cascada.json`): l'esborrany i les diferències (nodes afegits, trets i canviats amb l'abans i
+    l'ara, fletxes afegides i tretes, notes) per fer-les després al codi; al menú ⋯ («Més accions»), **«Importar JSON…»** i **«Tornar a carregar des de
+    l'app…»** (confirmació, es pot desfer): l'esborrany torna a ser el que fa el codi ara.
   - **La llavor és el registre** `core/model/options/` (`OPTION_CASCADE`, `appCascade()` a `cascadeDraft.ts`: una opció del
     registre = un node amb el seu id; cada tria = un node `opció=valor`; `reveals`/`hides` = fletxes), sempre al dia amb el
     codi: cada fila i secció dels inspectors en porta l'id (`optionId`) i el test `src/optionCascade.test.ts` falla si en
@@ -240,7 +243,7 @@ Balay, Siemens i Teka—, categoria «Electrodomèstics», motor `appliance`, `V
 additiu: s'afegeixen per id i els llocs nous apunten als d'inici, `fixHardwareDefaults`. El 2026-10-15, sense canviar de
 versió, el penjador, la regleta, els sòcols d'alumini i els electrodomèstics passen a l'**estàndard del fabricant**
 —item `version` 2—: en llegir, un item inicial d'una versió anterior es canvia pel d'ara, com la pota AXILO 78; les
-còpies dels mobles desats no es toquen); 44 (la Duomatic 105° per a marc estret i els pistons de gas Häfele, `V44_ITEMS`, additiu); 43 (la frontissa Duomatic Premium per a marc d'alumini, `V43_ITEMS`, additiu); 42 (els tiradors de vitrina Häfele, `V42_ITEMS`, additiu); 41 (a les vitrines, la frontissa —la Metallamat A, `V41_ITEMS`— i el tirador es trien com a les portes; els marcs Häfele, només perfil, es refan); 40 (els perfils de LED a «Llums»); 39 (la pota AXILO 78 de mobles, `V39_ITEMS`, additiu); 38 (la pota AXILO 78 amb la placa per dibuixar-la al 3D, refeta si és d'una versió anterior de l'item); 37 (la pota AXILO 78 com la munta el taller, refeta si encara és la de la v34); 36 (el material del que es veu d'un ferratge, `HardwareItem.material`: els marcs Häfele en «Alumini anoditzat plata», material nou `FRAME_MATERIALS`; el de l'app, negre); 35 (catàleg general Häfele, `V35_ITEMS`: marcs d'alumini amb la placa de la Metallamat A, 9 tiradors, 2 suports de prestatge i el perfil Loox d'11 mm per encastar amb la tira LED 3015, additiu); 34 (potes de sòcol Häfele AXILO 78, `V34_ITEMS`, additiu); 33 (el joc de la ranura per defecte a 0,8, `DEFAULT_GROOVE_CLEARANCE`); 32 (joc de l'ample de la ranura del fons, `gaps.grooveClearance` 0, additiu); 31 (jocs de llum Häfele Loox, additiu); 30 (la neteja de la 29 amb la regla sencera); 29 (fora els «només 3D»: tots els inicials del motor `model`, els importats sense `machining` i els inicials DTC que ja no són a la biblioteca); 28 (la resta del catàleg DTC 2026, additiu); 27 (catàleg DTC 2026: jocs i push latch, additiu); 26 (`assistant`: clau de l'API i model,
+còpies dels mobles desats no es toquen); 44 (la Duomatic 105° per a marc estret i els pistons de gas Häfele, `V44_ITEMS`, additiu); 43 (la frontissa Duomatic Premium per a marc d'alumini, `V43_ITEMS`, additiu); 42 (els tiradors de vitrina Häfele, `V42_ITEMS`, additiu); 41 (a les vitrines, la frontissa —la Metallamat A, `V41_ITEMS`— i el tirador es trien com a les portes; els marcs Häfele, només perfil, es refan); 40 (els perfils de LED a «Llums»); 39 (la pota AXILO 78 de mobles, `V39_ITEMS`, additiu); 38 (la pota AXILO 78 amb la placa per dibuixar-la al 3D, refeta si és d'una versió anterior de l'item); 37 (la pota AXILO 78 com la munta el taller, refeta si encara és la de la v34); 36 (el material del que es veu d'un ferratge, `HardwareItem.material`: els marcs Häfele en «Alumini anoditzat plata», material nou `FRAME_MATERIALS`; el de l'app, negre); 35 (catàleg general Häfele, `V35_ITEMS`: marcs d'alumini amb la placa de la Metallamat A, 9 tiradors, 2 suports de prestatge i el perfil Loox d'11 mm per encastar amb la tira LED 3015, additiu); 34 (potes de sòcol Häfele AXILO 78, `V34_ITEMS`, additiu); 33 (la folgança de la ranura per defecte a 0,8, `DEFAULT_GROOVE_CLEARANCE`); 32 (folgança de l'ample de la ranura del fons, `gaps.grooveClearance` 0, additiu); 31 (jocs de llum Häfele Loox, additiu); 30 (la neteja de la 29 amb la regla sencera); 29 (fora els «només 3D»: tots els inicials del motor `model`, els importats sense `machining` i els inicials DTC que ja no són a la biblioteca); 28 (la resta del catàleg DTC 2026, additiu); 27 (catàleg DTC 2026: jocs i push latch, additiu); 26 (`assistant`: clau de l'API i model,
   additiu; **la clau no surt mai** a l'export, `settingsToJson`, ni al `.moble`, i importar unes preferències no la toca,
   `importSettingsJson`); 25: `gaps.innerClearance`, 1 mm, additiu; 24: jocs inicials amb les dades d'ara; 23: jocs paramètrics de calaix (DTC MAGIC-PRO); 22: generador de mecanitzats; 21: tiradors, potes i «només 3D» importats; 20: ferratges importats; 19: biblioteca de ferratges; sense versió, additius en llegir: els accessoris de la biblioteca (`fixHardwareDefaults` afegeix l'item d'inici de cada lloc que falta) i la regla `kitPilot`): les migracions depenen només de la versió
   desada, que **mai baixa** (`saveSettings` desa la més alta). **Desades per una versió més nova**: només lectura

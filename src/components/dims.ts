@@ -1,4 +1,5 @@
 import type { PlanDim } from "../core/build/hardwareMount"
+import { fmtNum } from "../lib/format"
 
 /**
  * **Cotes dels dibuixos 2D** (pur, sense React): el mateix joc a tots els plànols de peça i vistes dels ferratges
@@ -47,9 +48,6 @@ export interface DimLayout {
 
 type Box = { x0: number; y0: number; x1: number; y1: number }
 
-/** Mm amb coma i com a molt un decimal (dues si cal). */
-export const fmtMm = (v: number) => String(Math.round(v * 100) / 100).replace(".", ",")
-
 /** Amplada aproximada d'un text de cota (la mateixa estimació que `DimLine`). */
 export const textW = (s: string, fs: number) => s.length * fs * 0.56
 
@@ -76,7 +74,7 @@ function chain(axis: "x" | "y", stops: number[], at: number, offset: number, fs:
     const a = stops[i]!, b = stops[i + 1]!
     const len = b - a
     if (len < 0.05) continue
-    const label = fmtMm(len)
+    const label = fmtNum(len)
     const tw = axis === "x" ? textW(label, fs) : fs * 1.1
     const d: DrawDim = axis === "x" ? { a: [a, at], b: [b, at], offset, label, title } : { a: [at, a], b: [at, b], offset, label, title }
     if (len <= tw + fs * 0.6) {
@@ -109,8 +107,8 @@ export function layoutDims(box: Box, feats: readonly DrawFeature[], fs: number, 
   const chainY = ys.length > 2 ? chain("y", ys, x1, -gap, fs, "Encadenada") : []
   dims.push(...chainX, ...chainY)
   // Total: a sota (amplada) i a l'esquerra (alçada).
-  dims.push({ a: [x0, y1], b: [x1, y1], offset: gap, label: fmtMm(x1 - x0), title: opts.title ? `${opts.title}: amplada` : "Amplada" })
-  dims.push({ a: [x0, y0], b: [x0, y1], offset: gap, label: fmtMm(y1 - y0), title: opts.title ? `${opts.title}: alçada` : "Alçada" })
+  dims.push({ a: [x0, y1], b: [x1, y1], offset: gap, label: fmtNum(x1 - x0), title: opts.title ? `${opts.title}: amplada` : "Amplada" })
+  dims.push({ a: [x0, y0], b: [x0, y1], offset: gap, label: fmtNum(y1 - y0), title: opts.title ? `${opts.title}: alçada` : "Alçada" })
   // Etiquetes dels elements: a una de les quatre cantonades de fora, on no toquin cap element ni cap altra etiqueta.
   const busy: Box[] = feats.map((f) => ({ x0: f.x - f.hx, y0: f.y - f.hy, x1: f.x + f.hx, y1: f.y + f.hy }))
   const labels: FeatureLabel[] = []
@@ -151,7 +149,7 @@ export function layoutDims(box: Box, feats: readonly DrawFeature[], fs: number, 
   // Les verticals: el text al costat, i els apartats `shift` × 2,2 més enfora (com els dibuixa `DimLine`).
   const right = x1 + (chainY.length ? gap + fs * 0.9 + Math.max(...chainY.map((d) => Math.abs(d.shift ?? 0) * 2.2 + textW(d.label, fs))) : fs * 0.6)
   const bottom = y1 + gap + fs * 1.4
-  const left = x0 - gap - textW(fmtMm(y1 - y0), fs) - fs * 0.6
+  const left = x0 - gap - textW(fmtNum(y1 - y0), fs) - fs * 0.6
   let ex0 = left, ey0 = top, ex1 = right, ey1 = bottom
   for (const l of labels) {
     const w = textW(l.text, lfs)

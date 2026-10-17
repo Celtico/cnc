@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { roundTo } from "../../lib/format"
 
 const Vec3Schema = z.tuple([z.number().finite(), z.number().finite(), z.number().finite()])
 
@@ -37,8 +38,8 @@ export function sameCameraPose(a: CameraPose, b: CameraPose, eps = 0.005): boole
 export function cameraSignature(raw: unknown): string | undefined {
   const c = parseCameraPose(raw)
   if (!c) return undefined
-  const r = (v: number) => Math.round(v * 1000) / 1000
-  return JSON.stringify([c.position.map(r), c.target.map(r), c.fov === undefined ? null : Math.round(c.fov * 10) / 10])
+  const r = (v: number) => roundTo(v, 3)
+  return JSON.stringify([c.position.map(r), c.target.map(r), c.fov === undefined ? null : roundTo(c.fov, 1)])
 }
 
 /** Camps de miniatura desats amb el document (`Project`, `AmbientRow`). */

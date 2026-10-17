@@ -1,8 +1,9 @@
 import { Box, Button, HStack, Stack, Switch, Text } from "@chakra-ui/react"
-import { fmtMm, setSplitSize, type Zone } from "../../../core/model"
+import { setSplitSize, type Zone } from "../../../core/model"
 import { NumberField } from "../../../components/NumRow"
 import { FormRow } from "../../../components/FormRow"
 import { splitRows } from "../zoneLabel"
+import { fmtNum } from "../../../lib/format"
 
 /**
  * La mida de cada zona d'una divisió, al pare (per decisió de l'usuari, 2026-10-08: «a les obertures no té sentit
@@ -38,7 +39,7 @@ export function SplitSizes({ root, zone, onChange, onSelect, childSizes }: { roo
           >
             {row.rest ? (
               <Text fontSize="sm" color="fg.muted">
-                {real !== undefined ? `${fmtMm(real)} mm` : "—"} (el que sobra)
+                {real !== undefined ? `${fmtNum(real)} mm` : "—"} (el que sobra)
               </Text>
             ) : (
               <HStack gap={3}>
@@ -53,7 +54,7 @@ export function SplitSizes({ root, zone, onChange, onSelect, childSizes }: { roo
                   </Box>
                 ) : real !== undefined ? (
                   <Text fontSize="sm" color="fg.muted">
-                    {fmtMm(real)} mm
+                    {fmtNum(real)} mm
                   </Text>
                 ) : null}
               </HStack>

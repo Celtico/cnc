@@ -1,4 +1,5 @@
 /** Utilitats de polígons 2D (perfils d'objectes i talls passants poligonals). */
+import { roundTo } from "../../lib/format"
 
 export type Pt = [number, number]
 
@@ -39,6 +40,53 @@ export function pointInPolygon([px, py]: Pt, pts: Pt[]): boolean {
     if (yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) inside = !inside
   }
   return inside
+}
+
+/** Llargada d'una polilínia; `closed` hi suma el costat de tornada (només amb 3 punts o més). */
+export function polylineLength(pts: Pt[], closed: boolean): number {
+  let l = 0
+  for (let i = 1; i < pts.length; i++) l += Math.hypot(pts[i]![0] - pts[i - 1]![0], pts[i]![1] - pts[i - 1]![1])
+  if (closed && pts.length > 2) l += Math.hypot(pts[0]![0] - pts[pts.length - 1]![0], pts[0]![1] - pts[pts.length - 1]![1])
+  return l
+}
+
+/** El punt del segment a–b més proper a (x, y). */
+function closestOnSegment(x: number, y: number, [ax, ay]: Pt, [bx, by]: Pt): [number, number] {
+  const dx = bx - ax, dy = by - ay
+  const l2 = dx * dx + dy * dy
+  const t = l2 ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2)) : 0
+  return [ax + t * dx, ay + t * dy]
+}
+
+/** El punt del contorn (polígon tancat) més proper a (x, y). */
+export function closestOnPolygon(x: number, y: number, poly: Pt[]): [number, number] {
+  let best = Infinity
+  let out: [number, number] = [x, y]
+  for (let i = 0; i < poly.length; i++) {
+    const [px, py] = closestOnSegment(x, y, poly[i]!, poly[(i + 1) % poly.length]!)
+    const d2 = (px - x) ** 2 + (py - y) ** 2
+    if (d2 < best) {
+      best = d2
+      out = [px, py]
+    }
+  }
+  return out
+}
+
+/** Distància d'un punt al contorn (polígon tancat, sense signe). */
+export function distToPolygon(x: number, y: number, poly: Pt[]): number {
+  let best = Infinity
+  for (let i = 0; i < poly.length; i++) {
+    const [ax, ay] = poly[i]!
+    const [bx, by] = poly[(i + 1) % poly.length]!
+    const dx = bx - ax, dy = by - ay
+    const l2 = dx * dx + dy * dy
+    const t = l2 ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2)) : 0
+    const ex = ax + t * dx - x, ey = ay + t * dy - y
+    const d2 = ex * ex + ey * ey
+    if (d2 < best) best = d2
+  }
+  return Math.sqrt(best)
 }
 
 function orient(a: Pt, b: Pt, c: Pt): number {
@@ -166,8 +214,7 @@ export function filletCorner(pts: BPt[], i: number, r: number): BPt[] | null {
   // Gir a l'esquerra (a → v → c) = arc antihorari = bulge positiu.
   const turn = (v[0] - a[0]) * (c[1] - v[1]) - (v[1] - a[1]) * (c[0] - v[0])
   const b = Math.tan((Math.PI - alpha) / 4) * Math.sign(turn)
-  const r1 = (x: number) => Math.round(x * 100) / 100
-  return [...pts.slice(0, i), [r1(t1[0]), r1(t1[1]), b], [r1(t2[0]), r1(t2[1])], ...pts.slice(i + 1)]
+  return [...pts.slice(0, i), [roundTo(t1[0], 2), roundTo(t1[1], 2), b], [roundTo(t2[0], 2), roundTo(t2[1], 2)], ...pts.slice(i + 1)]
 }
 
 // --- Perfils amb corbes de Bézier cúbiques ---------------------------------------------
@@ -303,8 +350,7 @@ export function profileToOutline(nodes: PNode[], tol = 0.02): BPt[] {
     else if (e.kind === "arc") out.push([a.x, a.y, e.b])
     else out.push([a.x, a.y])
   }
-  const r = (v: number) => Math.round(v * 1000) / 1000
-  return out.map((p) => (p[2] ? [r(p[0]), r(p[1]), p[2]] : [r(p[0]), r(p[1])]))
+  return out.map((p) => (p[2] ? [roundTo(p[0], 3), roundTo(p[1], 3), p[2]] : [roundTo(p[0], 3), roundTo(p[1], 3)]))
 }
 
 /** Parteix el costat i pel mig conservant-ne la forma (de Casteljau a les cúbiques). */
@@ -397,10 +443,9 @@ export function bendEdge(nodes: PNode[], i: number, m: Vec2): PNode[] {
 /** Desplaça el perfil perquè la cantonada mínima (corbes incloses) sigui (0, 0). */
 export function normalizeNodes(nodes: PNode[]): { points: PNode[]; w: number; h: number } {
   const b = bounds(sampleProfile(nodes, 64))
-  const r = (v: number) => Math.round(v * 100) / 100
-  const rv = (v?: Vec2): Vec2 | undefined => (v && lenV(v) > 1e-9 ? [r(v[0]), r(v[1])] : undefined)
+  const rv = (v?: Vec2): Vec2 | undefined => (v && lenV(v) > 1e-9 ? [roundTo(v[0], 2), roundTo(v[1], 2)] : undefined)
   const points = nodes.map((p) => {
-    const q: PNode = { x: r(p.x - b.x0), y: r(p.y - b.y0) }
+    const q: PNode = { x: roundTo(p.x - b.x0, 2), y: roundTo(p.y - b.y0, 2) }
     const hi = rv(p.in), ho = rv(p.out)
     if (hi) q.in = hi
     if (ho) q.out = ho
@@ -408,7 +453,7 @@ export function normalizeNodes(nodes: PNode[]): { points: PNode[]; w: number; h:
     if (p.t && p.t !== "corner" && (hi || ho)) q.t = p.t
     return q
   })
-  return { points, w: r(b.x1 - b.x0), h: r(b.y1 - b.y0) }
+  return { points, w: roundTo(b.x1 - b.x0, 2), h: roundTo(b.y1 - b.y0, 2) }
 }
 
 /** Arrodoneix la cantonada `i` (entre dos costats rectes) amb un arc de radi `r`. */

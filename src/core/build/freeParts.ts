@@ -26,6 +26,7 @@ import {
 import { slotSpec } from "./hardware"
 import { normalizePanel } from "./buildCabinet"
 import { shapeOutline } from "./buildModule"
+import { roundTo } from "../../lib/format"
 
 /**
  * Encaixos entre peces lliures, calculats per geometria (com els generadors de «slot and
@@ -238,11 +239,11 @@ export function buildFreeParts(comp: Composition, moduleNumber: number): FreePar
           if (through) cutRect(M, rect, j)
           else
             M.grooves.push({
-              x: r2(rect.u0),
-              y: r2(rect.v0),
-              w: r2(rect.u1 - rect.u0),
-              h: r2(rect.v1 - rect.v0),
-              depth: r2(depth[1] - depth[0]),
+              x: roundTo(rect.u0, 2),
+              y: roundTo(rect.v0, 2),
+              w: roundTo(rect.u1 - rect.u0, 2),
+              h: roundTo(rect.v1 - rect.v0, 2),
+              depth: roundTo(depth[1] - depth[0], 2),
               face: faceAt(M.part, fromMin ? "min" : "max"),
               tag: "mortise",
             })
@@ -294,9 +295,9 @@ export function buildFreeParts(comp: Composition, moduleNumber: number): FreePar
         const mid = (lo[nT]! + hi[nT]!) / 2
         for (const c of at) {
           const pt = localRect(T.part, { [L]: [c, c], [nM]: [bT[tSide][nM]!, bT[tSide][nM]!] })
-          T.holes.push({ x: r2(pt.u0), y: r2(pt.v0), diameter: dowel.diameter, depth: dowel.edgeDepth, face: "edge", edge, tag: "dowel" })
+          T.holes.push({ x: roundTo(pt.u0, 2), y: roundTo(pt.v0, 2), diameter: dowel.diameter, depth: dowel.edgeDepth, face: "edge", edge, tag: "dowel" })
           const q = localRect(M.part, { [L]: [c, c], [nT]: [mid, mid] })
-          M.holes.push({ x: r2(q.u0), y: r2(q.v0), diameter: dowel.diameter, depth: Math.min(dowel.faceDepth, M.part.thickness - 4), face: faceAt(M.part, tSide === "max" ? "min" : "max"), tag: "dowel" })
+          M.holes.push({ x: roundTo(q.u0, 2), y: roundTo(q.v0, 2), diameter: dowel.diameter, depth: Math.min(dowel.faceDepth, M.part.thickness - 4), face: faceAt(M.part, tSide === "max" ? "min" : "max"), tag: "dowel" })
         }
         joints.push({ kind: "dowel", a: A.id, b: B.id, into: T.part.id })
       }
@@ -338,7 +339,6 @@ export function buildFreeParts(comp: Composition, moduleNumber: number): FreePar
   return { panels, extras, joints, warnings }
 }
 
-const r2 = (v: number) => Math.round(v * 100) / 100
 
 /** El contorn té osques: menys àrea que la forma (o el rectangle) sencera. */
 function notched(p: FreePart, outline: NonNullable<Panel["outline"]>): boolean {
@@ -361,7 +361,7 @@ function partContour(p: FreePart, removals: Pt[][]): { outline?: Panel["outline"
   const res = pc.difference([base], ...removals.map((r) => [r]))
   if (!res.length) return { cutouts: [], pieces: 0 }
   const ringOf = (r: Pt[]): Pt[] => {
-    const q = r.map(([x, y]) => [r2(x), r2(y)] as Pt)
+    const q = r.map(([x, y]) => [roundTo(x, 2), roundTo(y, 2)] as Pt)
     const last = q[q.length - 1]!
     if (q.length > 1 && last[0] === q[0]![0] && last[1] === q[0]![1]) q.pop()
     return ccw(q)

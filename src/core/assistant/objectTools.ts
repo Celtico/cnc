@@ -20,7 +20,8 @@ import {
 } from "../model"
 import { ellipse, roundRect } from "../model/objectShapes"
 import { OBJECT_SYSTEM_PROMPT } from "./prompt"
-import { fail, parseToolInput, r1, toolDefs, toolFailure, type AssistantToolSet, type ToolRun } from "./toolset"
+import { fail, parseToolInput, toolDefs, toolFailure, type AssistantToolSet, type ToolRun } from "./toolset"
+import { roundTo } from "../../lib/format"
 
 /**
  * Eines de l'assistent IA per als **objectes** (docs/xat-ia.md): un objecte és una composició del tipus `objecte` amb
@@ -176,7 +177,7 @@ export function partShapeKind(p: Pick<FreePart, "shape">): { kind: "rectangle" |
   const w = Math.max(...xs) - Math.min(...xs), h = Math.max(...ys) - Math.min(...ys)
   if (Math.min(...xs) === 0 && Math.min(...ys) === 0) {
     if (close(s, ellipse(w, h))) return { kind: Math.abs(w - h) < 0.05 ? "circle" : "ellipse" }
-    if (s.length === 8 && close(s, roundRect(w, h, s[0]!.y))) return { kind: "rounded", radius: r1(s[0]!.y) }
+    if (s.length === 8 && close(s, roundRect(w, h, s[0]!.y))) return { kind: "rounded", radius: roundTo(s[0]!.y, 1) }
   }
   return { kind: "custom" }
 }
@@ -329,7 +330,7 @@ function summarizeObject(comp: Composition): ObjectSummary {
   const boxes = [...ps.map(partBox), ...(comp.models ?? []).map((m) => ({ min: [m.x, m.y, m.z], max: [m.x + m.w, m.y + m.h, m.z + m.d] }))]
   const all = boxes.length ? { min: [0, 1, 2].map((a) => Math.min(...boxes.map((b) => b.min[a]!))), max: [0, 1, 2].map((a) => Math.max(...boxes.map((b) => b.max[a]!))) } : null
   return {
-    size: all ? { w: r1(all.max[0]! - all.min[0]!), h: r1(all.max[1]! - all.min[1]!), d: r1(all.max[2]! - all.min[2]!) } : null,
+    size: all ? { w: roundTo(all.max[0]! - all.min[0]!, 1), h: roundTo(all.max[1]! - all.min[1]!, 1), d: roundTo(all.max[2]! - all.min[2]!, 1) } : null,
     parts: ps.map((p) => {
       const b = partBox(p)
       const s = partShapeKind(p)
@@ -337,13 +338,13 @@ function summarizeObject(comp: Composition): ObjectSummary {
         id: p.id,
         name: p.name,
         orient: p.orient,
-        w: r1(p.w),
-        h: r1(p.h),
-        thickness: r1(p.thickness),
-        x: r1(p.x),
-        y: r1(p.y),
-        z: r1(p.z),
-        box: [...b.min, ...b.max].map(r1),
+        w: roundTo(p.w, 1),
+        h: roundTo(p.h, 1),
+        thickness: roundTo(p.thickness, 1),
+        x: roundTo(p.x, 1),
+        y: roundTo(p.y, 1),
+        z: roundTo(p.z, 1),
+        box: [...b.min, ...b.max].map((v) => roundTo(v, 1)),
         material: p.material,
         shape: s.kind === "rounded" ? `rounded r=${s.radius}` : s.kind,
         ...(p.group ? { group: p.group } : {}),
@@ -351,7 +352,7 @@ function summarizeObject(comp: Composition): ObjectSummary {
       }
     }),
     groups: partGroups(ps),
-    ...(comp.models?.length ? { models: comp.models.map((m) => ({ id: m.id, name: m.name, x: r1(m.x), y: r1(m.y), z: r1(m.z), w: r1(m.w), h: r1(m.h), d: r1(m.d) })) } : {}),
+    ...(comp.models?.length ? { models: comp.models.map((m) => ({ id: m.id, name: m.name, x: roundTo(m.x, 1), y: roundTo(m.y, 1), z: roundTo(m.z, 1), w: roundTo(m.w, 1), h: roundTo(m.h, 1), d: roundTo(m.d, 1) })) } : {}),
   }
 }
 

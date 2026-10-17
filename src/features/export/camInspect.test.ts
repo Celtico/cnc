@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest"
 import { camDraw, camRows, type CamOp, type XcsPreview } from "../../core/export/xcsPreview"
 import type { CamSheetView } from "./camDrawing"
-import { bbox, camInspect, edgeGaps, pathLength } from "./camInspect"
+import { bounds, polylineLength } from "../../core/model"
+import { camInspect, edgeGaps } from "./camInspect"
 
 const base = { line: 1, name: "", plane: "Top", toolArg: "T", tool: "T", desc: "" }
 const rect = (x0: number, y0: number, x1: number, y1: number) => ({
@@ -33,9 +34,9 @@ function view(ops: CamOp[]): CamSheetView {
 
 describe("camInspect", () => {
   it("geometria bàsica", () => {
-    expect(bbox([[1, 2], [5, -1]])).toEqual({ x0: 1, y0: -1, x1: 5, y1: 2 })
-    expect(pathLength([[0, 0], [3, 0], [3, 4]], false)).toBe(7)
-    expect(pathLength([[0, 0], [3, 0], [3, 4]], true)).toBe(12)
+    expect(bounds([[1, 2], [5, -1]])).toEqual({ x0: 1, y0: -1, x1: 5, y1: 2 })
+    expect(polylineLength([[0, 0], [3, 0], [3, 4]], false)).toBe(7)
+    expect(polylineLength([[0, 0], [3, 0], [3, 4]], true)).toBe(12)
     expect(edgeGaps({ x0: 10, y0: 20, x1: 10, y1: 20 }, { x0: 0, y0: 0, x1: 100, y1: 50 })).toEqual({ left: 10, right: 90, bottom: 20, top: 30 })
   })
 

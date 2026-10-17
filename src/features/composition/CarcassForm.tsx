@@ -24,7 +24,7 @@ const TOP_LABEL: Record<Top["kind"], string> = { full: "Sencera", ventSlot: "Ran
 /**
  * Formulari de la carcassa del mòdul seleccionat, per seccions (l'inspector en fa una secció plegable per a cadascuna):
  * mides i la **Caixa**, en cascada: base, fons (amb la Ranura o la Retirada del fons), tapa, laterals, parets, cantonades
- * i, al final, el que és de tots els fronts del mòdul: l'Estil, les folgances i el Retranqueig dels prestatges (per
+ * i, al final, el que és de tots els fronts del mòdul: l'Estil, les folgances i la Retirada dels prestatges (per
  * decisió de l'usuari, 2026-10-08: «l'Estil també a la Caixa»; abans eren a «Acabats»). Només el que la construcció
  * llegeix (`moduleRows`, `core/model/usedHardware.ts`). Els passacables són a `CableHolesForm`.
  */
@@ -166,7 +166,7 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
                 {rows.back === "groove" && <NumRow optionId="module.carcass.backSetback" label="Ranura del fons" value={c.backSetback} min={0} max={60} step={1} onChange={(backSetback) => set({ backSetback })} help="Distància al cantell posterior" />}
                 {rows.back === "groove" && (
                   <>
-                    <NumRow optionId="module.carcass.grooveClearance" label="Joc de la ranura" value={c.grooveClearance ?? 0} min={0} max={2} step={0.1} onChange={(grooveClearance) => set({ grooveClearance })} help={`La ranura fa ${String(Math.round((c.backThickness + (c.grooveClearance ?? 0)) * 10) / 10).replace(".", ",")} mm d'ample: el gruix del fons + el joc (cap al davant). ${prefHint(c.grooveClearance ?? 0, gaps.grooveClearance)}`} />
+                    <NumRow optionId="module.carcass.grooveClearance" label="Folgança de la ranura" value={c.grooveClearance ?? 0} min={0} max={2} step={0.1} onChange={(grooveClearance) => set({ grooveClearance })} help={`La ranura fa ${String(Math.round((c.backThickness + (c.grooveClearance ?? 0)) * 10) / 10).replace(".", ",")} mm d'ample: el gruix del fons + la folgança (cap al davant). ${prefHint(c.grooveClearance ?? 0, gaps.grooveClearance)}`} />
                     <PrefReset optionId="module.carcass.grooveClearance" value={c.grooveClearance ?? 0} pref={gaps.grooveClearance} onReset={() => set({ grooveClearance: gaps.grooveClearance })} />
                   </>
                 )}
@@ -305,7 +305,7 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
                   <PrefReset optionId="module.carcass.betweenGap" value={module.fronts.betweenGap} pref={gaps.betweenGap} onReset={() => setFronts({ betweenGap: gaps.betweenGap })} />
                 </>}
                 {rows.shelfSetback && <>
-                  <NumRow optionId="module.carcass.shelfSetback" label="Retranqueig dels prestatges" value={c.shelfSetback} min={0} max={100} step={1} onChange={(shelfSetback) => set({ shelfSetback })} help={`Del davant de la caixa al cantell dels prestatges de tot el mòdul (amb fronts encastats, almenys un gruix). ${prefHint(c.shelfSetback, gaps.shelfSetback)}`} />
+                  <NumRow optionId="module.carcass.shelfSetback" label="Retirada dels prestatges" value={c.shelfSetback} min={0} max={100} step={1} onChange={(shelfSetback) => set({ shelfSetback })} help={`Del davant de la caixa al cantell dels prestatges de tot el mòdul (amb fronts encastats, almenys un gruix). ${prefHint(c.shelfSetback, gaps.shelfSetback)}`} />
                   <PrefReset optionId="module.carcass.shelfSetback" value={c.shelfSetback} pref={gaps.shelfSetback} onReset={() => set({ shelfSetback: gaps.shelfSetback })} />
                 </>}
               </Stack>
@@ -532,7 +532,7 @@ function TableTopFields({ module, onChange }: { module: Module; onChange: (m: Mo
           <ProfileEditor
             open={editing}
             initial={tt.shape ?? PRESETS[0]!.make(L, D)}
-            axes={["Ample", "Fondària"]}
+            axes={["Amplada", "Fondària"]}
             onClose={() => setEditing(false)}
             onApply={({ points }) => {
               set({ ...tt, shape: points })

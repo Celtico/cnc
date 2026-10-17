@@ -1,4 +1,4 @@
-import { pickBallRouter, pickRouter } from "../../machine/tools"
+import { pickBallRouter, pickRouter, routerReach } from "../../machine/tools"
 import type { RulePicker } from "../../machine/rules"
 import { defaultRelief, reliefPlan, reliefPoints, type P3 } from "../../machine/relief"
 import { flatten, isFlatPocket, pocketBounds, type BPt, type Panel, type Pocket } from "../../model"
@@ -29,7 +29,7 @@ function lowestZ(paths: P3[][]): number {
 
 /** Què fer si cap fresa no hi arriba: la més llarga de la màquina i quant s'ha de pujar l'objecte. */
 function reachHint(m: Machine, depth: number): string {
-  const longest = Math.max(0, ...m.tools.filter((t) => t.kind === "router" && t.mounted && t.auto).map((t) => t.maxDepth))
+  const longest = routerReach(m)
   return longest > 0 && longest < depth ? ` (la més llarga, ${num(longest)} mm): puja l'objecte que talla ${num(depth - longest)} mm o afegeix una fresa més llarga` : ""
 }
 

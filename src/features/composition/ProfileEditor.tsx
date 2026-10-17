@@ -32,7 +32,7 @@ export function ProfileEditor({
 }: {
   open: boolean
   initial: PNode[]
-  /** Noms dels eixos (u, v) per als rètols, p. ex. ["Ample", "Alt"]. */
+  /** Noms dels eixos (u, v) per als rètols, p. ex. ["Amplada", "Alçada"]. */
   axes: [string, string]
   onClose: () => void
   onApply: (p: { points: PNode[]; w: number; h: number }) => void

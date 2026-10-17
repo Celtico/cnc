@@ -1,5 +1,6 @@
 import { CUTOUT_PRESETS, freeX, moduleFrontFace, type Composition, type Module, type Panel, type WorktopRun } from "../model"
 import type { ModulePlacement } from "../model/composition"
+import { roundTo } from "../../lib/format"
 
 export interface RunWarning {
   runId: string
@@ -25,7 +26,6 @@ function runModules(comp: Composition, from: string, to: string): { modules: Mod
   return { modules: indices.map((i) => comp.modules[i]!), indices }
 }
 
-const r1 = (v: number) => Math.round(v * 10) / 10
 
 /**
  * Taulell: una peça de punta a punta sobre els baixos. Local: x al llarg, y del cantell de
@@ -39,15 +39,15 @@ export function buildWorktop(comp: Composition, run: WorktopRun, places: ModuleP
   const top = Math.max(...r.indices.map((i) => places[i]!.y + comp.modules[i]!.carcass.height))
   // Fins a la cara dels fronts més el voladís.
   const front = Math.max(...r.modules.map(moduleFrontFace)) + run.overhangFront
-  const L = r1(x1 - x0)
-  const W = r1(front)
+  const L = roundTo(x1 - x0, 1)
+  const W = roundTo(front, 1)
   const cutouts: NonNullable<Panel["cutouts"]> = []
   for (const c of run.cutouts) {
     const i = comp.modules.findIndex((m) => m.id === c.module)
     if (i < 0) continue
     const cx = places[i]!.x + comp.modules[i]!.carcass.width / 2 + c.dx - x0
     const y = c.front ?? (W - c.d) / 2
-    const cut = { kind: "rect" as const, x: r1(cx - c.w / 2), y: r1(y), w: c.w, h: c.d, tag: c.kind }
+    const cut = { kind: "rect" as const, x: roundTo(cx - c.w / 2, 1), y: roundTo(y, 1), w: c.w, h: c.d, tag: c.kind }
     // Si travessa el contorn no és un forat sinó una osca: no es fa.
     if (cut.x < 0 || cut.x + cut.w > L || cut.y < 0 || cut.y + cut.h > W) {
       warnings.push({ runId: run.id, message: `El forat «${CUTOUT_PRESETS[c.kind].label}» surt del taulell (${c.w} × ${c.d} mm en un taulell de ${L} × ${W} mm): no s'ha fet. Mou-lo o fes-lo més petit.` })

@@ -2,7 +2,8 @@ import { NO_EDGES, type Cutout, type EdgeBanding, type Panel, type PanelRole, ty
 import { X, Y, Z, dowelJoint, neg, placement, r, threeAlong, toLocal } from "../geometry"
 import { MIN_OPEN_RATIO, grilleCutouts, type Rect } from "../grille"
 import { BuilderBase } from "./base"
-import { num, edges, near, shapeOutline } from "./helpers"
+import { edges, near, shapeOutline } from "./helpers"
+import { fmtNum } from "../../../lib/format"
 
 /** La carcassa: laterals, base, tapa, fons, sòcol (base «Sòcol»; el de les potes, `MountingBuilder`) i parets buides. */
 export class CarcassBuilder extends BuilderBase {
@@ -26,7 +27,7 @@ export class CarcassBuilder extends BuilderBase {
       this.warnings.push({ code: "inset", message: "Fronts encastats: van dins de la llum amb el joc a tot el voltant; calen frontisses per a porta encastada." })
       // Només si algun prestatge es retira de debò (sense prestatges, o tots a ras en compartiments oberts, no compta).
       if (c.shelfSetback < d.t && frontOptionsUse(m).shelfSetback)
-        this.warnings.push({ code: "inset", message: `Els prestatges van retirats ${c.shelfSetback} mm i el front encastat entra ${d.t} mm: retira'ls almenys ${d.t} mm (${UI_PATHS.box} › Retranqueig dels prestatges).` })
+        this.warnings.push({ code: "inset", message: `Els prestatges van retirats ${c.shelfSetback} mm i el front encastat entra ${d.t} mm: retira'ls almenys ${d.t} mm (${UI_PATHS.box} › Retirada dels prestatges).` })
     }
     // Fons en ranura massa gruixut: la ranura deixaria el lateral sense material.
     if (c.back === "groove" && d.tb > d.t - 6) {
@@ -380,8 +381,8 @@ export class CarcassBuilder extends BuilderBase {
         code: "back-inset",
         message:
           slot <= 0
-            ? `Ranura d'aire de la tapa: amb el fons encastat (retirada ${num(z0)} + gruix ${num(d.tb)} mm) la ranura queda tapada. Fes-la més ampla (més de ${num(z0 + d.tb + 10)} mm) o retira menys el fons.`
-            : `Ranura d'aire de la tapa: entre el fons encastat i la tapa només queden ${num(slot)} mm (calen 10 mm o més). Fes la ranura més ampla o retira menys el fons.`,
+            ? `Ranura d'aire de la tapa: amb el fons encastat (retirada ${fmtNum(z0, 1)} + gruix ${fmtNum(d.tb, 1)} mm) la ranura queda tapada. Fes-la més ampla (més de ${fmtNum(z0 + d.tb + 10, 1)} mm) o retira menys el fons.`
+            : `Ranura d'aire de la tapa: entre el fons encastat i la tapa només queden ${fmtNum(slot, 1)} mm (calen 10 mm o més). Fes la ranura més ampla o retira menys el fons.`,
         panelId: back.id,
       })
     }
@@ -392,7 +393,7 @@ export class CarcassBuilder extends BuilderBase {
     if (d.D - d.backInnerZ < need) {
       this.warnings.push({
         code: "back-inset",
-        message: `Fons encastat: davant del fons només queden ${num(d.D - d.backInnerZ)} mm de fondària (calen ${num(need)} mm per a les dues fileres System 32 a ${num(s32.edgeOffset)} mm dels cantells). Retira menys el fons o fes el mòdul més fondo; si les fileres es trobarien, la de darrere no es fa.`,
+        message: `Fons encastat: davant del fons només queden ${fmtNum(d.D - d.backInnerZ, 1)} mm de fondària (calen ${fmtNum(need, 1)} mm per a les dues fileres System 32 a ${fmtNum(s32.edgeOffset, 1)} mm dels cantells). Retira menys el fons o fes el mòdul més fondo; si les fileres es trobarien, la de darrere no es fa.`,
         panelId: back.id,
       })
     }

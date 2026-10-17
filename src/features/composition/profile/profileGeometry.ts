@@ -1,7 +1,6 @@
 import { arcOf, bounds, cubicAt, edgeOf, sampleProfile, type PNode, type Vec2 } from "../../../core/model"
 import type { SetOptions } from "../../history/history"
 
-export const r1 = (v: number) => Math.round(v * 10) / 10
 /** Canvi en viu (arrossegant): el pas de desfer es fa en deixar anar. */
 export const LIVE: SetOptions = { commit: false }
 /** Eines de l'editor de perfil. */

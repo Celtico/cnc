@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react"
 import { toaster } from "../../components/ui/toaster"
+import { useLatest } from "../../lib/useLatest"
 import { useSettings } from "../settings/SettingsContext"
 import { openAnyFile } from "./openAnyFile"
 
@@ -20,8 +21,7 @@ export function useLaunchFiles(onOpen: (projectId: number) => void, onOpenAmbien
   const { settings, save, loading } = useSettings()
   const pending = useRef<FileSystemFileHandle[]>([])
   const ready = useRef<() => void>(() => {})
-  const latest = useRef({ settings, save, onOpen, onOpenAmbient })
-  latest.current = { settings, save, onOpen, onOpenAmbient }
+  const latest = useLatest({ settings, save, onOpen, onOpenAmbient })
 
   useEffect(() => {
     const queue = (window as unknown as { launchQueue?: LaunchQueue }).launchQueue
@@ -59,5 +59,5 @@ export function useLaunchFiles(onOpen: (projectId: number) => void, onOpenAmbien
     return () => {
       ready.current = () => {}
     }
-  }, [loading])
+  }, [loading, latest])
 }

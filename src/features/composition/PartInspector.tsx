@@ -1,12 +1,12 @@
-import { Badge, Button, HStack, IconButton, Menu, Portal, Stack, Switch, Text } from "@chakra-ui/react"
+import { Badge, Button, HStack, IconButton, Menu, Stack, Switch, Text } from "@chakra-ui/react"
 import { segGroup, segItem } from "../../components/segmented"
 import { useState } from "react"
 import {
   LuBan,
   LuCopy,
-  LuEllipsis,
   LuFactory,
   LuGroup,
+  LuListChecks,
   LuLink,
   LuMove,
   LuMoveDiagonal,
@@ -73,16 +73,17 @@ import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { MaterialSelect } from "../settings/MaterialSelect"
 import { useSettings } from "../settings/SettingsContext"
 import { ProfileEditor } from "./ProfileEditor"
-import { AxisLabel } from "./RefInspector"
+import { AxisLabel } from "../../components/AxisLabel"
 import { ORIENT_ICON, ORIENTS } from "./partOrient"
 import { moduleChips } from "./moduleChips"
+import { ActionsMenu } from "../../components/ActionsMenu"
 
 /** Orientació d'una peça lliure: com està posada (el pla del tauler). */
 
 const NEW_GROUP = "__new_group__"
 
 /** Noms de les dues mides del pla segons l'orientació. */
-const DIM_NAMES: Record<PartOrient, [string, string]> = { front: ["Ample", "Alt"], side: ["Fondària", "Alt"], flat: ["Ample", "Fondària"] }
+const DIM_NAMES: Record<PartOrient, [string, string]> = { front: ["Amplada", "Alçada"], side: ["Fondària", "Alçada"], flat: ["Amplada", "Fondària"] }
 
 const GRAIN: IconOption<"u" | "v" | "none">[] = [
   { value: "u", label: "Al llarg de l'ample", icon: LuMoveHorizontal },
@@ -170,7 +171,7 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
       <FoldItem optionId="part.size" id="part-size" title="Mides" icon={LuMoveDiagonal} badge={size.join(" × ")}>
         {/* Sempre ample (X), alt (Y) i fondària (Z) com la resta de l'app; la del gruix depèn de
             l'orientació. De CNC: el gruix, només els del tauler. Si no és de CNC: tot lliure. */}
-        {(["Ample", "Alt", "Fondària"] as const).map((label, a) => {
+        {(["Amplada", "Alçada", "Fondària"] as const).map((label, a) => {
             const isT = a === ax.n
             if (isT && cnc && mat)
               return (
@@ -361,7 +362,7 @@ export function PartJoineryForm({ comp, onChange }: { comp: Composition; onChang
   const fit = j.clearance === 0 ? "a pressió dur" : j.clearance <= 0.25 ? "a pressió" : j.clearance <= 0.5 ? "fluix (desmuntable)" : "molt fluix"
   return (
     <Stack gap={3}>
-      <NumRow optionId="moble.joinery.clearance" label="Joc" value={j.clearance} min={0} max={3} step={0.05} onChange={(clearance) => set({ clearance: Math.max(0, clearance || 0) })} />
+      <NumRow optionId="moble.joinery.clearance" label="Folgança" value={j.clearance} min={0} max={3} step={0.05} onChange={(clearance) => set({ clearance: Math.max(0, clearance || 0) })} />
       <NumRow optionId="moble.joinery.tool" label="Diàmetre fresa (Ø)" value={j.tool} min={0} max={25} step={1} onChange={(tool) => set({ tool: Math.max(0, tool || 0) })} />
       <NumRow optionId="moble.joinery.tabWidth" label="Pestanya" value={j.tabWidth} min={10} max={500} step={5} onChange={(tabWidth) => set({ tabWidth: Math.max(10, tabWidth || 10) })} />
       <FormRow optionId="moble.joinery.dogbones" label="Dogbones">
@@ -386,40 +387,29 @@ export function PartActions({ comp, id, onChange, onRemoved, onSelected }: { com
   const p = comp.parts?.find((x) => x.id === id)
   if (!p) return null
   return (
-    <Menu.Root positioning={{ placement: "bottom-end" }}>
-      <Menu.Trigger asChild>
-        <IconButton size="xs" variant="ghost" aria-label="Accions de la peça">
-          <LuEllipsis />
-        </IconButton>
-      </Menu.Trigger>
-      <Portal>
-        <Menu.Positioner>
-          <Menu.Content>
-            <Menu.Item
-              value="dup"
-              onClick={() => {
-                const res = insertPartCopy(comp, p)
-                onChange(res.comp)
-                onSelected?.(res.id)
-              }}
-            >
-              <LuCopy /> Duplicar
-            </Menu.Item>
-            <Menu.Separator />
-            <Menu.Item
-              value="del"
-              color="fg.error"
-              onClick={() => {
-                onChange({ ...comp, parts: (comp.parts ?? []).filter((x) => x.id !== id) })
-                onRemoved()
-              }}
-            >
-              <LuTrash2 /> Eliminar
-            </Menu.Item>
-          </Menu.Content>
-        </Menu.Positioner>
-      </Portal>
-    </Menu.Root>
+    <ActionsMenu label="Accions de la peça">
+      <Menu.Item
+        value="dup"
+        onClick={() => {
+          const res = insertPartCopy(comp, p)
+          onChange(res.comp)
+          onSelected?.(res.id)
+        }}
+      >
+        <LuCopy /> Duplicar
+      </Menu.Item>
+      <Menu.Separator />
+      <Menu.Item
+        value="del"
+        color="fg.error"
+        onClick={() => {
+          onChange({ ...comp, parts: (comp.parts ?? []).filter((x) => x.id !== id) })
+          onRemoved()
+        }}
+      >
+        <LuTrash2 /> Eliminar
+      </Menu.Item>
+    </ActionsMenu>
   )
 }
 
@@ -509,8 +499,8 @@ export function MultiInspector({ comp, items, onChange, onSelect, onMove, onGrou
       </FoldItem>
       {one && (
         <FoldItem optionId="multi.size" id="multi-size" title="Mides" icon={LuMoveDiagonal}>
-          {sizeRow("w", "Ample")}
-          {sizeRow("h", "Alt")}
+          {sizeRow("w", "Amplada")}
+          {sizeRow("h", "Alçada")}
           {sizeRow("d", one === "part" ? "Gruix" : "Fondària")}
           {one === "model" && <NumRow optionId="multi.size" label="Gir" suffix="°" value={rot ?? 0} min={-360} max={360} step={15} help={rot === undefined ? "Diversos: el gir que hi posis va a tots." : "Al voltant del vertical, pel centre."} onChange={(n) => Number.isFinite(n) && onChange(setMultiRot(comp, items, n))} />}
         </FoldItem>
@@ -528,7 +518,7 @@ export function MultiInspector({ comp, items, onChange, onSelect, onMove, onGrou
           </FormRow>
         </FoldItem>
       )}
-      <FoldItem optionId="multi.items" id="multi-items" title="Triats" icon={LuGroup} badge={items.length}>
+      <FoldItem optionId="multi.items" id="multi-items" title="Triats" icon={LuListChecks} badge={items.length}>
         <Stack gap={0.5}>
           {items.map((x) => (
             <Button key={`${x.kind}:${x.id}`} size="xs" variant="ghost" justifyContent="flex-start" onClick={() => onSelect(x)}>

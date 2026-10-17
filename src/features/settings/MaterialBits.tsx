@@ -1,8 +1,9 @@
-import { Badge, Box, HStack, IconButton, Input, Stack, Text } from "@chakra-ui/react"
+import { Badge, Box, HStack, Input, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import { LuPlus, LuX } from "react-icons/lu"
 import type { MaterialPref } from "../../core/model"
 import { PREVIEW_MM, previewStyle } from "./materialPreview"
+import { IconAction } from "../../components/IconAction"
 
 /** Mostra gran del material a escala real (com el previsualitzador de materials de Blender o Figma). */
 export function MaterialPreview({ m, w = 240, h = 150, caption = true }: { m: MaterialPref; w?: number; h?: number; caption?: boolean }) {
@@ -69,16 +70,16 @@ export function ThicknessChips({ value, onChange, label = true, what = "gruix", 
         {value.map((t) => (
           <Badge key={t} size="lg" variant="subtle" colorPalette="wood" pr={0.5}>
             {t} mm
-            <IconButton aria-label={`Treure ${what === "gruix" ? "el gruix" : `la ${what}`} de ${t} mm`} size="2xs" variant="ghost" disabled={value.length <= 1} onClick={() => onChange(value.filter((x) => x !== t))}>
+            <IconAction label={`Eliminar ${what === "gruix" ? "el gruix" : `la ${what}`} de ${t} mm`} size="2xs" variant="ghost" disabled={value.length <= 1} onClick={() => onChange(value.filter((x) => x !== t))}>
               <LuX />
-            </IconButton>
+            </IconAction>
           </Badge>
         ))}
         <HStack gap={0} as="form" onSubmit={(e) => (e.preventDefault(), add())}>
           <Input size="xs" w="72px" type="number" inputMode="decimal" value={text} onChange={(e) => setText(e.target.value)} placeholder="mm" aria-label={`${what === "gruix" ? "Gruix nou" : `${what[0]!.toUpperCase()}${what.slice(1)} nova`} (mm)`} />
-          <IconButton type="submit" aria-label={what === "gruix" ? "Afegir el gruix" : `Afegir la ${what}`} size="xs" variant="ghost" disabled={!text}>
+          <IconAction type="submit" label={what === "gruix" ? "Afegir el gruix" : `Afegir la ${what}`} size="xs" variant="ghost" disabled={!text}>
             <LuPlus />
-          </IconButton>
+          </IconAction>
         </HStack>
       </HStack>
     </Stack>

@@ -55,17 +55,6 @@ export function flattenPath(p: CamPath, stepDeg = 5): Pt[] {
   return clean
 }
 
-/** Àrea amb signe (antihorari > 0). */
-export function signedArea(pts: Pt[]): number {
-  let a = 0
-  for (let i = 0; i < pts.length; i++) {
-    const p = pts[i]!
-    const q = pts[(i + 1) % pts.length]!
-    a += p[0] * q[1] - q[0] * p[1]
-  }
-  return a / 2
-}
-
 /**
  * Òfset d'una polilínia a `s` mm cap a l'esquerra del sentit de la marxa (negatiu: cap a la dreta). Cantonades que
  * s'obren: arc al voltant del vèrtex (com fa el centre de l'eina); que es tanquen: intersecció de les dues rectes.

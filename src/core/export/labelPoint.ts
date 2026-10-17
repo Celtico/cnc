@@ -1,5 +1,6 @@
-import { bounds, flatten, pocketBounds, type Panel } from "../model"
-import { pointInRing, rectsOverlap, type Pt2, type Rect2 } from "./region2d"
+import { bounds, flatten, pocketBounds, pointInPolygon, type Panel } from "../model"
+import { rectsOverlap, type Pt2, type Rect2 } from "./region2d"
+import { roundTo } from "../../lib/format"
 
 /**
  * Punt on enganxar l'etiqueta d'una peça (coordenades locals u/v, en mm): dins de la
@@ -83,7 +84,7 @@ export function labelPoint(p: Panel, options: LabelOptions = {}): { u: number; v
   for (let u = hw; u <= L - hw + 1e-9; u += step)
     for (let v = hh; v <= W - hh + 1e-9; v += step) candidates.push([u, v, (u - cu) ** 2 + (v - cv) ** 2])
   candidates.sort((a, b) => a[2] - b[2])
-  for (const [u, v] of candidates) if (free(u, v)) return { u: r2(u), v: r2(v), fits: true }
+  for (const [u, v] of candidates) if (free(u, v)) return { u: roundTo(u, 2), v: roundTo(v, 2), fits: true }
   return fallback(p, ring, cu, cv, step)
 }
 
@@ -95,20 +96,19 @@ function insideRing(box: Rect2, ring: Pt2[]): boolean {
     [box.a1, box.b1],
     [box.a0, box.b1],
   ]
-  if (!corners.every((c) => pointInRing(c, ring))) return false
+  if (!corners.every((c) => pointInPolygon(c, ring))) return false
   return !ring.some(([x, y]) => x > box.a0 + 1e-6 && x < box.a1 - 1e-6 && y > box.b0 + 1e-6 && y < box.b1 - 1e-6)
 }
 
 /** L'etiqueta no hi cap: el centre, o, si cau fora del contorn, el punt de dins més proper al centre. */
 function fallback(p: Panel, ring: Pt2[] | null, cu: number, cv: number, step: number): { u: number; v: number; fits: false } {
-  if (!ring || pointInRing([cu, cv], ring)) return { u: cu, v: cv, fits: false }
+  if (!ring || pointInPolygon([cu, cv], ring)) return { u: cu, v: cv, fits: false }
   let best: [number, number, number] | null = null
   for (let u = step / 2; u < p.length; u += step / 2)
     for (let v = step / 2; v < p.width; v += step / 2) {
       const d = (u - cu) ** 2 + (v - cv) ** 2
-      if ((!best || d < best[2]) && pointInRing([u, v], ring)) best = [u, v, d]
+      if ((!best || d < best[2]) && pointInPolygon([u, v], ring)) best = [u, v, d]
     }
-  return best ? { u: r2(best[0]), v: r2(best[1]), fits: false } : { u: cu, v: cv, fits: false }
+  return best ? { u: roundTo(best[0], 2), v: roundTo(best[1], 2), fits: false } : { u: cu, v: cv, fits: false }
 }
 
-const r2 = (v: number): number => Math.round(v * 100) / 100

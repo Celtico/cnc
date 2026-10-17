@@ -10,7 +10,9 @@ export const MAX_PDF_BYTES = 30 * 1024 * 1024
 /** Caràcters màxims d'un fitxer de text (la resta es talla i s'avisa). */
 export const MAX_TEXT_CHARS = 200_000
 
-const TEXT_EXT = /\.(txt|md|markdown|csv|tsv|json|xml|xcs|pgmx|html?|ya?ml|log|ini|cfg)$/i
+/** Extensions de text (una sola llista: la fan servir `attachKind` i l'`accept` del selector). */
+const TEXT_EXTS = ["txt", "md", "markdown", "csv", "tsv", "json", "xml", "xcs", "pgmx", "html", "htm", "yaml", "yml", "log", "ini", "cfg"]
+const TEXT_EXT = new RegExp(`\\.(${TEXT_EXTS.join("|")})$`, "i")
 
 /** El tipus d'un fitxer per al xat, o `null` si no s'hi pot adjuntar. */
 export function attachKind(file: { name: string; type: string }): AttachKind | null {
@@ -21,7 +23,7 @@ export function attachKind(file: { name: string; type: string }): AttachKind | n
 }
 
 /** El que accepta el selector de fitxers del xat. */
-export const ATTACH_ACCEPT = "image/*,application/pdf,.pdf,text/*,.txt,.md,.csv,.tsv,.json,.xml,.xcs,.pgmx,.html,.yaml,.yml,.log"
+export const ATTACH_ACCEPT = ["image/*", "application/pdf", ".pdf", "text/*", ...TEXT_EXTS.map((e) => `.${e}`)].join(",")
 
 /** El text d'un fitxer com va al missatge, amb el nom i tallat si és massa llarg. */
 export function textAttachment(name: string, text: string): string {

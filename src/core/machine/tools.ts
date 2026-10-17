@@ -48,6 +48,15 @@ export function pickBlade(m: Machine, depth: number, maxThickness: number): Mach
     .sort((a, b) => (a.bladeThickness ?? 0) - (b.bladeThickness ?? 0) || a.code.localeCompare(b.code))[0]
 }
 
+/**
+ * Fins on arriba la fresa més llarga de la màquina (muntada, automàtica, Ø > 0): la fondària útil més gran; una fresa amb
+ * fondària útil 0 (sense límit) hi arriba sempre (`Infinity`). Sense cap fresa, 0.
+ */
+export function routerReach(m: Machine): number {
+  const routers = m.tools.filter((t) => t.kind === "router" && t.mounted && t.auto && t.diameter > 0)
+  return routers.length ? Math.max(...routers.map((t) => (t.maxDepth > 0 ? t.maxDepth : Infinity))) : 0
+}
+
 /** La fresa esfèrica (`ball`) que arriba a la fondària, per a l'acabat dels relleus: la més grossa (deixa menys marca). */
 export function pickBallRouter(m: Machine, depth: number): MachineTool | undefined {
   return m.tools

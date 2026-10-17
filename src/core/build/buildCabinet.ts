@@ -10,10 +10,9 @@ import {
   type Placement,
   type Vec3,
 } from "../model"
-import { hingeCount } from "./geometry"
+import { hingeCount, r } from "./geometry"
 
 /** Arrodoneix a la centèsima per evitar soroll de coma flotant. */
-const r = (v: number): number => Math.round(v * 100) / 100
 
 const X: Vec3 = [1, 0, 0]
 const Y: Vec3 = [0, 1, 0]

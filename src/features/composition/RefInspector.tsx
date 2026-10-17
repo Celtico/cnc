@@ -1,4 +1,4 @@
-import { Box, Button, HStack, IconButton, Menu, Portal, Stack, Text, Switch } from "@chakra-ui/react"
+import { Button, HStack, Menu, Stack, Text, Switch } from "@chakra-ui/react"
 import { segGroup, segItem } from "../../components/segmented"
 import { useRef, useState, type ReactNode } from "react"
 import { ProfileEditor } from "./ProfileEditor"
@@ -6,7 +6,7 @@ import { MeshEditor } from "./MeshEditor"
 import { readReliefImage } from "./reliefImage"
 import type { IconType } from "react-icons"
 import { IconChoice, type IconOption } from "../../components/IconChoice"
-import { LuBox, LuCylinder, LuMoveDiagonal2, LuMoveHorizontal, LuMoveVertical, LuScissors, LuShield, LuSpline, LuArrowDownToLine, LuBrickWall, LuBookmark, LuCopy, LuEllipsis, LuMove, LuMoveDiagonal, LuPencilRuler, LuLink, LuPalette, LuShapes, LuImage, LuTrash2 } from "react-icons/lu"
+import { LuBox, LuCylinder, LuMoveDiagonal2, LuMoveHorizontal, LuMoveVertical, LuScissors, LuShield, LuSpline, LuArrowDownToLine, LuBrickWall, LuBookmark, LuCopy, LuMove, LuMoveDiagonal, LuPencilRuler, LuLink, LuPalette, LuShapes, LuImage, LuTrash2 } from "react-icons/lu"
 import { FoldItem } from "../../components/Fold"
 import { toaster } from "../../components/ui/toaster"
 import { AXIS_INDEX, SECTION_AXES, anchorRef, boxCage, insertRefCopy, makeRoomForRef, refBlocksRow, toNodes, newId, type Composition, type RefObject } from "../../core/model"
@@ -14,6 +14,8 @@ import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { useSettings } from "../settings/SettingsContext"
 import { MaterialSelect } from "../settings/MaterialSelect"
+import { ActionsMenu } from "../../components/ActionsMenu"
+import { AxisLabel } from "../../components/AxisLabel"
 
 /** Propietats d'un objecte de referència (fantasma): nom, mides i posició. */
 export function RefInspector({ comp, id, onChange }: { comp: Composition; id: string; onChange: (c: Composition) => void }) {
@@ -41,7 +43,7 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
           label="Efecte"
           help={
             o.effect === "cut"
-              ? "Fa un forat passant a cada peça que travessa (tub, endoll, passacables…); si arriba a la vora (una columna de la casa), la peça es retalla amb la seva forma i, si és una caixa vertical que entra pel darrere, el moble s'hi tanca amb fons nous i les potes s'hi aparten. Si el mous, el tall el segueix; surt al nesting, al DXF, al STEP i als .xcs."
+              ? "A cada peça que toca: si la travessa, un forat passant (tub, endoll, passacables…); si no, un buidat fins on hi entra; amb forma lliure o relleu d'imatge, un relleu amb la seva forma. Si arriba a la vora (una columna de la casa), la peça es retalla amb la seva forma i, si és una caixa vertical que entra pel darrere, el moble s'hi tanca amb fons nous i les potes s'hi aparten. Si el mous, el tall el segueix; surt al nesting, al DXF, al STEP i als .xcs."
               : "Obstacle: no forma part del moble, es veu translúcid per comprovar que tot hi cap i avisa si xoca amb alguna peça."
           }
         >
@@ -111,7 +113,7 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
                 <Switch.Root size="sm" checked={!!o.image.invert} onCheckedChange={(e) => update({ image: { ...o.image!, invert: e.checked || undefined } })}>
                   <Switch.HiddenInput />
                   <Switch.Control />
-                  <Switch.Label fontSize="sm">Blanc = el més fons</Switch.Label>
+                  <Switch.Label fontSize="sm">Blanc = el més profund</Switch.Label>
                 </Switch.Root>
               </Stack>
             )}
@@ -177,8 +179,8 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
           </>
         ) : (
           <>
-            <NumRow optionId="ref.size" label="Ample" value={o.w} min={1} max={20000} step={10} onChange={(w) => update({ w })} />
-            <NumRow optionId="ref.size" label="Alt" value={o.h} min={1} max={20000} step={10} onChange={(h) => update({ h })} />
+            <NumRow optionId="ref.size" label="Amplada" value={o.w} min={1} max={20000} step={10} onChange={(w) => update({ w })} />
+            <NumRow optionId="ref.size" label="Alçada" value={o.h} min={1} max={20000} step={10} onChange={(h) => update({ h })} />
             <NumRow optionId="ref.size" label="Fondària" value={o.d} min={1} max={20000} step={10} onChange={(d) => update({ d })} />
           </>
         )}
@@ -285,7 +287,7 @@ const SHAPE_OPTIONS: { id: "box" | "cylinder" | "profile" | "mesh" | "image"; na
 }))
 
 /** Noms dels eixos (u, v) de la secció per a cada direcció (`SECTION_AXES`). */
-const AXIS_NAMES: Record<Axis, [string, string]> = { z: ["Ample", "Alt"], y: ["Ample", "Fondària"], x: ["Fondària", "Alt"] }
+const AXIS_NAMES: Record<Axis, [string, string]> = { z: ["Amplada", "Alçada"], y: ["Amplada", "Fondària"], x: ["Fondària", "Alçada"] }
 
 /** Mida de la secció (u, v) i llarg (direcció) d'un objecte. */
 function sectionOf(o: RefObject): { su: number; sv: number; length: number } {
@@ -351,60 +353,31 @@ export function RefActions({ comp, id, onChange, onRemoved, onSelected }: { comp
     toaster.create({ title: `«${o.name}» desat a les preferències`, type: "success" })
   }
   return (
-    <Menu.Root positioning={{ placement: "bottom-end" }}>
-      <Menu.Trigger asChild>
-        <IconButton size="xs" variant="ghost" aria-label="Accions de l'objecte">
-          <LuEllipsis />
-        </IconButton>
-      </Menu.Trigger>
-      <Portal>
-        <Menu.Positioner>
-          <Menu.Content>
-            <Menu.Item
-              value="dup"
-              onClick={() => {
-                const res = insertRefCopy(comp, o)
-                onChange(res.comp)
-                onSelected?.(res.id)
-              }}
-            >
-              <LuCopy /> Duplicar
-            </Menu.Item>
-            <Menu.Item value="save" onClick={saveAsPreset}>
-              <LuBookmark /> Desar a les preferències
-            </Menu.Item>
-            <Menu.Separator />
-            <Menu.Item
-              value="del"
-              color="fg.error"
-              onClick={() => {
-                onChange({ ...comp, references: comp.references.filter((r) => r.id !== id) })
-                onRemoved()
-              }}
-            >
-              <LuTrash2 /> Eliminar
-            </Menu.Item>
-          </Menu.Content>
-        </Menu.Positioner>
-      </Portal>
-    </Menu.Root>
-  )
-}
-
-/** Rètol d'una direcció de moviment: icona + nom, i la lletra de l'eix en petit. */
-/** Mateixos colors que les fletxes del 3D: vermell de costat, verd amunt, blau endavant. */
-const AXIS_TINT: Record<string, string> = { X: "#e5484d", Y: "#30a46c", Z: "#0090ff" }
-
-export function AxisLabel({ icon: Icon, name, axis, hint }: { icon: IconType; name: string; axis: string; hint: string }) {
-  return (
-    <HStack as="span" gap={1} title={`${name} (${axis}): ${hint}`}>
-      <Box as="span" color={AXIS_TINT[axis]} display="inline-flex">
-        <Icon />
-      </Box>
-      <span>{name}</span>
-      <Text as="span" color="fg.subtle" fontSize="2xs">
-        {axis}
-      </Text>
-    </HStack>
+    <ActionsMenu label="Accions de l'objecte">
+      <Menu.Item
+        value="dup"
+        onClick={() => {
+          const res = insertRefCopy(comp, o)
+          onChange(res.comp)
+          onSelected?.(res.id)
+        }}
+      >
+        <LuCopy /> Duplicar
+      </Menu.Item>
+      <Menu.Item value="save" onClick={saveAsPreset}>
+        <LuBookmark /> Desar a les preferències
+      </Menu.Item>
+      <Menu.Separator />
+      <Menu.Item
+        value="del"
+        color="fg.error"
+        onClick={() => {
+          onChange({ ...comp, references: comp.references.filter((r) => r.id !== id) })
+          onRemoved()
+        }}
+      >
+        <LuTrash2 /> Eliminar
+      </Menu.Item>
+    </ActionsMenu>
   )
 }

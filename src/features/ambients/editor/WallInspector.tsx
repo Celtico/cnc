@@ -1,4 +1,4 @@
-import { Box, Button, HStack, IconButton, Stack, Text } from "@chakra-ui/react"
+import { Box, Button, HStack, Menu, Stack, Text } from "@chakra-ui/react"
 import { LuAppWindow, LuBrickWall, LuDoorOpen, LuPanelTop, LuRuler, LuTrash2 } from "react-icons/lu"
 import { ChoiceChips, FormRow } from "../../../components/FormRow"
 import { FoldItem } from "../../../components/Fold"
@@ -6,8 +6,10 @@ import { NumRow } from "../../../components/NumRow"
 import { toaster } from "../../../components/ui/toaster"
 import { OPENING_DEFAULTS, addOpening, clampOpening, setWallEnds, wallLength, type MaterialPref, type Opening, type Wall } from "../../../core/model"
 import { MaterialPick } from "./MaterialPick"
+import { IconAction } from "../../../components/IconAction"
+import { ActionsMenu } from "../../../components/ActionsMenu"
 
-export function WallInspector({ wall, label, materials, onPatch, onDelete }: { wall: Wall; label: string;materials: MaterialPref[]; onPatch: (p: Partial<Wall>) => void; onDelete: () => void }) {
+export function WallInspector({ wall, label, materials, onPatch, onDelete }: { wall: Wall; label: string; materials: MaterialPref[]; onPatch: (p: Partial<Wall>) => void; onDelete: () => void }) {
   const L = Math.round(wallLength(wall))
   return (
     <Stack gap={0}>
@@ -18,9 +20,12 @@ export function WallInspector({ wall, label, materials, onPatch, onDelete }: { w
         <Text fontWeight="semibold" flex={1}>
           {label}
         </Text>
-        <IconButton aria-label="Eliminar la paret" size="xs" variant="ghost" colorPalette="red" onClick={onDelete}>
-          <LuTrash2 />
-        </IconButton>
+        {/* El menú ⋯ de l'inspector, com a l'editor. */}
+        <ActionsMenu label={`Accions de «${label}»`}>
+          <Menu.Item value="del" color="fg.error" onClick={onDelete}>
+            <LuTrash2 /> Eliminar
+          </Menu.Item>
+        </ActionsMenu>
       </HStack>
       <FoldItem id="amb-wall" title="Mides i material" icon={LuRuler} badge={`${L} mm`}>
       {/* Recta o corba (Bézier, com la ploma amb clic i arrossegar): en fer-la corba, els punts de control a un terç i dos
@@ -54,7 +59,7 @@ export function WallInspector({ wall, label, materials, onPatch, onDelete }: { w
         }}
       />}
       <NumRow label="Gruix" value={wall.thickness} min={20} max={1000} step={10} onChange={(thickness) => thickness >= 20 && onPatch({ thickness })} />
-      <NumRow label="Alt" value={wall.height} min={200} max={10000} step={10} onChange={(height) => height >= 200 && onPatch({ height })} />
+      <NumRow label="Alçada" value={wall.height} min={200} max={10000} step={10} onChange={(height) => height >= 200 && onPatch({ height })} />
       <MaterialPick label="Material d'aquesta paret" value={wall.material ?? ""} materials={materials} onChange={(material) => onPatch({ material: material || undefined })} onlySim emptyLabel="El de totes les parets" />
       <Text fontSize="xs" color="fg.muted">
         Arrossega-la per moure-la (les parets enganxades la segueixen) o arrossega'n els extrems. Maj: sense angles · Alt: sense imant.
@@ -80,13 +85,13 @@ export function WallInspector({ wall, label, materials, onPatch, onDelete }: { w
                   />
                 </FormRow>
                 </Box>
-                <IconButton aria-label="Treure l'obertura" size="xs" variant="ghost" colorPalette="red" onClick={() => onPatch({ openings: wall.openings!.filter((_, j) => j !== i) })}>
+                <IconAction label="Eliminar l'obertura" size="xs" variant="ghost" colorPalette="red" onClick={() => onPatch({ openings: wall.openings!.filter((_, j) => j !== i) })}>
                   <LuTrash2 />
-                </IconButton>
+                </IconAction>
               </HStack>
               <NumRow label="Centre (des de l'inici)" value={Math.round(o.at)} step={10} onChange={(at) => Number.isFinite(at) && set({ at })} />
-              <NumRow label="Ample" value={o.w} min={200} step={10} onChange={(w) => w >= 200 && set({ w })} />
-              <NumRow label="Alt" value={o.h} min={200} step={10} onChange={(h) => h >= 200 && set({ h })} />
+              <NumRow label="Amplada" value={o.w} min={200} step={10} onChange={(w) => w >= 200 && set({ w })} />
+              <NumRow label="Alçada" value={o.h} min={200} step={10} onChange={(h) => h >= 200 && set({ h })} />
               {o.kind === "window" && <NumRow label="Ampit (del terra)" value={o.sill} min={0} step={10} onChange={(sill) => sill >= 0 && set({ sill })} />}
               {o.kind !== "door" && <NumRow label="Fulles" value={o.panes ?? Math.max(1, Math.round(o.w / (o.kind === "glazing" ? 1200 : 900)))} min={1} max={12} step={1} onChange={(panes) => panes >= 1 && set({ panes: Math.round(panes) })} />}
             </Stack>

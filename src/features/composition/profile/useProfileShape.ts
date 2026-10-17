@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { autoHandles, moveHandle, type PNode, type Vec2 } from "../../../core/model"
+import { useLatest } from "../../../lib/useLatest"
 import { useHistory } from "../../history/useHistory"
 import type { History, SetOptions } from "../../history/history"
 import { viewOf, type Drag, type Tool } from "./profileGeometry"
@@ -20,8 +21,7 @@ export function useProfileShape(open: boolean, initial: PNode[]) {
   // Historial en començar la ploma: cancel·lar-la hi torna (sense deixar passos de la forma descartada).
   const beforePen = useRef<History<PNode[]> | null>(null)
   // Només en obrir-se: el pare pot tornar a renderitzar amb un `initial` nou (mateix contingut).
-  const initialRef = useRef(initial)
-  initialRef.current = initial
+  const initialRef = useLatest(initial)
   useEffect(() => {
     if (open) {
       reset(initialRef.current)
@@ -29,7 +29,7 @@ export function useProfileShape(open: boolean, initial: PNode[]) {
       setSel(null)
       setTool("edit")
     }
-  }, [open, reset])
+  }, [open, reset, initialRef])
 
   const drawing = tool === "pen"
   // Vista: es congela mentre s'arrossega o es dibuixa perquè el dibuix no salti.

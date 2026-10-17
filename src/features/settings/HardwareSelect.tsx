@@ -149,7 +149,7 @@ function HardwareDrawer({ open, onOpenChange, label, items, current, inherited, 
       title={label}
       query={query}
       onQuery={setQuery}
-      placeholder="Buscar un ferratge"
+      placeholder="Cercar un ferratge"
       size="md"
       testId="hardware-drawer"
     >

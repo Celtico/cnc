@@ -1,5 +1,6 @@
 import { imageToPlaneAt, type Camera, type Vec3 } from "./camera"
 import { computeHomography, invertMat3, orderQuad, rectanglePoints, type Mat3, type Pt } from "./homography"
+import { roundTo } from "../../lib/format"
 
 /**
  * Mesures sobre la foto amb tres estats:
@@ -166,8 +167,8 @@ export function measureValues(m: PlaneModel, measures: readonly Measure[], refW:
       id: meas.id,
       relative: rel.r,
       ...(rel.r2 !== undefined ? { relative2: rel.r2 } : {}),
-      total: total === null ? null : round1(total),
-      ...(total2 !== undefined ? { total2: total2 === null ? null : round1(total2) } : {}),
+      total: total === null ? null : roundTo(total, 1),
+      ...(total2 !== undefined ? { total2: total2 === null ? null : roundTo(total2, 1) } : {}),
       error: real ? 0 : ESTIMATE_ERROR[m.mode],
       state: real ? "real" : total !== null ? "estimated" : "relative",
       ...second,
@@ -179,10 +180,9 @@ export function measureValues(m: PlaneModel, measures: readonly Measure[], refW:
 /** Mides efectives de la referència (mm), o null si no se saben. */
 export function effectiveReference(m: PlaneModel, measures: readonly Measure[], refW: number | null): { w: number; h: number } | null {
   const w = effectiveWidth(m, measures, refW)
-  return w === null ? null : { w: round1(w), h: round1(w / m.aspect) }
+  return w === null ? null : { w: roundTo(w, 1), h: roundTo(w / m.aspect, 1) }
 }
 
-const round1 = (v: number): number => Math.round(v * 10) / 10
 
 /**
  * Origen desat en mm (`originMm`) passat a l'escala d'ara. Es desa amb l'amplada efectiva de la referència d'aquell

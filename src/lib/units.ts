@@ -1,4 +1,5 @@
 import { createContext, useContext } from "react"
+import { roundTo } from "./format"
 
 /**
  * Unitat de les mides a la pantalla (mm o cm). Internament tot és en mm: els camps
@@ -18,4 +19,4 @@ export function formatLength(mm: number, unit: Unit): string {
   return `${trim(mm)} mm`
 }
 
-const trim = (v: number): string => (Math.round(v * 100) / 100).toLocaleString("ca-ES", { maximumFractionDigits: 2 })
+const trim = (v: number): string => roundTo(v, 2).toLocaleString("ca-ES", { maximumFractionDigits: 2 })

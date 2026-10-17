@@ -16,7 +16,7 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
 - **`SceneHelpers`** (`StudioEnvironment`, `SceneAccess`) als visors 3D; **`RenderDialog`** a l'editor i als ambients;
   **`MoveGizmo`**, **`BoxFrame`**; **`ViewOptions`** / **`ViewTile`**.
 - **`TreeRow`** · `TreeRowMenu` · `TreeSection` (`components/TreeRow.tsx`): fila d'arbre (sagnat, triada `wood.muted`,
-  fletxa de plegar, menú ⋯, arrossegar), menú ⋯ i títol de grup amb el + (o un menú, `menu`). Estructura de l'editor i arbre
+  fletxa de plegar, menú ⋯, arrossegar), menú ⋯ (`TreeRowMenu`, sobre `ActionsMenu`) i títol de grup amb el + (o un menú, `menu`). Estructura de l'editor i arbre
   dels Ambients.
 - **Desfer/refer comú** (`features/history/`): `history.ts` (pur, test: límit, ajuntar per temps `coalesceMs` o per
   `group`, canvis en viu `commit: false` + `commitHistory` en deixar anar, refer que es buida) i `useHistory` (React:
@@ -24,6 +24,23 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
   test; `scope` = una finestra amb desfer propi: només les tecles de dins) i els botons `components/UndoRedo` (`LuUndo2` · `LuRedo2`). Editor de
   mobles, Ambients i editor de perfils. Un editor nou amb desfer fa servir aquest, no un de propi.
 - **`NameDialog`** (`components/`): posar un nom (grup nou, canviar el nom, mòdul nou), amb un nom per defecte seleccionat.
+- **`ConfirmDialog`** (`components/ConfirmDialog.tsx`): **la confirmació d'esborrar**, una de sola (`Dialog` `alertdialog`):
+  «Esborrar «x»?», el que passa acabat en «No es pot desfer.» i el botó vermell (`confirmLabel`, per defecte «Esborrar»;
+  «Eliminar» per a un element, p. ex. un objecte de referència de Preferències). Galeries (Mobles, Objectes, Ambients, amb
+  l'avís ««x» esborrat» en acabar), grups i referències.
+- **`IconAction`** (`components/IconAction.tsx`): `IconButton` + `Tooltip` d'un cop (`label` = `aria-label` i, sense `tip`,
+  el text del tooltip). Un botó d'icona nou es fa amb aquest.
+- **`ActionsMenu`** (`components/ActionsMenu.tsx`): **el menú ⋯** (targetes, files de l'arbre, inspectors, barres): botó
+  `LuEllipsis` amb el tooltip «Accions» i `aria-label` «Accions de «x»» (mai «Opcions de»), i el `Menu` de Chakra.
+- **`AxisLabel`** (`components/AxisLabel.tsx`, abans dins de `RefInspector`): rètol d'una posició amb icona i lletra de l'eix
+  amb el color de les fletxes del 3D: «De costat (X)», «Alçada (Y)», «Fondària (Z)». Objectes, peces, models i ambients.
+- **`CardMenu`** (`features/projects/CardMenu.tsx`): el ⋯ de les targetes de document (Mobles, Objectes, Ambients) sobre
+  `ActionsMenu`: «Desar com a fitxer…» · «Duplicar» · «Moure a un grup…» · «Esborrar», el mateix text, icones i ordre (només
+  les accions que es passen).
+- **Esborrar · Eliminar · Treure** (per decisió de l'usuari): **Esborrar** un document sencer (moble, objecte, ambient,
+  historial, esborrany); **Eliminar** un element de dins d'un document (peça, paret, obertura, mòdul, objecte de referència,
+  element d'un ambient, triats); **Treure** el que continua existint en un altre lloc (treure del grup, un adjunt, un mapa de
+  textura).
 - **`FloatingWindow`** (`components/FloatingWindow.tsx`, mides a `windowRect.ts` amb test): **la finestra**, una de sola
   per a tot el que s'obre per triar o editar (per decisió de l'usuari, 2026-10-15: «tot el que s'obre, una finestra com la
   del Render»). Embolcall del `FloatingPanel` de Chakra (`useFloatingPanel` + `RootProvider`): títol i, al costat,
@@ -48,7 +65,7 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
   - **Què és finestra**: Render (`RenderFrame`), els editors de materials i de
     ferratges de Preferències, «Afegir un material» (`MaterialLibrary`), «Editar la textura», «Forma de la secció»
     (`ProfileEditor`), «Importar un model 3D», «Desar … com a fitxer» (moble i ambient), Vista CAM i «Veure a casa» (AR).
-  - **Què és `Dialog`** (modal, Chakra): les confirmacions («Esborrar …?», «Eliminar …?» de materials i ferratges, «Ja hi ha
+  - **Què és `Dialog`** (modal, Chakra): les confirmacions («Esborrar «x»?» de `ConfirmDialog`, «Eliminar …?» de materials i ferratges, «Ja hi ha
     un render», «Començar una conversa nova?», esborrar l'historial, restaurar valors inicials) i les preguntes d'un sol camp
     que aturen el que s'estava fent (`NameDialog`, «… per a…» d'un ambient del catàleg, «Mida real» del plànol, «Moure a un
     grup»). Res més: un `Dialog` nou per editar o triar és una `FloatingWindow`.
@@ -88,8 +105,8 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
   objectes són només icona; Efecte i Forma dels objectes, portes (una/dues, frontisses), abatible i muntatge de la reixeta,
   segments amb icona i text.
 - **Un sol acordió** (`components/Fold.tsx`, `FoldGroup` + `FoldItem`, sobre `Accordion` de Chakra; context i tipus a
-  `foldContext.ts`, estat de sessió a `sessionState.ts`): inspectors, Render, Foto, Exportar, galeries, finestra de tria de materials,
-  taulells i forats (`RunsForm`) i eines de la màquina. Res d'`Accordion`/`Collapsible` de Chakra ni de plegables propis fora
+  `foldContext.ts`, estat de sessió a `sessionState.ts`): inspectors, Render, Foto, Exportar, galeries, finestra de tria de materials
+  i eines de la màquina. Res d'`Accordion`/`Collapsible` de Chakra ni de plegables propis fora
   d'aquí. `FoldItem`: `id`, `icon` (del catàleg, obligatòria a les seccions), `title`, `badge`/`badgePalette`, `count`,
   `description` (sempre), `summary` (tancat), `actions` (al costat de la capçalera, mai a dins), `header` (fila de taula).
   Variants: `section` (inspectors i Render: icona + títol + insígnia + fletxa, sense fons; `size="sm"` per a subseccions),
@@ -133,8 +150,8 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
 - **Barra superior del document** (`components/TopBar.tsx`, `DocBar` per a moble, objecte i ambient —`AmbientTopBar`—, com
   Figma/Onshape/Notion): `Mobles › Nom` a l'esquerra (nom editable) i les accions del document a la dreta, que cada pàgina hi
   posa amb `<TopBarActions>` (desar, desfer, refer). Les pàgines **no porten títol propi** ni capçaleres pròpies. Les pàgines
-  d'un moble (`PROJECT_NAV`) són **pestanyes al mig de la barra** (`TopBar tabs`); al mòbil, en una **franja a sang sota la
-  barra de dalt** (`mobileProjectTabs`: icona a sobre i nom a sota, la triada amb el color principal i una ratlla): la barra
+  d'un moble (`PROJECT_NAV`) són **pestanyes al mig de la barra** (`ProjectTabs`, un `SegmentGroup`, a la prop `tabs` del `TopBar`); al mòbil, en una
+  **franja a sang sota la barra de dalt** (`MobileProjectTabs`, `Tabs` variant `line`, tots dos a `app/ProjectTabs.tsx`: icona a sobre i nom a sota, la triada amb el color principal i una ratlla): la barra
   de baix és **sempre el menú general** (com les apps de l'iPhone).
 - **Mòbil sense títols repetits**: les pàgines d'inici porten el seu títol gran (com iOS) i no hi ha barra de dalt; només n'hi
   ha quan cal tornar enrere. **Un sol «‹ Tornar» a la vista** («‹ nom del moble», «‹ Preferències», «‹ Màquines CNC»;

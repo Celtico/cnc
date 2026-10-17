@@ -24,8 +24,9 @@ import { X, Y, Z, placement, r, toLocal } from "../geometry"
 import { applyHardware, resolveOps } from "../hardware"
 import type { ZoneRect } from "../layout"
 import { DrawersBuilder } from "./drawers"
-import { frontMaterialOf, num } from "./helpers"
+import { frontMaterialOf} from "./helpers"
 import type { BuildWarning, HorizontalRef, VerticalRef } from "./types"
+import { fmtNum } from "../../../lib/format"
 
 /** Què es pot fer si l'aparell no hi cap o el moble no és com el demana el fabricant. */
 const APPLIANCE_FIT: BuildWarning["options"] = [
@@ -99,19 +100,19 @@ export abstract class AppliancesBuilder extends DrawersBuilder {
     const hRange = wall ? a.wallNiche!.h : tall && a.tallNicheH ? a.tallNicheH : niche?.h
     const dRange = wall ? a.wallNiche!.d : niche?.d
     if (!niche && !hRange) {
-      warn(`${name}: el fabricant no publica el nínxol (${src}). Comprova'l amb el manual d'instal·lació de l'aparell (el compartiment fa ${num(w)} × ${num(h)} × ${num(d)} mm).`)
+      warn(`${name}: el fabricant no publica el nínxol (${src}). Comprova'l amb el manual d'instal·lació de l'aparell (el compartiment fa ${fmtNum(w, 1)} × ${fmtNum(h, 1)} × ${fmtNum(d, 1)} mm).`)
       return
     }
     const bad: string[] = []
-    if (!inRange(w, niche?.w)) bad.push(`${num(w)} mm d'ample (en demana ${rangeText(niche?.w)})`)
+    if (!inRange(w, niche?.w)) bad.push(`${fmtNum(w, 1)} mm d'ample (en demana ${rangeText(niche?.w)})`)
     // Un aparell de terra en un nínxol una mica més alt del que vol (la cuina fa 870 i el rentaplats en vol 865): és el
     // normal, s'hi posa un suplement a terra sota les potes. Per decisió de l'usuari (2026-10-17: «trec un error i n'entra
     // un de nou»), això no és un error: s'explica què cal fer.
     const over = hRange?.max !== undefined ? h - hRange.max : 0
     const shim = !wall && !tall && standsOnFloor(a) && over > 0 && over <= 30
-    if (shim) inform(`${name}: el nínxol fa ${num(h)} mm d'alt i l'aparell en vol com a molt ${num(hRange!.max!)} (${src}): posa un suplement de ${num(over)} mm a terra, sota les potes (un tros de tauler), i arribarà al taulell.`)
-    else if (!inRange(h, hRange)) bad.push(`${num(h)} mm d'alt (en demana ${rangeText(hRange)}${wall ? " al moble penjat" : tall && a.tallNicheH ? " en columna" : ""})`)
-    if (!inRange(d, dRange)) bad.push(`${num(d)} mm de fons (en demana ${rangeText(dRange)})`)
+    if (shim) inform(`${name}: el nínxol fa ${fmtNum(h, 1)} mm d'alt i l'aparell en vol com a molt ${fmtNum(hRange!.max!, 1)} (${src}): posa un suplement de ${fmtNum(over, 1)} mm a terra, sota les potes (un tros de tauler), i arribarà al taulell.`)
+    else if (!inRange(h, hRange)) bad.push(`${fmtNum(h, 1)} mm d'alt (en demana ${rangeText(hRange)}${wall ? " al moble penjat" : tall && a.tallNicheH ? " en columna" : ""})`)
+    if (!inRange(d, dRange)) bad.push(`${fmtNum(d, 1)} mm de fons (en demana ${rangeText(dRange)})`)
     if (bad.length) warn(`${name}: l'aparell no hi cap com diu el fabricant: el nínxol fa ${bad.join(", ")} (${src}).`, APPLIANCE_FIT)
   }
 
@@ -120,9 +121,9 @@ export abstract class AppliancesBuilder extends DrawersBuilder {
     const c = a.cabinet
     if (!c) return
     const bad: string[] = []
-    if (!inRange(this.d.W, c.w)) bad.push(`${num(this.d.W)} mm d'ample (en demana ${rangeText(c.w)})`)
-    if (!inRange(this.d.D, c.d)) bad.push(`${num(this.d.D)} mm de fons (en demana ${rangeText(c.d)})`)
-    if (!inRange(rect.y1 - rect.y0, c.h)) bad.push(`${num(rect.y1 - rect.y0)} mm d'alçada interior (en demana ${rangeText(c.h)})`)
+    if (!inRange(this.d.W, c.w)) bad.push(`${fmtNum(this.d.W, 1)} mm d'ample (en demana ${rangeText(c.w)})`)
+    if (!inRange(this.d.D, c.d)) bad.push(`${fmtNum(this.d.D, 1)} mm de fons (en demana ${rangeText(c.d)})`)
+    if (!inRange(rect.y1 - rect.y0, c.h)) bad.push(`${fmtNum(rect.y1 - rect.y0, 1)} mm d'alçada interior (en demana ${rangeText(c.h)})`)
     if (bad.length) warn(`${name}: el moble no és com el demana el fabricant: fa ${bad.join(", ")} (${src}).`, APPLIANCE_FIT)
   }
 
@@ -176,13 +177,13 @@ export abstract class AppliancesBuilder extends DrawersBuilder {
     const floor = standsOnFloor(a) && !below
     const plinth = za.plinth ?? this.appliancePlinth ?? DEFAULT_APPLIANCE_PLINTH
     const y0 = floor ? r(rect.y0 + plinth) : ter.y0
-    if (floor && a.plinth && !inRange(plinth, a.plinth)) warn(`${name}: sòcol de ${num(plinth)} mm i el fabricant el demana de ${rangeText(a.plinth)} (${src}).`)
+    if (floor && a.plinth && !inRange(plinth, a.plinth)) warn(`${name}: sòcol de ${fmtNum(plinth, 1)} mm i el fabricant el demana de ${rangeText(a.plinth)} (${src}).`)
     // L'estàndard: el sòcol de la cuina passa corregut per davant de l'aparell (el dels mòduls del costat, tallat a mida).
-    if (floor) note(`sòcol de ${num(plinth)} mm davant de l'aparell: el corregut de la cuina, tallat a mida`)
+    if (floor) note(`sòcol de ${fmtNum(plinth, 1)} mm davant de l'aparell: el corregut de la cuina, tallat a mida`)
     const W = r(ter.x1 - ter.x0)
     const T = r(ter.y1 - y0)
     if (T < 100 || W < 100) {
-      warn(`${name}: no hi ha lloc per al front de moble (${num(W)} × ${num(T)} mm).`)
+      warn(`${name}: no hi ha lloc per al front de moble (${fmtNum(W, 1)} × ${fmtNum(T, 1)} mm).`)
       return
     }
     // Gruix de la base on seu l'aparell (A) i de la peça de sobre (S): les alçades del catàleg dels frigorífics en depenen.
@@ -205,7 +206,7 @@ export abstract class AppliancesBuilder extends DrawersBuilder {
       // enrasat a dalt amb els fronts del costat, i el que sobra queda de joc a sota, damunt del sòcol (com al taller).
       const fr = range(f?.h)
       const h = fr?.max !== undefined && T > fr.max ? fr.max : T
-      if (h < T) note(`front de ${num(h)} mm (el màxim del fabricant), enrasat a dalt: ${num(r(T - h))} mm més de joc a sota`)
+      if (h < T) note(`front de ${fmtNum(h, 1)} mm (el màxim del fabricant), enrasat a dalt: ${fmtNum(r(T - h), 1)} mm més de joc a sota`)
       fronts.push({ y: r(y0 + T - h), h, key: "", label: "Front", ...(fr ? { range: fr } : {}) })
     }
     const kindLabel = { dishwasher: "del rentaplats", fridge: "del frigorífic", washer: "de la rentadora" }[a.kind as "dishwasher" | "fridge" | "washer"] ?? "de l'electrodomèstic"
@@ -216,14 +217,14 @@ export abstract class AppliancesBuilder extends DrawersBuilder {
     // El material del front de moble (Electrodomèstic › «Material del front»; sense, el dels fronts del mòdul). El gruix,
     // el de tots els fronts (el del cos).
     const panelMaterial = za.panelMaterial?.trim() || frontMaterialOf(this.m)
-    if (a.front?.thickness && !inRange(thick, a.front.thickness)) warn(`${name}: front de ${num(thick)} mm de gruix i el fabricant el demana de ${rangeText(a.front.thickness)} (${src}).`)
+    if (a.front?.thickness && !inRange(thick, a.front.thickness)) warn(`${name}: front de ${fmtNum(thick, 1)} mm de gruix i el fabricant el demana de ${rangeText(a.front.thickness)} (${src}).`)
     let kg = 0
     let density = 0
     for (const fr of fronts) {
       const label = `${fr.label} ${kindLabel}`
       const id = doorLike ? `appliance-${n}${fr.key ? `-${fr.key}` : ""}-door-${hinge}` : `appliance-${n}${fr.key ? `-${fr.key}` : ""}-flap`
       const p = this.frontPanel(id, doorLike ? "porta electrodomèstic" : "front electrodomèstic", label, doorLike ? "door" : "flap", ter.x0, fr.y, W, fr.h, panelMaterial)
-      if (fr.range && !inRange(fr.h, fr.range)) warn(`${name}: ${label.toLowerCase()} fa ${num(fr.h)} mm d'alt i el fabricant l'admet de ${rangeText(fr.range)} (${src}). Canvia l'alçada del mòdul o el sòcol.`)
+      if (fr.range && !inRange(fr.h, fr.range)) warn(`${name}: ${label.toLowerCase()} fa ${fmtNum(fr.h, 1)} mm d'alt i el fabricant l'admet de ${rangeText(fr.range)} (${src}). Canvia l'alçada del mòdul o el sòcol.`)
       density = boardDensity(p.material)
       kg = Math.max(kg, (fr.h * W * thick * density) / 1e9)
       this.mountApplianceFront(p, za, a, rect, fr.y, n, name, src, warn, note, hinge, left, right)
@@ -233,7 +234,7 @@ export abstract class AppliancesBuilder extends DrawersBuilder {
       else this.handle(p, fr.h - Math.min(handleHw.spec.inset, fr.h / 2), W / 2, "y", handleHw, zone.id)
     }
     const wk = a.front?.weightKg
-    if (wk && !inRange(kg, wk)) warn(`${name}: el front pesa uns ${num(kg)} kg (estimat amb ${num(density)} kg/m³, la densitat estàndard del tauler) i el fabricant l'admet de ${rangeText(wk, "kg")} (${src}).`)
+    if (wk && !inRange(kg, wk)) warn(`${name}: el front pesa uns ${fmtNum(kg, 1)} kg (estimat amb ${fmtNum(density, 1)} kg/m³, la densitat estàndard del tauler) i el fabricant l'admet de ${rangeText(wk, "kg")} (${src}).`)
   }
 
   /**
@@ -279,7 +280,7 @@ export abstract class AppliancesBuilder extends DrawersBuilder {
         made += 1
       }
       if (made < ys.length) warn(`${name}: només hi caben ${made} de ${ys.length} cassoletes de les frontisses de l'aparell al front (${src}).`)
-      if (first) note(`front penjat de les frontisses de l'aparell: cassoletes Ø${num(P.cupDiameter ?? 35)} × ${num(P.cupDepth ?? 12)} a ${num(P.firstHinge ?? 202)} i ${num((P.firstHinge ?? 202) + (P.hingePitch ?? 338.6))} mm de dalt de l'aparell`)
+      if (first) note(`front penjat de les frontisses de l'aparell: cassoletes Ø${fmtNum(P.cupDiameter ?? 35, 1)} × ${fmtNum(P.cupDepth ?? 12, 1)} a ${fmtNum(P.firstHinge ?? 202, 1)} i ${fmtNum((P.firstHinge ?? 202) + (P.hingePitch ?? 338.6), 1)} mm de dalt de l'aparell`)
       return
     }
     if (furnitureHinges(a)) {
@@ -318,8 +319,8 @@ export abstract class AppliancesBuilder extends DrawersBuilder {
     // A 5 mm del cantell de darrere de la peça (un retall que hi toqués seria una osca).
     const z0 = Math.max(above.zRear, this.d.backInnerZ) + 5
     const ok = this.cutRect(above.panel, [rect.x0 + VENT_MARGIN, above.yBottom, z0], [rect.x1 - VENT_MARGIN, above.yBottom, z0 + depth], "vent")
-    if (ok) note(`sortida d'aire (≥ ${num(cm2)} cm²): retall de ${num(w)} × ${num(depth)} mm a «${above.panel.label}», arran del fons`)
-    else warn(`Cal una sortida d'aire de ${num(cm2)} cm² per dalt al darrere i el retall no cap a la peça de sobre («${above.panel.label}»): fes-la a mà (${src}).`)
+    if (ok) note(`sortida d'aire (≥ ${fmtNum(cm2, 1)} cm²): retall de ${fmtNum(w, 1)} × ${fmtNum(depth, 1)} mm a «${above.panel.label}», arran del fons`)
+    else warn(`Cal una sortida d'aire de ${fmtNum(cm2, 1)} cm² per dalt al darrere i el retall no cap a la peça de sobre («${above.panel.label}»): fes-la a mà (${src}).`)
   }
 
   /**
@@ -331,11 +332,11 @@ export abstract class AppliancesBuilder extends DrawersBuilder {
   protected ventInlet(item: HardwareItem, cm2: number, rect: ZoneRect, src: string, note: (m: string) => void): void {
     const w = Math.floor(rect.x1 - rect.x0 - 2 * VENT_MARGIN)
     const h = Math.ceil((cm2 * 100) / Math.max(1, w))
-    const size = `${num(w)} × ${num(h)} mm`
-    this.fittingOrders.push({ component: `${item.id}:vent`, name: "Reixeta de ventilació de sòcol", qty: 1, note: `≥ ${num(cm2)} cm², ${size}` })
+    const size = `${fmtNum(w, 1)} × ${fmtNum(h, 1)} mm`
+    this.fittingOrders.push({ component: `${item.id}:vent`, name: "Reixeta de ventilació de sòcol", qty: 1, note: `≥ ${fmtNum(cm2, 1)} cm², ${size}` })
     // El sòcol és el del tram (`tramPlinth.ts`): hi fa el retall o, si no n'hi ha, ho diu la nota.
     this.ventInlets.push({ x0: rect.x0, x1: rect.x1, cm2, name: item.name, src })
-    note(`entrada d'aire (≥ ${num(cm2)} cm²): reixeta de ${size} al sòcol de davant de l'aparell`)
+    note(`entrada d'aire (≥ ${fmtNum(cm2, 1)} cm²): reixeta de ${size} al sòcol de davant de l'aparell`)
   }
 
   /**
@@ -350,16 +351,16 @@ export abstract class AppliancesBuilder extends DrawersBuilder {
     const where = c.at === "top" ? "al taulell" : "a la base del moble"
     const size = `${rangeText(c.w)} × ${rangeText(c.d)}`
     if (!host) {
-      note(`retall ${where} de ${size}, a ${num(c.fromFront ?? 0)} mm o més del cantell de davant: a la peça on vagi (${src})`)
+      note(`retall ${where} de ${size}, a ${fmtNum(c.fromFront ?? 0, 1)} mm o més del cantell de davant: a la peça on vagi (${src})`)
       return
     }
     const t = host.yTop - host.yBottom
-    if (c.board && !inRange(t, c.board)) warn(`${name}: «${host.panel.label}» de ${num(t)} mm de gruix i el fabricant demana ${rangeText(c.board)} (${src}).`)
+    if (c.board && !inRange(t, c.board)) warn(`${name}: «${host.panel.label}» de ${fmtNum(t, 1)} mm de gruix i el fabricant demana ${rangeText(c.board)} (${src}).`)
     const cx = (rect.x0 + rect.x1) / 2
     const zFront = host.zFront - (c.fromFront ?? 0)
     const y = c.at === "top" ? host.yTop : host.yBottom
     if (c.at === "top" && zFront - dd - host.zRear < 40) warn(`${name}: el retall queda a menys de 40 mm del darrere ${where} (el fabricant en demana 40).`)
-    if (this.cutRect(host.panel, [cx - w / 2, y, zFront - dd], [cx + w / 2, y, zFront], "appliance")) note(`retall de ${num(w)} × ${num(dd)} mm ${where}, a ${num(c.fromFront ?? 0)} mm del cantell de davant`)
+    if (this.cutRect(host.panel, [cx - w / 2, y, zFront - dd], [cx + w / 2, y, zFront], "appliance")) note(`retall de ${fmtNum(w, 1)} × ${fmtNum(dd, 1)} mm ${where}, a ${fmtNum(c.fromFront ?? 0, 1)} mm del cantell de davant`)
     else warn(`${name}: el retall de ${size} no cap ${where} («${host.panel.label}»): fes-lo a mà (${src}).`)
   }
 

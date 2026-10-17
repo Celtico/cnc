@@ -1,4 +1,4 @@
-import { pocketGrid, type DepthGrid, type Pocket } from "../model"
+import { pocketGrid, pocketKey, type DepthGrid, type Pocket } from "../model"
 import type { MachineTool } from "../model/machine"
 
 /**
@@ -355,7 +355,7 @@ function finishPasses(g: DepthGrid, o: NonNullable<ReliefOptions["finish"]>): Re
 /** Els recorreguts del buidat: desbast i acabat (els que tinguin eina). */
 export function reliefPlan(pk: Pocket, o: ReliefOptions): ReliefPass[] {
   // És lent (segons en un relleu gran) i el programa de la peça i el del tauler en demanen el mateix: es recorda.
-  const key = JSON.stringify([pk, o])
+  const key = JSON.stringify([pocketKey(pk), o])
   const hit = PLANS.get(key)
   if (hit) return hit
   const out = computePlan(pk, o)

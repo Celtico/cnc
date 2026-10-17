@@ -2,6 +2,7 @@ import { deepEqual } from "./photoUpgrade"
 import { evalExpr } from "./expr"
 import { isDamagedImport, isPendingImport, type HardwareItem, type MachiningOp } from "./hardware"
 import { machiningProblems } from "./hardwareOps"
+import { roundTo } from "../../lib/format"
 
 /**
  * Operacions pures sobre un item de la biblioteca de ferratges (Preferències › Ferratges): aparellar plaques, canviar
@@ -9,10 +10,9 @@ import { machiningProblems } from "./hardwareOps"
  * importació del fabricant (`core/import`, adormida).
  */
 
-const num = (x: number) => Math.round(x * 100) / 100
 
 /** `cupOffset+5.5` / `cupOffset-3` / `cupOffset`: la v d'un forat de la porta des del centre de la cassoleta. */
-export const cupRel = (dv: number): string => (Math.abs(dv) < 0.005 ? "cupOffset" : `cupOffset${dv > 0 ? "+" : "-"}${num(Math.abs(dv))}`)
+export const cupRel = (dv: number): string => (Math.abs(dv) < 0.005 ? "cupOffset" : `cupOffset${dv > 0 ? "+" : "-"}${roundTo(Math.abs(dv), 2)}`)
 
 /** La v d'un forat de la porta relativa al centre de la cassoleta (avaluant `cupOffset` = 0). */
 export function relV(op: MachiningOp): number {

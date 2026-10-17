@@ -4,6 +4,7 @@ import { LuCircleStop, LuFileText, LuPaperclip, LuSendHorizontal, LuX } from "re
 import { Tooltip } from "../../../components/ui/tooltip"
 import { ATTACH_ACCEPT } from "../attachments"
 import type { Attached } from "./types"
+import { IconAction } from "../../../components/IconAction"
 
 /** On s'escriu: els adjunts, l'avís dels que no s'han pogut adjuntar, el camp de text, el clip i Enviar (o Aturar). */
 export function ChatComposer({
@@ -45,9 +46,9 @@ export function ChatComposer({
           <Text fontSize="xs" color="fg.muted" flex={1} minW={0} truncate>
             {f.name}
           </Text>
-          <IconButton size="xs" variant="ghost" aria-label={`Treure ${f.name}`} onClick={() => onRemove(k)}>
+          <IconAction size="xs" variant="ghost" label={`Treure ${f.name}`} onClick={() => onRemove(k)}>
             <LuX />
-          </IconButton>
+          </IconAction>
         </HStack>
       ))}
       {attachNote && (

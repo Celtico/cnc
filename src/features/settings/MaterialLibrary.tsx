@@ -12,7 +12,7 @@ import { SectionLabel } from "../../components/SectionLabel"
  * tens (mateix nom o mateix acabat, `ownedMaterial`) porten «Ja el tens»: tocar-ne un no en fa un «X 2» sense dir res,
  * sinó que ofereix obrir el teu o afegir-ne una còpia igualment.
  */
-export function MaterialLibrary({ open, onClose, onPick, onBlank, onTextureSet, materials, onOpenExisting }: { open: boolean; onClose: () => void; onPick: (m: LibraryItem) => void; onBlank: () => void; /** «Joc de textures…»: un material nou amb un joc PBR (el .zip de Poly Haven, fitxers…). */ onTextureSet: () => void; materials: readonly MaterialPref[]; onOpenExisting: (id: string) => void }) {
+export function MaterialLibrary({ open, onClose, onPick, onBlank, onTextureSet, materials, onOpenExisting }: { open: boolean; onClose: () => void; onPick: (m: LibraryItem) => void; onBlank: () => void; /** «Conjunt de textures…»: un material nou amb un conjunt PBR (el .zip de Poly Haven, fitxers…). */ onTextureSet: () => void; materials: readonly MaterialPref[]; onOpenExisting: (id: string) => void }) {
   const groups = [...new Set(MATERIAL_LIBRARY.map((m) => m.group))]
   const owned = useMemo(() => new Map(MATERIAL_LIBRARY.map((m) => [m.name, ownedMaterial(m, materials)])), [materials])
   const [ask, setAsk] = useState<{ item: LibraryItem; mine: MaterialPref } | null>(null)
@@ -82,7 +82,7 @@ export function MaterialLibrary({ open, onClose, onPick, onBlank, onTextureSet, 
               onTextureSet()
             }}
           >
-            <LuFileUp /> Joc de textures…
+            <LuFileUp /> Conjunt de textures…
           </Button>
           <Button variant="outline" onClick={close}>
             Cancel·lar
@@ -93,7 +93,7 @@ export function MaterialLibrary({ open, onClose, onPick, onBlank, onTextureSet, 
     >
       <Stack gap={6}>
         <Text fontSize="sm" color="fg.muted">
-          Tria'n un de fet: queda afegit amb la seva categoria, gruixos i cantell. Després el pots retocar amb «Editar la textura». Amb «Joc de textures…», un de teu a partir d'un joc PBR (el .zip de textures de Poly Haven tal com es baixa, fitxers o una carpeta).
+          Tria'n un de fet: queda afegit amb la seva categoria, gruixos i cantell. Després el pots retocar amb «Editar la textura». Amb «Conjunt de textures…», un de teu a partir d'un conjunt PBR (el .zip de textures de Poly Haven tal com es baixa, fitxers o una carpeta).
         </Text>
         {groups.map((g) => (
           <Stack key={g} gap={2}>

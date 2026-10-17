@@ -1,6 +1,7 @@
 import type { HardwareItem } from "../model"
 import type { KitOrderLine } from "./drawerKit"
 import type { KitGroup } from "./kitOrders"
+import { fmtNum } from "../../lib/format"
 
 /**
  * **Ferratges per metres** (v45; `docs/funcional/model.md` › Ferratges per metres): la regleta dels penjadors i el sòcol
@@ -111,7 +112,6 @@ export function buildLinearOrders(pieces: readonly LinearPiece[]): LinearOrder[]
 }
 
 const m2 = (mm: number) => (mm / 1000).toFixed(2).replace(".", ",")
-const n1 = (v: number) => String(Math.round(v * 10) / 10).replace(".", ",")
 
 /** Els trossos per tallar en una línia («2 × 1800 + 600»). */
 export function cutsText(cuts: readonly number[]): string {
@@ -121,7 +121,7 @@ export function cutsText(cuts: readonly number[]): string {
     if (g) g[1]++
     else groups.push([c, 1])
   }
-  return groups.map(([len, k]) => (k > 1 ? `${k} × ${n1(len)}` : n1(len))).join(" + ")
+  return groups.map(([len, k]) => (k > 1 ? `${k} × ${fmtNum(len, 1)}` : fmtNum(len, 1))).join(" + ")
 }
 
 /** Les línies de la comanda d'un ferratge per metres: el perfil (barres o metres), els clips i les cantonades. */
@@ -130,7 +130,7 @@ function orderLines(o: LinearOrder): KitOrderLine[] {
   const cut = `tallar ${cutsText(o.cuts)} mm · ${m2(o.total)} m`
   const lines: KitOrderLine[] = [
     o.stock > 0
-      ? { component: o.item.id, name: `${o.item.name} (barra de ${n1(o.stock)} mm)`, qty: o.bars, ...ref, note: cut }
+      ? { component: o.item.id, name: `${o.item.name} (barra de ${fmtNum(o.stock, 1)} mm)`, qty: o.bars, ...ref, note: cut }
       : { component: o.item.id, name: `${o.item.name} (per metres)`, qty: o.cuts.length, ...ref, note: cut },
   ]
   const clip = o.item.linear?.clip

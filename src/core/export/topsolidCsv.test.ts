@@ -3,7 +3,7 @@ import { buildComposition } from "../build/buildComposition"
 import { DEFAULT_CABINET, cabinetToComposition, flatPackStool, flatten, type Panel } from "../model"
 import { DEFAULT_NEST_OPTIONS, nest } from "../nesting/nest"
 import { DEFAULT_LABEL, labelPoint } from "./labelPoint"
-import { pointInRing } from "./region2d"
+import { pointInPolygon } from "../model/polygon"
 import { boardName, encodeUtf16le, localToBoard, TOPSOLID_CSV_HEADER, toTopsolidCsv } from "./topsolidCsv"
 
 const panels = buildComposition(cabinetToComposition(DEFAULT_CABINET)).panels
@@ -115,10 +115,10 @@ describe("labelPoint", () => {
     for (const p of legs) {
       const ring = flatten(p.outline!)
       const lp = labelPoint(p)
-      expect(pointInRing([lp.u, lp.v], ring), p.name).toBe(true)
+      expect(pointInPolygon([lp.u, lp.v], ring), p.name).toBe(true)
       if (!lp.fits) continue
       const { w, h } = DEFAULT_LABEL
-      for (const [du, dv] of [[-1, -1], [1, -1], [1, 1], [-1, 1]] as const) expect(pointInRing([lp.u + (du * w) / 2, lp.v + (dv * h) / 2], ring), p.name).toBe(true)
+      for (const [du, dv] of [[-1, -1], [1, -1], [1, 1], [-1, 1]] as const) expect(pointInPolygon([lp.u + (du * w) / 2, lp.v + (dv * h) / 2], ring), p.name).toBe(true)
     }
   })
   it("contorn en U (arc obert): no posa l'etiqueta al buit del mig", () => {

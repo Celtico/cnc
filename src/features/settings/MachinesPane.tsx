@@ -97,6 +97,8 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
         onSelect={setSel}
         query={query}
         onQuery={setQuery}
+        searchPlaceholder="Cercar màquines: nom, model, sèrie…"
+        searchLabel="Cercar màquines"
         addLabel="Importar de Maestro"
         onAdd={() => pick("folder")}
         backLabel="Màquines CNC"

@@ -13,7 +13,10 @@ import {
   LuAlignVerticalSpaceAround,
   LuCopy,
   LuGroup,
+  LuListChecks,
   LuMove,
+  LuMoveDiagonal2,
+  LuMoveHorizontal,
   LuRotateCcw,
   LuRotateCw,
   LuTrash2,
@@ -21,6 +24,7 @@ import {
 import { ChoiceChips, FormRow } from "../../../components/FormRow"
 import { FoldItem } from "../../../components/Fold"
 import { NumRow } from "../../../components/NumRow"
+import { AxisLabel } from "../../../components/AxisLabel"
 import { Tooltip } from "../../../components/ui/tooltip"
 import type { AmbientItem, Wall } from "../../../core/model"
 
@@ -88,20 +92,10 @@ export function MultiInspector({
             {items.length + walls.length} {walls.length && !items.length ? "parets" : "elements"}
           </Text>
         )}
-        <Tooltip content="Duplicar (Ctrl/⌘ D)">
-          <IconButton aria-label="Duplicar els triats" size="xs" variant="ghost" onClick={onDuplicate}>
-            <LuCopy />
-          </IconButton>
-        </Tooltip>
-        <Tooltip content="Eliminar (Supr)">
-          <IconButton aria-label="Eliminar els triats" size="xs" variant="ghost" colorPalette="red" onClick={onDelete}>
-            <LuTrash2 />
-          </IconButton>
-        </Tooltip>
       </HStack>
       <FoldItem id="amb-multi-place" title="Posició" icon={LuMove}>
-        <NumRow label="X (centre)" value={cx} step={10} onChange={(x) => Number.isFinite(x) && onMove(x - cx, 0)} />
-        <NumRow label="Y (centre)" value={cy} step={10} onChange={(y) => Number.isFinite(y) && onMove(0, y - cy)} />
+        <NumRow label={<AxisLabel icon={LuMoveHorizontal} name="De costat" axis="X" hint="El centre de tots, d'esquerra a dreta del plànol" />} ariaLabel="De costat (X)" help="El centre de tots." value={cx} step={10} onChange={(x) => Number.isFinite(x) && onMove(x - cx, 0)} />
+        <NumRow label={<AxisLabel icon={LuMoveDiagonal2} name="Fondària" axis="Z" hint="El centre de tots, de dalt a baix del plànol" />} ariaLabel="Fondària (Z)" help="El centre de tots." value={cy} step={10} onChange={(y) => Number.isFinite(y) && onMove(0, y - cy)} />
         <HStack gap={2}>
           <Button size="xs" variant="outline" onClick={() => onRotate(-90)}>
             <LuRotateCcw /> −90°
@@ -118,7 +112,7 @@ export function MultiInspector({
         <NumRow label="Espai entre ells" value={gap} min={-5000} max={20000} step={5} help="Per al darrer botó de cada fila: el primer es queda i els altres es posen a aquest espai de l'anterior (0 = tocant-se)." onChange={(n) => Number.isFinite(n) && setGap(n)} />
         {([
           { axis: "x", label: "De costat (X)", opts: [["min", "A l'esquerra", LuAlignStartVertical], ["mid", "Al centre", LuAlignCenterVertical], ["max", "A la dreta", LuAlignEndVertical]] },
-          { axis: "y", label: "Fondària (Y del plànol)", opts: [["min", "A dalt del plànol", LuAlignStartHorizontal], ["mid", "Al mig", LuAlignCenterHorizontal], ["max", "A baix del plànol", LuAlignEndHorizontal]] },
+          { axis: "y", label: "Fondària (Z)", opts: [["min", "A dalt del plànol", LuAlignStartHorizontal], ["mid", "Al mig", LuAlignCenterHorizontal], ["max", "A baix del plànol", LuAlignEndHorizontal]] },
         ] as const).map(({ axis, label, opts }) => (
           <FormRow key={axis} label={label}>
             <HStack gap={1}>
@@ -158,7 +152,8 @@ export function MultiInspector({
           />
         </FormRow>
       </FoldItem>
-      <FoldItem id="amb-multi-items" title="Triats" icon={LuGroup} badge={items.length + walls.length}>
+      {/* La llista i les accions dels triats, com a l'editor (Triats › Duplicar · Eliminar). */}
+      <FoldItem id="amb-multi-items" title="Triats" icon={LuListChecks} badge={items.length + walls.length}>
         <Stack gap={1}>
           {items.map((i) => (
             <Button key={i.id} size="xs" variant="ghost" justifyContent="flex-start" onClick={() => onPick(i.id)}>
@@ -171,6 +166,14 @@ export function MultiInspector({
             </Text>
           ))}
         </Stack>
+        <HStack gap={2}>
+          <Button size="xs" variant="outline" onClick={onDuplicate}>
+            <LuCopy /> Duplicar
+          </Button>
+          <Button size="xs" variant="outline" colorPalette="red" onClick={onDelete}>
+            <LuTrash2 /> Eliminar
+          </Button>
+        </HStack>
       </FoldItem>
     </Stack>
   )

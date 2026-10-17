@@ -40,7 +40,7 @@ export function PartRows({ tree }: { tree: TreeCtx }) {
               dnd={dnd.dnd("part", r.id)}
               flags={flagsOf("parts", r)}
               menu={
-                <TreeRowMenu label={`Opcions de «${r.name}»`}>
+                <TreeRowMenu label={`Accions de «${r.name}»`}>
                   <Menu.Item
                     value="dup"
                     onClick={() => {

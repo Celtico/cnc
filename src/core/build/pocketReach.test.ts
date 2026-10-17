@@ -9,6 +9,7 @@ describe("buidats que cap fresa no fa (per decisió de l'usuari, 2026-10-17)", (
   it("més fons que la fresa més llarga: avís amb quant s'ha de pujar", () => {
     const w = pocketReachIssues([panel(48)], machine)
     expect(w).toHaveLength(1)
+    expect(w[0]!.code).toBe("pocket-reach")
     expect(w[0]!.message).toContain("48 mm")
     expect(w[0]!.options![0]!.text).toContain("13 mm")
   })

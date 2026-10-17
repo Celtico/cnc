@@ -8,6 +8,7 @@
 
 // Les peces (tipus, lector, geometria, dibuix i llegenda) són a `./cam/`: aquí, l'API de sempre.
 export type { CamOp, CamPath, Pt, XcsPreview } from "./cam/types"
-export { arcCenter, flattenPath, offsetPolyline, signedArea } from "./cam/geometry"
+export { arcCenter, flattenPath, offsetPolyline } from "./cam/geometry"
+export { signedArea } from "../model/polygon"
 export { parseXcsPreview } from "./cam/parse"
 export { approachSegment, camDraw, camRows, camTools, cutWidth, findTool, toolKey, type CamDraw, type CamRow, type CamToolInfo } from "./cam/draw"

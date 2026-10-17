@@ -65,7 +65,7 @@ export function NewMobleGallery({
   return (
     <Stack gap={4}>
 
-      <SearchBar value={query} onChange={setQuery} placeholder="Cercar: nom, tipus, estil, material, color…" ariaLabel="Cercar mobles i plantilles" add={add} extra={extra} />
+      <SearchBar value={query} onChange={setQuery} placeholder="Cercar mobles: nom, tipus, estil, material, color…" ariaLabel="Cercar mobles" add={add} extra={extra} />
       {q && !found.length && (
         <Text fontSize="sm" color="fg.muted">
           Cap moble ni plantilla no coincideix amb «{query.trim()}».

@@ -2,9 +2,9 @@ import { Box } from "@chakra-ui/react"
 import { useId } from "react"
 import type { MountPlan, PlanRect } from "../../core/build/hardwareMount"
 import { DimLine } from "../../components/DimLine"
+import { fmtNum } from "../../lib/format"
 
 const ROLE_NAME: Partial<Record<PlanRect["role"], string>> = { door: "Porta", side: "Lateral", flap: "Abatible", grille: "Reixeta", drawerFront: "Front", drawerSide: "Lateral calaix", bottom: "Base", top: "Tapa", shelf: "Prestatge" }
-const fmt = (v: number) => String(Math.round(v * 100) / 100).replace(".", ",")
 
 /**
  * El pla del muntatge d'un ferratge (Preferències › Ferratges, «Pla»): vista de dalt amb el tall a l'alçada del forat
@@ -21,7 +21,7 @@ export function HardwareMountPlan({ plan }: { plan: MountPlan }) {
   const hatch = `mount-hatch-${useId().replace(/:/g, "")}`
   return (
     <Box asChild color="fg" w="full" style={{ aspectRatio: `${view.w} / ${view.h}` }} data-testid="hardware-mount-plan">
-      <svg viewBox={`${view.x} ${view.z} ${view.w} ${view.h}`} role="img" aria-label={`Pla del muntatge, tall a ${fmt(plan.sectionY)} mm d'alçada`}>
+      <svg viewBox={`${view.x} ${view.z} ${view.w} ${view.h}`} role="img" aria-label={`Pla del muntatge, tall a ${fmtNum(plan.sectionY)} mm d'alçada`}>
         <defs>
           <pattern id={hatch} width={s / 60} height={s / 60} patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
             <line x1={0} y1={0} x2={0} y2={s / 60} stroke="var(--chakra-colors-wood-emphasized)" strokeWidth={stroke * 0.8} />
@@ -81,7 +81,7 @@ const hits = (a: Box4, list: Box4[]) => list.some((b) => a[0] < b[2] && a[2] > b
 
 /** Nom i gruix de la peça dins del seu rectangle, on es vegi i no tapi cap forat (si no hi cap, res). */
 function RectLabel({ r, fs, view, busy }: { r: PlanRect; fs: number; view: MountPlan["view"]; busy: Box4[] }) {
-  const name = `${ROLE_NAME[r.role] ?? r.label} · ${fmt(r.thickness)}`
+  const name = `${ROLE_NAME[r.role] ?? r.label} · ${fmtNum(r.thickness)}`
   const w = name.length * fs * 0.5
   const h = fs * 0.9
   // La part de la peça que es veu.

@@ -7,6 +7,7 @@ import { movingGroups } from "../../../components/viewer/opening"
 import type { HardwareItem, MaterialPref, Module } from "../../../core/model"
 import { HardwareMountPlan } from "../HardwareMountPlan"
 import { useSessionString } from "../useSessionString"
+import { fmtNum } from "../../../lib/format"
 
 /** El ferratge muntat en 3D (three, les peces i el GLB, quan s'obre l'editor). */
 const HardwareMount3D = lazy(() => import("../HardwareMount3D"))
@@ -122,7 +123,6 @@ export function MountPreview({ item, base, materials, noModel }: { item: Hardwar
 
 /** Un ferratge «només 3D»: el model sol (sense mòdul ni forats), en 3D, amb les mides de la caixa. */
 function ModelPreview({ mount, materials, noModel, generated }: { mount: HardwareMount; materials: MaterialPref[]; noModel: boolean; generated: number }) {
-  const n = (v: number) => String(Math.round(v * 10) / 10).replace(".", ",")
   if (!mount.model?.bbox && !mount.model?.asset)
     return null
   if (!mount.model?.bbox)
@@ -144,7 +144,7 @@ function ModelPreview({ mount, materials, noModel, generated }: { mount: Hardwar
           {generated ? "Model 3D" : "Només 3D"}
         </Text>
         <Text fontSize="xs" color="fg.muted">
-          {mount.model?.bbox ? `Caixa de ${n(mount.size.width)} × ${n(mount.size.height)} × ${n(mount.size.depth)} mm · ` : ""}{generated ? `cap regla del moble: els seus ${generated} mecanitzats es fan als mobles on ja està col·locat a mà.` : "sense cap forat: no hi ha cap regla del moble per a aquest ferratge."}
+          {mount.model?.bbox ? `Caixa de ${fmtNum(mount.size.width, 1)} × ${fmtNum(mount.size.height, 1)} × ${fmtNum(mount.size.depth, 1)} mm · ` : ""}{generated ? `cap regla del moble: els seus ${generated} mecanitzats es fan als mobles on ja està col·locat a mà.` : "sense cap forat: no hi ha cap regla del moble per a aquest ferratge."}
         </Text>
       </Stack>
       <Box h={{ base: "300px", md: "420px", lg: "min(560px, 55dvh)" }} rounded="md" overflow="hidden" bg="bg.subtle" data-testid="hardware-mount-3d">

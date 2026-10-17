@@ -6,6 +6,7 @@ import { expandWalls, rad, snapToWalls, type Ambient } from "../../../core/model
 import type { ItemGeometry } from "../ambientData"
 import { snapGrid } from "../planGeom"
 import { useOrbitControls } from "../../../components/viewer/orbitControls"
+import { axisDragPlane } from "../../../components/viewer/gizmoDrag"
 
 /** El gizmo per moure la selecció al 3D: on va (al centre de la selecció) i l'arrossegament de cada fletxa. */
 export function useGizmoDrag({ ambient, geos, selectedIds, onChange, snap, cameraLocked }: { ambient: Ambient; geos: Map<string, ItemGeometry | null>; selectedIds: string[]; onChange?: (a: Ambient, commit: boolean) => void; snap: boolean; cameraLocked: boolean }) {
@@ -44,13 +45,11 @@ export function useGizmoDrag({ ambient, geos, selectedIds, onChange, snap, camer
     if (!onChange || e.button !== 0) return
     e.stopPropagation()
     // La bola del mig: lliure pel terra (X i Z del plànol; l'alçada, amb la fletxa verda).
-    const dir = a === "x" ? new Vector3(1, 0, 0) : a === "y" ? new Vector3(0, 1, 0) : new Vector3(0, 0, 1)
-    const toCam = camera.getWorldDirection(new Vector3()).negate()
-    const n = a === "free" ? new Vector3(0, 1, 0) : dir.clone().cross(toCam).cross(dir)
-    if (n.lengthSq() < 1e-6) return
+    const plane = axisDragPlane(a, camera, e.point, new Vector3(0, 1, 0))
+    if (!plane) return
     drag.current = {
       axis: a,
-      plane: new Plane().setFromNormalAndCoplanarPoint(n.normalize(), e.point),
+      plane,
       start: e.point.clone(),
       from: new Map(sel.map((it) => [it.id, [it.x, it.y, it.elevation ?? 0] as const])),
       moved: false,

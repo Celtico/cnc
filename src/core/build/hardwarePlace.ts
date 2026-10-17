@@ -27,6 +27,7 @@ import {
   type WorldAxis,
 } from "../model"
 import { edgeAt, panelBox, r, toLocal } from "./geometry"
+import { fmtNum } from "../../lib/format"
 
 /**
  * Ferratges **col·locats a mà** (`Composition.hardwarePlacements`, millores v1 F4): les operacions del generador de
@@ -138,12 +139,11 @@ export function applyGenOp(op: GenOp, f: PartFrame, refP: number, refQ: number):
   const cp = f.at("p", op.p, refP)
   const cq = f.at("q", op.q, refQ)
   const out: OpResult = { holes: [], grooves: [], cutouts: [], span: [cp, cq, cp, cq] }
-  const n = (v: number) => String(Math.round(v * 100) / 100).replace(".", ",")
-  if (!op.through && op.face !== "edge" && op.depth >= T - EPS) return { error: `fondària de ${n(op.depth)} mm en una peça de ${n(T)} mm (fes-la passant)` }
+  if (!op.through && op.face !== "edge" && op.depth >= T - EPS) return { error: `fondària de ${fmtNum(op.depth)} mm en una peça de ${fmtNum(T)} mm (fes-la passant)` }
   const face = op.face === "B" ? "B" : "A"
   if (op.kind === "drill" && op.face === "edge") {
     const d = op.d ?? 0
-    if (d >= T - EPS) return { error: `forat de cantell de Ø${n(d)} en una peça de ${n(T)} mm` }
+    if (d >= T - EPS) return { error: `forat de cantell de Ø${fmtNum(d)} en una peça de ${fmtNum(T)} mm` }
     if (outline) return { error: "forat de cantell en una peça amb forma" }
     const ip = AXIS_INDEX[f.p], iq = AXIS_INDEX[f.q]
     const pw = op.edge === "pmin" ? f.box.min[ip]! : op.edge === "pmax" ? f.box.max[ip]! : cp
@@ -155,7 +155,7 @@ export function applyGenOp(op: GenOp, f: PartFrame, refP: number, refQ: number):
     const span = edge === "left" || edge === "right" ? panel.width : panel.length
     const into = edge === "left" || edge === "right" ? panel.length : panel.width
     if (along < d / 2 - EPS || along > span - d / 2 + EPS) return { error: "el forat de cantell surt de la peça" }
-    if (op.depth >= into - EPS) return { error: `forat de cantell de ${n(op.depth)} mm de fondària` }
+    if (op.depth >= into - EPS) return { error: `forat de cantell de ${fmtNum(op.depth)} mm de fondària` }
     out.holes.push({ x: r(x), y: r(y), diameter: d, depth: op.depth, face: "edge", edge, tag: TAG })
     out.span = [pw, qw, pw, qw]
     return out
@@ -163,8 +163,8 @@ export function applyGenOp(op: GenOp, f: PartFrame, refP: number, refQ: number):
   if (op.kind === "drill") {
     const d = op.d ?? 0
     const [x, y] = f.local(cp, cq)
-    if (!inside(panel, outline, [x, y], d / 2)) return { error: `forat Ø${n(d)} fora de la peça` }
-    if (outline) for (let k = 0; k < 8; k++) if (!inside(panel, outline, [x + (d / 2) * Math.cos((k * Math.PI) / 4), y + (d / 2) * Math.sin((k * Math.PI) / 4)])) return { error: `forat Ø${n(d)} fora del contorn` }
+    if (!inside(panel, outline, [x, y], d / 2)) return { error: `forat Ø${fmtNum(d)} fora de la peça` }
+    if (outline) for (let k = 0; k < 8; k++) if (!inside(panel, outline, [x + (d / 2) * Math.cos((k * Math.PI) / 4), y + (d / 2) * Math.sin((k * Math.PI) / 4)])) return { error: `forat Ø${fmtNum(d)} fora del contorn` }
     if (op.through) out.cutouts.push({ kind: "circle", x: r(x), y: r(y), diameter: d, tag: TAG })
     else out.holes.push({ x: r(x), y: r(y), diameter: d, depth: op.depth, face, tag: TAG })
     out.span = [cp - d / 2, cq - d / 2, cp + d / 2, cq + d / 2]

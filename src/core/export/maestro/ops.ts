@@ -2,6 +2,7 @@ import { bulgeOf, type BPt, type Cutout, type Groove, type Hole } from "../../mo
 import { blindRule, cutModeOf, type CutMode, type MachineRules, type MachineTool } from "../../model/machine"
 import { closedPolyline } from "./geometry"
 import { comment, cs, HEAD, num, toolArg } from "./script"
+import { roundTo } from "../../../lib/format"
 
 /** Línies d'operació (contorns, caixeres, rampes, passades) i els textos de les regles i dels mecanitzats. */
 
@@ -17,7 +18,7 @@ export const cutWhat = (c: Cutout) =>
 export function passDepths(depth: number, maxPass: number): number[] {
   if (!(maxPass > 0) || depth <= maxPass + 1e-6) return [depth]
   const out: number[] = []
-  for (let z = maxPass; z < depth - 1e-6; z += maxPass) out.push(Math.round(z * 1000) / 1000)
+  for (let z = maxPass; z < depth - 1e-6; z += maxPass) out.push(roundTo(z, 3))
   out.push(depth)
   return out
 }

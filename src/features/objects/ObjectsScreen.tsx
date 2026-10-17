@@ -1,6 +1,5 @@
-import { Button, Dialog, Portal, Text, VStack } from "@chakra-ui/react"
+import { Text, VStack } from "@chakra-ui/react"
 import { useState, type ReactNode } from "react"
-import { LuTrash2 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
 import { uniqueName } from "../../core/file/mobleFile"
 import type { Composition } from "../../core/model"
@@ -17,6 +16,7 @@ import { useProjects } from "../useProject"
 import { ObjectsGallery } from "./ObjectsGallery"
 import { isObject } from "./isObject"
 import { PageHeader } from "../../components/PageHeader"
+import { ConfirmDialog } from "../../components/ConfirmDialog"
 import { projectSearchText } from "../projects/searchText"
 
 /**
@@ -110,7 +110,7 @@ export function ObjectsScreen({ onOpen }: { onOpen: (id: number) => void }) {
               )
             ) : (
               <Text fontSize="sm" color="fg.muted">
-                {shown.length ? "L'historial és buit: el que tens és a Projectes." : projects?.some(isObject) ? "Cap objecte no coincideix amb la cerca." : "Encara no en tens: comença en blanc o des d'una plantilla."}
+                {shown.length ? "L'historial és buit: el que tens és a Projectes." : projects?.some(isObject) ? "Cap objecte no coincideix amb la cerca." : "Encara no en tens: comença en blanc o des del catàleg."}
               </Text>
             ),
             projects: {
@@ -135,39 +135,18 @@ export function ObjectsScreen({ onOpen }: { onOpen: (id: number) => void }) {
         onPick={(f) => toMove && void setProjectsFolder([toMove.id], f)}
         onClose={() => setToMove(null)}
       />
-      <Dialog.Root role="alertdialog" open={toDelete !== null} onOpenChange={(e) => !e.open && setToDelete(null)}>
-        <Portal>
-          <Dialog.Backdrop />
-          <Dialog.Positioner>
-            <Dialog.Content>
-              <Dialog.Header>
-                <Dialog.Title>Esborrar «{toDelete?.name}»?</Dialog.Title>
-              </Dialog.Header>
-              <Dialog.Body>
-                <Text>
-                  {toDelete && membership.get(toDelete.id)?.length
-                    ? `És a ${membership.get(toDelete.id)!.map((a) => `«${a.name}»`).join(", ")}: hi sortirà com a «Element esborrat». No es pot desfer.`
-                    : "Aquesta acció no es pot desfer."}
-                </Text>
-              </Dialog.Body>
-              <Dialog.Footer>
-                <Button variant="outline" onClick={() => setToDelete(null)}>
-                  Cancel·lar
-                </Button>
-                <Button
-                  colorPalette="red"
-                  onClick={() => {
-                    if (toDelete) void deleteProject(toDelete.id)
-                    setToDelete(null)
-                  }}
-                >
-                  <LuTrash2 /> Esborrar
-                </Button>
-              </Dialog.Footer>
-            </Dialog.Content>
-          </Dialog.Positioner>
-        </Portal>
-      </Dialog.Root>
+      <ConfirmDialog
+        open={toDelete !== null}
+        title={`Esborrar «${toDelete?.name ?? ""}»?`}
+        body={toDelete && membership.get(toDelete.id)?.length ? `És a ${membership.get(toDelete.id)!.map((a) => `«${a.name}»`).join(", ")}: hi sortirà com a «Element esborrat». No es pot desfer.` : "No es pot desfer."}
+        onConfirm={async () => {
+          if (!toDelete) return
+          const { id, name } = toDelete
+          await deleteProject(id)
+          toaster.create({ title: `«${name}» esborrat`, type: "info" })
+        }}
+        onClose={() => setToDelete(null)}
+      />
     </VStack>
   )
 }

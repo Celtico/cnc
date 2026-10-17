@@ -13,7 +13,7 @@ import { useSettings } from "../../settings/SettingsContext"
  * accessoris»; surt sempre menys amb un front fix o amb calaixos): prestatges (quantitat, regulació, a ras, gruix), els
  * accessoris i, darrere d'una porta, els **calaixos interiors** (`behindDoor`).
  */
-export function ZoneShelvesSection({ root, zone, onChange, hardware, bounds, system32, behindDoor = false, bodyThickness = 19, moduleSetback = 20 }: { /** El gruix del cos (el suplement per defecte). */ bodyThickness?: number; /** El retranqueig dels prestatges del mòdul (el que s'hereta). */ moduleSetback?: number; root: Zone; zone: Zone; onChange: (root: Zone) => void; hardware: ModuleHardware; bounds: ZoneBounds; system32?: { at: "shelves" | "front"; row: ReactNode }; /** Hi ha una porta davant (la seva o la d'una zona de més amunt): hi poden anar calaixos interiors. */ behindDoor?: boolean }) {
+export function ZoneShelvesSection({ root, zone, onChange, hardware, bounds, system32, behindDoor = false, bodyThickness = 19, moduleSetback = 20 }: { /** El gruix del cos (el suplement per defecte). */ bodyThickness?: number; /** El retirada dels prestatges del mòdul (el que s'hereta). */ moduleSetback?: number; root: Zone; zone: Zone; onChange: (root: Zone) => void; hardware: ModuleHardware; bounds: ZoneBounds; system32?: { at: "shelves" | "front"; row: ReactNode }; /** Hi ha una porta davant (la seva o la d'una zona de més amunt): hi poden anar calaixos interiors. */ behindDoor?: boolean }) {
   const { settings } = useSettings()
   return (
     <FoldItem optionId="zone.shelves" id="zone-shelves" title="Opcions de l'interior" badge={shelvesBadge(zone, behindDoor)} icon={LuRows3}>
@@ -55,7 +55,7 @@ export function ZoneShelvesSection({ root, zone, onChange, hardware, bounds, sys
       {!zone.shelves?.flush && (
         <NumRow
           optionId="zone.shelves.setback"
-          label="Retranqueig"
+          label="Retirada"
           value={zone.shelves?.setback ?? moduleSetback}
           min={0}
           max={300}

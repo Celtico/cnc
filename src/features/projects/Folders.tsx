@@ -1,7 +1,10 @@
-import { Box, Button, Dialog, HStack, IconButton, Input, Menu, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { Box, Button, Dialog, HStack, Input, Menu, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useState, type ReactNode } from "react"
-import { LuCircle, LuCircleCheck, LuEllipsis, LuFolder, LuFolderInput, LuFolderMinus, LuFolderPlus, LuListChecks, LuPencil, LuTrash2, LuX } from "react-icons/lu"
+import { LuCircle, LuCircleCheck, LuFolder, LuFolderInput, LuFolderMinus, LuFolderPlus, LuListChecks, LuPencil, LuTrash2, LuX } from "react-icons/lu"
 import { NameDialog } from "../../components/NameDialog"
+import { ConfirmDialog } from "../../components/ConfirmDialog"
+import { ActionsMenu } from "../../components/ActionsMenu"
+import { IconAction } from "../../components/IconAction"
 import { FoldGroup, FoldItem } from "../../components/Fold"
 import { GALLERY_COLS, groupByFolder } from "./galleryGrid"
 
@@ -111,7 +114,7 @@ export function FolderedGrid<T>({
           {picking && selection ? (
             <>
               <Text fontSize="sm" color="fg.muted" mr="auto">
-                {target && !n ? `Toca els que van al grup «${target}»` : n ? `${n} ${noun} seleccionat${n === 1 ? "" : "s"}` : "Toca les targetes per seleccionar-les"}
+                {target && !n ? `Toca els que van al grup «${target}»` : n ? `${n} ${noun} triat${n === 1 ? "" : "s"}` : "Toca les targetes per seleccionar-les"}
               </Text>
               <Button size="xs" variant="ghost" onClick={() => setPicked(new Set(visible.map(keyOf)))}>
                 Tots
@@ -138,9 +141,9 @@ export function FolderedGrid<T>({
                   <LuTrash2 /> Esborrar
                 </Button>
               )}
-              <IconButton size="xs" variant="ghost" aria-label="Acabar la selecció" title="Acabar la selecció" onClick={stopPicking}>
+              <IconAction size="xs" variant="ghost" label="Acabar la selecció" onClick={stopPicking}>
                 <LuX />
-              </IconButton>
+              </IconAction>
             </>
           ) : (
             <>
@@ -172,29 +175,18 @@ export function FolderedGrid<T>({
               count={list.length}
               actions={
                 (onRenameFolder || onUngroup) && (
-                <Menu.Root positioning={{ placement: "bottom-end" }}>
-                  <Menu.Trigger asChild>
-                    <IconButton aria-label={`Opcions del grup «${name}»`} size="xs" variant="ghost">
-                      <LuEllipsis />
-                    </IconButton>
-                  </Menu.Trigger>
-                  <Portal>
-                    <Menu.Positioner>
-                      <Menu.Content>
-                        {onRenameFolder && (
-                          <Menu.Item value="rename" onClick={() => setRenaming(name)}>
-                            <LuPencil /> Canviar el nom
-                          </Menu.Item>
-                        )}
-                        {onUngroup && (
-                          <Menu.Item value="ungroup" onClick={() => onUngroup(name)}>
-                            <LuFolderMinus /> Desagrupar
-                          </Menu.Item>
-                        )}
-                      </Menu.Content>
-                    </Menu.Positioner>
-                  </Portal>
-                </Menu.Root>
+                <ActionsMenu label={`Accions del grup «${name}»`}>
+                  {onRenameFolder && (
+                    <Menu.Item value="rename" onClick={() => setRenaming(name)}>
+                      <LuPencil /> Canviar el nom
+                    </Menu.Item>
+                  )}
+                  {onUngroup && (
+                    <Menu.Item value="ungroup" onClick={() => onUngroup(name)}>
+                      <LuFolderMinus /> Desagrupar
+                    </Menu.Item>
+                  )}
+                </ActionsMenu>
                 )
               }
             >
@@ -228,36 +220,16 @@ export function FolderedGrid<T>({
             }}
             onClose={() => setMoving(false)}
           />
-          <Dialog.Root role="alertdialog" open={deleting} onOpenChange={(e) => !e.open && setDeleting(false)}>
-            <Portal>
-              <Dialog.Backdrop />
-              <Dialog.Positioner>
-                <Dialog.Content>
-                  <Dialog.Header>
-                    <Dialog.Title>Esborrar {n} {noun}?</Dialog.Title>
-                  </Dialog.Header>
-                  <Dialog.Body>
-                    <Text>No es pot desfer.</Text>
-                  </Dialog.Body>
-                  <Dialog.Footer>
-                    <Button variant="outline" onClick={() => setDeleting(false)}>
-                      Cancel·lar
-                    </Button>
-                    <Button
-                      colorPalette="red"
-                      onClick={async () => {
-                        await selection.onDelete?.([...picked])
-                        setDeleting(false)
-                        stopPicking()
-                      }}
-                    >
-                      <LuTrash2 /> Esborrar
-                    </Button>
-                  </Dialog.Footer>
-                </Dialog.Content>
-              </Dialog.Positioner>
-            </Portal>
-          </Dialog.Root>
+          <ConfirmDialog
+            open={deleting}
+            title={`Esborrar ${n} ${noun}?`}
+            body="No es pot desfer."
+            onConfirm={async () => {
+              await selection.onDelete?.([...picked])
+              stopPicking()
+            }}
+            onClose={() => setDeleting(false)}
+          />
         </>
       )}
       <NameDialog

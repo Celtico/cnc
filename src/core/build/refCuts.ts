@@ -382,6 +382,23 @@ function blindCut(o: RefObject, sec: Section, p: Panel, lo: number, hi: number, 
  * (`Pocket.map`). Retorna un avís si no es pot fer.
  */
 function meshCut(o: RefObject, p: Panel): string | undefined {
+  // Rasteritzar la forma és el més lent de reconstruir el moble (una imatge fa mig milió de triangles): la mateixa forma
+  // al mateix lloc de la mateixa peça es treu de la memòria.
+  const key = JSON.stringify([o.shape, o.x, o.y, o.z, o.w, o.h, o.d, o.mesh ?? null, o.image ?? null, o.name, p.label, p.length, p.width, p.thickness, p.placement])
+  let hit = MESH_CUTS.get(key)
+  if (!hit) {
+    hit = meshCutUncached(o, p)
+    MESH_CUTS.set(key, hit)
+    if (MESH_CUTS.size > 32) MESH_CUTS.delete(MESH_CUTS.keys().next().value!)
+  }
+  if (hit.pocket) p.pockets = [...(p.pockets ?? []), hit.pocket]
+  return hit.msg
+}
+
+/** Els últims relleus calculats (el buidat i l'avís). */
+const MESH_CUTS = new Map<string, { pocket?: NonNullable<Panel["pockets"]>[number]; msg?: string }>()
+
+function meshCutUncached(o: RefObject, p: Panel): { pocket?: NonNullable<Panel["pockets"]>[number]; msg?: string } {
   const world = o.shape === "image" ? reliefWorldTriangles(o) : meshWorldTriangles(o)
   const tris = world.map((t) => t.map((q) => toLocal(p, q)) as [Vec3, Vec3, Vec3])
   let zmin = Infinity, zmax = -Infinity
@@ -391,20 +408,20 @@ function meshCut(o: RefObject, p: Panel): string | undefined {
   }
   // Un relleu d'imatge és tot el que hi ha per sobre de la superfície dins de la caixa: arriba fins a dalt de la caixa.
   if (o.shape === "image") {
-    for (const y of [o.y + o.h]) for (const x of [o.x, o.x + o.w]) for (const z of [o.z, o.z + o.d]) zmax = Math.max(zmax, toLocal(p, [x, y, z])[2])
+    for (const x of [o.x, o.x + o.w]) for (const z of [o.z, o.z + o.d]) zmax = Math.max(zmax, toLocal(p, [x, o.y + o.h, z])[2])
   }
   const T = p.thickness
   const face: "A" | "B" | null = zmax >= T - 0.5 && zmin < T - 0.05 ? "A" : zmin <= 0.5 && zmax > 0.05 ? "B" : null
-  if (!face) return zmax > 0 && zmin < T ? `«${o.name}» queda dins del gruix de ${p.label} sense sortir per cap cara: no es pot fresar.` : undefined
+  if (!face) return { msg: zmax > 0 && zmin < T ? `«${o.name}» queda dins del gruix de ${p.label} sense sortir per cap cara: no es pot fresar.` : undefined }
   const area = p.length * p.width
   // Una imatge porta detall fi: graella d'1 mm (si no passa de 400.000 punts).
   const step = Math.max(o.shape === "image" ? 1 : 2, Math.sqrt(area / (o.shape === "image" ? 400_000 : 150_000)))
   const map = rasterDepth(tris, face, T, step, { x0: 0, y0: 0, x1: p.length, y1: p.width })
-  if (!map) return undefined
+  if (!map) return {}
   const x1 = map.x0 + (map.nx - 1) * step, y1 = map.y0 + (map.ny - 1) * step
   const depth = map.d.reduce((a, v) => (v > a ? v : a), 0)
-  p.pockets = [...(p.pockets ?? []), { points: [[map.x0, map.y0], [x1, map.y0], [x1, y1], [map.x0, y1]], depth, face, map: { ...map, step }, tag: "ref" }]
-  return depth >= T - 0.05 ? `«${o.name}» travessa ${p.label} en algun punt: a la CNC el buidat es deixa a la pell mínima.` : undefined
+  const pocket = { points: [[map.x0, map.y0], [x1, map.y0], [x1, y1], [map.x0, y1]] as [number, number][], depth, face, map: { ...map, step }, tag: "ref" as const }
+  return { pocket, msg: depth >= T - 0.05 ? `«${o.name}» travessa ${p.label} en algun punt: a la CNC el buidat es deixa a la pell mínima.` : undefined }
 }
 
 /** Els quatre punts fan un rectangle alineat amb la peça (una ranura). */

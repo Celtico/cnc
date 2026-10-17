@@ -78,7 +78,7 @@
     a mòdul, `pip install bpy`) i comprimits amb meshopt (`npx gltfpack -c`; `GLTFLoader.setMeshoptDecoder`). Es
     precachegen. **Herba (2 × 2 m)** (`grass-patch`, `models/grass_patch.glb`, 40.000 triangles, 0,75 MB): ~120 mates
     de `grass_medium_01` escampades (`scripts/polyhaven-grass.py`, `mode: "patch"`); al Showroom, fora de la vidriera. El render per CPU també retalla les fulles (`RenderMaterial.alphaCut`, `alphaAt`).
-  - **De l'usuari** (sense llista de models al + —només l'explicació del format i «Triar un fitxer .glb…»—, per decisió de l'usuari: les plantes de l'app són al catàleg d'Objectes;
+  - **De l'usuari** (sense llista de models al + —només l'explicació del format, «Triar fitxers…» i «Triar carpeta…»—, per decisió de l'usuari: les plantes de l'app són al catàleg d'Objectes;
     a l'inspector, «Model» diu el nom i «Canviar» n'importa un altre; `composition/ModelUpload.tsx`): taula Dexie **v5**
     `models` (`UserModel`: id `user-…`, nom, `blob`, mida en mm); `db/userModels.ts` (`addUserModelBuffer` valida amb
     `GLTFLoader` + meshopt i mesura; sempre es desa un `.glb`; avís si fa més de 15 MB).
@@ -103,8 +103,8 @@
     malles opaques es delmen (`MeshoptSimplifier` després de `mergeVertices`, primer amb `LockBorder`, ≥ 25 % del pressupost)
     i les d'alfa no (se'n treuen grups solts i els que queden ≤ 1,5× més grans); textures de més de **1024 px** reduïdes i
     WebP si el navegador en sap codificar (si no, JPEG/PNG). Si ja compleix, no millora o falla, es desa l'original. Avís amb
-    `formatReport`. `useModelAssets` = `MODEL_ASSETS` + els de l'usuari; `forgetModel` en pujar-ne o esborrar-ne;
-    `removeUserModel` sense UI. El `.moble` porta els que fa servir (base64) i en obrir-lo es tornen a crear amb el mateix id.
+    `formatReport`. `useModelAssets` = `MODEL_ASSETS` + els de l'usuari; `forgetModel` en pujar-ne o restaurar-ne;
+    no es poden esborrar (no hi ha cap funció ni UI per fer-ho). El `.moble` porta els que fa servir (base64) i en obrir-lo es tornen a crear amb el mateix id.
 - **Render** (`viewer/render/`, `RenderDialog`, «Render» al menú de l'app (a sobre de Preferències; al mòbil, a Opcions de vista), també als ambients; com Cinema 4D): path
   tracing progressiu amb **dos motors que donen la mateixa imatge** (`ChoiceChips` GPU · CPU, per defecte GPU si n'hi ha,
   `mobles:render-engine`): **GPU** (WebGPU, `gpuTracer.ts` + `gpuTracer.wgsl.ts`) i **CPU** (`cpuEngine.ts`: un `pathWorker`

@@ -87,7 +87,7 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
             <KitPilotGroup pilot={draft.kitPilot} onChange={(next) => setDraft((d) => ({ ...d, kitPilot: next, hardwareLibrary: setKitPilot(d.hardwareLibrary, next) }))} />
           </Pane>
 
-          <Pane id="gaps" title="Folgances per defecte" icon={LuRuler} desc="Separacions (folgances) dels fronts i de les peces de dins, retranqueig dels prestatges i ranura del fons, per als mòduls nous." onReset={() => setReset({ key: "gaps", label: "Folgances per defecte" })}>
+          <Pane id="gaps" title="Folgances per defecte" icon={LuRuler} desc="Separacions (folgances) dels fronts i de les peces de dins, retirada dels prestatges i ranura del fons, per als mòduls nous." onReset={() => setReset({ key: "gaps", label: "Folgances per defecte" })}>
             <GapsFields gaps={draft.gaps} onChange={(gaps) => set("gaps", gaps)} />
           </Pane>
 

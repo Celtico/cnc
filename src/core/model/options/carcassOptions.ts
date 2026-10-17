@@ -3,7 +3,7 @@ import { applianceFrontFields } from "./moduleOptions"
 
 const FROM_PREFS_GAPS = "Preferències › Folgances per defecte"
 const BY_APPLIANCE = "Si l'electrodomèstic que és el mòdul la fixa, no surt (la nota de dalt de la Caixa ho diu)."
-const RAW_BACK = "`moduleRows().back` llegeix el fons de l'usuari sense `visibleModule`. Amb un electrodomèstic que fixa «Sense fons» (rentaplats, rentadora, frigorífic sota taulell; microones penjat), la fila Fons diu «Sense fons» però si el fons de l'usuari era en ranura surten igualment «Ranura del fons» i «Joc de la ranura» (o «Retirada del fons» si era encastat), que la construcció no fa servir."
+const RAW_BACK = "`moduleRows().back` llegeix el fons de l'usuari sense `visibleModule`. Amb un electrodomèstic que fixa «Sense fons» (rentaplats, rentadora, frigorífic sota taulell; microones penjat), la fila Fons diu «Sense fons» però si el fons de l'usuari era en ranura surten igualment «Ranura del fons» i «Folgança de la ranura» (o «Retirada del fons» si era encastat), que la construcció no fa servir."
 const BELOW_DOORS = "Depèn d'una opció de MÉS AVALL a la mateixa pantalla: Mòdul › Portes (secció posterior a la Caixa) la fa aparèixer. La regla «cada opció depèn només de les de més amunt» no es compleix dins de l'inspector del mòdul."
 const HUNG_SIDES = "Surt amb qualsevol caixa penjada, però la construcció només en fa servir amb laterals (`usedHardwareSlots`). Un mòdul nou penjat (sense laterals) ensenya Penjadors i Regleta que no compten; a més depèn de «Laterals», que és més avall a la Caixa."
 
@@ -62,7 +62,7 @@ export const CARCASS = section("module.carcass", "Caixa", { icon: "carcass", cod
     ],
   }, [
     field("module.carcass.backSetback", "Ranura del fons", { code: UI.carcass, control: "number", showIf: "Fons = En ranura", defaultText: FROM_PREFS_GAPS, issue: RAW_BACK }),
-    field("module.carcass.grooveClearance", "Joc de la ranura", {
+    field("module.carcass.grooveClearance", "Folgança de la ranura", {
       code: UI.carcass,
       control: "number",
       showIf: "Fons = En ranura",
@@ -149,6 +149,6 @@ export const CARCASS = section("module.carcass", "Caixa", { icon: "carcass", cod
   }),
   field("module.carcass.outerGap", "Folgança front–cos", { code: UI.carcass, control: "number", showIf: "Com l'Estil dels fronts", defaultText: FROM_PREFS_GAPS, issue: "Mateixa dependència de Mòdul › Portes (més avall)." }),
   field("module.carcass.betweenGap", "Folgança entre fronts", { code: UI.carcass, control: "number", showIf: "Dues portes, dos o més calaixos, o un front recobrent que no és a l'arrel", defaultText: FROM_PREFS_GAPS, issue: "Mateixa dependència de Mòdul › Portes «Dues» (més avall)." }),
-  field("module.carcass.shelfSetback", "Retranqueig dels prestatges", { code: UI.carcass, control: "number", showIf: "Algun compartiment amb tira LED, o prestatges (sense calaixos) que no van a ras o que un front encastat bloqueja", defaultText: FROM_PREFS_GAPS }),
+  field("module.carcass.shelfSetback", "Retirada dels prestatges", { code: UI.carcass, control: "number", showIf: "Algun compartiment amb tira LED, o prestatges (sense calaixos) que no van a ras o que un front encastat bloqueja", defaultText: FROM_PREFS_GAPS }),
   ]),
 ])

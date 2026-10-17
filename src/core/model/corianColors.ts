@@ -107,7 +107,7 @@ const CORIAN_COLORS: [id: string, name: string, color: string, marks: string][] 
 ]
 
 /** Els gruixos dels Corian: planxes de 6, 12 i 19 i blocs encolats de 38 i 57. */
-const CORIAN_THICKNESSES = [6, 12, 19, 38, 57]
+export const CORIAN_THICKNESSES = [6, 12, 19, 38, 57]
 
 /** Mida real de la mostra de la carta (mm). */
 const SAMPLE_MM = 92

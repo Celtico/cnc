@@ -6,8 +6,9 @@ import type { ZoneRect } from "../layout"
 import { discOutline, planLights } from "../lightKit"
 import type { LightOrder } from "../lightOrders"
 import { MountingBuilder } from "./mounting"
-import { num, worldBoxOf } from "./helpers"
+import { worldBoxOf } from "./helpers"
 import type { Wiring } from "./types"
+import { fmtNum } from "../../../lib/format"
 
 /** Accessoris de dins i llum: barra de penjar, LED, jocs de llum i el recorregut dels cables. */
 export class LightsBuilder extends MountingBuilder {
@@ -394,7 +395,7 @@ export class LightsBuilder extends MountingBuilder {
       runs.push({ from: l.label, points: pts.map(([x, y]) => [r(x), r(y)]), length: Math.round(length) })
       if (length > sys.maxCable) notes.push(`${l.label}: ${Math.round(length)} mm de cable fins a l'alimentador (el catàleg en diu ${sys.maxCable} com a molt): cal un altre alimentador més a prop.`)
     }
-    if (cavity && !inside) notes.push(`Els cables baixen per la cambra de darrere del fons (${num(backRear)} mm entre el fons i el darrere del moble): no es veuen.`)
+    if (cavity && !inside) notes.push(`Els cables baixen per la cambra de darrere del fons (${fmtNum(backRear, 1)} mm entre el fons i el darrere del moble): no es veuen.`)
     if (longBores) notes.push(`${longBores === 1 ? "Un forat" : `${longBores} forats`} de cable per dins del tauler (des del cantell de darrere fins a la làmpada, pel mig del gruix): es fan després de la CNC amb una broca llarga.`)
     // Inside: la sortida del cable de xarxa pel fons, darrere de l'alimentador.
     let mains: Wiring["mains"]

@@ -1,6 +1,6 @@
-import { Badge, Button, Dialog, Input, IconButton, Menu, Portal, SimpleGrid, Stack, Text, VStack } from "@chakra-ui/react"
+import { Badge, Button, Dialog, Input, Portal, SimpleGrid, Stack, Text, VStack } from "@chakra-ui/react"
 import { useEffect, useState, type ReactNode } from "react"
-import { LuFolders, LuCopy, LuEllipsis, LuFolderInput, LuHistory, LuPlus, LuSave, LuTrash2 } from "react-icons/lu"
+import { LuFolders, LuHistory, LuPlus } from "react-icons/lu"
 import { SearchBar } from "../../components/SearchBar"
 import { OpenFileButton } from "../file/OpenFileButton"
 import { SaveAmbientFileDialog } from "../file/SaveFileDialog"
@@ -17,7 +17,9 @@ import { FolderedGrid, MoveToFolderDialog } from "../projects/Folders"
 import { createAmbientFromTemplate } from "./fromTemplate"
 import { AMBIENT_TAB_KEY } from "./planGeom"
 import { PageHeader } from "../../components/PageHeader"
+import { ConfirmDialog } from "../../components/ConfirmDialog"
 import { CardDate, GalleryCard } from "../projects/GalleryCard"
+import { CardMenu } from "../projects/CardMenu"
 import { CatalogSection } from "../projects/CatalogSection"
 import { SnapshotThumb } from "../../components/SnapshotThumb"
 import { catalogThumb, needsAmbientThumb, requestAmbientThumb, requestCatalogThumb } from "./ambientThumbs"
@@ -103,32 +105,7 @@ export function AmbientsScreen({ onOpen, onOpenProject }: { onOpen: (id: number)
             footer={
               <>
                 <CardDate at={r.updatedAt} />
-                <Menu.Root positioning={{ placement: "bottom-end" }}>
-                  <Menu.Trigger asChild>
-                    <IconButton aria-label={`Opcions de «${r.name}»`} size="xs" variant="ghost">
-                      <LuEllipsis />
-                    </IconButton>
-                  </Menu.Trigger>
-                  <Portal>
-                    <Menu.Positioner>
-                      <Menu.Content>
-                        <Menu.Item value="file" onClick={() => setToSave(r)}>
-                          <LuSave /> Desar com a fitxer…
-                        </Menu.Item>
-                        <Menu.Item value="dup" onClick={() => (setClient(""), setAsking({ row: r }))}>
-                          <LuCopy /> Duplicar (per a un client)…
-                        </Menu.Item>
-                        <Menu.Item value="move" onClick={() => setToMove(r)}>
-                          <LuFolderInput /> Moure a un grup…
-                        </Menu.Item>
-                        <Menu.Separator />
-                        <Menu.Item value="del" color="fg.error" onClick={() => setToDelete(r)}>
-                          <LuTrash2 /> Esborrar
-                        </Menu.Item>
-                      </Menu.Content>
-                    </Menu.Positioner>
-                  </Portal>
-                </Menu.Root>
+                <CardMenu name={r.name} onSaveFile={() => setToSave(r)} onDuplicate={() => (setClient(""), setAsking({ row: r }))} duplicateLabel="Duplicar (per a un client)…" onMove={() => setToMove(r)} onDelete={() => setToDelete(r)} />
               </>
             }
           />
@@ -144,7 +121,7 @@ export function AmbientsScreen({ onOpen, onOpenProject }: { onOpen: (id: number)
         description="El plànol de la casa amb els mobles al seu lloc: dibuixa les parets (o posa-hi la imatge d'un plànol), col·loca-hi els teus mobles i objectes i mira-ho en 3D o fes-ne un render. Al catàleg hi ha habitacions moblades, a punt per a renders."
       />
       <Stack gap={4}>
-        <SearchBar value={query} onChange={setQuery} placeholder="Cercar ambients: nom, habitació, material…" ariaLabel="Cercar ambients" add={{ label: "Nou ambient", onClick: () => void create() }}
+        <SearchBar value={query} onChange={setQuery} placeholder="Cercar ambients: nom, grup…" ariaLabel="Cercar ambients" add={{ label: "Nou ambient", onClick: () => void create() }}
           // Com a Mobles i Objectes: un .ambient crea un ambient nou amb còpies dels seus mobles; un .moble s'obre a Mobles o Objectes.
           extra={<OpenFileButton page="ambient" onOpened={(o) => (o.kind === "ambient" ? onOpen(o.ambientId) : onOpenProject(o.projectId))} />}
         />
@@ -259,35 +236,18 @@ export function AmbientsScreen({ onOpen, onOpenProject }: { onOpen: (id: number)
         onPick={(f) => toMove && void setAmbientsFolder([toMove.id], f)}
         onClose={() => setToMove(null)}
       />
-      <Dialog.Root role="alertdialog" open={toDelete !== null} onOpenChange={(e) => !e.open && setToDelete(null)}>
-        <Portal>
-          <Dialog.Backdrop />
-          <Dialog.Positioner>
-            <Dialog.Content>
-              <Dialog.Header>
-                <Dialog.Title>Esborrar «{toDelete?.name}»?</Dialog.Title>
-              </Dialog.Header>
-              <Dialog.Body>
-                <Text>Els mobles i objectes que hi ha no s'esborren: continuen a Mobles i Objectes.</Text>
-              </Dialog.Body>
-              <Dialog.Footer>
-                <Button variant="outline" onClick={() => setToDelete(null)}>
-                  Cancel·lar
-                </Button>
-                <Button
-                  colorPalette="red"
-                  onClick={() => {
-                    if (toDelete) void deleteAmbient(toDelete.id)
-                    setToDelete(null)
-                  }}
-                >
-                  <LuTrash2 /> Esborrar
-                </Button>
-              </Dialog.Footer>
-            </Dialog.Content>
-          </Dialog.Positioner>
-        </Portal>
-      </Dialog.Root>
+      <ConfirmDialog
+        open={toDelete !== null}
+        title={`Esborrar «${toDelete?.name ?? ""}»?`}
+        body="Els mobles i objectes que hi ha no s'esborren: continuen a Mobles i Objectes. No es pot desfer."
+        onConfirm={async () => {
+          if (!toDelete) return
+          const { id, name } = toDelete
+          await deleteAmbient(id)
+          toaster.create({ title: `«${name}» esborrat`, type: "info" })
+        }}
+        onClose={() => setToDelete(null)}
+      />
     </VStack>
   )
 }

@@ -49,7 +49,7 @@ const ALTERNATIVES: Partial<Record<ImportFailure | "other", string[]>> = {
     "O obre el .blend a Blender i exporta'l: Fitxer › Exportar › glTF 2.0, «glTF Binary (.glb)» (o amb scripts/polyhaven-tree-to-glb.py).",
   ],
   unsupported: ["Obre'l a Blender i exporta'l: Fitxer › Exportar › glTF 2.0, «glTF Binary (.glb)». També serveixen .gltf (amb el .bin i les textures) i .fbx."],
-  "texture-only": ["Per fer-ne un material: aquí sota, o a Preferències › Materials › «Afegir» (o «Joc PBR» de l'editor de materials)."],
+  "texture-only": ["Per fer-ne un material: aquí sota, o a Preferències › Materials › «Afegir» (o «Conjunt PBR» de l'editor de materials)."],
   "no-model": ["Tria un .glb, un .gltf amb el seu .bin i les textures (o la carpeta), un .fbx o el .zip tal com es baixa de Poly Haven."],
 }
 
@@ -214,7 +214,7 @@ function TexturesToMaterials({ textures, info, fallbackName, defaultTile }: { te
     <Stack gap={2} data-testid="model-import-textures">
       <SectionLabel>Textures</SectionLabel>
       <Text fontSize="sm" color="fg.muted">
-        {sets.length === 1 ? `Un joc de textures: ${names[0]}.` : `${sets.length} jocs de textures: ${names.join(", ")}.`} En pots fer materials (foto amb relleu i brillantor) per a objectes i ambients.
+        {sets.length === 1 ? `Un conjunt de textures: ${names[0]}.` : `${sets.length} conjunts de textures: ${names.join(", ")}.`} En pots fer materials (foto amb relleu i brillantor) per a objectes i ambients.
       </Text>
       <NumRow label="Mida real" help="Amplada real d'una repetició de la textura." value={tile} min={50} max={5000} step={10} onChange={(v) => Number.isFinite(v) && v >= 50 && v <= 5000 && setTile(v)} />
       <Box>

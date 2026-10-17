@@ -8,6 +8,7 @@
  * sentit horari (la matèria sempre queda a l'esquerra en recórrer l'anell), que és el
  * que demana un B-rep amb la normal cap enfora.
  */
+import { pointInPolygon, signedArea } from "../model/polygon"
 
 export interface Rect2 {
   a0: number
@@ -37,27 +38,6 @@ function clip(r: Rect2, A: number, B: number): Rect2 | null {
   const c: Rect2 = { a0: Math.max(0, r.a0), a1: Math.min(A, r.a1), b0: Math.max(0, r.b0), b1: Math.min(B, r.b1) }
   if (c.a1 - c.a0 <= EPS || c.b1 - c.b0 <= EPS) return null
   return c
-}
-
-export function signedArea(ring: Pt2[]): number {
-  let s = 0
-  for (let i = 0; i < ring.length; i++) {
-    const p = ring[i]!
-    const q = ring[(i + 1) % ring.length]!
-    s += p[0] * q[1] - q[0] * p[1]
-  }
-  return s / 2
-}
-
-/** Punt dins d'un polígon simple (ray casting). */
-export function pointInRing(p: Pt2, ring: Pt2[]): boolean {
-  let inside = false
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const [xi, yi] = ring[i]!
-    const [xj, yj] = ring[j]!
-    if (yi > p[1] !== yj > p[1] && p[0] < ((xj - xi) * (p[1] - yi)) / (yj - yi) + xi) inside = !inside
-  }
-  return inside
 }
 
 /** Treu els vèrtexs col·lineals consecutius d'un anell rectilini. */
@@ -144,7 +124,7 @@ export function subtractRects(A: number, B: number, rects: Rect2[]): Poly2[] {
   const inners = rings.filter((r) => signedArea(r) < 0)
   const polys: Poly2[] = outers.map((outer) => ({ outer, inners: [] }))
   for (const inner of inners) {
-    const p = polys.find((poly) => pointInRing(inner[0]!, poly.outer))
+    const p = polys.find((poly) => pointInPolygon(inner[0]!, poly.outer))
     ;(p ?? polys[0])?.inners.push(inner)
   }
   return polys

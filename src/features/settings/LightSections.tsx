@@ -2,7 +2,8 @@ import { Stack, Table, Text } from "@chakra-ui/react"
 import { LuBookOpen, LuCircleDot, LuListOrdered, LuPackageOpen } from "react-icons/lu"
 import { FoldItem } from "../../components/Fold"
 import { FormRow } from "../../components/FormRow"
-import { LIGHT_KINDS, fmtMm, lightSystemOf, type HardwareItem, type LightKit } from "../../core/model"
+import { LIGHT_KINDS, lightSystemOf, type HardwareItem, type LightKit } from "../../core/model"
+import { fmtNum } from "../../lib/format"
 
 /**
  * Seccions de l'editor d'un **joc de llum** (Preferències › Ferratges › Llums; per decisió de l'usuari, 2026-10-14: «tota la
@@ -13,7 +14,7 @@ import { LIGHT_KINDS, fmtMm, lightSystemOf, type HardwareItem, type LightKit } f
 export function LightSections({ item, kit }: { item: HardwareItem; kit: LightKit }) {
   const sys = lightSystemOf(kit.maker)
   const kind = LIGHT_KINDS.find((k) => k.id === kit.kind)?.label ?? kit.kind
-  const recess = kit.recess.shape === "round" ? `forat Ø${fmtMm(kit.recess.size)} × ${fmtMm(kit.recess.depth)}` : kit.recess.shape === "square" ? `rebaix de ${fmtMm(kit.recess.size)} × ${fmtMm(kit.recess.size)} × ${fmtMm(kit.recess.depth)}` : `ranura de ${fmtMm(kit.recess.size)} × ${fmtMm(kit.recess.depth)} al llarg`
+  const recess = kit.recess.shape === "round" ? `forat Ø${fmtNum(kit.recess.size)} × ${fmtNum(kit.recess.depth)}` : kit.recess.shape === "square" ? `rebaix de ${fmtNum(kit.recess.size)} × ${fmtNum(kit.recess.size)} × ${fmtNum(kit.recess.depth)}` : `ranura de ${fmtNum(kit.recess.size)} × ${fmtNum(kit.recess.depth)} al llarg`
   return (
     <>
       <FoldItem id="light-catalog" icon={LuBookOpen} title="Del catàleg" badge={`${kit.maker} ${kit.series}`} defaultOpen>
@@ -30,8 +31,8 @@ export function LightSections({ item, kit }: { item: HardwareItem; kit: LightKit
         </FormRow>
         <FormRow label="Potència">
           <Text fontSize="sm" pt="6px">
-            {fmtMm(kit.watts)} W{kit.peakWatts ? ` (${fmtMm(kit.peakWatts)} W en encendre)` : ""}
-            {kit.lumens ? ` · ${fmtMm(kit.lumens)} lm` : ""}
+            {fmtNum(kit.watts)} W{kit.peakWatts ? ` (${fmtNum(kit.peakWatts)} W en encendre)` : ""}
+            {kit.lumens ? ` · ${fmtNum(kit.lumens)} lm` : ""}
           </Text>
         </FormRow>
         <FormRow label="Font">
@@ -49,19 +50,19 @@ export function LightSections({ item, kit }: { item: HardwareItem; kit: LightKit
       <FoldItem id="light-machining" icon={LuCircleDot} title="Mecanitzat" badge={recess}>
         <FormRow label="Làmpada" help="A la cara de sota de la peça de sobre (la tapa, un travesser, un prestatge o, amb «Llum a sota», la base).">
           <Text fontSize="sm" pt="6px">
-            {recess} · cos de {fmtMm(kit.body.size)} mm, {fmtMm(kit.body.height)} d'alt
+            {recess} · cos de {fmtNum(kit.body.size)} mm, {fmtNum(kit.body.height)} d'alt
           </Text>
         </FormRow>
         <FormRow label="Cable" help="Al moble, el cable va per dins del tauler (forat de cantell des del darrere, es fa després de la CNC) i per la cambra de darrere del fons fins a l'alimentador; en un tauler massa prim, el passant de la làmpada.">
           <Text fontSize="sm" pt="6px">
-            Ø{fmtMm(kit.cableHole)}
-            {kit.cableLength ? ` · cable de ${fmtMm(kit.cableLength / 1000)} m` : ""}
+            Ø{fmtNum(kit.cableHole)}
+            {kit.cableLength ? ` · cable de ${fmtNum(kit.cableLength / 1000)} m` : ""}
           </Text>
         </FormRow>
         {kit.surface && (
           <FormRow label="Si no s'encasta" help="Tauler massa prim o sense lloc: la versió per sobreposar (només el forat del cable).">
             <Text fontSize="sm" pt="6px">
-              {kit.surface.name} · <span style={{ fontFamily: "monospace" }}>{kit.surface.article}</span> · {fmtMm(kit.surface.height)} mm
+              {kit.surface.name} · <span style={{ fontFamily: "monospace" }}>{kit.surface.article}</span> · {fmtNum(kit.surface.height)} mm
             </Text>
           </FormRow>
         )}
@@ -80,18 +81,18 @@ export function LightSections({ item, kit }: { item: HardwareItem; kit: LightKit
             <Table.Body>
               {kit.bars.map((b) => (
                 <Table.Row key={b.article}>
-                  <Table.Cell textAlign="end">{fmtMm(b.length)}</Table.Cell>
+                  <Table.Cell textAlign="end">{fmtNum(b.length)}</Table.Cell>
                   <Table.Cell fontFamily="mono" fontSize="xs">
                     {b.article}
                   </Table.Cell>
-                  <Table.Cell textAlign="end">{fmtMm(b.watts)}</Table.Cell>
+                  <Table.Cell textAlign="end">{fmtNum(b.watts)}</Table.Cell>
                 </Table.Row>
               ))}
             </Table.Body>
           </Table.Root>
           {kit.barStep && (
             <Text fontSize="xs" color="fg.muted">
-              Es pot tallar cada {fmtMm(kit.barStep)} mm.
+              Es pot tallar cada {fmtNum(kit.barStep)} mm.
             </Text>
           )}
         </FoldItem>
@@ -126,7 +127,7 @@ export function LightSections({ item, kit }: { item: HardwareItem; kit: LightKit
               <b>Distribuïdor</b> {sys.distributor.name} · <code>{sys.distributor.article}</code>
             </Text>
             <Text>
-              <b>Interruptor de porta</b> {sys.doorSwitch.name} · <code>{sys.doorSwitch.article}</code> · forat Ø{fmtMm(sys.doorSwitch.bore)} × {fmtMm(sys.doorSwitch.depth)} al cantell del lateral
+              <b>Interruptor de porta</b> {sys.doorSwitch.name} · <code>{sys.doorSwitch.article}</code> · forat Ø{fmtNum(sys.doorSwitch.bore)} × {fmtNum(sys.doorSwitch.depth)} al cantell del lateral
             </Text>
             <Text>
               <b>Interruptor de proximitat</b> {sys.touchSwitch.name} · <code>{sys.touchSwitch.article}</code>
@@ -135,7 +136,7 @@ export function LightSections({ item, kit }: { item: HardwareItem; kit: LightKit
               <b>Cable de l'interruptor</b> {sys.switchCable.name} · <code>{sys.switchCable.article}</code>
             </Text>
             <Text>
-              <b>Cables d'extensió</b> {sys.extensions.map((e) => `${fmtMm(e.length / 1000)} m ${e.article}`).join(" · ")} (com a molt {fmtMm(sys.maxCable / 1000)} m fins a la làmpada)
+              <b>Cables d'extensió</b> {sys.extensions.map((e) => `${fmtNum(e.length / 1000)} m ${e.article}`).join(" · ")} (com a molt {fmtNum(sys.maxCable / 1000)} m fins a la làmpada)
             </Text>
             {sys.cableCover && (
               <Text>

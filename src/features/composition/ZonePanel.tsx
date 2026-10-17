@@ -1,5 +1,5 @@
-import { Button, HStack, IconButton, Menu, Portal, Stack, Text } from "@chakra-ui/react"
-import { LuArrowUp, LuCopy, LuEllipsis, LuColumns2, LuRows2, LuPlus, LuSquareSplitHorizontal, LuSquareSplitVertical, LuTrash2, LuUngroup, LuDoorClosed, LuFlipHorizontal2, LuSquareDashed } from "react-icons/lu"
+import { Button, HStack, Menu, Stack, Text } from "@chakra-ui/react"
+import { LuArrowUp, LuCopy, LuColumns2, LuRows2, LuPlus, LuSquareSplitHorizontal, LuSquareSplitVertical, LuTrash2, LuUngroup, LuDoorClosed, LuFlipHorizontal2, LuSquareDashed } from "react-icons/lu"
 import type { ReactNode } from "react"
 import { FoldItem } from "../../components/Fold"
 import {
@@ -31,6 +31,7 @@ import { CoveredFront, ZoneFrontSection } from "./zone/FrontSection"
 import { ZoneShelvesSection } from "./zone/ShelvesSection"
 import { FrontFields } from "./zone/FrontFields"
 import { ApplianceSection } from "./zone/ApplianceSection"
+import { ActionsMenu } from "../../components/ActionsMenu"
 
 /**
  * Accions de la zona seleccionada (van a la capçalera de l'inspector, com a icones):
@@ -47,32 +48,21 @@ export function ZoneActions({ root, zone, onChange, onSelect }: { root: Zone; zo
   if (!parent) return null
   // Un sol botó ⋯ amb totes les accions: la capçalera queda neta.
   return (
-    <Menu.Root positioning={{ placement: "bottom-end" }}>
-      <Menu.Trigger asChild>
-        <IconButton size="xs" variant="ghost" aria-label="Accions del compartiment">
-          <LuEllipsis />
-        </IconButton>
-      </Menu.Trigger>
-      <Portal>
-        <Menu.Positioner>
-          <Menu.Content>
-            <Menu.Item value="parent" onClick={() => onSelect(parent.id)}>
-              <LuArrowUp /> Seleccionar el pare
-            </Menu.Item>
-            <Menu.Item value="v" onClick={() => duplicate("v")}>
-              <LuCopy /> Duplicar al costat
-            </Menu.Item>
-            <Menu.Item value="h" onClick={() => duplicate("h")}>
-              <LuCopy /> Duplicar a sobre
-            </Menu.Item>
-            <Menu.Separator />
-            <Menu.Item value="del" color="fg.error" onClick={() => onChange(removeZone(root, zone.id))}>
-              <LuTrash2 /> Eliminar
-            </Menu.Item>
-          </Menu.Content>
-        </Menu.Positioner>
-      </Portal>
-    </Menu.Root>
+    <ActionsMenu label="Accions del compartiment">
+      <Menu.Item value="parent" onClick={() => onSelect(parent.id)}>
+        <LuArrowUp /> Seleccionar el pare
+      </Menu.Item>
+      <Menu.Item value="v" onClick={() => duplicate("v")}>
+        <LuCopy /> Duplicar al costat
+      </Menu.Item>
+      <Menu.Item value="h" onClick={() => duplicate("h")}>
+        <LuCopy /> Duplicar a sobre
+      </Menu.Item>
+      <Menu.Separator />
+      <Menu.Item value="del" color="fg.error" onClick={() => onChange(removeZone(root, zone.id))}>
+        <LuTrash2 /> Eliminar
+      </Menu.Item>
+    </ActionsMenu>
   )
 }
 
@@ -115,7 +105,7 @@ export function ZonePanel({
   coveredByDoor?: boolean
   /** El gruix del cos del mòdul (el suplement per defecte dels calaixos interiors). */
   bodyThickness?: number
-  /** El retranqueig dels prestatges del mòdul (Mòdul › Caixa): el que hereten els del compartiment. */
+  /** El retirada dels prestatges del mòdul (Mòdul › Caixa): el que hereten els del compartiment. */
   shelfSetback?: number
   /** % d'àrea oberta si la zona té reixeta. */
   openRatio?: number

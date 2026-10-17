@@ -83,7 +83,9 @@ function SimScene({ clock, paths, rapids }: { clock: CamSimClock; paths: boolean
     if (board.current) (sim.mat.uniforms.camLocal!.value as Vector3).copy(board.current.worldToLocal(camera.position.clone()))
     clock.tick(Math.min(dt, 0.1))
     const t = clock.time.current
-    advanceSim(sim.hf, prog, sim.cur, t)
+    // Com a molt ~10 ms per fotograma: si queda feina, un altre fotograma (la pantalla no es penja).
+    advanceSim(sim.hf, prog, sim.cur, t, 10)
+    if (sim.cur.t < t - 1e-9) invalidate()
     flushHeightTexture(sim.hf, sim.tex)
     const { p, r } = toolAt(prog, t)
     tool.current?.position.set(p[0], p[1], p[2])

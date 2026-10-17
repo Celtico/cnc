@@ -91,7 +91,7 @@ export async function convertModelFiles(picked: PickedFile[], onProgress: (p: Im
   const ref = polyHavenRefOf(paths, zipNames[0]) ?? undefined
   if (!main) {
     const tex = texturesOf()
-    if (tex.size) throw importError("texture-only", "Aquests fitxers són un joc de textures, no un model 3D.", tex, ref)
+    if (tex.size) throw importError("texture-only", "Aquests fitxers són un conjunt de textures, no un model 3D.", tex, ref)
     throw importError("no-model", "No hi ha cap model 3D (.glb, .gltf, .fbx o el .blend de Poly Haven).")
   }
   const name = modelDisplayName(main.path)

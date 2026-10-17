@@ -1,5 +1,6 @@
 import { materialCategory, type Composition, type MaterialPref, type Panel } from "../model"
 import type { CompositionWarning } from "./buildComposition"
+import { fmtNum } from "../../lib/format"
 
 /**
  * Materials del moble que no lliguen amb Preferències (el build no les llegeix: es comprova a part, a l'Editor i a
@@ -36,11 +37,11 @@ export function materialIssues(
     const shim = p.id.includes("inner-shim")
     out.push({
       code: "thickness-not-listed",
-      message: `${p.label}: el gruix ${fmt(p.thickness)} mm no és dels gruixos de «${m.name}» (${m.thicknesses.map(fmt).join(" · ")} mm).`,
+      message: `${p.label}: el gruix ${fmtNum(p.thickness)} mm no és dels gruixos de «${m.name}» (${m.thicknesses.map((t) => fmtNum(t)).join(" · ")} mm).`,
       panelId: p.id,
       ...(moduleId ? { moduleId } : {}),
       options: [
-        { text: `Posar-hi un gruix dels que té el material (${m.thicknesses.map(fmt).join(" · ")} mm)${shim ? ": el suplement dels calaixos interiors" : ""}.`, where: shim ? "innerDrawers" : "materials" },
+        { text: `Posar-hi un gruix dels que té el material (${m.thicknesses.map((t) => fmtNum(t)).join(" · ")} mm)${shim ? ": el suplement dels calaixos interiors" : ""}.`, where: shim ? "innerDrawers" : "materials" },
         { text: "O afegir aquest gruix al material, si el taller el té (Preferències › Materials)." },
       ],
     })
@@ -52,4 +53,3 @@ export function materialIssues(
   return out
 }
 
-const fmt = (n: number) => String(Math.round(n * 100) / 100).replace(".", ",")

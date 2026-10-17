@@ -6,6 +6,7 @@ import type { MaterialPref, RefObject } from "../../../core/model"
 import { useLatest } from "../../../lib/useLatest"
 import { BoxFrame } from "../BoxFrame"
 import { useViewerCursor } from "../cursor"
+import { axisDragPlane } from "../gizmoDrag"
 import { MoveGizmo, type GizmoHandle } from "../MoveGizmo"
 import type { Axis } from "../pixelScale"
 import { imageGeometry, meshGeometry, profileGeometry } from "../refGeometry"
@@ -168,22 +169,13 @@ export function RefGhost({
   const camera = useThree((st) => st.camera)
   const startAxis = (a: GizmoHandle, e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation()
-    const toCam = camera.getWorldDirection(new Vector3()).negate()
-    let n: Vector3
-    let axes: Axis[]
-    if (a === "free") {
-      // La bola: lliure en el pla que toca. Al terra, pel terra; a la paret, per la paret; si no, el pla de la pantalla
-      // (es mou en les direccions que es poden, menys la que mira a la càmera).
-      n = g.onFloor ? new Vector3(0, 1, 0) : g.onWall ? new Vector3(0, 0, 1) : toCam
-      axes = g.onFloor ? (["x", "z"] as Axis[]) : g.onWall ? (["x", "y"] as Axis[]) : gizmoAxes
-    } else {
-      const dir = a === "x" ? new Vector3(1, 0, 0) : a === "y" ? new Vector3(0, 1, 0) : new Vector3(0, 0, 1)
-      n = dir.clone().cross(toCam).cross(dir)
-      axes = [a]
-    }
-    if (n.lengthSq() < 1e-6 || !axes.length) return
+    // La bola: lliure en el pla que toca. Al terra, pel terra; a la paret, per la paret; si no, el pla de la pantalla
+    // (es mou en les direccions que es poden, menys la que mira a la càmera).
+    const plane = axisDragPlane(a, camera, e.point, g.onFloor ? new Vector3(0, 1, 0) : g.onWall ? new Vector3(0, 0, 1) : undefined)
+    const axes: Axis[] = a !== "free" ? [a] : g.onFloor ? ["x", "z"] : g.onWall ? ["x", "y"] : gizmoAxes
+    if (!plane || !axes.length) return
     const corner = new Vector3(g.x * S + offset[0], g.y * S + offset[1], g.z * S + offset[2])
-    state.current = { plane: new Plane().setFromNormalAndCoplanarPoint(n.normalize(), e.point), grab: e.point.clone().sub(corner), axes, start: [e.clientX, e.clientY], moved: false }
+    state.current = { plane, grab: e.point.clone().sub(corner), axes, start: [e.clientX, e.clientY], moved: false }
     ;(e.target as Element | null)?.setPointerCapture?.(e.pointerId)
     if (controls) controls.enabled = false
   }

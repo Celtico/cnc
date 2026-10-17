@@ -61,8 +61,32 @@ export function useNesting(panels: Panel[], options: NestOptions | undefined): N
 
 /** Lectura de la composició del projecte, amb `unreadable` (la desada no es pot llegir). */
 export function useCompositionRead(project: Pick<Project, "params" | "composition" | "name"> | undefined): CompositionRead | undefined {
-  return useMemo(() => (project ? readComposition(project) : undefined), [project])
+  return useMemo(() => (project ? cachedRead(project) : undefined), [project])
 }
+
+/**
+ * Llegir i construir la composició, un cop per versió desada: Peces en demana set coses (peces, extres, jocs…) i cada una
+ * feia la seva lectura i el seu `buildComposition`; i Dexie torna un objecte nou a cada consulta, encara que no hagi
+ * canviat (clau: `id:updatedAt`).
+ */
+const READS = new Map<string, CompositionRead>()
+const READS_BY_OBJECT = new WeakMap<object, CompositionRead>()
+function cachedRead(project: Pick<Project, "params" | "composition" | "name"> & { id?: number; updatedAt?: number }): CompositionRead {
+  const byObj = READS_BY_OBJECT.get(project)
+  if (byObj) return byObj
+  const key = project.id !== undefined && project.updatedAt !== undefined ? `${project.id}:${project.updatedAt}` : undefined
+  let read = key ? READS.get(key) : undefined
+  if (!read) {
+    read = readComposition(project)
+    if (key) {
+      READS.set(key, read)
+      if (READS.size > 8) READS.delete(READS.keys().next().value!)
+    }
+  }
+  READS_BY_OBJECT.set(project, read)
+  return read
+}
+const BUILDS = new WeakMap<Composition, CompositionBuild>()
 
 /**
  * Composició del projecte (migrada del mòdul de caixa si cal). `undefined` si la desada és il·legible
@@ -74,7 +98,15 @@ export function useComposition(project: Pick<Project, "params" | "composition" |
 }
 
 export function useCompositionBuild(comp: Composition | undefined): CompositionBuild | undefined {
-  return useMemo(() => (comp ? buildComposition(comp) : undefined), [comp])
+  return useMemo(() => {
+    if (!comp) return undefined
+    let b = BUILDS.get(comp)
+    if (!b) {
+      b = buildComposition(comp)
+      BUILDS.set(comp, b)
+    }
+    return b
+  }, [comp])
 }
 
 /** Peces de tota la composició del projecte: el que fan servir peces, nesting i exports. */

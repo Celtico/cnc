@@ -28,7 +28,8 @@ import {
 } from "../model"
 import { MAG_FURNITURE } from "../model/magFurniture"
 import { AMBIENT_SYSTEM_PROMPT } from "./prompt"
-import { fail, parseToolInput, r1, toolDefs, toolFailure, type AssistantToolSet, type ToolRun } from "./toolset"
+import { fail, parseToolInput, toolDefs, toolFailure, type AssistantToolSet, type ToolRun } from "./toolset"
+import { roundTo } from "../../lib/format"
 
 /**
  * Eines de l'assistent IA per als **ambients** (docs/xat-ia.md): parets, obertures, elements (mobles i objectes enllaçats),
@@ -513,7 +514,7 @@ function withoutOpenings(w: Wall): Wall {
   return rest
 }
 
-const openingOut = (o: Opening) => ({ kind: o.kind, at: Math.round(o.at), width: r1(o.w), height: r1(o.h), sill: r1(o.sill), ...(o.panes ? { panes: o.panes } : {}) })
+const openingOut = (o: Opening) => ({ kind: o.kind, at: Math.round(o.at), width: roundTo(o.w, 1), height: roundTo(o.h, 1), sill: roundTo(o.sill, 1), ...(o.panes ? { panes: o.panes } : {}) })
 const adjusted = (p: Opening, q: Opening) => Math.abs(p.at - q.at) > 0.5 || Math.abs(p.w - q.w) > 0.5 || Math.abs(p.h - q.h) > 0.5 || Math.abs(p.sill - q.sill) > 0.5
 
 async function listLibrary(i: In<"list_library">, ctx: AmbientToolContext): Promise<Record<string, unknown>> {
@@ -522,7 +523,7 @@ async function listLibrary(i: In<"list_library">, ctx: AmbientToolContext): Prom
   let left = i.limit
   if (i.source !== "catalogue") {
     const mine = (await ctx.library()).filter((e) => okKind(e.kind) && matches(i.query, e.name, e.kind, e.folder ?? ""))
-    out.mine = mine.slice(0, left).map((e) => ({ project_id: e.id, name: e.name, kind: e.kind, w: r1(e.w), h: r1(e.h), d: r1(e.d), ...(e.folder ? { folder: e.folder } : {}) }))
+    out.mine = mine.slice(0, left).map((e) => ({ project_id: e.id, name: e.name, kind: e.kind, w: roundTo(e.w, 1), h: roundTo(e.h, 1), d: roundTo(e.d, 1), ...(e.folder ? { folder: e.folder } : {}) }))
     if (mine.length > left) out.mine_more = mine.length - left
     left = Math.max(0, left - (out.mine as unknown[]).length)
   }
@@ -554,11 +555,11 @@ function summarizeAmbient(a: Ambient, names: Map<number, LibraryEntry>): Ambient
     walls: a.walls.map((w, k) => ({
       id: w.id,
       label: `Paret ${k + 1}`,
-      a: w.a.map(r1),
-      b: w.b.map(r1),
+      a: w.a.map((v) => roundTo(v, 1)),
+      b: w.b.map((v) => roundTo(v, 1)),
       length: Math.round(wallLength(w)),
-      thickness: r1(w.thickness),
-      height: r1(w.height),
+      thickness: roundTo(w.thickness, 1),
+      height: roundTo(w.height, 1),
       ...(w.material ? { material: w.material } : {}),
       ...(w.openings?.length ? { openings: w.openings.map((o, index) => ({ index, ...openingOut(o) })) } : {}),
     })),
@@ -571,13 +572,13 @@ function summarizeAmbient(a: Ambient, names: Map<number, LibraryEntry>): Ambient
         kind,
         name: itemName(it, names),
         ...(it.kind === "moble" ? { project_id: it.projectId } : {}),
-        w: r1(s.w),
-        h: r1(s.h),
-        d: r1(s.d),
-        x: r1(it.x),
-        y: r1(it.y),
-        rot: r1(it.rot),
-        ...(it.elevation ? { elevation: r1(it.elevation) } : {}),
+        w: roundTo(s.w, 1),
+        h: roundTo(s.h, 1),
+        d: roundTo(s.d, 1),
+        x: roundTo(it.x, 1),
+        y: roundTo(it.y, 1),
+        rot: roundTo(it.rot, 1),
+        ...(it.elevation ? { elevation: roundTo(it.elevation, 1) } : {}),
         ...(it.group ? { group: it.group } : {}),
         box: [b.x0, b.y0, b.x1, b.y1].map(Math.round),
       }

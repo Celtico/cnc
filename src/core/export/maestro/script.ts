@@ -1,6 +1,7 @@
 import type { EdgeSide, Hole, Panel } from "../../model"
 import { toolMslName, type MachineTool } from "../../model/machine"
 import { asciiFold } from "../text"
+import { roundTo } from "../../../lib/format"
 
 /** Peces bàsiques de l'MSL: números, cadenes, comentaris, plans i l'script d'un programa (`Script`). */
 
@@ -34,7 +35,7 @@ export const EOL = "\r\n"
 /** Número per a l'MSL: punt decimal, fins a 3 decimals, sense zeros de més. Llança si no és finit. */
 export function num(n: number): string {
   if (!Number.isFinite(n)) throw new Error(`Número no vàlid a l'MSL: ${n}`)
-  const r = Math.round(n * 1000) / 1000
+  const r = roundTo(n, 3)
   return Object.is(r, -0) ? "0" : String(r)
 }
 

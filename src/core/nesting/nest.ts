@@ -1,5 +1,6 @@
 import { z } from "zod"
 import type { Panel } from "../model"
+import { roundTo } from "../../lib/format"
 
 /**
  * Nesting simple de peces rectangulars sobre taulers, per franges ("shelf packing").
@@ -110,7 +111,6 @@ interface OpenBoard {
   nextShelfY: number
 }
 
-const r = (v: number): number => Math.round(v * 100) / 100
 
 /** El tauler apaïsat: el costat llarg (i la veta) en X. */
 function landscape(sheet: Sheet): Sheet {
@@ -216,7 +216,7 @@ export function nest(panels: Panel[], options: NestOptions = DEFAULT_NEST_OPTION
   let usedArea = 0
   for (const b of boards) {
     const area = b.placements.reduce((s, pl) => s + pl.w * pl.h, 0)
-    b.efficiency = r(area / (b.w * b.h))
+    b.efficiency = roundTo(area / (b.w * b.h), 2)
     usedArea += area
   }
   const totalArea = boards.reduce((s, b) => s + b.w * b.h, 0)
@@ -225,7 +225,7 @@ export function nest(panels: Panel[], options: NestOptions = DEFAULT_NEST_OPTION
     options,
     boards,
     unplaced,
-    totalEfficiency: totalArea ? r(usedArea / totalArea) : 0,
+    totalEfficiency: totalArea ? roundTo(usedArea / totalArea, 2) : 0,
   }
 }
 

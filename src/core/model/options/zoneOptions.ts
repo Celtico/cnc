@@ -59,7 +59,7 @@ const drawers = group("zone.front.drawers", "Calaixos", { code: UI.frontFields, 
       issue: "Mateixa dada en dos llocs: el Tancament (aquí) i el «Tirador › Cap (push)» de més avall. Triar el Tirador (opció de sota) canvia el Tancament (opció de dalt): una opció de més avall modifica una de més amunt.",
     }),
     field("zone.front.drawers.kit.back", "Darrere", { code: UI.drawers, control: "choice", defaultText: "Fusta" }),
-    field("zone.front.drawers.kit.finish", "Acabat", { code: UI.drawers, control: "choice", showIf: "El joc té més d'un acabat" }),
+    field("zone.front.drawers.kit.finish", "Color dels laterals", { code: UI.drawers, control: "choice", showIf: "El joc té més d'un acabat" }),
     field("zone.front.drawers.kit.bottom", "Fons del calaix", { code: UI.drawers, control: "text", note: "Només es llegeix: el gruix el demana el joc." }),
     field("zone.front.drawers.kit.info", "Joc", { code: UI.drawers, control: "text", note: "NL, números d'article i peces de fusta que ha fet la construcció." }),
   ]),
@@ -181,12 +181,12 @@ const shelves = section("zone.shelves", "Opcions de l'interior", {
     choices: [{ value: "on", label: "A ras del davant (a sang)", hides: ["zone.shelves.setback"] }],
     issue: "(menor) Surt també quan no compta: amb fronts Encastats (Mòdul › Caixa) i el compartiment amb front o tapat, la construcció retira igualment els prestatges i el «a ras» no fa res (només un avís).",
   }),
-  field("zone.shelves.setback", "Retranqueig", {
+  field("zone.shelves.setback", "Retirada", {
     code: UI.shelves,
     control: "number",
     showIf: "Prestatges > 0 i no a ras del davant",
     range: { min: 0, max: 300, step: 1, suffix: "mm" },
-    defaultText: "Com el mòdul (Caixa › Retranqueig dels prestatges)",
+    defaultText: "Com el mòdul (Caixa › Retirada dels prestatges)",
   }),
   field("zone.shelves.thick", "Gruix", {
     code: UI.shelves,

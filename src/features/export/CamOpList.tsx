@@ -2,7 +2,8 @@ import { Badge, Box, HStack, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useRef } from "react"
 import { SectionLabel } from "../../components/SectionLabel"
 import type { CamOp } from "../../core/export/xcsPreview"
-import { colorFor, fmtMm, opLabel, type CamSheetView } from "./camDrawing"
+import { colorFor, opLabel, type CamSheetView } from "./camDrawing"
+import { fmtNum } from "../../lib/format"
 
 const opLine = (o: CamOp) => {
   const parts = [o.ref, opLabel(o)].filter(Boolean)
@@ -36,9 +37,9 @@ export function CamOpList({ view, sel, onSelect, hot, follow, onHover }: { view:
           const lit = hot === r.from
           const extras = [
             o.pass ? `P${o.pass.index}/${o.pass.count}` : "",
-            o.approach && view.widths.get(o.n) ? `rampa ${fmtMm(o.approach.k * (view.widths.get(o.n)! / 2))} mm` : o.approach ? "rampa" : "",
-            o.maxPass ? `passades de ${fmtMm(o.maxPass)}` : "",
-            o.overMaterial ? `sobrant ${fmtMm(o.overMaterial)}` : "",
+            o.approach && view.widths.get(o.n) ? `rampa ${fmtNum(o.approach.k * (view.widths.get(o.n)! / 2))} mm` : o.approach ? "rampa" : "",
+            o.maxPass ? `passades de ${fmtNum(o.maxPass)}` : "",
+            o.overMaterial ? `sobrant ${fmtNum(o.overMaterial)}` : "",
             o.toolpath ? "recorregut" : "",
             o.plane !== "Top" ? o.plane : "",
           ].filter(Boolean)
@@ -68,7 +69,7 @@ export function CamOpList({ view, sel, onSelect, hot, follow, onHover }: { view:
               <Box w="10px" h="10px" mt="3px" rounded={o.kind === "drill" ? "full" : "sm"} style={{ background: colorFor(view, o) }} flexShrink={0} />
               <Stack gap={0} flex={1} minW={0}>
                 <Text truncate>
-                  {r.count > 1 ? opLabel(o, r.count) : opLine(o)} · {fmtMm(r.depth)} mm
+                  {r.count > 1 ? opLabel(o, r.count) : opLine(o)} · {fmtNum(r.depth)} mm
                 </Text>
                 <Text color="fg.muted" lineClamp={2}>
                   {o.tool === "-1" ? "eina automàtica" : o.tool}

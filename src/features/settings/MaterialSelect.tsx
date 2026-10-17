@@ -56,7 +56,7 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
         }}
       />
 
-      <PickerDrawer open={open} onOpenChange={setOpen} title={label} query={query} onQuery={search} placeholder="Buscar un material">
+      <PickerDrawer open={open} onOpenChange={setOpen} title={label} query={query} onQuery={search} placeholder="Cercar un material">
         {q && !cats.length && (
           <Text fontSize="sm" color="fg.muted">
             Cap material es diu així.

@@ -112,7 +112,7 @@ export function TextureMapRows({ finish, onChange }: { finish: ImageFinish; onCh
 }
 
 /**
- * «Carregar joc de textures…»: diversos fitxers, una carpeta o un .zip d'un cop (també deixant-los anar a sobre). Es
+ * «Carregar conjunt de textures…»: diversos fitxers, una carpeta o un .zip d'un cop (també deixant-los anar a sobre). Es
  * reconeixen pel nom (`planTextureSet`): color, relleu (normal, `_gl`/`_dx`) i brillantor (rugositat o ARM/ORM).
  */
 export function TextureSetRow({ finish, onChange }: { finish: Finish; onChange: (f: ImageFinish) => void }) {
@@ -129,7 +129,7 @@ export function TextureSetRow({ finish, onChange }: { finish: Finish; onChange: 
       if (next && set.color && r.tileMm) next = { ...next, tileMm: r.tileMm }
       if (!next) {
         toaster.create({
-          title: "No s'ha trobat el joc de textures",
+          title: "No s'ha trobat el conjunt de textures",
           description: `${finish.kind === "image" || set.normal || set.rough ? "Falta la foto de color (diff, color, albedo…)." : "Cap fitxer té un nom de mapa (diff, nor, rough…)."}${set.ignored.length ? ` Fitxers: ${set.ignored.slice(0, 6).join(", ")}.` : ""}`,
           type: "warning",
           duration: 10000,
@@ -138,15 +138,15 @@ export function TextureSetRow({ finish, onChange }: { finish: Finish; onChange: 
       }
       onChange(next)
       const size = set.color && r.tileMm ? ` Mida real ${r.tileMm} mm (Poly Haven).` : ""
-      toaster.create({ title: "Joc de textures carregat", description: textureSetSummary(set) + size, type: set.ignored.length ? "info" : "success", duration: 8000 })
+      toaster.create({ title: "Conjunt de textures carregat", description: textureSetSummary(set) + size, type: set.ignored.length ? "info" : "success", duration: 8000 })
     } catch (e) {
-      toaster.create({ title: "No s'ha pogut carregar el joc de textures", description: errText(e), type: "error", duration: 8000 })
+      toaster.create({ title: "No s'ha pogut carregar el conjunt de textures", description: errText(e), type: "error", duration: 8000 })
     } finally {
       setBusy(false)
     }
   }
   return (
-    <FormRow label="Joc PBR" help="Color, relleu i brillantor d'un cop, com els de Poly Haven (el .zip tal com es baixa, en qualsevol format; també els EXR): fitxers, una carpeta o un .zip. Es reconeixen pel nom (diff/color/albedo, nor/normal amb _gl o _dx, rough o ARM); la resta (disp, ao…) no es fa servir.">
+    <FormRow label="Conjunt PBR" help="Color, relleu i brillantor d'un cop, com els de Poly Haven (el .zip tal com es baixa, en qualsevol format; també els EXR): fitxers, una carpeta o un .zip. Es reconeixen pel nom (diff/color/albedo, nor/normal amb _gl o _dx, rough o ARM); la resta (disp, ao…) no es fa servir.">
       <Box
         borderWidth="1px"
         borderStyle="dashed"
@@ -168,7 +168,7 @@ export function TextureSetRow({ finish, onChange }: { finish: Finish; onChange: 
       >
         <HStack gap={1.5} wrap="wrap">
           <Button size="xs" variant="outline" colorPalette="wood" loading={busy} onClick={() => void pickFiles({ multiple: true, accept: "image/*,.zip,.exr" }).then(load)}>
-            <LuFileUp /> Carregar joc de textures…
+            <LuFileUp /> Carregar conjunt de textures…
           </Button>
           <Button size="xs" variant="ghost" disabled={busy} onClick={() => void pickFiles({ folder: true }).then(load)}>
             <LuFolderOpen /> Carpeta…

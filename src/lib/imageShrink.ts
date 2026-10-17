@@ -13,14 +13,24 @@ export async function shrinkImage(file: Blob, maxSide: number, { jpeg = false, q
   }
   const width = Math.round(bitmap.width * scale)
   const height = Math.round(bitmap.height * scale)
+  const { canvas } = drawScaled(bitmap, width, height)
+  const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("No s'ha pogut reduir la imatge"))), "image/jpeg", quality))
+  return { blob, width, height }
+}
+
+/**
+ * Pinta la imatge a `width × height` en un canvas nou, sobre blanc (les transparències no queden negres), i tanca el
+ * bitmap. Serveix per reduir-la (`shrinkImage`) o per llegir-ne els píxels (el relleu d'una imatge).
+ */
+export function drawScaled(bitmap: ImageBitmap, width: number, height: number): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } {
   const canvas = document.createElement("canvas")
   canvas.width = width
   canvas.height = height
-  const g = canvas.getContext("2d")!
-  g.fillStyle = "#ffffff"
-  g.fillRect(0, 0, width, height)
-  g.drawImage(bitmap, 0, 0, width, height)
+  const ctx = canvas.getContext("2d")
+  if (!ctx) throw new Error("No es pot llegir la imatge")
+  ctx.fillStyle = "#ffffff"
+  ctx.fillRect(0, 0, width, height)
+  ctx.drawImage(bitmap, 0, 0, width, height)
   bitmap.close()
-  const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("No s'ha pogut reduir la imatge"))), "image/jpeg", quality))
-  return { blob, width, height }
+  return { canvas, ctx }
 }

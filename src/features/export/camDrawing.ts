@@ -1,5 +1,6 @@
 import { camDraw, camRows, camTools, cutWidth, findTool, parseXcsPreview, toolKey, type CamDraw, type CamOp, type CamRow, type CamToolInfo, type Pt, type XcsPreview } from "../../core/export/xcsPreview"
 import type { Machine } from "../../core/model"
+import { fmtNum, roundTo } from "../../lib/format"
 
 /** Colors per eina (tokens de Chakra: s'adapten al mode fosc). El groc és per a les peces petites. */
 const PALETTE = ["blue", "orange", "green", "purple", "pink", "teal", "red", "cyan"]
@@ -49,19 +50,14 @@ export const colorFor = (v: CamSheetView, o: CamOp) => v.colorOf.get(toolKey(o))
 /** Camí SVG (y cap avall: `H − y`). */
 export function svgPath(pts: Pt[], closed: boolean, H: number): string {
   if (!pts.length) return ""
-  return pts.map((p, i) => `${i ? "L" : "M"}${r2(p[0])} ${r2(H - p[1])}`).join("") + (closed ? "Z" : "")
+  return pts.map((p, i) => `${i ? "L" : "M"}${roundTo(p[0], 2)} ${roundTo(H - p[1], 2)}`).join("") + (closed ? "Z" : "")
 }
-
-const r2 = (n: number) => Math.round(n * 100) / 100
-
-/** Mm amb coma decimal (com a la resta de la UI). */
-export const fmtMm = (n: number) => String(Math.round(n * 100) / 100).replace(".", ",")
 
 /** Nom curt del tipus d'operació. */
 export function opLabel(o: Pick<CamOp, "kind" | "side" | "diameter">, count = 1): string {
   switch (o.kind) {
     case "drill":
-      return `${count > 1 ? `${count} forats` : "Forat"} Ø${fmtMm(o.diameter ?? 0)}`
+      return `${count > 1 ? `${count} forats` : "Forat"} Ø${fmtNum(o.diameter ?? 0)}`
     case "contour":
       return o.side === "inside" ? "Tall per dins" : "Contorn per fora"
     case "pocket":

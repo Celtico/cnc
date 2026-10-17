@@ -66,7 +66,7 @@ export function ClearHistory({
                       <Alert.Title>
                         {edited.length === 1 ? "N'has modificat 1" : `N'has modificat ${edited.length}`}: {shown}
                       </Alert.Title>
-                      <Alert.Description>Si no els guardes en un grup (menú ⋯ › «Moure a un grup…»), perdràs les modificacions.</Alert.Description>
+                      <Alert.Description>Si no els deses en un grup (menú ⋯ › «Moure a un grup…»), perdràs les modificacions.</Alert.Description>
                     </Alert.Content>
                   </Alert.Root>
                 )}

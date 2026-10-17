@@ -1,5 +1,5 @@
 import type { Pocket } from "./panel"
-import { bounds, flatten, pointInPolygon, type Pt } from "./polygon"
+import { bounds, closestOnPolygon, distToPolygon, flatten, pointInPolygon, type Pt } from "./polygon"
 
 /**
  * La forma d'un buidat (`Pocket`) com a fondària a cada punt: el que fan servir els recorreguts 3D (`core/machine/relief.ts`)
@@ -19,42 +19,6 @@ export interface DepthGrid {
 /** El contorn del buidat com a polígon (arcs en trossos petits). */
 export function pocketPolygon(pk: Pocket): Pt[] {
   return flatten(pk.points, Math.PI / 48)
-}
-
-/** El punt del contorn més proper a (x, y). */
-function closestOnPolygon(x: number, y: number, poly: Pt[]): [number, number] {
-  let best = Infinity
-  let out: [number, number] = [x, y]
-  for (let i = 0; i < poly.length; i++) {
-    const [ax, ay] = poly[i]!
-    const [bx, by] = poly[(i + 1) % poly.length]!
-    const dx = bx - ax, dy = by - ay
-    const l2 = dx * dx + dy * dy
-    const t = l2 ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2)) : 0
-    const px = ax + t * dx, py = ay + t * dy
-    const d2 = (px - x) ** 2 + (py - y) ** 2
-    if (d2 < best) {
-      best = d2
-      out = [px, py]
-    }
-  }
-  return out
-}
-
-/** Distància d'un punt al contorn (sense signe). */
-function distToPolygon(x: number, y: number, poly: Pt[]): number {
-  let best = Infinity
-  for (let i = 0; i < poly.length; i++) {
-    const [ax, ay] = poly[i]!
-    const [bx, by] = poly[(i + 1) % poly.length]!
-    const dx = bx - ax, dy = by - ay
-    const l2 = dx * dx + dy * dy
-    const t = l2 ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2)) : 0
-    const ex = ax + t * dx - x, ey = ay + t * dy - y
-    const d2 = ex * ex + ey * ey
-    if (d2 < best) best = d2
-  }
-  return Math.sqrt(best)
 }
 
 /**
@@ -122,6 +86,29 @@ export function pocketGrid(pk: Pocket, step: number, margin: number, maxNodes = 
   return { x0, y0, step: s, nx, ny, d }
 }
 
+/** Empremta del mapa (FNV-1a de les fondàries a 0,01 mm), un cop per array. */
+const MAP_HASH = new WeakMap<readonly number[], string>()
+function mapHash(d: readonly number[]): string {
+  let h = MAP_HASH.get(d)
+  if (h) return h
+  let x = 0x811c9dc5
+  for (const v of d) {
+    x ^= Math.round(v * 100) | 0
+    x = Math.imul(x, 0x01000193)
+  }
+  h = `${d.length}:${(x >>> 0).toString(36)}`
+  MAP_HASH.set(d, h)
+  return h
+}
+
+/**
+ * Una clau curta del buidat (per a memòries i per saber si una peça ha canviat): el buidat en JSON, amb el mapa resumit en
+ * una empremta (un relleu porta centenars de milers de fondàries: passar-les a text a cada reconstrucció era el més lent).
+ */
+export function pocketKey(pk: Pocket): string {
+  return JSON.stringify(pk.map ? { ...pk, map: { ...pk.map, d: mapHash(pk.map.d) } } : pk)
+}
+
 /** El buidat té el fons pla (una caixera de les de sempre). */
 export const isFlatPocket = (pk: Pocket): boolean => !pk.round && !pk.map
 
@@ -148,64 +135,87 @@ export function pocketSolids(pk: Pocket, T: number, maxCells = 10_000): { wall?:
   const top = wallDepth > 0.01 ? wallDepth - 0.5 : -1
   // Cel·les on el fons baixa més que la paret (alguna cantonada).
   const { nx, ny, d } = g
-  const th = Math.max(0.02, wallDepth + 0.02)
+  // La vora, on el fons ja baixa 0,3 mm: més a prop de la cara, el booleà deixa trossets gairebé plans (punts a la cara).
+  const th = Math.max(0.3, wallDepth + 0.3)
   const poly = pk.map ? null : pocketPolygon(pk)
-  const inCell = (i: number, j: number) =>
-    i >= 0 && j >= 0 && i < nx - 1 && j < ny - 1 && Math.max(d[j * nx + i]!, d[j * nx + i + 1]!, d[(j + 1) * nx + i]!, d[(j + 1) * nx + i + 1]!) > th
-  // Els nodes de fora d'una cel·la de la vora es posen sobre la línia on el fons passa per `th` (la mitjana dels punts on
-  // talla les arestes cap als de dins): la vora segueix el contorn i no fa l'escala de la graella.
-  const nodeXY = (i: number, j: number): [number, number] => {
-    const k = j * nx + i
-    const dk = d[k]!
-    const gx = g.x0 + i * g.step, gy = g.y0 + j * g.step
-    if (dk > th) return [gx, gy]
-    // Amb contorn: el punt del contorn més proper (exacte; la fondària hi salta de cop i interpolar-la faria l'escala).
-    if (poly) return closestOnPolygon(gx, gy, poly)
-    let sx = 0, sy = 0, n = 0
-    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
-      const a = i + di, b = j + dj
-      if (a < 0 || b < 0 || a >= nx || b >= ny) continue
-      const dm = d[b * nx + a]!
-      if (dm <= th) continue
-      const t = Math.min(1, Math.max(0, (th - dk) / (dm - dk)))
-      sx += gx + di * g.step * t
-      sy += gy + dj * g.step * t
-      n++
-    }
-    return n ? [sx / n, sy / n] : [gx, gy]
-  }
+  // Cada cel·la es parteix en dos triangles i cada triangle es retalla per on el fons passa per `th` (interpolat a les
+  // arestes; amb contorn, el punt va a sobre del contorn): la vora segueix la línia exacta, sense punxes de la graella.
   const positions: number[] = []
   const index: number[] = []
-  const topIdx = new Map<number, number>()
-  const botIdx = new Map<number, number>()
-  const vert = (map: Map<number, number>, i: number, j: number, depth: number) => {
-    const k = j * nx + i
-    let v = map.get(k)
-    if (v === undefined) {
-      v = positions.length / 3
-      const [x, y] = nodeXY(i, j)
-      positions.push(x, y, z(depth))
-      map.set(k, v)
+  const ids = new Map<string, [number, number]>()
+  const nodeXY = (k: number): [number, number] => [g.x0 + (k % nx) * g.step, g.y0 + Math.floor(k / nx) * g.step]
+  /** Vèrtex de dalt i de baix d'un node de dins (`b < 0`) o del punt de l'aresta a–b on el fons passa per `th`. */
+  const vtx = (a: number, b2: number): [number, number] => {
+    const key = b2 < 0 ? `n${a}` : a < b2 ? `e${a}_${b2}` : `e${b2}_${a}`
+    let v = ids.get(key)
+    if (v) return v
+    let x: number, y: number, depth: number
+    if (b2 < 0) {
+      ;[x, y] = nodeXY(a)
+      depth = d[a]!
+    } else {
+      const [ax, ay] = nodeXY(a), [bx, by] = nodeXY(b2)
+      const da = d[a]!, db = d[b2]!
+      const t = Math.min(1, Math.max(0, (th - da) / (db - da)))
+      x = ax + (bx - ax) * t
+      y = ay + (by - ay) * t
+      if (poly) [x, y] = closestOnPolygon(x, y, poly)
+      depth = th
     }
+    const i0 = positions.length / 3
+    positions.push(x, y, z(top), x, y, z(Math.max(top + 0.01, depth)))
+    v = [i0, i0 + 1]
+    ids.set(key, v)
     return v
   }
-  const T0 = (i: number, j: number) => vert(topIdx, i, j, top)
-  const B0 = (i: number, j: number) => vert(botIdx, i, j, Math.max(top + 0.01, d[j * nx + i]! > th ? d[j * nx + i]! : th))
-  // Cara de dalt (mirant cap a fora del sòlid: cap a la cara de la peça) i de baix (cap a dins de la peça).
-  const quad = (a: number, b2: number, c: number, e: number, flip: boolean) => {
-    if (flip !== (pk.face === "B")) index.push(a, c, b2, a, e, c)
-    else index.push(a, b2, c, a, c, e)
+  const up = pk.face === "B"
+  const tri = (a: number, b2: number, c: number, flip: boolean) => (flip !== up ? index.push(a, c, b2) : index.push(a, b2, c))
+  const quad = (a: number, b2: number, c: number, e: number) => (up ? index.push(a, e, c, a, c, b2) : index.push(a, b2, c, a, c, e))
+  const border = (a: number, b2: number) => {
+    const ia = a % nx, ja = Math.floor(a / nx), ib = b2 % nx, jb = Math.floor(b2 / nx)
+    return (ia === ib && (ia === 0 || ia === nx - 1)) || (ja === jb && (ja === 0 || ja === ny - 1))
+  }
+  const clip = (c: [number, number, number]) => {
+    const ins = c.map((k) => d[k]! > th)
+    if (!ins.some(Boolean)) return
+    // El polígon retallat (antihorari) i, per a cada costat, si és un tall (paret) o un costat de la graella.
+    const pts: [number, number][] = []
+    const cut: boolean[] = []
+    for (let k = 0; k < 3; k++) {
+      const a = c[k]!, b2 = c[(k + 1) % 3]!
+      if (ins[k]) {
+        pts.push(vtx(a, -1))
+        cut.push(false)
+        if (!ins[(k + 1) % 3]) {
+          pts.push(vtx(a, b2))
+          cut.push(true)
+        }
+      } else if (ins[(k + 1) % 3]) {
+        pts.push(vtx(a, b2))
+        cut.push(false)
+      }
+    }
+    for (let k = 1; k + 1 < pts.length; k++) {
+      tri(pts[0]![0], pts[k]![0], pts[k + 1]![0], false)
+      tri(pts[0]![1], pts[k]![1], pts[k + 1]![1], true)
+    }
+    // Parets: als talls i a la vora de la graella (el mapa arriba fins al cantell de la peça).
+    for (let k = 0; k < pts.length; k++) {
+      const P = pts[k]!, Q = pts[(k + 1) % pts.length]!
+      if (cut[k]) quad(P[0], P[1], Q[1], Q[0])
+    }
+    for (let k = 0; k < 3; k++) {
+      const a = c[k]!, b2 = c[(k + 1) % 3]!
+      if (!border(a, b2) || !(ins[k] || ins[(k + 1) % 3])) continue
+      const P = ins[k] ? vtx(a, -1) : vtx(a, b2), Q = ins[(k + 1) % 3] ? vtx(b2, -1) : vtx(a, b2)
+      quad(P[0], P[1], Q[1], Q[0])
+    }
   }
   for (let j = 0; j < ny - 1; j++)
     for (let i = 0; i < nx - 1; i++) {
-      if (!inCell(i, j)) continue
-      quad(T0(i, j), T0(i + 1, j), T0(i + 1, j + 1), T0(i, j + 1), false)
-      quad(B0(i, j), B0(i + 1, j), B0(i + 1, j + 1), B0(i, j + 1), true)
-      // Parets on la cel·la del costat no hi és.
-      if (!inCell(i, j - 1)) quad(T0(i, j), B0(i, j), B0(i + 1, j), T0(i + 1, j), false)
-      if (!inCell(i + 1, j)) quad(T0(i + 1, j), B0(i + 1, j), B0(i + 1, j + 1), T0(i + 1, j + 1), false)
-      if (!inCell(i, j + 1)) quad(T0(i + 1, j + 1), B0(i + 1, j + 1), B0(i, j + 1), T0(i, j + 1), false)
-      if (!inCell(i - 1, j)) quad(T0(i, j + 1), B0(i, j + 1), B0(i, j), T0(i, j), false)
+      const k00 = j * nx + i, k10 = k00 + 1, k01 = k00 + nx, k11 = k01 + 1
+      clip([k00, k10, k11])
+      clip([k00, k11, k01])
     }
   if (index.length) out.field = { positions, index }
   return out

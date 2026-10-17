@@ -2,13 +2,17 @@ import { OrbitControls } from "@react-three/drei"
 import { Canvas, useThree, type ThreeEvent } from "@react-three/fiber"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { BufferGeometry, DoubleSide, Float32BufferAttribute, Plane, SphereGeometry, Vector3 } from "three"
+import { axisDragPlane } from "../../components/viewer/gizmoDrag"
 import { MoveGizmo, type GizmoHandle } from "../../components/viewer/MoveGizmo"
 import { useOrbitControls } from "../../components/viewer/orbitControls"
 import { meshGeometry } from "../../components/viewer/refGeometry"
 import { useColorModeValue } from "../../components/ui/color-mode"
-import { moveVertices, type MeshCage } from "../../core/model"
+import { edgeKey, moveVertices, type MeshCage } from "../../core/model"
 
 const S = 0.001
+
+/** Un punt de la caixa (0 a 1) a l'escena: la caixa centrada a l'origen, en m. */
+const cageToScene = (p: readonly number[], size: Size): [number, number, number] => [(p[0]! - 0.5) * size.w * S, (p[1]! - 0.5) * size.h * S, (p[2]! - 0.5) * size.d * S]
 type Axis = "x" | "y" | "z"
 type Size = { w: number; h: number; d: number }
 
@@ -43,20 +47,20 @@ export function MeshEditorCanvas(props: { cage: MeshCage; size: Size; level: num
 function CageScene({ cage, size, level, selected, mirror, onSelect, onPreview, onCommit, ink }: Parameters<typeof MeshEditorCanvas>[0] & { ink: string }) {
   const surface = useMemo(() => meshGeometry(size, cage, level), [size, cage, level])
   useEffect(() => () => surface.dispose(), [surface])
-  const at = (p: readonly number[]): [number, number, number] => [(p[0]! - 0.5) * size.w * S, (p[1]! - 0.5) * size.h * S, (p[2]! - 0.5) * size.d * S]
+  const at = (p: readonly number[]) => cageToScene(p, size)
   // Línies de la caixa de control (cada aresta un cop).
   const lines = useMemo(() => {
     const seen = new Set<string>()
-    const sharp = new Set((cage.crease ?? []).map(([a, b]) => (a < b ? `${a}-${b}` : `${b}-${a}`)))
+    const sharp = new Set((cage.crease ?? []).map(([a, b]) => edgeKey(a, b)))
     const pos: number[] = []
     const vivid: number[] = []
     for (const f of cage.f)
       f.forEach((a, k) => {
         const b = f[(k + 1) % f.length]!
-        const key = a < b ? `${a}-${b}` : `${b}-${a}`
+        const key = edgeKey(a, b)
         if (seen.has(key)) return
         seen.add(key)
-        ;(sharp.has(key) ? vivid : pos).push(...at(cage.v[a]!), ...at(cage.v[b]!))
+        ;(sharp.has(key) ? vivid : pos).push(...cageToScene(cage.v[a]!, size), ...cageToScene(cage.v[b]!, size))
       })
     const g = new BufferGeometry()
     g.setAttribute("position", new Float32BufferAttribute(pos, 3))
@@ -64,7 +68,6 @@ function CageScene({ cage, size, level, selected, mirror, onSelect, onPreview, o
     const gv = new BufferGeometry()
     gv.setAttribute("position", new Float32BufferAttribute(vivid, 3))
     return { g, gv }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `at` depèn només de `size`
   }, [cage, size])
   useEffect(
     () => () => {
@@ -88,9 +91,8 @@ function CageScene({ cage, size, level, selected, mirror, onSelect, onPreview, o
   const centroid = useMemo(() => {
     if (!selected.length) return null
     const c = [0, 0, 0]
-    for (const i of selected) at(cage.v[i]!).forEach((x, k) => (c[k]! += x / selected.length))
+    for (const i of selected) cageToScene(cage.v[i]!, size).forEach((x, k) => (c[k]! += x / selected.length))
     return c as [number, number, number]
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `at` depèn només de `size`
   }, [selected, cage, size])
 
   // Arrossegar les fletxes o la bola: el pla que conté l'eix i mira a la càmera (com els objectes del visor).
@@ -101,11 +103,10 @@ function CageScene({ cage, size, level, selected, mirror, onSelect, onPreview, o
   const [active, setActive] = useState<GizmoHandle | null>(null)
   const start = (a: GizmoHandle, e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation()
-    const toCam = camera.getWorldDirection(new Vector3()).negate()
     const axes: Axis[] = a === "free" ? ["x", "y", "z"] : [a]
-    const n = a === "free" ? toCam : (a === "x" ? new Vector3(1, 0, 0) : a === "y" ? new Vector3(0, 1, 0) : new Vector3(0, 0, 1)).cross(toCam).cross(a === "x" ? new Vector3(1, 0, 0) : a === "y" ? new Vector3(0, 1, 0) : new Vector3(0, 0, 1))
-    if (n.lengthSq() < 1e-9) return
-    drag.current = { plane: new Plane().setFromNormalAndCoplanarPoint(n.normalize(), e.point), start: e.point.clone(), axes, base: cage, last: cage }
+    const plane = axisDragPlane(a, camera, e.point)
+    if (!plane) return
+    drag.current = { plane, start: e.point.clone(), axes, base: cage, last: cage }
     setActive(a)
     ;(e.target as Element | null)?.setPointerCapture?.(e.pointerId)
     if (controls) controls.enabled = false

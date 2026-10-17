@@ -1,6 +1,7 @@
 import { Box, Button, HStack, Image, Stack, Text } from "@chakra-ui/react"
 import type { RefObject } from "react"
 import { LuDownload, LuPause, LuPlay, LuRotateCcw } from "react-icons/lu"
+import { downloadBlob } from "../../../lib/download"
 import { Tooltip } from "../../ui/tooltip"
 import type { Background } from "./renderConfig"
 import { WIDE } from "./renderLayout"
@@ -14,12 +15,7 @@ export function RenderViewport({ canvas, engine, background, preview, notice, st
     // Desar el PNG mentre calcula l'atura (per decisió de l'usuari, 2026-10-16): la imatge desada és la final.
     if (running) toggle()
     canvas.current?.toBlob((b) => {
-      if (!b) return
-      const a = document.createElement("a")
-      a.href = URL.createObjectURL(b)
-      a.download = `${name || "moble"}-render.png`
-      a.click()
-      setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+      if (b) downloadBlob(b, `${name || "moble"}-render.png`)
     }, "image/png")
     onSaved()
   }

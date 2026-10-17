@@ -5,8 +5,10 @@ import { edgeMid, gridLinesOf, openPath } from "./profileGeometry"
 import type { ProfileShape } from "./useProfileShape"
 import type { useProfilePointer } from "./useProfilePointer"
 
-/** Blau dels nodes i manegadors (com a Figma). */
-const HANDLE = "#1e88e5"
+/** Colors del dibuix (tokens del tema, també en mode fosc): nodes i manegadors del color principal. */
+const HANDLE = "var(--chakra-colors-wood-solid)"
+const FILL = "var(--chakra-colors-bg-panel)"
+const ERROR = "var(--chakra-colors-fg-error)"
 
 /**
  * El dibuix del perfil: quadrícula, forma (tancada o el traç de la ploma), costats amb la mida i el cercle del mig,
@@ -31,7 +33,7 @@ export function ProfileCanvas({ shape, pointer, sample, closed, bad, unit, minor
   // Tram provisional de la ploma: de l'últim node al cursor.
   const last = nodes[nodes.length - 1]
   const preview = drawing && last && cursor && !drag ? `M ${last.x} ${-last.y} C ${last.x + (last.out?.[0] ?? 0)} ${-(last.y + (last.out?.[1] ?? 0))} ${cursor[0]} ${-cursor[1]} ${cursor[0]} ${-cursor[1]}` : null
-  const stroke = bad ? "#dc2626" : "#6b7280"
+  const stroke = bad ? ERROR : "var(--chakra-colors-fg-muted)"
 
   return (
     <Box flex={1} minW={0} display="flex" justifyContent="center" alignItems="flex-start">
@@ -49,7 +51,7 @@ export function ProfileCanvas({ shape, pointer, sample, closed, bad, unit, minor
           <line key={i} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} stroke="var(--chakra-colors-border)" strokeWidth={l.major ? unit * 0.25 : unit * 0.1} />
         ))}
         {closed ? (
-          <polygon points={sample.map(([x, y]) => `${x},${-y}`).join(" ")} fill={bad ? "rgba(220,38,38,0.12)" : "rgba(124,58,237,0.08)"} stroke={stroke} strokeWidth={unit * 0.3} strokeLinejoin="round" />
+          <polygon points={sample.map(([x, y]) => `${x},${-y}`).join(" ")} fill={bad ? ERROR : HANDLE} fillOpacity={bad ? 0.12 : 0.08} stroke={stroke} strokeWidth={unit * 0.3} strokeLinejoin="round" />
         ) : (
           nodes.length >= 2 && <path d={openPath(nodes)} fill="none" stroke={stroke} strokeWidth={unit * 0.4} />
         )}
@@ -73,7 +75,7 @@ export function ProfileCanvas({ shape, pointer, sample, closed, bad, unit, minor
                   style={{ cursor: "pointer" }}
                 >
                   <title>Clic: afegir un node · Arrossegar: corbar el costat</title>
-                  <circle cx={mx} cy={-my} r={unit * (tool === "bend" ? 1.4 : 0.9)} fill={tool === "bend" ? HANDLE : "#fff"} fillOpacity={tool === "bend" ? 0.25 : 1} stroke={HANDLE} strokeWidth={unit * 0.2} strokeDasharray={tool === "bend" ? undefined : `${unit * 0.4} ${unit * 0.3}`} />
+                  <circle cx={mx} cy={-my} r={unit * (tool === "bend" ? 1.4 : 0.9)} fill={tool === "bend" ? HANDLE : FILL} fillOpacity={tool === "bend" ? 0.25 : 1} stroke={HANDLE} strokeWidth={unit * 0.2} strokeDasharray={tool === "bend" ? undefined : `${unit * 0.4} ${unit * 0.3}`} />
                 </g>
               </g>
             )
@@ -87,7 +89,7 @@ export function ProfileCanvas({ shape, pointer, sample, closed, bad, unit, minor
                 const hx = n.x + h[0], hy = n.y + h[1]
                 return (
                   <g key={`h${i}${which}`}>
-                    <line x1={n.x} y1={-n.y} x2={hx} y2={-hy} stroke={angleLock && drag?.i === i ? "#ef4444" : "#9ca3af"} strokeWidth={unit * 0.2} />
+                    <line x1={n.x} y1={-n.y} x2={hx} y2={-hy} stroke={angleLock && drag?.i === i ? ERROR : "var(--chakra-colors-fg-subtle)"} strokeWidth={unit * 0.2} />
                     {/* Manegador en rombe (com a Figma). */}
                     <rect
                       x={hx - unit * 0.9}
@@ -95,7 +97,7 @@ export function ProfileCanvas({ shape, pointer, sample, closed, bad, unit, minor
                       width={unit * 1.8}
                       height={unit * 1.8}
                       transform={`rotate(45 ${hx} ${-hy})`}
-                      fill="#fff"
+                      fill={FILL}
                       stroke={HANDLE}
                       strokeWidth={unit * 0.3}
                       style={{ cursor: "grab" }}
@@ -111,7 +113,7 @@ export function ProfileCanvas({ shape, pointer, sample, closed, bad, unit, minor
           const smooth = !!(n.in || n.out)
           const s = unit * (sel === i ? 1.9 : 1.5)
           const common = {
-            fill: sel === i ? HANDLE : drawing && i === 0 && nodes.length >= 3 ? "#16a34a" : "#fff",
+            fill: sel === i ? HANDLE : drawing && i === 0 && nodes.length >= 3 ? "var(--chakra-colors-fg-success)" : FILL,
             stroke: HANDLE,
             strokeWidth: unit * 0.35,
             style: { cursor: drawing ? (i === 0 ? "pointer" : "default") : tool === "erase" ? "not-allowed" : tool === "bend" ? "pointer" : "grab" },

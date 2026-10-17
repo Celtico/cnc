@@ -1,10 +1,11 @@
-import { Box, Button, HStack, IconButton, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { Box, Button, HStack, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { LuPlus, LuTrash2 } from "react-icons/lu"
 import { FormRow } from "../../../components/FormRow"
 import { NumberField } from "../../../components/NumRow"
 import { cupRel, relV } from "../../../core/model/hardwareEdit"
 import { evalExpr, type HardwareItem, type HardwareTarget } from "../../../core/model"
 import { fmt } from "./format"
+import { IconAction } from "../../../components/IconAction"
 
 const TAG_LABEL: Record<string, string> = { hinge: "Cassoleta", "hinge-screw": "Cargol", "hinge-dowel": "Espiga", plate: "Placa", leg: "Cargol", handle: "Forat" }
 const num = (e: number | string, vars: Record<string, number>) => {
@@ -81,9 +82,9 @@ export function OpsEditor({ item, target, onChange }: { item: HardwareItem; targ
                 <Text fontSize="sm" fontWeight="medium">
                   {name}
                 </Text>
-                <IconButton aria-label={`Treure ${name}`} title="Treure el forat" size="2xs" variant="ghost" colorPalette="red" onClick={() => onChange({ ...target, ops: target.ops.filter((_, i) => i !== k) })}>
+                <IconAction label={`Eliminar ${name}`} tip="Eliminar el forat" size="2xs" variant="ghost" colorPalette="red" onClick={() => onChange({ ...target, ops: target.ops.filter((_, i) => i !== k) })}>
                   <LuTrash2 />
-                </IconButton>
+                </IconAction>
               </HStack>
               <SimpleGrid columns={2} gap={2}>
                 <NumberField label="Al llarg" ariaLabel={`${name}: al llarg`} value={num(op.u, vars)} min={-300} max={300} step={0.5} onChange={(x) => setOp(k, { u: x })} />

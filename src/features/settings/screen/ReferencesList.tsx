@@ -1,7 +1,9 @@
-import { Badge, IconButton, Input, Stack, Text } from "@chakra-ui/react"
+import { Badge, Input, Stack, Text } from "@chakra-ui/react"
 import { useContext, useEffect, useState } from "react"
 import { LuArrowDown, LuArrowUp, LuCopy, LuEye, LuEyeOff, LuScan, LuTrash2 } from "react-icons/lu"
 import { MasterDetail } from "../../../components/MasterDetail"
+import { ConfirmDialog } from "../../../components/ConfirmDialog"
+import { IconAction } from "../../../components/IconAction"
 import { SettingsGroup } from "../../../components/SettingsGroup"
 import { ChoiceChips, FormRow } from "../../../components/FormRow"
 import { NumRow } from "../../../components/NumRow"
@@ -35,6 +37,7 @@ export function ReferencesList({ refs, onChange }: { refs: RefPreset[]; onChange
     onChange(next)
     setSel(copy.id)
   }
+  const [deleting, setDeleting] = useState<RefPreset | null>(null)
   const q = query.trim().toLowerCase()
   const shown = refs.filter((r) => !q || r.name.toLowerCase().includes(q))
   const i = refs.findIndex((r) => r.id === sel)
@@ -44,6 +47,19 @@ export function ReferencesList({ refs, onChange }: { refs: RefPreset[]; onChange
     if (sel !== null && i < 0) setSel(null)
   }, [sel, i, setSel])
   return (
+    <>
+    <ConfirmDialog
+      open={deleting !== null}
+      title={`Eliminar «${deleting?.name ?? ""}»?`}
+      body="Surt de la llista d'objectes de referència. No es pot desfer."
+      confirmLabel="Eliminar"
+      onConfirm={() => {
+        if (!deleting) return
+        onChange(refs.filter((x) => x.id !== deleting.id))
+        setSel(null)
+      }}
+      onClose={() => setDeleting(null)}
+    />
     <MasterDetail
       head={
         <Stack gap={3}>
@@ -77,6 +93,8 @@ export function ReferencesList({ refs, onChange }: { refs: RefPreset[]; onChange
       onSelect={setSel}
       query={query}
       onQuery={setQuery}
+      searchPlaceholder="Cercar objectes de referència…"
+      searchLabel="Cercar objectes de referència"
       addLabel="Afegir"
       onAdd={add}
       backLabel="Objectes de referència"
@@ -89,32 +107,23 @@ export function ReferencesList({ refs, onChange }: { refs: RefPreset[]; onChange
             summary={r.builtin ? "Objecte inicial (es pot amagar, no eliminar)" : "Objecte teu"}
             actions={
               <>
-                <IconButton aria-label="Pujar a la llista" size="xs" variant="ghost" disabled={i === 0} onClick={() => move(i, -1)}>
+                <IconAction label="Pujar a la llista" size="xs" variant="ghost" disabled={i === 0} onClick={() => move(i, -1)}>
                   <LuArrowUp />
-                </IconButton>
-                <IconButton aria-label="Baixar a la llista" size="xs" variant="ghost" disabled={i === refs.length - 1} onClick={() => move(i, 1)}>
+                </IconAction>
+                <IconAction label="Baixar a la llista" size="xs" variant="ghost" disabled={i === refs.length - 1} onClick={() => move(i, 1)}>
                   <LuArrowDown />
-                </IconButton>
-                <IconButton aria-label="Duplicar objecte" size="xs" variant="ghost" onClick={() => duplicate(i)}>
+                </IconAction>
+                <IconAction label="Duplicar l'objecte" size="xs" variant="ghost" onClick={() => duplicate(i)}>
                   <LuCopy />
-                </IconButton>
+                </IconAction>
                 {r.builtin ? (
-                  <IconButton aria-label={r.hidden ? "Mostrar objecte" : "Amagar objecte"} size="xs" variant="ghost" onClick={() => update(i, { hidden: !r.hidden })}>
+                  <IconAction label={r.hidden ? "Mostrar l'objecte" : "Amagar l'objecte"} size="xs" variant="ghost" onClick={() => update(i, { hidden: !r.hidden })}>
                     {r.hidden ? <LuEyeOff /> : <LuEye />}
-                  </IconButton>
+                  </IconAction>
                 ) : (
-                  <IconButton
-                    aria-label="Eliminar objecte"
-                    size="xs"
-                    variant="ghost"
-                    colorPalette="red"
-                    onClick={() => {
-                      onChange(refs.filter((_, k) => k !== i))
-                      setSel(null)
-                    }}
-                  >
+                  <IconAction label="Eliminar l'objecte" size="xs" variant="ghost" colorPalette="red" onClick={() => setDeleting(r)}>
                     <LuTrash2 />
-                  </IconButton>
+                  </IconAction>
                 )}
               </>
             }
@@ -141,5 +150,6 @@ export function ReferencesList({ refs, onChange }: { refs: RefPreset[]; onChange
         )
       }
     />
+    </>
   )
 }

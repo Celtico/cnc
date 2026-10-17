@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { fmtNum } from "../../lib/format"
 
 /**
  * **Electrodomèstics** (v46, `docs/electrodomestic/README.md`; per petició de l'usuari, 2026-10-15: «posa'ls com a
@@ -179,10 +180,9 @@ export const applianceFronts = (a: Appliance): number => (a.front?.lower && a.fr
 /** «600–604», «≥ 550», «≤ 765» (un rang, en text). */
 export function rangeText(r: Range | undefined, unit = "mm"): string {
   if (!r || (r.min === undefined && r.max === undefined)) return "—"
-  const n = (v: number) => String(Math.round(v * 10) / 10).replace(".", ",")
   const u = unit ? ` ${unit}` : ""
-  if (r.min !== undefined && r.max !== undefined) return r.min === r.max ? `${n(r.min)}${u}` : `${n(r.min)}–${n(r.max)}${u}`
-  return r.min !== undefined ? `≥ ${n(r.min)}${u}` : `≤ ${n(r.max!)}${u}`
+  if (r.min !== undefined && r.max !== undefined) return r.min === r.max ? `${fmtNum(r.min, 1)}${u}` : `${fmtNum(r.min, 1)}–${fmtNum(r.max, 1)}${u}`
+  return r.min !== undefined ? `≥ ${fmtNum(r.min, 1)}${u}` : `≤ ${fmtNum(r.max!, 1)}${u}`
 }
 
 /** El valor és dins del rang (amb mig mil·límetre de marge). */

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { pointInRing, signedArea, subtractRects } from "./region2d"
+import { pointInPolygon, signedArea } from "../model/polygon"
+import { subtractRects } from "./region2d"
 
 describe("subtractRects", () => {
   it("sense rectangles: el rectangle sencer, antihorari", () => {
@@ -35,8 +36,8 @@ describe("subtractRects", () => {
     expect(polys).toHaveLength(1)
     expect(polys[0]!.outer).toHaveLength(8)
     expect(signedArea(polys[0]!.outer)).toBeCloseTo(5000 - 300)
-    expect(pointInRing([15, 15], polys[0]!.outer)).toBe(false)
-    expect(pointInRing([50, 15], polys[0]!.outer)).toBe(true)
+    expect(pointInPolygon([15, 15], polys[0]!.outer)).toBe(false)
+    expect(pointInPolygon([50, 15], polys[0]!.outer)).toBe(true)
   })
 
   it("dos rectangles interiors: dos bucles interiors", () => {

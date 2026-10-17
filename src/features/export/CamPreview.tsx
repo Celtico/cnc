@@ -4,7 +4,7 @@ import { LuMap, LuRotate3D } from "react-icons/lu"
 import { ChoiceChips } from "../../components/FormRow"
 import type { Machine } from "../../core/model"
 import { usePersistentFlag } from "../../lib/usePersistentFlag"
-import { camSheetView, fmtMm } from "./camDrawing"
+import { camSheetView} from "./camDrawing"
 import { camInspect, type CamInspection, type CamTarget } from "./camInspect"
 import { CamOpList } from "./CamOpList"
 import { CamSheetSvg, type Zoom } from "./CamSheetSvg"
@@ -13,6 +13,7 @@ import { CamSimControls } from "./CamSimControls"
 import { CamToolLegend } from "./CamToolLegend"
 import { useCamSim } from "./useCamSim"
 import { useElementWidth } from "./useElementWidth"
+import { fmtNum } from "../../lib/format"
 
 /** La simulació 3D (three) es carrega en triar «3D»: no és al bloc d'Exportar. */
 const CamSim3D = lazy(() => import("./CamSim3D"))
@@ -95,9 +96,9 @@ export function CamPreview({ sheets, machine }: { sheets: CamSheet[]; machine?: 
             {sheet.file}
           </Text>
           <Text fontSize="xs" color="fg.muted">
-            {p.workpiece ? `${p.workpiece.name} · ${fmtMm(L)} × ${fmtMm(W)} × ${fmtMm(p.workpiece.T)} mm · ` : ""}
+            {p.workpiece ? `${p.workpiece.name} · ${fmtNum(L)} × ${fmtNum(W)} × ${fmtNum(p.workpiece.T)} mm · ` : ""}
             {p.parts.length} {p.parts.length === 1 ? "peça" : "peces"} · {p.ops.length} {p.ops.length === 1 ? "operació" : "operacions"}
-            {p.edgeTrim !== undefined ? ` · marge ${fmtMm(p.edgeTrim)} mm` : ""}
+            {p.edgeTrim !== undefined ? ` · marge ${fmtNum(p.edgeTrim)} mm` : ""}
           </Text>
         </Stack>
         <HStack gap={4} wrap="wrap" rowGap={2}>

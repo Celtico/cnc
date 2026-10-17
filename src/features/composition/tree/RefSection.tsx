@@ -112,7 +112,7 @@ export function RefSection({ tree, isObject, onAddBlank }: { tree: TreeCtx; isOb
             dnd={dnd.dnd("ref", r.id)}
             flags={flagsOf("references", r)}
             menu={
-              <TreeRowMenu label={`Opcions de «${r.name}»`}>
+              <TreeRowMenu label={`Accions de «${r.name}»`}>
                 {!isObject && (
                   <Menu.Item
                     value="dup"

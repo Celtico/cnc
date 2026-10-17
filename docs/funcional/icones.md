@@ -11,7 +11,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Navegació | Mobles (el cub: un moble) · Ambients · Objectes | `LuBox` · `LuHouse` · `LuSofa` |
 | Navegació | Editor · Peces · Nesting / taulers · Exportar | `LuDraftingCompass` · `LuList` · `LuLayoutGrid` · `LuDownload` |
 | Navegació | Tornar (‹ a les barres) · Plegar/desplegar menú · Preferències | `LuChevronLeft` · `LuPanelLeftClose` / `LuPanelLeftOpen` · `LuSettings` |
-| Tipus de moble («+ Nou moble» i targetes) | Moble · Cuina · Armari · Taula · Peces lliures (`lliure`, d'abans) · Objecte | `LuBox` · `LuCookingPot` · `LuContainer` · `LuTable` · `LuPuzzle` · `LuSofa` |
+| Tipus de moble (targetes; «Nou moble» no en té menú) | Moble · Cuina · Armari · Taula · Peces lliures (`lliure`, d'abans) · Objecte | `LuBox` · `LuCookingPot` · `LuContainer` · `LuTable` · `LuPuzzle` · `LuSofa` |
 | Zones | Dividir en vertical (divisor vertical, zones esquerra/dreta) | `LuSquareSplitHorizontal` |
 | Zones | Dividir en horitzontal (travesser, zones dalt/baix) | `LuSquareSplitVertical` |
 | Zones | Divisió vertical · horitzontal (un compartiment porta la icona del seu contingut, igual a l'arbre, a la capçalera i a «Front»: `composition/zoneIcons.ts`) | `LuColumns2` · `LuRows2` |
@@ -26,11 +26,13 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Front | Recobrents (fronts) | `LuSquareStack` |
 | Forma | Rectangle · Arrodonit · Oval (tauler de taula) · Efecte obstacle | `LuRectangleHorizontal` · `LuSquircle` · `LuCircle` · `LuShield` |
 | Inspector | Mides · Caixa (base, fons, tapa, laterals, estil dels fronts i folgances) · Portes (del mòdul; com el Front de la porta) · Materials · Unió (l'espiga del mòdul; la de la categoria Unions) · Ferratges (inspector de la peça lliure, Preferències i visor; no al mòdul) · Front · Pare | `LuMoveDiagonal` · `LuFrame` · `LuDoorClosed` · `LuPalette` · `LuBolt` · `LuWrench` · `LuDoorClosed` · `LuArrowUp` |
-| Inspector | Base: Directe a terra · Sòcol · Potes (la de la categoria Potes, no la Taula) · Sense base | `LuArrowDownToLine` · `LuPanelBottom` · `LuFootprints` · `LuSquareDashedBottom` |
+| Inspector | Suport: Directe a terra · Sòcol · Potes vistes (la de la categoria Potes, no la Taula) | `LuArrowDownToLine` · `LuPanelBottom` · `LuFootprints` |
+| Inspector | Base: Sencera · Sense base | `LuPanelBottom` · `LuSquareDashedBottom` |
 | Inspector | Fons en ranura · Cargolat darrere · Encastat · Sense fons | `LuLayers2` · `LuDrill` · `LuInspectionPanel` · `LuSquareDashed` |
 | Inspector | Resum del moble · Suport general · Tipus del mòdul · Posició | `LuBox` · `LuPanelBottom` · el del tipus (`LuBox` moble, `LuRefrigerator` electrodomèstic) · `LuMove` |
-| Inspector | Grup (peces lliures) · Enganxada (a un mòdul, al terra / a la paret) · CNC de la peça (la de Màquina CNC) | `LuGroup` · `LuLink` · `LuFactory` |
-| Forma | Forma a mida / perfil · Cilindre (la caixa, `LuBox`) | `LuSpline` · `LuCylinder` |
+| Inspector | Grup (peces lliures) · Enganxada (a un mòdul, al terra / a la paret) · CNC de la peça (la de Màquina CNC) · Triats (selecció múltiple, editor i ambients) | `LuGroup` · `LuLink` · `LuFactory` · `LuListChecks` |
+| Forma | Objecte de referència: Caixa · Cilindre · Perfil · Forma lliure · Relleu d'imatge | `LuBox` · `LuCylinder` · `LuSpline` · `LuShapes` · `LuImage` |
+| Composició | «+» d'Objectes de referència › «Per fresar una peça»: Forma lliure · Relleu d'imatge… · En blanc… | `LuShapes` · `LuImage` · `LuPlus` |
 | Render | Qualitat · Càmera · Escena · Llums · Sol · Cel · Llum (materials que fan llum) · Imatge | `LuGauge` · `LuCamera` · `LuHouse` · `LuLightbulb` · `LuSun` · `LuCloudSun` · `LuLamp` · `LuImage` |
 | Inspector | Anterior · Següent · Accions de la selecció (menú) | `LuChevronLeft` · `LuChevronRight` · `LuEllipsis` |
 | Preferències | Tema (dia/nit/sistema) · Color principal | `LuSunMoon` (`LuSun` · `LuMoon` · `LuMonitor`) · `LuCheck` a la mostra triada |
@@ -45,7 +47,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Ferratges | Col·locat a mà (llista de l'inspector): Editar · Duplicar · Eliminar | `LuPencil` · `LuCopy` · `LuTrash2` |
 | Ferratges | Seccions de l'editor: General · Importat del fabricant (només els ja importats) · Plànols i documents · Placa · Mides · Quantitat per alçada · Distància entre forats · Mecanitzats | `LuInfo` · `LuUpload` · `LuFileText` · `LuSquareDot` · `LuMoveDiagonal` · `LuListOrdered` · `LuRuler` · `LuCircleDot` |
 | Preferències | Visor 3D (els materials per defecte als mòduls nous porten la de Materials, `LuPalette`) | `LuLampFloor` |
-| Fitxer | Desar com a fitxer (`.moble`, també els ambients) · Obrir fitxer (Mobles, Objectes, Ambients) · Pujar un fitxer (preferències) | `LuSave` · `LuFolderOpen` · `LuUpload` |
+| Fitxer | Desar com a fitxer… (`.moble`, també els ambients) · Obrir fitxer (Mobles, Objectes, Ambients) · Pujar un fitxer (preferències) | `LuSave` · `LuFolderOpen` · `LuUpload` |
 | Models 3D | Triar fitxers… · Triar carpeta… (importar un model) · Afegir les textures a Materials | `LuFileUp` · `LuFolderOpen` · `LuPalette` |
 | Editor | Estructura · Propietats · Opcions de vista | `LuListTree` · `LuSlidersHorizontal` · `LuSlidersVertical` |
 | Assistent IA | Assistent (pestanya de l'Editor i pàgina de Preferències) · Clau de l'API · Provar la clau | `LuMessageSquare` · `LuKeyRound` · `LuPlugZap` |
@@ -69,9 +71,9 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Materials | Categories de la llista: Taulers · Fons · Corian · Simulació | `LuLayers3` · `LuLayers2` · `LuGem` · `LuSprayCan` |
 | Màquines | Màquina CNC (pàgina, grups del detall i export Maestro) · Per defecte · Triar carpeta… · Triar fitxers… | `LuFactory` · `LuStar` · `LuFolderOpen` · `LuFileUp` |
 | Màquines | Regles de mecanitzat · Distribució dels taulers (girar peces) · Vista CAM | `LuRoute` · `LuRotateCw` · `LuMonitorCog` |
-| Materials | Posar una foto / mapa (relleu, brillantor) · Carregar joc de textures… · Carpeta… | `LuImagePlus` · `LuFileUp` · `LuFolderOpen` |
+| Materials | Posar una foto / mapa (relleu, brillantor) · Carregar conjunt de textures… · Carpeta… | `LuImagePlus` · `LuFileUp` · `LuFolderOpen` |
 | Materials | Seccions de l'editor: Aspecte · Fabricació · Per defecte als mòduls nous | `LuSwatchBook` · `LuFactory` · `LuStar` |
 | Editor de formes | Selecció (node) · Arrodonir la punta · Com funciona (ajuda) | `LuMousePointer2` · `LuSquircle` · `LuCircleHelp` |
 
-Les vistes Davant, Darrere, Esquerra, Dreta i Dalt van amb **text**, sense icona (no hi ha vista «3D»: és «Enquadrar»). Compte: a Lucide, `square-split-horizontal`
+Les vistes (`VIEW_BUTTONS`, `ViewerToolbar.tsx`) són **només icona** (el nom, al tooltip): 3D `LuBox` · Davant `LuSquare` · Darrere `LuSquareDashed` · Esquerra `LuPanelLeft` · Dreta `LuPanelRight` · Dalt `LuPanelTop`. Compte: a Lucide, `square-split-horizontal`
 té la línia **vertical**. Per això és la de "dividir en vertical".

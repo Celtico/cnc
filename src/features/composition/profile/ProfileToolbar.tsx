@@ -1,12 +1,13 @@
-import { Button, HStack, IconButton } from "@chakra-ui/react"
+import { Button, HStack } from "@chakra-ui/react"
 import { useMemo } from "react"
 import { LuEraser, LuMousePointer2, LuPenTool, LuSpline, LuX } from "react-icons/lu"
 import { sampleProfile, type bounds, type PNode } from "../../../core/model"
 import { segGroup, segItem } from "../../../components/segmented"
 import { UndoRedo } from "../../../components/UndoRedo"
 import { PRESETS } from "../profilePresets"
-import { r1 } from "./profileGeometry"
 import type { ProfileShape } from "./useProfileShape"
+import { roundTo } from "../../../lib/format"
+import { IconAction } from "../../../components/IconAction"
 
 /** Eines (Moure, Ploma, Corbar, Esborrar), desfer/refer i les formes de partida. `b`: la mida de la forma d'ara. */
 export function ProfileToolbar({ shape, b }: { shape: ProfileShape; b: ReturnType<typeof bounds> }) {
@@ -21,7 +22,7 @@ export function ProfileToolbar({ shape, b }: { shape: ProfileShape; b: ReturnTyp
               ["edit", "Moure", LuMousePointer2, "Arrossega nodes i manegadors"],
               ["pen", "Ploma", LuPenTool, "Dibuixa una forma nova node a node"],
               ["bend", "Corbar", LuSpline, "Arrossega un costat per corbar-lo; clic a un node el fa suau o cantonada"],
-              ["erase", "Esborrar", LuEraser, "Clic a un node per treure'l"],
+              ["erase", "Esborrar", LuEraser, "Clic a un node per eliminar-lo"],
             ] as const
           ).map(([id, label, Icon, title]) => (
             <Button
@@ -48,20 +49,19 @@ export function ProfileToolbar({ shape, b }: { shape: ProfileShape; b: ReturnTyp
       </HStack>
       <HStack gap={1} wrap="wrap">
         {PRESETS.map((p) => (
-          <IconButton
+          <IconAction
             key={p.id}
             size="xs"
             variant="ghost"
-            title={`Començar amb: ${p.label}`}
-            aria-label={`Començar amb: ${p.label}`}
+            label={`Començar amb: ${p.label}`}
             disabled={drawing}
             onClick={() => {
-              setNodes(p.make(Math.max(50, r1(b.x1 - b.x0)), Math.max(50, r1(b.y1 - b.y0))))
+              setNodes(p.make(Math.max(50, roundTo(b.x1 - b.x0, 1)), Math.max(50, roundTo(b.y1 - b.y0, 1))))
               setSel(null)
             }}
           >
             <PresetIcon make={p.make} />
-          </IconButton>
+          </IconAction>
         ))}
       </HStack>
     </HStack>

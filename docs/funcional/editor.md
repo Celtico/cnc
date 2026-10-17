@@ -36,7 +36,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   (`LuPanelLeftClose/Open` · `LuPanelRightClose/Open`). L'app ocupa just la finestra; cada panell té la seva barra de
   desplaçament fina amb lloc reservat (`scrollbarGutter: stable`). **Mòbil**: visor a dalt i pestanyes `Estructura` ·
   `Propietats` (triar a l'arbre porta a Propietats); «Ampliar el visor».
-- **Una sola selecció** (`Selection`), sincronitzada entre arbre, 3D i alçat. **Maj + clic** (per decisió de l'usuari, 2026-10-14, com Figma i el Finder): **a l'arbre, el tram** del darrer triat a aquest, del mateix tipus i en l'ordre de l'arbre (`treeOrder`, `rangeAnchor`; també als Ambients, per apartat, `sectionOrder`); Maj + clic a un que ja és triat el treu, només aquell; **⌘/Ctrl + clic** a l'arbre, i Maj o ⌘/Ctrl + clic al 3D i al plànol, afegeix o treu peces lliures, models 3D, objectes de referència i **mòduls** (els mòduls es mouen pel camí de la nansa, `moveModuleBy`; Material = el del cos, només taulers; Mides = les del cos; s'eliminen amb `removeModule`; també entren al Grup de tots) a una **selecció múltiple** (`{ kind: "multi", items }`, `MultiItem`, `toggleMulti`; es llegeix la tecla del `pointerdown`): una caixa amb el gizmo els mou tots junts (`CabinetViewer selectedSet`/`onMoveSet`, `moveMultiBy`), també les fletxes del teclat; Supr els elimina (`removeMulti`); l'inspector (`MultiInspector`; **un grup triat fa servir el mateix inspector** amb els seus elements, per decisió de l'usuari, 2026-10-14, també als Ambients amb el nom editable) diu la posició de tots, les **propietats comunes** (el valor si tots el tenen igual, si no «Diversos» i el que hi posis va a tots: Material —`setMultiMaterial`, a les peces com el seu inspector—; amb un sol tipus, Mides —Ample · Alt · Gruix o Fondària, `setMultiSize`— i, als models, el Gir, `setMultiRot`), **Alineació** (com Figma: per X, Y i Z, a l'inici, al mig o al final de la caixa de tots, `alignMulti`; amb tres o més, «Repartir» amb el mateix espai, `distributeMulti`; amb dos o més, «Espai entre ells» (mm, a dalt) i el darrer botó de cada fila els posa a aquest espai l'un de l'altre, `spaceMulti`; icones `LuAlign…`), el **Grup** de tots (Sense grup · els que hi ha · «+ Grup nou», com el d'una peça; `groupMulti`, `ungroupMulti`; dreceres ⌘G grup nou i ⇧⌘G fora del grup, també amb una peça, un model, un objecte de referència o un grup triats; **els objectes de referència també fan grups**, per decisió de l'usuari, 2026-10-16: `RefObject.group`, plegats a l'arbre com els models); **arrossegar a l'arbre** una fila triada arrossega tots els triats: sobre un grup hi entren, al costat d'un element s'hi posen i n'agafen el grup, i a «Treure del grup» en surten (`StructureTree` `drag.multi`), la llista (tocar-ne un el tria sol) i «Eliminar». Amb algun bloquejat, no es mouen. Controls nous: decideix a quin nivell pertanyen
+- **Una sola selecció** (`Selection`), sincronitzada entre arbre, 3D i alçat. **Maj + clic** (per decisió de l'usuari, 2026-10-14, com Figma i el Finder): **a l'arbre, el tram** del darrer triat a aquest, del mateix tipus i en l'ordre de l'arbre (`treeOrder`, `rangeAnchor`; també als Ambients, per apartat, `sectionOrder`); Maj + clic a un que ja és triat el treu, només aquell; **⌘/Ctrl + clic** a l'arbre, i Maj o ⌘/Ctrl + clic al 3D i al plànol, afegeix o treu peces lliures, models 3D, objectes de referència i **mòduls** (els mòduls es mouen pel camí de la nansa, `moveModuleBy`; Material = el del cos, només taulers; Mides = les del cos; s'eliminen amb `removeModule`; també entren al Grup de tots) a una **selecció múltiple** (`{ kind: "multi", items }`, `MultiItem`, `toggleMulti`; es llegeix la tecla del `pointerdown`): una caixa amb el gizmo els mou tots junts (`CabinetViewer selectedSet`/`onMoveSet`, `moveMultiBy`), també les fletxes del teclat; Supr els elimina (`removeMulti`); l'inspector (`MultiInspector`; **un grup triat fa servir el mateix inspector** amb els seus elements, per decisió de l'usuari, 2026-10-14, també als Ambients amb el nom editable) diu la posició de tots, les **propietats comunes** (el valor si tots el tenen igual, si no «Diversos» i el que hi posis va a tots: Material —`setMultiMaterial`, a les peces com el seu inspector—; amb un sol tipus, Mides —Amplada · Alçada · Gruix o Fondària, `setMultiSize`— i, als models, el Gir, `setMultiRot`), **Alineació** (com Figma: per X, Y i Z, a l'inici, al mig o al final de la caixa de tots, `alignMulti`; amb tres o més, «Repartir» amb el mateix espai, `distributeMulti`; amb dos o més, «Espai entre ells» (mm, a dalt) i el darrer botó de cada fila els posa a aquest espai l'un de l'altre, `spaceMulti`; icones `LuAlign…`), el **Grup** de tots (Sense grup · els que hi ha · «+ Grup nou», com el d'una peça; `groupMulti`, `ungroupMulti`; dreceres ⌘G grup nou i ⇧⌘G fora del grup, també amb una peça, un model, un objecte de referència o un grup triats; **els objectes de referència també fan grups**, per decisió de l'usuari, 2026-10-16: `RefObject.group`, plegats a l'arbre com els models); **arrossegar a l'arbre** una fila triada arrossega tots els triats: sobre un grup hi entren, al costat d'un element s'hi posen i n'agafen el grup, i a «Treure del grup» en surten (`StructureTree` `drag.multi`), la llista (tocar-ne un el tria sol) i «Eliminar». Amb algun bloquejat, no es mouen. Controls nous: decideix a quin nivell pertanyen
   i posa'ls a l'inspector d'aquell nivell.
 - **Estructura** (`composition/StructureTree.tsx`): moble › mòduls (agrupats per fila) › compartiments, peces lliures,
   objectes de referència i models 3D. L'arrel de cada mòdul surt com a **«Interior · …»** (`zoneLabel(z, { root })`; «Interior ·
@@ -66,7 +66,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   a Peces, Nesting, Exportar, miniatures i AR; **bloquejat** = no es mou (sense gizmo ni nansa, fletxes no; als Ambients,
   `keepLocked` torna la posició a qualsevol canvi i `mergeHidden` hi torna els amagats). Surten en passar per sobre, sempre
   si són actius i a les pantalles tàctils. Test `model/viewFlags.test.ts`.
-  Menú ⋯ per afegir/duplicar/moure/eliminar (manté «Moure amunt/avall», «Moure a l'esquerra/dreta»). **Arrossegar per
+  Menú ⋯ per afegir/duplicar/moure/eliminar (`TreeRowMenu` sobre `ActionsMenu`: tooltip «Accions», `aria-label` «Accions de
+  «x»»; als mòduls, «Moure a l'esquerra» / «Moure a la dreta»). **Arrossegar per
   ordenar** (`reorderModule`, `reorderRef`): mòduls dins de la seva fila i objectes; una línia marca on cau. Arrossegar una
   peça lliure, un model o un **mòdul** sobre la fila d'un grup l'hi posa; al costat d'un altre del seu tipus n'agafa el grup
   (també els mòduls, `reorderModule`, des del 2026-10-15: abans un mòdul deixat fora del grup s'hi quedava); la zona
@@ -109,7 +110,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
       **en subgrups plegables** (per decisió de l'usuari, 2026-10-16), cada un amb les seves opcions i una insígnia amb el
       que hi ha: **Base** (suport, penjadors, base, llum a sota) · **Fons** (fons, ranura o retirada) · **Tapa** (tapa,
       ranura d'aire, tauler de taula) · **Laterals** (laterals, parets, cantonades) · **Fronts** (estil, folgances,
-      retranqueig dels prestatges); el que l'aparell fixa no surt.
+      retirada dels prestatges); el que l'aparell fixa no surt.
       a dalt, si el mòdul és un electrodomèstic, **una nota** amb el que fixa l'aparell (`applianceCarcass`, «Rentaplats:
       directe a terra, sense base, sense tapa i sense fons. Ho demana l'aparell»; les files fixes no surten) i les opcions
       del front de moble (`ApplianceFields`: Front, Material del front, Obre, Sòcol, Tirador); al nínxol de terra, els
@@ -124,7 +125,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
       del fons** (encastat), tapa, laterals, parets, cantonades i, al final, el que és de tots els fronts del mòdul:
       **Estil dels fronts** (Recobrents / Encastats) i Folgança front–cos si hi ha algun front que es fa (un front fix
       també) · Folgança entre fronts amb dues portes, dos calaixos o un front recobrent al costat d'un divisor ·
-      Retranqueig dels prestatges amb prestatges que es retiren o una tira LED (`frontOptionsUse`; totes amb «Com a
+      Retirada dels prestatges amb prestatges que es retiren o una tira LED (`frontOptionsUse`; totes amb «Com a
       Preferències» quan coincideixen amb Preferències › Folgances per defecte i un botó per tornar-hi). Insígnia
       Recobrents/Encastats si hi ha estil.
     - **Portes** (`mod-doors`, `LuDoorClosed`, `ModuleDoorsSection`; per decisió de l'usuari, 2026-10-08): només amb
@@ -186,7 +187,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     «Rentaplats», «Frigorífic»…; vegeu Model › Zones › Electrodomèstic) · Front ·
     **Opcions de l'interior** (`LuRows3`; abans «Prestatges i accessoris», reanomenada per decisió de l'usuari, 2026-10-16;
     surt sempre menys amb un front fix o amb calaixos; insígnia «3 · Barra · LED · 2 calaixos»:
-    per grups plegables com les subseccions de la Caixa (per decisió de l'usuari, 2026-10-17: **Prestatges** `zone-shelves-shelves`, **Accessoris** `zone-shelves-accessories` i **Calaixos interiors** `zone-shelves-drawers`, cada un amb el seu resum): primer els prestatges —Prestatges (quants) · Regulables · Filera System 32 si li toca, vegeu Mòdul · A ras · Retranqueig (sense a ras; el propi o «com el mòdul», i amb un pistó d'abatible al lateral, prou retirats per no tocar-lo: avís `shelf-strut`) · Gruixuts—, a sota
+    per grups plegables com les subseccions de la Caixa (per decisió de l'usuari, 2026-10-17: **Prestatges** `zone-shelves-shelves`, **Accessoris** `zone-shelves-accessories` i **Calaixos interiors** `zone-shelves-drawers`, cada un amb el seu resum): primer els prestatges —Prestatges (quants) · Regulables · Filera System 32 si li toca, vegeu Mòdul · A ras · Retirada (sense a ras; la pròpia o «com el mòdul», i amb un pistó d'abatible al lateral, prou retirats per no tocar-lo: avís `shelf-strut`) · Gruixuts—, a sota
     els accessoris —Penjar (Barra de penjar) i Llum (Tira LED), interruptor + `HardwarePick` «Com el mòdul»— i, darrere
     d'una porta (la seva o la d'una zona de més amunt), els **calaixos interiors** (`InnerDrawerRows`: Quantitat · Alçada
     de cada calaix · Guia o joc · Retirada del front, 25 per defecte de Preferències › Folgances · Suplement, el gruix del
@@ -207,7 +208,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     sense canviar la geometria (mateixes peces), i després s'aplica el canvi. Després, «Afegir zona» · «Treure la divisió» (i a l'«Interior», «Peces de dins»). Una zona dividida
     (l'«Interior» o una de dins) dona només la Divisió: **cap «Front de tota la zona»** (per decisió de l'usuari,
     2026-10-08: les portes de dalt a baix són a Mòdul › Portes). **L'«Interior» (l'arrel) no té opcions de tots els fronts** (per decisió de l'usuari, 2026-10-08: l'estil, les
-    folgances i el retranqueig són a Mòdul › Caixa i el material dels fronts a Mòdul › Materials; vegeu Mòdul). Un compartiment **tapat** per les portes de
+    folgances i la retirada dels prestatges són a Mòdul › Caixa i el material dels fronts a Mòdul › Materials; vegeu Mòdul). Un compartiment **tapat** per les portes de
     tot el mòdul (`coveringZone`) ensenya «Front · Tapat» sense opcions (diu on són: `UI_PATHS.doors`): el seu front no es
     fa (es conserva) i els prestatges i accessoris de dins sí (`walkBuiltZones`, `visibleZone`). **Una sola paraula per a la precedència** (auditoria C3):
     **«Com el mòdul»** = heretat i **«Còpia pròpia»** = una còpia que no és a la biblioteca tal qual (`INHERITED_LABEL`,
@@ -283,12 +284,12 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     peces: caixa del grup amb el gizmo; el primer clic selecciona el grup i el segon la peça.
   - **Mòduls**: nansa ↔ (`MoveHandle`; als penjats i als de terra lliures, **dues nanses**, ↔ i ↕, cada una mou en un
     sol eix, per decisió de l'usuari, 2026-10-16: «dos marcadors, un per la x i un per la y») uns píxels per sobre de l'aresta de dalt (en un mòdul alt que no hi cap, baixa fins a
-    sota de la barra del visor); **sense els + als costats** (per decisió de l'usuari, 2026-10-08: els mòduls s'afegeixen amb el + de l'arbre; `AddButton`/`onAddModule` queden sense ús); arrossegar-la el mou a la
+    sota de la barra del visor); **sense els + als costats** (per decisió de l'usuari, 2026-10-08: els mòduls s'afegeixen amb el + de l'arbre; `onAddModule` s'ha tret); arrossegar-la el mou a la
     seva fila (`moveModuleBy`: els de la dreta es queden on eren) i, si és penjat, amunt i avall; al terra, de costat i
     endavant/enrere (`dz`); amb Maj, tot el moble (`moveAllBy`). Imant a les vores dels mòduls i dels objectes. Nanses, + i gizmo són malles 3D de mida constant
     (`usePixelScale`), no `Html` de drei (fallaven en muntar-se i desmuntar-se amb React 19), amb `userData.editorOnly` (la
     imatge per al Render no els porta). La nansa surt també a Presentació.
-  - **Posició dels objectes**: camps «↔ De costat X», «↕ Alçada Y», «⤢ Fons Z» (`AxisLabel`, colors com les fletxes;
+  - **Posició dels objectes**: camps «De costat (X)», «Alçada (Y)», «Fondària (Z)» (`components/AxisLabel`, el mateix a peces, models i ambients, amb icona ↔ ↕ ⤢, colors com les fletxes;
     `NumberField.label` accepta un ReactNode). «Al terra» (y = 0) i «A la paret» (z = 0) (`RefObject.onFloor`, `onWall`,
     `anchorRef`, aplicat a l'inspector, a l'arrossegament i a les fletxes; el camp fixat queda desactivat).
   - Teclat: fletxes 1 mm (Maj 10), Re Pàg / Av Pàg per a Z.
@@ -318,8 +319,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   mòdul d'un altre moble queda solta, una illa es duplica al costat i no s'enganxen mòduls a un moble només de peces (`lliure`) o objecte. Ctrl/⌘ D
   en un compartiment fa `duplicateZone`. **Eliminar un mòdul** = `removeModule`: peces enganxades soltes al mateix lloc,
   taulell i sòcol al mòdul més proper del tram (o fora) i forats del taulell seus fora.
-- **Vistes** (per decisió de l'usuari): només **Davant · Darrere · Esquerra · Dreta · Dalt**, botons de text sense estat triat
-  (`CameraViews` a `ViewerControls`, `viewNames.ts`) en un sol lloc, Opcions de vista (ordinador i mòbil). **Sense perspectiva i
+- **Vistes** (per decisió de l'usuari, 2026-10-16): **3D · Davant · Darrere · Esquerra · Dreta · Dalt**, botons d'icona
+  sense text (el nom, al tooltip; `VIEW_BUTTONS` a `features/editor/ViewerToolbar.tsx`, noms a `viewNames.ts`), sempre a
+  baix del 3D, centrats; la triada surt marcada mentre la càmera no es mou. **Sense perspectiva i
   amb fils** (per decisió de l'usuari, 2026-10-14: «que siguin de 0 perspectiva, i els renders amb fils, per poder moure
   la peça seleccionada»): càmera **ortogràfica** d'aquell costat amb el zoom que hi fa cabre el moble (`CameraRig`,
   `OrthographicCamera`; es pot orbitar i fer zoom) i el moble en **línies**: les peces gairebé transparents

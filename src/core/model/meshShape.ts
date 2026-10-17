@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { roundTo } from "../../lib/format"
 
 /**
  * Forma lliure d'un objecte (per decisió de l'usuari, 2026-10-17: «un editor de malla com el de SolidWorks», xShape): una
@@ -7,6 +8,12 @@ import { z } from "zod"
  */
 
 type V3 = [number, number, number]
+
+/** La caixa d'un objecte (mm): cantonada (x, y, z) i mides w × h × d. */
+export type ObjectBox = { x: number; y: number; z: number; w: number; h: number; d: number }
+
+/** Clau d'una aresta (els dos vèrtexs, el menor primer): la mateixa per a a–b i b–a. */
+export const edgeKey = (a: number, b: number): string => (a < b ? `${a}_${b}` : `${b}_${a}`)
 
 export const MeshCageSchema = z.object({
   /** Vèrtexs de la caixa de control, de 0 a 1 dins de la caixa de l'objecte. */
@@ -71,14 +78,13 @@ function catmullClark(v: V3[], f: number[][], crease: [number, number][] = []): 
   const add = (a: V3, b: V3): V3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
   const mul = (a: V3, k: number): V3 => [a[0] * k, a[1] * k, a[2] * k]
   const facePts = f.map((fc) => mul(fc.reduce((s, i) => add(s, v[i]!), [0, 0, 0] as V3), 1 / fc.length))
-  const ek = (a: number, b: number) => (a < b ? `${a}_${b}` : `${b}_${a}`)
-  const sharp = new Set(crease.map(([a, b]) => ek(a, b)))
+  const sharp = new Set(crease.map(([a, b]) => edgeKey(a, b)))
   // Arestes: les cares de cada costat.
   const edges = new Map<string, { a: number; b: number; faces: number[] }>()
   f.forEach((fc, fi) =>
     fc.forEach((a, k) => {
       const b = fc[(k + 1) % fc.length]!
-      const key = ek(a, b)
+      const key = edgeKey(a, b)
       const e = edges.get(key) ?? { a, b, faces: [] }
       e.faces.push(fi)
       edges.set(key, e)
@@ -123,7 +129,7 @@ function catmullClark(v: V3[], f: number[][], crease: [number, number][] = []): 
     fc.forEach((a, i) => {
       const next = fc[(i + 1) % fc.length]!
       const prev = fc[(i - 1 + fc.length) % fc.length]!
-      faces.push([a, edgeIdx.get(ek(a, next))!, c, edgeIdx.get(ek(prev, a))!])
+      faces.push([a, edgeIdx.get(edgeKey(a, next))!, c, edgeIdx.get(edgeKey(prev, a))!])
     })
   })
   const nextCrease: [number, number][] = []
@@ -164,14 +170,13 @@ export function refineCage(cage: MeshCage): MeshCage {
 /** Posa o treu «aresta viva» a les arestes de la caixa que tenen els dos punts triats. */
 export function toggleCrease(cage: MeshCage, ids: readonly number[]): MeshCage {
   const sel = new Set(ids)
-  const ek = (a: number, b: number) => (a < b ? `${a}_${b}` : `${b}_${a}`)
   const edges = new Map<string, [number, number]>()
   for (const fc of cage.f) fc.forEach((a, k) => {
     const b = fc[(k + 1) % fc.length]!
-    if (sel.has(a) && sel.has(b)) edges.set(ek(a, b), [Math.min(a, b), Math.max(a, b)])
+    if (sel.has(a) && sel.has(b)) edges.set(edgeKey(a, b), [Math.min(a, b), Math.max(a, b)])
   })
   if (!edges.size) return cage
-  const cur = new Map((cage.crease ?? []).map(([a, b]) => [ek(a, b), [a, b] as [number, number]]))
+  const cur = new Map((cage.crease ?? []).map(([a, b]) => [edgeKey(a, b), [a, b] as [number, number]]))
   const allOn = [...edges.keys()].every((key) => cur.has(key))
   for (const [key, e] of edges) {
     if (allOn) cur.delete(key)
@@ -185,7 +190,7 @@ export function toggleCrease(cage: MeshCage, ids: readonly number[]): MeshCage {
  * La caixa de control dins de [0, 1] amb la caixa que la conté: després d'estirar punts fora (o d'encongir-la), la caixa
  * de l'objecte (`box`, mm) s'ajusta a la forma i els punts tornen de 0 a 1.
  */
-export function normalizeCage(cage: MeshCage, box: { x: number; y: number; z: number; w: number; h: number; d: number }): { cage: MeshCage; box: { x: number; y: number; z: number; w: number; h: number; d: number } } {
+export function normalizeCage(cage: MeshCage, box: ObjectBox): { cage: MeshCage; box: ObjectBox } {
   const lo: V3 = [Infinity, Infinity, Infinity], hi: V3 = [-Infinity, -Infinity, -Infinity]
   for (const p of cage.v) for (let k = 0; k < 3; k++) {
     lo[k] = Math.min(lo[k]!, p[k]!)
@@ -193,17 +198,15 @@ export function normalizeCage(cage: MeshCage, box: { x: number; y: number; z: nu
   }
   const size = [box.w, box.h, box.d]
   const span = [0, 1, 2].map((k) => Math.max(1e-6, hi[k]! - lo[k]!))
-  const r = (x: number) => Math.round(x * 1e5) / 1e5
-  const rm = (x: number) => Math.round(x * 10) / 10
-  const v = cage.v.map((p) => p.map((x, k) => r((x - lo[k]!) / span[k]!)) as V3)
+  const v = cage.v.map((p) => p.map((x, k) => roundTo((x - lo[k]!) / span[k]!, 5)) as V3)
   return {
     cage: { ...cage, v },
-    box: { x: rm(box.x + lo[0]! * size[0]!), y: rm(box.y + lo[1]! * size[1]!), z: rm(box.z + lo[2]! * size[2]!), w: rm(Math.max(1, span[0]! * size[0]!)), h: rm(Math.max(1, span[1]! * size[1]!)), d: rm(Math.max(1, span[2]! * size[2]!)) },
+    box: { x: roundTo(box.x + lo[0]! * size[0]!, 1), y: roundTo(box.y + lo[1]! * size[1]!, 1), z: roundTo(box.z + lo[2]! * size[2]!, 1), w: roundTo(Math.max(1, span[0]! * size[0]!), 1), h: roundTo(Math.max(1, span[1]! * size[1]!), 1), d: roundTo(Math.max(1, span[2]! * size[2]!), 1) },
   }
 }
 
 /** Els triangles de la forma en coordenades de la composició (mm). */
-export function meshWorldTriangles(o: { x: number; y: number; z: number; w: number; h: number; d: number; mesh?: MeshCage }): [V3, V3, V3][] {
+export function meshWorldTriangles(o: ObjectBox & { mesh?: MeshCage }): [V3, V3, V3][] {
   if (!o.mesh) return []
   const s = subdivide(o.mesh)
   const pts = s.positions.map((p): V3 => [o.x + p[0] * o.w, o.y + p[1] * o.h, o.z + p[2] * o.d])
@@ -249,11 +252,10 @@ export function rasterDepth(tris: [V3, V3, V3][], face: "A" | "B", T: number, st
         if (face === "A" ? z < best[k]! : z > best[k]!) best[k] = z
       }
   }
-  const r = (v: number) => Math.round(v * 100) / 100
   // Per sobre de la cara (negatiu, fins a −T): la vora exacta és on passa per 0 (el 3D la segueix).
-  const d: number[] = Array.from(best, (z) => (Number.isFinite(z) ? r(Math.max(-T, Math.min(T, face === "A" ? T - z : z))) : 0))
+  const d: number[] = Array.from(best, (z) => (Number.isFinite(z) ? roundTo(Math.max(-T, Math.min(T, face === "A" ? T - z : z)), 2) : 0))
   if (!d.some((x) => x > 0.05)) return null
-  return { x0: r(x0), y0: r(y0), nx, ny, d }
+  return { x0: roundTo(x0, 2), y0: roundTo(y0, 2), nx, ny, d }
 }
 
 /** Per a cada vèrtex, el seu simètric respecte del pla del mig en X (x → 1 − x), o ell mateix si és al pla. */
@@ -271,16 +273,15 @@ export function mirrorPairs(cage: MeshCage, tol = 1e-4): number[] {
 export function moveVertices(cage: MeshCage, ids: readonly number[], delta: [number, number, number], mirror?: readonly number[]): MeshCage {
   const v = cage.v.map((p) => [...p] as [number, number, number])
   const done = new Set<number>()
-  const r = (x: number) => Math.round(x * 1e5) / 1e5
   for (const i of ids) {
     if (done.has(i)) continue
     done.add(i)
     const j = mirror?.[i]
     const onPlane = mirror && j === i
-    v[i] = [r(cage.v[i]![0] + (onPlane ? 0 : delta[0])), r(cage.v[i]![1] + delta[1]), r(cage.v[i]![2] + delta[2])]
+    v[i] = [roundTo(cage.v[i]![0] + (onPlane ? 0 : delta[0]), 5), roundTo(cage.v[i]![1] + delta[1], 5), roundTo(cage.v[i]![2] + delta[2], 5)]
     if (mirror && j !== undefined && j !== i && !done.has(j)) {
       done.add(j)
-      v[j] = [r(cage.v[j]![0] - delta[0]), r(cage.v[j]![1] + delta[1]), r(cage.v[j]![2] + delta[2])]
+      v[j] = [roundTo(cage.v[j]![0] - delta[0], 5), roundTo(cage.v[j]![1] + delta[1], 5), roundTo(cage.v[j]![2] + delta[2], 5)]
     }
   }
   return { ...cage, v }
@@ -347,7 +348,7 @@ function sharpBoxCage(): MeshCage {
       const pa = c.v[a]!, pb = c.v[b]!
       // Del mateix cantell del cub: tots dos hi són i comparteixen les dues coordenades de la vora.
       const shared = [0, 1, 2].filter((i) => (pa[i] === 0 || pa[i] === 1) && pa[i] === pb[i]).length
-      const key = a < b ? `${a}_${b}` : `${b}_${a}`
+      const key = edgeKey(a, b)
       if (onEdge(pa) && onEdge(pb) && shared >= 2 && !seen.has(key)) {
         seen.add(key)
         crease.push([a, b])
@@ -402,14 +403,13 @@ export function extrudeFaces(cage: MeshCage, ids: readonly number[], dist: numbe
   }
   // Vores de la zona: arestes que només són d'una cara de la zona (amb el sentit d'aquella cara).
   const count = new Map<string, number>()
-  const ek = (a: number, b: number) => (a < b ? `${a}_${b}` : `${b}_${a}`)
-  for (const fi of region) cage.f[fi]!.forEach((a, k, fc) => count.set(ek(a, fc[(k + 1) % fc.length]!), (count.get(ek(a, fc[(k + 1) % fc.length]!)) ?? 0) + 1))
+  for (const fi of region) cage.f[fi]!.forEach((a, k, fc) => count.set(edgeKey(a, fc[(k + 1) % fc.length]!), (count.get(edgeKey(a, fc[(k + 1) % fc.length]!)) ?? 0) + 1))
   const f = cage.f.map((fc, i) => (region.includes(i) ? fc.map((a) => map.get(a)!) : fc))
   for (const fi of region) {
     const fc = cage.f[fi]!
     fc.forEach((a, k) => {
       const b = fc[(k + 1) % fc.length]!
-      if (count.get(ek(a, b)) !== 1) return
+      if (count.get(edgeKey(a, b)) !== 1) return
       f.push([a, b, map.get(b)!, map.get(a)!])
     })
   }

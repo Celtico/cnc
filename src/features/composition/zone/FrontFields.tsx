@@ -4,7 +4,6 @@ import type { ReactNode } from "react"
 import { FoldItem } from "../../../components/Fold"
 import {
   KIT_CLOSINGS,
-  fmtMm,
   isDrawerKit,
   perDrawerSlides,
   isPushClosing,
@@ -23,6 +22,7 @@ import { ChoiceChips, FormRow } from "../../../components/FormRow"
 import { HardwarePick } from "../HardwarePick"
 import { DrawerHeights, DrawerSlides, KitFields } from "./DrawerFields"
 import { GrillePatternFields } from "../GrillePatternFields"
+import { fmtNum } from "../../../lib/format"
 
 /** El front amb el seu ferratge (una còpia) o, sense, amb el del mòdul (el camp fora). */
 function withHardware<F extends Extract<Front, { kind: "door" | "drawers" | "flap" }>>(front: F, item: HardwareItem | undefined): F {
@@ -217,7 +217,7 @@ export function FrontFields({ front, openRatio, drawerHeights, onChange, hardwar
             })()
             const value = front.handleInset ?? own ?? 0
             return (
-              <FoldItem optionId="zone.front.flap.handleOptions" id="zone-flap-handle" title="Opcions del tirador" icon={LuSettings2} size="sm" badge={`${fmtMm(value)} mm del cantell`}>
+              <FoldItem optionId="zone.front.flap.handleOptions" id="zone-flap-handle" title="Opcions del tirador" icon={LuSettings2} size="sm" badge={`${fmtNum(value)} mm del cantell`}>
                 <NumRow
                   optionId="zone.front.flap.handleInset"
                   label="Des del cantell"
@@ -226,7 +226,7 @@ export function FrontFields({ front, openRatio, drawerHeights, onChange, hardwar
                   max={1000}
                   step={5}
                   onChange={(v) => Number.isFinite(v) && onChange(v === own ? (({ handleInset: _i, ...rest }) => rest)(front) : { ...front, handleInset: v })}
-                  help={`Del cantell que obre a l'eix del tirador. ${own !== undefined ? `La del tirador: ${fmtMm(own)} mm.` : ""} Com a molt, el mig de l'abatible.`}
+                  help={`Del cantell que obre a l'eix del tirador. ${own !== undefined ? `La del tirador: ${fmtNum(own)} mm.` : ""} Com a molt, el mig de l'abatible.`}
                 />
               </FoldItem>
             )
@@ -275,8 +275,8 @@ export function FrontFields({ front, openRatio, drawerHeights, onChange, hardwar
             <>
               <NumRow optionId="zone.front.grille.hatchSize" label="Trapa X" value={front.hatch.x} min={0} max={3000} step={10} onChange={(x) => onChange({ ...front, hatch: { ...front.hatch!, x } })} />
               <NumRow optionId="zone.front.grille.hatchSize" label="Trapa Y" value={front.hatch.y} min={0} max={3000} step={10} onChange={(y) => onChange({ ...front, hatch: { ...front.hatch!, y } })} />
-              <NumRow optionId="zone.front.grille.hatchSize" label="Ample" value={front.hatch.w} min={50} max={600} step={10} onChange={(w) => onChange({ ...front, hatch: { ...front.hatch!, w } })} />
-              <NumRow optionId="zone.front.grille.hatchSize" label="Alt" value={front.hatch.h} min={50} max={600} step={10} onChange={(h) => onChange({ ...front, hatch: { ...front.hatch!, h } })} />
+              <NumRow optionId="zone.front.grille.hatchSize" label="Amplada" value={front.hatch.w} min={50} max={600} step={10} onChange={(w) => onChange({ ...front, hatch: { ...front.hatch!, w } })} />
+              <NumRow optionId="zone.front.grille.hatchSize" label="Alçada" value={front.hatch.h} min={50} max={600} step={10} onChange={(h) => onChange({ ...front, hatch: { ...front.hatch!, h } })} />
             </>
           )}
           {/* Després de Muntatge i Trapa (en depèn: opcions en cascada). */}

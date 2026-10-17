@@ -1,6 +1,6 @@
 import { useEffect, type RefObject } from "react"
-import { r1 } from "./profileGeometry"
 import type { ProfileShape } from "./useProfileShape"
+import { roundTo } from "../../../lib/format"
 
 /**
  * Teclat de l'editor de perfil (obert): Esc i Retorn a la ploma; Supr i fletxes al node seleccionat. Només amb el focus
@@ -33,7 +33,7 @@ export function useProfileKeys(open: boolean, { drawing, sel, nodes, set, remove
       if (!d) return
       e.preventDefault()
       const p = nodes[sel]!
-      set(sel, { ...p, x: r1(p.x + d[0]!), y: r1(p.y + d[1]!) }, { group: `nudge:${sel}` })
+      set(sel, { ...p, x: roundTo(p.x + d[0]!, 1), y: roundTo(p.y + d[1]!, 1) }, { group: `nudge:${sel}` })
     }
     window.addEventListener("keydown", onKey, true)
     return () => window.removeEventListener("keydown", onKey, true)

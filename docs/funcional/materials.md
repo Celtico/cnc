@@ -20,25 +20,25 @@
   periòdic), **Metall** (polit, raspallat, martellejat), **Vidre**, **Color llis i lacat**. Tots menys la foto (`isEditable`).
   Tot a `textures.ts` (canvas; `woodTexture(species, gen)`, `patternTexture(kind, color, grout, opts)`), memòria de 48.
 - **Textures reals** (`Finish.kind = "image"`): foto reduïda a 1024 px JPEG i amplada real (mm); `photoTexture` en mirall o,
-  amb «Sense costures (seamless)» (`Finish.seamless`), repetició normal. `Finish.aspect` fa que l'alçada real sigui
+  amb «Sense costures (repetir sense mirall)» (`Finish.seamless`), repetició normal. `Finish.aspect` fa que l'alçada real sigui
   `tileMm × aspect` (es mesura en triar-la o, a les antigues, en obrir la targeta; abans s'estirava). `faceTexture` creua
-  les repeticions quan la veta va en v (three escala després de girar). Botó visible «Posar una foto de textura» (a més de
-  l'Acabat «Foto (textura)»), amb miniatura, «Canviar la foto» i «Treure-la».
-- **Mapes PBR de l'usuari** (com els jocs de Poly Haven; `settings/TextureMapRows.tsx`, `settings/textureImport.ts`, pur
+  les repeticions quan la veta va en v (three escala després de girar). Botó visible «Posar una foto» (a més de
+  l'Acabat «Foto (textura)»), amb miniatura, «Canviar» i «Treure».
+- **Mapes PBR de l'usuari** (com els conjunts de Poly Haven; `settings/TextureMapRows.tsx`, `settings/textureImport.ts`, pur
   a `core/photo/pbrMaps.ts` amb test): amb l'acabat de foto, sota «Foto» (miniatura de la foto de color) hi ha **Relleu**
   («Mapa de relleu (normal)») i **Brillantor** («Mapa de brillantor (rugositat)»), cadascun amb miniatura, «Posar»/«Canviar»
   i «Treure». Es redueixen a 1024 px com el color; el normal i la rugositat són **dades**: es llegeixen sense gestió de
   color (`createImageBitmap` amb `colorSpaceConversion: "none"`), el normal en JPEG 0,95 (alfa opac) i la rugositat en
   grisos (JPEG 0,9; d'un ARM/ORM, el canal verd). El normal es desa sempre en **OpenGL**: «Invertir el verd (DirectX)»
   (`Finish.normalDx`, només recorda l'interruptor) inverteix el verd en carregar-lo i, si ja n'hi ha un, el torna a
-  invertir. La foto de color en dona el color mitjà (`Finish.color`, STEP). **«Joc PBR»** (a tots els acabats):
-  «Carregar joc de textures…» (diversos fitxers o un `.zip`, `unzip`; el `.zip` de Poly Haven tal com es baixa, en
+  invertir. La foto de color en dona el color mitjà (`Finish.color`, STEP). **«Conjunt PBR»** (a tots els acabats):
+  «Carregar conjunt de textures…» (diversos fitxers o un `.zip`, `unzip`; el `.zip` de Poly Haven tal com es baixa, en
   qualsevol format), «Carpeta…» (`webkitdirectory`) o deixar-los anar a sobre (`pickedFromDrop`). **EXR** (els zips «Blend»
   de Poly Haven porten el normal i la rugositat en EXR): `components/viewer/exrImage.ts` (`EXRLoader` de three a demanda,
   `floatToRgba8`: 0–1 → 8 bits, files de baix a dalt; el normal es queda OpenGL); entre dos fitxers del mateix mapa, la
-  imatge guanya a l'EXR. Un joc de Poly Haven (`<id>_<res>` als noms, `readPickedTextureSet`) pren la mida real de l'API
-  (`/info` `dimensions`; sense connexió, la d'abans). **Biblioteca › «Joc de textures…»** fa un material nou de Simulació
-  amb el nom del joc (el de Poly Haven si hi ha connexió). Es reconeixen pel nom (`classifyTextureFile`/`planTextureSet`: mana l'última paraula que és un
+  imatge guanya a l'EXR. Un conjunt de Poly Haven (`<id>_<res>` als noms, `readPickedTextureSet`) pren la mida real de l'API
+  (`/info` `dimensions`; sense connexió, la d'abans). **Biblioteca › «Conjunt de textures…»** fa un material nou de Simulació
+  amb el nom del conjunt (el de Poly Haven si hi ha connexió). Es reconeixen pel nom (`classifyTextureFile`/`planTextureSet`: mana l'última paraula que és un
   mapa —el nom del material va al davant—; diff/diffuse/albedo/basecolor/color/col → color; nor/normal/nrm, `_gl`/`_dx` →
   relleu i invertir; rough/roughness/rgh i ARM/ORM → brillantor; disp, ao, metal… no es fan servir; el normal OpenGL i la
   rugositat pròpia guanyen). Amb foto de color substitueix foto i mapes (i posa «Sense costures»); sense, només els mapes
@@ -56,13 +56,13 @@
   `MeshStandardMaterial` map + normalMap + roughnessMap amb la mateixa repetició i gir, sRGB només el color. Els `.jpg` no es
   precachegen (~14 MB, vegeu PWA). Les miniatures esperen les fotos (`photoTexturesIdle`).
 - **Els materials de sempre amb la foto** (v7, per decisió de l'usuari: «a tot arreu»; `core/model/photoUpgrade.ts`,
-  `PHOTO_UPGRADES`, nom de sempre → joc, només on la foto és fidel, mirat a `diff.jpg`): Roure massís / xapat, Melamina roure,
+  `PHOTO_UPGRADES`, nom de sempre → conjunt, només on la foto és fidel, mirat a `diff.jpg`): Roure massís / xapat, Melamina roure,
   Revestiment de roure → `oak_veneer_01`; Noguera xapada → `walnut_veneer_02`; Parquet de roure → `wood_floor`; Microciment
   gris → `gravel_concrete_03`; Formigó → `concrete_layers_02`; Pedra calcària → `marble_01`; Pedra de paret →
   `medieval_blocks_03`; Jute → `hessian_230`; Teixit gris → `poly_wool_herringbone`. **Els noms no canvien** (CSV del taller,
   composicions): només l'acabat (gruixos, cantell, veta, categoria i id es queden; una foto pròpia no es toca). Lacats, colors,
   metalls, vidres i el que no té foto fidel (freixe, wengué, estucs clars, teixits de color…) queden procedurals (l'acabat
-  `image` no es pot tenyir). `upgradeToPhoto` (migració v7 i valors inicials, idempotent): els «(foto)» el joc dels quals ja
+  `image` no es pot tenyir). `upgradeToPhoto` (migració v7 i valors inicials, idempotent): els «(foto)» el conjunt dels quals ja
   fa servir un de sempre desapareixen (els seus gruixos passen al de sempre); la resta perden el «(foto)» («Fusta fosca»,
   «Terratzo»…; si el nom ja és d'un altre material, es queda amb «(foto)»). Només passa a foto un material amb l'acabat per
   defecte d'abans (`OLD_FINISHES`, igualtat estructural): un de retocat es queda, i el «(foto)» al costat. **Àlies** (`resolveMaterialAlias`: «Roure (foto)» → «Roure massís / xapat», «Fusta fosca (foto)» → «Fusta fosca»;
@@ -122,7 +122,8 @@
   per defecte), `backChoices` (taulers i fons: fons del mòdul i per defecte, mides de tauler) i `partChoices` (peces
   lliures: tot menys els fons; ferro, pedra i vidre hi van a propòsit, la simulació per als objectes). Un moble fet amb un
   material que ja no és a la llista el conserva: el `MaterialSelect` el mostra com a valor actual amb ⚠ i «No es talla a
-  la CNC» / «Només de simulació» / «No és a Preferències».
+  la CNC (simulació)» / «No és per a aquí» / «No és a Preferències». Al calaix, un plegable per categoria
+  (`MATERIAL_CATEGORIES`: Taulers · Fons · Corian · Simulació, només les que hi tenen materials) i el cercador.
   Una peça lliure nova amb un material que no és a Preferències pren el tauler per defecte (`freePartFor`; no el primer
   de la llista: els nous s'hi afegeixen al davant).
 - **Avisos de materials** (`core/build/materialIssues.ts`, `materialIssues(build, comp, materials)`: el build no llegeix
@@ -130,7 +131,7 @@
   sortirà amb aquest nom») i `thickness-not-listed` («El gruix 18 mm no és dels gruixos de «X»»), a «Avisos de fusteria»
   de l'Editor i a Exportar. A «Per defecte als mòduls nous», un gruix que no és del material és una nota, no una pastilla.
 - **Biblioteca** (`settings/libraryItems.ts`, `MATERIAL_LIBRARY`; finestra `MaterialLibrary`): «Afegir» obre una graella de
-  materials fets (fustes, lacats, pedres, metalls, vidres, teixits, terres, parets), «En blanc» i «Joc de textures…» (vegeu Mapes PBR). `libraryItems.test.ts`.
+  materials fets (fustes, lacats, pedres, metalls, vidres, teixits, terres, parets), «En blanc» i «Conjunt de textures…» (vegeu Mapes PBR). `libraryItems.test.ts`.
   Els que ja tens (mateix nom o mateix acabat, `ownedMaterial`) porten «Ja el tens»: tocar-ne un no fa un «X 2» en
   silenci, sinó que ofereix «Obrir el meu» o «Afegir una còpia».
   (Les dades no són a `materialLibrary.ts`: vegeu Fast Refresh.)

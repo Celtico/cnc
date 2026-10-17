@@ -121,7 +121,7 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   passades paral·leles a X (`raster`), sempre amb la punta on la superfície ja «engreixada» pel radi de l'eina
   (`erode`, «drop cutter»): l'eina no es menja la forma. Els de la cara B, al programa «Volt» (girat); al nesting, els de
   la cara A. La Vista CAM llegeix els recorreguts amb la Z (`toolpath3`) i la simulació els segueix punt a punt, amb la
-  forma de la bola si és esfèrica. DXF: capa `POCKET_P<fondària>` (`_B`, `_3D`); STEP de CAD: el contorn fins a la fondària
+  forma de la bola si és esfèrica. **Si no hi arriba cap fresa** (més fons que la fondària útil de la més llarga o cap de prou petita, `pocketMachining` → `skip`): no surt al programa ni a la Vista CAM i va a l'avís de l'export com a eina que falta, amb la pista de pujar l'objecte que talla la diferència o afegir una fresa més llarga (`reachHint`); l'Editor ja ho avisa abans (vegeu Fabricació). DXF: capa `POCKET_P<fondària>` (cara B: `POCKET_B_P<fondària>`; amb el fons no pla, sufix `_3D`, `core/export/dxf.ts`); STEP de CAD: el contorn fins a la fondària
   (fons pla, amb avís); JSON del taller: el contorn com a `pockets`.
 - **Pendent de validar amb el taller** (llista a `docs/maestro-xcs.md`): pontets/pell de les peces petites, martiri, zones de
   buit, etiquetes, prova a la màquina (`PROVA_ORIENTACIO.xcs`), UTF-8 amb BOM (el real és ASCII sense BOM), noms de totes les

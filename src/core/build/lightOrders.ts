@@ -1,6 +1,7 @@
 import { lightSystemOf, type LightSystem } from "../model"
 import type { KitOrderLine } from "./drawerKit"
 import type { KitGroup } from "./kitOrders"
+import { fmtNum, roundTo } from "../../lib/format"
 
 /** Un compartiment amb un joc de llum: què s'hi posa i què demana (la comanda la fa `lightGroups`, per mòdul). */
 export interface LightOrder {
@@ -18,8 +19,6 @@ export interface LightOrder {
   lines: KitOrderLine[]
 }
 
-const r1 = (v: number) => Math.round(v * 10) / 10
-const fmt = (v: number) => String(r1(v)).replace(".", ",")
 
 /**
  * El sistema elèctric d'un mòdul: l'alimentador més petit que arriba a la potència de totes les làmpades (amb el pic en
@@ -36,15 +35,15 @@ export function electricalLines(sys: LightSystem, lamps: number, peakWatts: numb
   const n = one ? 1 : Math.max(1, Math.ceil(peakWatts / cap(biggest)))
   const driver = one ?? biggest
   const perDriver = Math.ceil(lamps / n)
-  const ext = sys.extensions.map((e) => `${e.article} (${fmt(e.length / 1000)} m)`).join(" · ")
-  out.push({ component: `driver:${driver.article}`, name: driver.name, qty: n, item: driver.article, note: `${fmt(peakWatts)} W de làmpades${n > 1 ? `, ${perDriver} per alimentador` : ""} · ${driver.size} mm · si és lluny, cables d'extensió ${ext}; màx. ${fmt(sys.maxCable / 1000)} m fins a la làmpada` })
+  const ext = sys.extensions.map((e) => `${e.article} (${fmtNum(e.length / 1000, 1)} m)`).join(" · ")
+  out.push({ component: `driver:${driver.article}`, name: driver.name, qty: n, item: driver.article, note: `${fmtNum(peakWatts, 1)} W de làmpades${n > 1 ? `, ${perDriver} per alimentador` : ""} · ${driver.size} mm · si és lluny, cables d'extensió ${ext}; màx. ${fmtNum(sys.maxCable / 1000, 1)} m fins a la làmpada` })
   const extra = perDriver - driver.slots
   const dist = extra > 0 ? Math.ceil(extra / (sys.distributor.ways - 1)) : 0
   if (dist > 0) out.push({ component: `distributor:${sys.distributor.article}`, name: sys.distributor.name, qty: dist * n, item: sys.distributor.article, note: `${perDriver} làmpades i ${driver.slots} ranures per alimentador` })
   // El cable de dins del moble (de les làmpades i de l'interruptor a l'alimentador), amagat: la tapa del catàleg, tallada a mida.
   if (sys.cableCover) out.push({ component: `cable-cover:${sys.cableCover.article}`, name: sys.cableCover.name, qty: n, item: sys.cableCover.article, note: "per amagar els cables dins del moble (s'encaixa, es talla a mida); el catàleg no dona cap forat al fons: el cable de xarxa de l'alimentador surt per darrere fins a l'endoll" })
   if (sw === "door") {
-    out.push({ component: `switch:${sys.doorSwitch.article}`, name: sys.doorSwitch.name, qty: n, item: sys.doorSwitch.article, note: `forat Ø${fmt(sys.doorSwitch.bore)} × ${fmt(sys.doorSwitch.depth)} al cantell de davant del lateral; porta oberta = llum encesa` })
+    out.push({ component: `switch:${sys.doorSwitch.article}`, name: sys.doorSwitch.name, qty: n, item: sys.doorSwitch.article, note: `forat Ø${fmtNum(sys.doorSwitch.bore, 1)} × ${fmtNum(sys.doorSwitch.depth, 1)} al cantell de davant del lateral; porta oberta = llum encesa` })
     out.push({ component: `switch-cable:${sys.switchCable.article}`, name: sys.switchCable.name, qty: n, item: sys.switchCable.article })
   } else if (sw === "touch") {
     out.push({ component: `switch:${sys.touchSwitch.article}`, name: sys.touchSwitch.name, qty: n, item: sys.touchSwitch.article, note: "per cargolar on es vulgui (sense mecanitzat)" })
@@ -76,14 +75,14 @@ export function lightGroups(orders: readonly (LightOrder & { module?: number })[
     const lines: KitOrderLine[] = []
     for (const o of list) mergeLines(lines, o.lines)
     const lamps = list.reduce((a, o) => a + o.lamps, 0)
-    const watts = r1(list.reduce((a, o) => a + o.watts, 0))
-    const peak = r1(list.reduce((a, o) => a + o.peakWatts, 0))
+    const watts = roundTo(list.reduce((a, o) => a + o.watts, 0), 1)
+    const peak = roundTo(list.reduce((a, o) => a + o.peakWatts, 0), 1)
     const makers = [...new Set(list.map((o) => o.maker))]
     const sys = makers.length === 1 ? lightSystemOf(makers[0]!) : undefined
     const sw = list.find((o) => o.switch !== "none")?.switch ?? "none"
     if (sys) mergeLines(lines, electricalLines(sys, lamps, peak, sw))
     const where = mod > 0 ? ` (mòdul ${mod})` : ""
-    const title = `${sys ? sys.name : [...new Set(list.map((o) => o.kit))].join(", ")} · ${lamps} ${lamps === 1 ? "làmpada" : "làmpades"} · ${fmt(watts)} W${peak > watts ? ` (${fmt(peak)} W en encendre)` : ""}${where}`
+    const title = `${sys ? sys.name : [...new Set(list.map((o) => o.kit))].join(", ")} · ${lamps} ${lamps === 1 ? "làmpada" : "làmpades"} · ${fmtNum(watts, 1)} W${peak > watts ? ` (${fmtNum(peak, 1)} W en encendre)` : ""}${where}`
     const notes = sys ? sys.notes.join(" ") : ""
     out.push({ key: `light:${mod}`, title, drawers: 0, lines, wood: notes })
   }
