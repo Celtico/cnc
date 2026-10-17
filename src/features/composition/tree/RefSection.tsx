@@ -1,11 +1,14 @@
 import { Box, Menu, Text } from "@chakra-ui/react"
-import { LuCopy, LuGroup, LuPlus, LuScan, LuTrash2, LuUngroup } from "react-icons/lu"
-import { groupMulti, groupNames, insertRefCopy, newGroupName, ungroupMulti, type RefObject } from "../../../core/model"
+import { useRef } from "react"
+import { LuCopy, LuGroup, LuImage, LuPlus, LuScan, LuShapes, LuTrash2, LuUngroup } from "react-icons/lu"
+import { boxCage, groupMulti, groupNames, insertRefCopy, newGroupName, ungroupMulti, type RefObject } from "../../../core/model"
 import { GroupRow } from "./GroupRow"
 import { UngroupDropZone } from "./UngroupDropZone"
 import { TreeRow, TreeRowMenu, TreeSection } from "../../../components/TreeRow"
 import { useSettings } from "../../settings/SettingsContext"
-import { refFromPreset } from "../addElements"
+import { cutterOver, refFromPreset } from "../addElements"
+import { readReliefImage } from "../reliefImage"
+import { toaster } from "../../../components/ui/toaster"
 import type { TreeCtx } from "./treeCtx"
 
 /**
@@ -21,14 +24,47 @@ export function RefSection({ tree, isObject, onAddBlank }: { tree: TreeCtx; isOb
     if (selection.kind === "ref" && selection.id === id) onSelect({ kind: "moble" })
   }
 
+  const imageInput = useRef<HTMLInputElement>(null)
+  const add = (r: RefObject) => {
+    onChange({ ...comp, references: [...comp.references, r] })
+    onSelect({ kind: "ref", id: r.id })
+  }
+
   return (
     <>
+      <input
+        ref={imageInput}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0]
+          e.target.value = ""
+          if (!f) return
+          readReliefImage(f)
+            .then((image) => {
+              const r = cutterOver(comp, selection.kind === "part" ? selection.id : undefined, { name: "Relleu", shape: "image", image }, 5, 5)
+              add({ ...r, d: Math.round((r.w * image.h) / image.w) })
+            })
+            .catch(() => toaster.create({ type: "error", title: "No s'ha pogut llegir la imatge" }))
+        }}
+      />
       {/* + d'objectes: els de Preferències › Objectes de referència (per decisió de l'usuari) o un en blanc. */}
       <TreeSection
         addLabel="Afegir objecte de referència"
         hideAdd={isObject}
         menu={
           <>
+            <Menu.ItemGroup>
+              <Menu.ItemGroupLabel>Per fresar una peça</Menu.ItemGroupLabel>
+              <Menu.Item value="mesh" onClick={() => add(cutterOver(comp, selection.kind === "part" ? selection.id : undefined, { name: "Forma lliure", shape: "mesh", mesh: boxCage() }, 20, 60))}>
+                <LuShapes /> Forma lliure
+              </Menu.Item>
+              <Menu.Item value="image" onClick={() => imageInput.current?.click()}>
+                <LuImage /> Relleu d'imatge…
+              </Menu.Item>
+            </Menu.ItemGroup>
+            <Menu.Separator />
             {refPresets.length > 0 && (
               <Menu.ItemGroup>
                 <Menu.ItemGroupLabel>De Preferències</Menu.ItemGroupLabel>

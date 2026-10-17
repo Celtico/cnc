@@ -72,3 +72,20 @@ export const MODEL_FORMAT_HELP: [string, string][] = [
   ["Textures", "color, relleu (normal) i brillantor; la transparència (fulles) també. En acabar, les pots afegir a Materials."],
   ["On trobar-ne", "Poly Haven (gratuïts, CC0), Sketchfab (baixa'l com a «glTF Binary») o els catàlegs 3D dels fabricants."],
 ]
+
+/**
+ * Un objecte que talla nou (+ d'«Objectes de referència» › Forma lliure / Relleu d'imatge; per decisió de l'usuari,
+ * 2026-10-17: «on és l'eina de formes»): damunt de la peça estirada triada (o de la primera), amb la part de dalt per
+ * sobre de la cara perquè hi entri: la forma lliure, 20 mm de fons; el relleu, `depth` mm.
+ */
+export function cutterOver(comp: Composition, partId: string | undefined, extra: Pick<RefObject, "name"> & Partial<RefObject>, depth: number, boxH: number): RefObject {
+  const parts = comp.parts ?? []
+  const p = parts.find((x) => x.id === partId && x.orient === "flat") ?? parts.find((x) => x.orient === "flat" && x.effect !== "cut")
+  const used = new Set(comp.references.map((r) => r.name))
+  let name = extra.name
+  for (let n = 2; used.has(name); n++) name = `${extra.name} ${n}`
+  if (!p) return refFor({ w: 300, h: boxH, d: 200, effect: "cut", ...extra, name })
+  const top = p.y + p.thickness
+  const w = Math.round(p.w * 0.6), d = Math.round(p.h * 0.6)
+  return refFor({ w, h: boxH, d, effect: "cut", ...extra, name, x: Math.round(p.x + (p.w - w) / 2), y: top - depth, z: Math.round(p.z + (p.h - d) / 2) })
+}

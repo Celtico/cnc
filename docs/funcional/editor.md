@@ -336,7 +336,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   visor hi va amb `CabinetViewer cameraGoto` i es desa); el **zoom** va de 2 cm a 60 m (`MAX_DISTANCE`); `updateProjectComposition` conserva la desada. En obrir-lo `CabinetViewer initialCamera` hi torna; redimensionar no
   la treu fins que s'orbita, s'enquadra o es tria una vista. Va al `.moble`.
 - **Editor de malla — Forma lliure** (`composition/MeshEditor.tsx`, `MeshEditorScene.tsx`; per decisió de l'usuari,
-  2026-10-17: «un editor de malla com el de SolidWorks», l'xShape): objecte de referència › Forma › **Forma lliure** i
+  2026-10-17: «un editor de malla com el de SolidWorks», l'xShape): el **+ d'Objectes de referència › «Per fresar una
+  peça» › Forma lliure** (o «Relleu d'imatge…», que demana la imatge) en posa un que talla damunt de la peça estirada
+  triada (`cutterOver`); o objecte de referència › Forma › **Forma lliure** i
   «Editar la forma lliure…» (una `FloatingWindow`). La **caixa de control** (punts i línies) i la superfície suau que en
   surt (Catmull-Clark, `meshShape.ts` `subdivide`; «Suau» 2 passades · «Molt suau» 3). Es toca un punt (amb Maj o ⌘, se
   n'hi afegeixen; tocar el buit els treu; una esfera invisible més grossa per tocar-los amb el dit) i es mou amb les
