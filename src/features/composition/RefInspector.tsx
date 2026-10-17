@@ -2,12 +2,13 @@ import { Box, Button, HStack, IconButton, Menu, Portal, Stack, Text } from "@cha
 import { segGroup, segItem } from "../../components/segmented"
 import { useState, type ReactNode } from "react"
 import { ProfileEditor } from "./ProfileEditor"
+import { MeshEditor } from "./MeshEditor"
 import type { IconType } from "react-icons"
 import { IconChoice, type IconOption } from "../../components/IconChoice"
-import { LuBox, LuCylinder, LuMoveDiagonal2, LuMoveHorizontal, LuMoveVertical, LuScissors, LuShield, LuSpline, LuArrowDownToLine, LuBrickWall, LuBookmark, LuCopy, LuEllipsis, LuMove, LuMoveDiagonal, LuPencilRuler, LuLink, LuPalette, LuTrash2 } from "react-icons/lu"
+import { LuBox, LuCylinder, LuMoveDiagonal2, LuMoveHorizontal, LuMoveVertical, LuScissors, LuShield, LuSpline, LuArrowDownToLine, LuBrickWall, LuBookmark, LuCopy, LuEllipsis, LuMove, LuMoveDiagonal, LuPencilRuler, LuLink, LuPalette, LuShapes, LuTrash2 } from "react-icons/lu"
 import { FoldItem } from "../../components/Fold"
 import { toaster } from "../../components/ui/toaster"
-import { AXIS_INDEX, SECTION_AXES, anchorRef, insertRefCopy, makeRoomForRef, refBlocksRow, toNodes, newId, type Composition, type RefObject } from "../../core/model"
+import { AXIS_INDEX, SECTION_AXES, anchorRef, boxCage, insertRefCopy, makeRoomForRef, refBlocksRow, toNodes, newId, type Composition, type RefObject } from "../../core/model"
 import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { useSettings } from "../settings/SettingsContext"
@@ -16,6 +17,7 @@ import { MaterialSelect } from "../settings/MaterialSelect"
 /** Propietats d'un objecte de referència (fantasma): nom, mides i posició. */
 export function RefInspector({ comp, id, onChange }: { comp: Composition; id: string; onChange: (c: Composition) => void }) {
   const [editing, setEditing] = useState(false)
+  const [meshing, setMeshing] = useState(false)
   const { settings } = useSettings()
   const o = comp.references.find((r) => r.id === id)
   if (!o) return null
@@ -25,7 +27,8 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
   const axis = (o.axis ?? "z") as Axis
   const axisOpt = AXIS_OPTIONS.find((a) => a.value === axis)!
   // La direcció: la del cilindre i el perfil, o la del tall d'una caixa que talla.
-  const oriented = shape !== "box" || o.effect === "cut"
+  // La forma lliure no en té: talla des de la cara per on entra.
+  const oriented = shape !== "mesh" && (shape !== "box" || o.effect === "cut")
   const shapeOpt = SHAPE_OPTIONS.find((s) => s.id === shape)!
   const attached = o.onFloor && o.onWall ? "Terra i paret" : o.onFloor ? "Al terra" : o.onWall ? "A la paret" : "Res"
   return (
@@ -72,16 +75,24 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
               value={shape}
               options={SHAPE_OPTIONS}
               onChange={(v) => {
-                if (v === "cylinder") update(cylinderPatch(o, o.axis ?? "z"))
+                if (v === "cylinder") update({ ...cylinderPatch(o, o.axis ?? "z"), mesh: undefined })
                 else if (v === "profile") {
-                  update(profilePatch(o))
+                  update({ ...profilePatch(o), mesh: undefined })
                   setEditing(true)
-                } else update({ shape: undefined, axis: undefined, profile: undefined })
+                } else if (v === "mesh") {
+                  update({ shape: "mesh", axis: undefined, profile: undefined, mesh: o.mesh ?? boxCage() })
+                  setMeshing(true)
+                } else update({ shape: undefined, axis: undefined, profile: undefined, mesh: undefined })
               }}
             />
             {o.shape === "profile" && (
               <Button size="xs" variant="outline" alignSelf="flex-start" onClick={() => setEditing(true)}>
                 <LuPencilRuler /> Editar la forma…
+              </Button>
+            )}
+            {o.shape === "mesh" && (
+              <Button size="xs" variant="outline" alignSelf="flex-start" onClick={() => setMeshing(true)}>
+                <LuShapes /> Editar la forma lliure…
               </Button>
             )}
           </Stack>
@@ -146,6 +157,18 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
           }}
         />
       )}
+      {o.shape === "mesh" && (
+        <MeshEditor
+          open={meshing}
+          box={{ x: o.x, y: o.y, z: o.z, w: o.w, h: o.h, d: o.d }}
+          initial={o.mesh}
+          onClose={() => setMeshing(false)}
+          onApply={(p) => {
+            update(p)
+            setMeshing(false)
+          }}
+        />
+      )}
       <FoldItem optionId="ref.attach" id="ref-attach" title="Enganxada" icon={LuLink} badge={attached} badgePalette={o.onFloor || o.onWall ? "wood" : "gray"}>
         {/* Enganxar-lo: interruptors discrets (es poden activar tots dos). */}
         <FormRow optionId="ref.attach" label="Enganxat">
@@ -200,12 +223,13 @@ const AXIS_OPTIONS: IconOption<Axis>[] = [
 ]
 
 /** Forma de l'objecte: pastilles amb icona i nom (la icona també és la de la secció). */
-const SHAPES: { id: "box" | "cylinder" | "profile"; name: string; icon: IconType }[] = [
+const SHAPES: { id: "box" | "cylinder" | "profile" | "mesh"; name: string; icon: IconType }[] = [
   { id: "box", name: "Caixa", icon: LuBox },
   { id: "cylinder", name: "Cilindre", icon: LuCylinder },
   { id: "profile", name: "Perfil", icon: LuSpline },
+  { id: "mesh", name: "Forma lliure", icon: LuShapes },
 ]
-const SHAPE_OPTIONS: { id: "box" | "cylinder" | "profile"; name: string; icon: IconType; label: ReactNode }[] = SHAPES.map((s) => ({
+const SHAPE_OPTIONS: { id: "box" | "cylinder" | "profile" | "mesh"; name: string; icon: IconType; label: ReactNode }[] = SHAPES.map((s) => ({
   ...s,
   label: (
     <>

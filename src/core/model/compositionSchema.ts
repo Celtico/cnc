@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { MeshCageSchema } from "./meshShape"
 import { BPtSchema, ProfileNodeSchema } from "./panel"
 import { flatten, profileToOutline, toNodes, type BPt } from "./polygon"
 import { CameraPoseSchema } from "./camera"
@@ -31,8 +32,13 @@ export const RefObjectSchema = z.object({
    * forat passant a cada peça que travessa (tubs, endolls, passacables…).
    */
   effect: z.enum(["obstacle", "cut"]).optional(),
-  /** Caixa (per defecte), cilindre o perfil 2D extrudit, dins de la caixa w × h × d. */
-  shape: z.enum(["box", "cylinder", "profile"]).optional(),
+  /**
+   * Caixa (per defecte), cilindre, perfil 2D extrudit o **forma lliure** (`mesh`: la caixa de control suavitzada, l'editor de
+   * malla), dins de la caixa w × h × d.
+   */
+  shape: z.enum(["box", "cylinder", "profile", "mesh"]).optional(),
+  /** Forma lliure (`shape: "mesh"`): la caixa de control, de 0 a 1 dins de la caixa (`MeshCageSchema`). */
+  mesh: MeshCageSchema.optional(),
   /**
    * Perfil (forma «profile»): contorn de la secció en mm, amb la cantonada mínima a (0, 0).
    * Coordenades (u, v) del pla perpendicular a la direcció: z → (x, y), y → (x, z), x → (z, y).

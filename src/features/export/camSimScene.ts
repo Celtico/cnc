@@ -83,7 +83,10 @@ vec3 smoothAt(vec2 xy) {
   float edge = (dot(vec4(a.b, c.b, d.b, e.b), w) * 255.0 - 128.0) / 127.0 * edgeRange;
   float lo = min(min(h.x, h.y), min(h.z, h.w));
   float hi = max(max(h.x, h.y), max(h.z, h.w));
-  float z = edge < 0.0 ? lo : hi;
+  // Sense vora a prop (canal B a 255 a les quatre: cap tall amb vora o un relleu 3D) i sense salt gran: una superfície,
+  // s'interpola (els relleus no fan graons de cel·la).
+  float noEdge = step(254.5, min(min(a.b, c.b), min(d.b, e.b)) * 255.0);
+  float z = noEdge > 0.5 && lo >= 0.0 ? dot(h, w) : edge < 0.0 ? lo : hi;
   float g = dot(vec4(a.g, c.g, d.g, e.g), w);
   return vec3(z < 0.0 ? 0.0 : 1.0, max(z, 0.0), g);
 }

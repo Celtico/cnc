@@ -1,6 +1,7 @@
 export * from "./panel"
 export * from "./polygon"
 export * from "./pocketField"
+export * from "./meshShape"
 export * from "./cabinet"
 export * from "./composition"
 export * from "./supportSchema"

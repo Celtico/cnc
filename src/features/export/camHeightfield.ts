@@ -101,11 +101,11 @@ export function takeDirty(hf: Heightfield): Heightfield["dirty"] {
 }
 
 /**
- * Escombrada d'una fresa de punta plana (o esfèrica, `ball`) de radi `r` d'`a` a `b` (la punta, Z des de la cara de sota): cada cel·la que toca
+ * Escombrada d'una fresa de punta plana (o esfèrica, `ball`) de radi `r` (`relief`: d'un recorregut 3D, sense vora) d'`a` a `b` (la punta, Z des de la cara de sota): cada cel·la que toca
  * el disc en algun moment baixa fins a la Z més baixa que hi passa (exacte per a rectes i rampes). Els trams llargs es
  * parteixen perquè la caixa que es recorre sigui estreta.
  */
-export function stampSegment(hf: Heightfield, a: P3, b: P3, rIn: number, ball = false): void {
+export function stampSegment(hf: Heightfield, a: P3, b: P3, rIn: number, ball = false, relief = false): void {
   if (Math.min(a[2], b[2]) >= hf.T) return
   // Una broca més petita que la cel·la marca almenys la cel·la del centre.
   const r = Math.max(rIn, hf.cell * 0.51)
@@ -116,11 +116,11 @@ export function stampSegment(hf: Heightfield, a: P3, b: P3, rIn: number, ball = 
     const s0 = k / n
     const s1 = (k + 1) / n
     const p = (s: number): P3 => [a[0] + (b[0] - a[0]) * s, a[1] + (b[1] - a[1]) * s, a[2] + (b[2] - a[2]) * s]
-    stampPiece(hf, p(s0), p(s1), r, ball)
+    stampPiece(hf, p(s0), p(s1), r, ball, relief)
   }
 }
 
-function stampPiece(hf: Heightfield, a: P3, b: P3, r: number, ball: boolean): void {
+function stampPiece(hf: Heightfield, a: P3, b: P3, r: number, ball: boolean, relief: boolean): void {
   const { cell, nx, ny, T, data } = hf
   // Fins a 2 cel·les fora del disc: la distància a la vora (canal B) de les cel·les del voltant.
   const m = r + EDGE_CELLS * cell
@@ -151,6 +151,8 @@ function stampPiece(hf: Heightfield, a: P3, b: P3, r: number, ball: boolean): vo
       const ey = a[1] + s * dy - cy
       const dist = Math.sqrt(ex * ex + ey * ey) - r
       if (dist > 0) {
+        // Relleu 3D (recorreguts explícits): sense vora (el 3D hi interpola l'alçada, és una superfície, no un tall).
+        if (relief) continue
         // Fora del disc però a prop: si aquí la matèria és més alta que el tall, la vora és a `dist`.
         if (dist < EDGE_CELLS * cell && data[k]! > zMin) {
           const e = encodeEdge(dist, cell)
@@ -183,12 +185,12 @@ function stampPiece(hf: Heightfield, a: P3, b: P3, r: number, ball: boolean): vo
       // Esfèrica: la bola puja cap a la vora (la punta és al centre).
       if (ball) z += r - Math.sqrt(Math.max(0, r2 - Math.min(r2, (dist + r) * (dist + r))))
       const code = encode(z, T)
-      const e = encodeEdge(dist, cell)
+      const e = relief ? FULL : encodeEdge(dist, cell)
       if (code < data[k]!) {
         // Més avall: la vora d'aquesta cel·la passa a ser la d'aquest tall.
         data[k] = code
         data[k + 2] = e
-      } else if (code === data[k]! && e < data[k + 2]!) data[k + 2] = e
+      } else if (code === data[k]! && e < data[k + 2]! && !relief) data[k + 2] = e
       else continue
       changed = true
       if (i < ci0) ci0 = i

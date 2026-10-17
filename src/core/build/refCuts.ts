@@ -1,4 +1,4 @@
-import { bounds, bulgeOf, ccw, ccwB, flatten, movePocket, pocketBounds, pointInPolygon, polygonArea, polygonTouchesRect, refSection, signedArea, type BPt, type Composition, type Cutout, type Panel, type RefObject, type Vec3 } from "../model"
+import { bounds, bulgeOf, ccw, ccwB, flatten, meshWorldTriangles, movePocket, pocketBounds, pointInPolygon, rasterDepth, polygonArea, polygonTouchesRect, refSection, signedArea, type BPt, type Composition, type Cutout, type Panel, type RefObject, type Vec3 } from "../model"
 import { buildModule } from "./buildModule"
 import { normalizePanel } from "./buildCabinet"
 import { toLocal } from "./geometry"
@@ -57,6 +57,14 @@ export function applyRefCuts(panels: Panel[], refs: RefObject[], boxOf: (p: Pane
     const sec = refSection(o)
     for (const p of panels) {
       const b = boxOf(p)
+      // Forma lliure (l'editor de malla): el que se'n pot fresar des de la cara per on entra, en qualsevol peça que toqui.
+      if (o.shape === "mesh") {
+        if (!o.mesh || !refTouchesBox(o, b)) continue
+        hits?.add(o.id)
+        const msg = meshCut(o, p)
+        if (msg && !(isExtra?.(p) ?? false)) problems.push({ refId: o.id, panel: p, message: msg })
+        continue
+      }
       // Només talla les peces que travessa en la seva direcció (un tub cap a la paret forada
       // el fons, no el cantell dels prestatges; un desguàs vertical, la base i els prestatges).
       if (normalIndex(p) !== sec.a) {
@@ -364,6 +372,33 @@ function blindCut(o: RefObject, sec: Section, p: Panel, lo: number, hi: number, 
   p.solidCuts = [...(p.solidCuts ?? []), { points: start, dir: [a1[0] - a0[0], a1[1] - a0[1], a1[2] - a0[2]] }]
   if (extra) return
   return `«${o.name}» entra ${num(depth)} mm a ${p.label} sense travessar-la: es veu al 3D, però a la CNC aquest buidat (${fromMax || fromMin ? "amb el fons arrodonit fins al cantell" : "dins del gruix"}) no es fa.`
+}
+
+/**
+ * Una forma lliure que entra en una peça: el **relleu** que se'n pot fresar des de la cara per on entra (per decisió de
+ * l'usuari, 2026-10-17: «fer el tall a una peça de fusta en comptes de fer talls amb diferents peces»). Els triangles de la
+ * forma passen a coordenades de la peça i es rasteritzen (`rasterDepth`): cada punt es buida fins al punt més baix de la
+ * forma (el que quedaria amagat sota una part que sobresurt, també: la fresa ve de dalt). Un buidat amb mapa
+ * (`Pocket.map`). Retorna un avís si no es pot fer.
+ */
+function meshCut(o: RefObject, p: Panel): string | undefined {
+  const tris = meshWorldTriangles(o).map((t) => t.map((q) => toLocal(p, q)) as [Vec3, Vec3, Vec3])
+  let zmin = Infinity, zmax = -Infinity
+  for (const t of tris) for (const q of t) {
+    zmin = Math.min(zmin, q[2])
+    zmax = Math.max(zmax, q[2])
+  }
+  const T = p.thickness
+  const face: "A" | "B" | null = zmax >= T - 0.5 && zmin < T - 0.05 ? "A" : zmin <= 0.5 && zmax > 0.05 ? "B" : null
+  if (!face) return zmax > 0 && zmin < T ? `«${o.name}» queda dins del gruix de ${p.label} sense sortir per cap cara: no es pot fresar.` : undefined
+  const area = p.length * p.width
+  const step = Math.max(2, Math.sqrt(area / 150_000))
+  const map = rasterDepth(tris, face, T, step, { x0: 0, y0: 0, x1: p.length, y1: p.width })
+  if (!map) return undefined
+  const x1 = map.x0 + (map.nx - 1) * step, y1 = map.y0 + (map.ny - 1) * step
+  const depth = Math.max(...map.d)
+  p.pockets = [...(p.pockets ?? []), { points: [[map.x0, map.y0], [x1, map.y0], [x1, y1], [map.x0, y1]], depth, face, map: { ...map, step }, tag: "ref" }]
+  return depth >= T - 0.05 ? `«${o.name}» travessa ${p.label} en algun punt: a la CNC el buidat es deixa a la pell mínima.` : undefined
 }
 
 /** Els quatre punts fan un rectangle alineat amb la peça (una ranura). */

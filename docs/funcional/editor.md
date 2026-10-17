@@ -335,6 +335,18 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   del desfer** (per decisió de l'usuari, 2026-10-14: l'historial de l'editor és `{ comp, cam }`; ⌘Z / ⇧⌘Z hi tornen, el
   visor hi va amb `CabinetViewer cameraGoto` i es desa); el **zoom** va de 2 cm a 60 m (`MAX_DISTANCE`); `updateProjectComposition` conserva la desada. En obrir-lo `CabinetViewer initialCamera` hi torna; redimensionar no
   la treu fins que s'orbita, s'enquadra o es tria una vista. Va al `.moble`.
+- **Editor de malla — Forma lliure** (`composition/MeshEditor.tsx`, `MeshEditorScene.tsx`; per decisió de l'usuari,
+  2026-10-17: «un editor de malla com el de SolidWorks», l'xShape): objecte de referència › Forma › **Forma lliure** i
+  «Editar la forma lliure…» (una `FloatingWindow`). La **caixa de control** (punts i línies) i la superfície suau que en
+  surt (Catmull-Clark, `meshShape.ts` `subdivide`; «Suau» 2 passades · «Molt suau» 3). Es toca un punt (amb Maj o ⌘, se
+  n'hi afegeixen; tocar el buit els treu; una esfera invisible més grossa per tocar-los amb el dit) i es mou amb les
+  fletxes o la bola del gizmo de sempre (`MoveGizmo`); **Simetria (X)** mou el punt de l'altra banda en mirall
+  (`mirrorPairs`, `moveVertices`); **Tots** tria tots els punts; **Més detall** parteix la caixa (`refineCage`: més punts
+  per modelar); **De nou** torna a la caixa de partida (`boxCage`: un cub de 2 × 2 per cara); desfer/refer (⌘Z). En
+  **Aplicar**, la caixa de l'objecte s'ajusta a la forma (`normalizeCage`). Si talla, la peça que toca s'hi **fresa des de
+  la cara per on entra** (`refCuts.ts` `meshCut`: els triangles a coordenades de la peça i `rasterDepth`, graella de 2 mm;
+  el que quedaria sota una part que sobresurt també es buida, la fresa ve de dalt): un buidat amb mapa (`Pocket.map`) que
+  va al programa amb recorreguts 3D. Una forma que queda dins del gruix sense sortir per cap cara avisa.
 - **Editor de perfils** (`composition/ProfileEditor.tsx`, com el mode vector de Figma): **Moure** (nodes i manegadors en
   rombe; Alt trenca el reflex; doble clic node ↔ corba), **Ploma** (clic = cantonada, clic i arrossegar = manegadors
   simètrics, clicar el primer node o Retorn tanca, Esc descarta), **Corbar** (arrossegar el punt del mig d'un costat,

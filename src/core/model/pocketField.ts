@@ -21,6 +21,26 @@ export function pocketPolygon(pk: Pocket): Pt[] {
   return flatten(pk.points, Math.PI / 48)
 }
 
+/** El punt del contorn més proper a (x, y). */
+function closestOnPolygon(x: number, y: number, poly: Pt[]): [number, number] {
+  let best = Infinity
+  let out: [number, number] = [x, y]
+  for (let i = 0; i < poly.length; i++) {
+    const [ax, ay] = poly[i]!
+    const [bx, by] = poly[(i + 1) % poly.length]!
+    const dx = bx - ax, dy = by - ay
+    const l2 = dx * dx + dy * dy
+    const t = l2 ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2)) : 0
+    const px = ax + t * dx, py = ay + t * dy
+    const d2 = (px - x) ** 2 + (py - y) ** 2
+    if (d2 < best) {
+      best = d2
+      out = [px, py]
+    }
+  }
+  return out
+}
+
 /** Distància d'un punt al contorn (sense signe). */
 function distToPolygon(x: number, y: number, poly: Pt[]): number {
   let best = Infinity
@@ -38,13 +58,17 @@ function distToPolygon(x: number, y: number, poly: Pt[]): number {
 }
 
 /**
- * Fondària del fons arrodonit a `dist` mm del contorn (cap a dins): la paret recta fins a `depth − round` i un quart de
- * cercle de radi `round` fins al fons. Un radi més gran que la fondària fa un plat (comença menys fondo a la vora).
+ * Fondària del fons arrodonit a `dist` mm del contorn (cap a dins). Radi ≤ fondària: la paret recta fins a
+ * `depth − round` i un quart de cercle de radi `round` fins al fons (una pica). Radi més gran que la fondària: un **plat**,
+ * un arc gran que surt de la vora (fondària 0) i arriba al fons a `round` mm de la vora, tangent (un plat de dutxa en
+ * pendent cap al mig). Els dos coincideixen quan el radi és la fondària.
  */
 export function roundedDepth(dist: number, depth: number, round: number): number {
   if (dist >= round) return depth
   const k = round - dist
-  return Math.max(0, depth - round + Math.sqrt(Math.max(0, round * round - k * k)))
+  if (round <= depth) return Math.max(0, depth - round + Math.sqrt(Math.max(0, round * round - k * k)))
+  const R = (round * round + depth * depth) / (2 * depth)
+  return Math.max(0, depth - (R - Math.sqrt(Math.max(0, R * R - k * k))))
 }
 
 /** Fondària del mapa a (x, y), interpolada (0 fora). */
@@ -122,8 +146,32 @@ export function pocketSolids(pk: Pocket, T: number, maxCells = 10_000): { wall?:
   const top = wallDepth > 0.01 ? wallDepth - 0.5 : -1
   // Cel·les on el fons baixa més que la paret (alguna cantonada).
   const { nx, ny, d } = g
+  const th = Math.max(0.02, wallDepth + 0.02)
+  const poly = pk.map ? null : pocketPolygon(pk)
   const inCell = (i: number, j: number) =>
-    i >= 0 && j >= 0 && i < nx - 1 && j < ny - 1 && Math.max(d[j * nx + i]!, d[j * nx + i + 1]!, d[(j + 1) * nx + i]!, d[(j + 1) * nx + i + 1]!) > Math.max(0.02, wallDepth + 0.02)
+    i >= 0 && j >= 0 && i < nx - 1 && j < ny - 1 && Math.max(d[j * nx + i]!, d[j * nx + i + 1]!, d[(j + 1) * nx + i]!, d[(j + 1) * nx + i + 1]!) > th
+  // Els nodes de fora d'una cel·la de la vora es posen sobre la línia on el fons passa per `th` (la mitjana dels punts on
+  // talla les arestes cap als de dins): la vora segueix el contorn i no fa l'escala de la graella.
+  const nodeXY = (i: number, j: number): [number, number] => {
+    const k = j * nx + i
+    const dk = d[k]!
+    const gx = g.x0 + i * g.step, gy = g.y0 + j * g.step
+    if (dk > th) return [gx, gy]
+    // Amb contorn: el punt del contorn més proper (exacte; la fondària hi salta de cop i interpolar-la faria l'escala).
+    if (poly) return closestOnPolygon(gx, gy, poly)
+    let sx = 0, sy = 0, n = 0
+    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+      const a = i + di, b = j + dj
+      if (a < 0 || b < 0 || a >= nx || b >= ny) continue
+      const dm = d[b * nx + a]!
+      if (dm <= th) continue
+      const t = Math.min(1, Math.max(0, (th - dk) / (dm - dk)))
+      sx += gx + di * g.step * t
+      sy += gy + dj * g.step * t
+      n++
+    }
+    return n ? [sx / n, sy / n] : [gx, gy]
+  }
   const positions: number[] = []
   const index: number[] = []
   const topIdx = new Map<number, number>()
@@ -133,13 +181,14 @@ export function pocketSolids(pk: Pocket, T: number, maxCells = 10_000): { wall?:
     let v = map.get(k)
     if (v === undefined) {
       v = positions.length / 3
-      positions.push(g.x0 + i * g.step, g.y0 + j * g.step, z(depth))
+      const [x, y] = nodeXY(i, j)
+      positions.push(x, y, z(depth))
       map.set(k, v)
     }
     return v
   }
   const T0 = (i: number, j: number) => vert(topIdx, i, j, top)
-  const B0 = (i: number, j: number) => vert(botIdx, i, j, Math.max(top + 0.01, d[j * nx + i]!))
+  const B0 = (i: number, j: number) => vert(botIdx, i, j, Math.max(top + 0.01, d[j * nx + i]! > th ? d[j * nx + i]! : th))
   // Cara de dalt (mirant cap a fora del sòlid: cap a la cara de la peça) i de baix (cap a dins de la peça).
   const quad = (a: number, b2: number, c: number, e: number, flip: boolean) => {
     if (flip !== (pk.face === "B")) index.push(a, c, b2, a, e, c)

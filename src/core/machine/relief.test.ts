@@ -17,6 +17,11 @@ describe("forma dels buidats (`pocketField`)", () => {
     expect(roundedDepth(0, 40, 30)).toBeCloseTo(10)
     expect(roundedDepth(30, 40, 30)).toBeCloseTo(40)
     expect(roundedDepth(15, 40, 30)).toBeCloseTo(10 + Math.sqrt(30 * 30 - 15 * 15))
+    // Radi més gran que la fondària: un plat que surt de la vora (0) i arriba al fons a «radi» mm, sense graó.
+    expect(roundedDepth(0, 12, 450)).toBeCloseTo(0, 6)
+    expect(roundedDepth(450, 12, 450)).toBe(12)
+    expect(roundedDepth(225, 12, 450)).toBeGreaterThan(6)
+    expect(roundedDepth(12, 12, 12)).toBe(12)
     const f = pocketDepthFn(basin)
     expect(f(150, 100)).toBe(40)
     expect(f(-5, 100)).toBe(0)

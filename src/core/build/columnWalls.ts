@@ -75,7 +75,7 @@ export function columnWalls(
     let k = 0
     for (const o of refs) {
       if (o.effect !== "cut" || o.id.startsWith("part:")) continue
-      if (o.shape === "cylinder" || o.shape === "profile" || (o.axis ?? "z") !== "y") continue
+      if ((o.shape ?? "box") !== "box" || (o.axis ?? "z") !== "y") continue
       const cx0 = o.x, cx1 = o.x + o.w, cz0 = o.z, cz1 = o.z + o.d
       // Ha de tocar la base i anar de la base a la tapa.
       const x0 = Math.max(cx0, bb.min[0]), x1 = Math.min(cx1, bb.max[0])
@@ -257,7 +257,7 @@ export function columnRearLimits(module: Module, refs: RefObject[], place: { x: 
   const mz = place.z ?? 0
   const out: { x0: number; x1: number; z: number }[] = []
   for (const o of refs) {
-    if (o.effect !== "cut" || o.shape === "cylinder" || o.shape === "profile" || (o.axis ?? "z") !== "y" || o.y > 1) continue
+    if (o.effect !== "cut" || (o.shape ?? "box") !== "box" || (o.axis ?? "z") !== "y" || o.y > 1) continue
     if (o.z > mz + 1) continue
     const x0 = o.x - place.x, x1 = o.x + o.w - place.x
     const front = o.z + o.d - mz

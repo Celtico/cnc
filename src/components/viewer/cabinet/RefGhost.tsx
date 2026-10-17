@@ -8,7 +8,7 @@ import { BoxFrame } from "../BoxFrame"
 import { useViewerCursor } from "../cursor"
 import { MoveGizmo, type GizmoHandle } from "../MoveGizmo"
 import type { Axis } from "../pixelScale"
-import { profileGeometry } from "../refGeometry"
+import { meshGeometry, profileGeometry } from "../refGeometry"
 import { surfaceMaterial } from "../surfaceMaterial"
 import { disposeMaterial } from "../textures"
 import { S, SELECT_COLOR } from "./constants"
@@ -116,7 +116,7 @@ export function RefGhost({
   const tint = hit ? "#dc2626" : selected ? SELECT_COLOR : g.effect === "cut" ? "#16a34a" : "#3b82f6"
   const draggable = selected && !!onMove
   const cyl = g.shape === "cylinder"
-  const profileGeo = useMemo(() => (g.shape === "profile" && g.profile && g.profile.length >= 3 ? profileGeometry(g) : null), [g])
+  const profileGeo = useMemo(() => (g.shape === "profile" && g.profile && g.profile.length >= 3 ? profileGeometry(g) : g.shape === "mesh" && g.mesh ? meshGeometry(g, g.mesh, 2) : null), [g])
   // Amb material: sòlid, amb ombres, i surt a la Presentació i al render (els fantasmes no hi surten).
   const solidMat = useMemo(() => (g.material && g.effect !== "cut" && !outline ? surfaceMaterial(materials, g.material, Math.max(g.w, g.d), g.h) : null), [g.material, g.effect, g.w, g.h, g.d, outline, materials])
   // Totes les textures del material (color, normals, rugositat), no només `map`.

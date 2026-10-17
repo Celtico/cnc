@@ -28,6 +28,8 @@ export interface SimMove {
   r: number
   /** Fresa esfèrica (relleus 3D): deixa la forma de la bola. */
   ball?: boolean
+  /** D'un recorregut 3D explícit (relleus): talla sense vora. */
+  relief?: boolean
 }
 
 export interface SimOp {
@@ -138,11 +140,12 @@ export function buildSimProgram(view: CamSheetView): SimProgram {
   let opIdx = 0
   let r = 0
   let ball = false
+  let relief = false
   const push = (kind: SimMove["kind"], b: P3) => {
     const len = Math.hypot(b[0] - pos[0], b[1] - pos[1], b[2] - pos[2])
     if (len < 1e-9) return
     const dt = len / feedOf(kind, pos, b)
-    moves.push({ kind, a: pos, b, t0: t, t1: t + dt, op: opIdx, r, ...(ball ? { ball } : {}) })
+    moves.push({ kind, a: pos, b, t0: t, t1: t + dt, op: opIdx, r, ...(ball ? { ball } : {}), ...(relief ? { relief } : {}) })
     t += dt
     pos = b
   }
@@ -173,6 +176,7 @@ export function buildSimProgram(view: CamSheetView): SimProgram {
       else if (d.centre3) {
         // Recorregut 3D explícit: cada punt a la seva Z (sobre la cara, en ràpid).
         const q0 = d.centre3[0]!
+        relief = true
         goTo([q0[0], q0[1]])
         for (const q of d.centre3) push(q[2] >= 0 && pos[2] >= T ? "rapid" : "cut", [q[0], q[1], T + q[2]])
         retract()
@@ -206,6 +210,7 @@ export function buildSimProgram(view: CamSheetView): SimProgram {
       }
     }
     ball = false
+    relief = false
     if (!shown) side++
     ops.push({ n: o.n, t0, t1: t, r, shown })
   }
@@ -277,7 +282,7 @@ export function advanceSim(hf: Heightfield, prog: SimProgram, cur: SimCursor, t:
       const m = prog.moves[k]!
       if (m.t0 >= t) break
       if (m.kind !== "cut") continue
-      stampSegment(hf, lerp(m, Math.max(cur.t, m.t0)), lerp(m, Math.min(t, m.t1)), m.r, m.ball)
+      stampSegment(hf, lerp(m, Math.max(cur.t, m.t0)), lerp(m, Math.min(t, m.t1)), m.r, m.ball, m.relief)
     }
   }
   while (cur.fin < prog.finished.length && prog.finished[cur.fin]!.t <= t) tintPolygon(hf, prog.finished[cur.fin++]!.outline)

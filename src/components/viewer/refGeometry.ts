@@ -1,5 +1,5 @@
-import { BufferGeometry, BoxGeometry, CylinderGeometry, ExtrudeGeometry, Matrix4, Shape, Vector3 } from "three"
-import { AXIS_INDEX, SECTION_AXES, sampleProfile, toNodes, type RefObject } from "../../core/model"
+import { BufferGeometry, BoxGeometry, CylinderGeometry, ExtrudeGeometry, Float32BufferAttribute, Matrix4, Shape, Vector3 } from "three"
+import { AXIS_INDEX, SECTION_AXES, sampleProfile, subdivide, toNodes, type MeshCage, type RefObject } from "../../core/model"
 
 /* Geometria dels objectes de referència (metres, centrada a la seva caixa): la fan servir el visor i les miniatures. */
 
@@ -28,8 +28,24 @@ export function profileGeometry(g: RefObject): ExtrudeGeometry {
   return geo
 }
 
-/** Geometria sòlida de l'objecte (caixa, cilindre o perfil) centrada a la seva caixa. */
+/** La forma lliure (caixa de control suavitzada) centrada a la seva caixa (metres), amb les normals suaus. */
+export function meshGeometry(g: { w: number; h: number; d: number }, cage: MeshCage, level?: number): BufferGeometry {
+  const s = subdivide(cage, level)
+  const size = [g.w, g.h, g.d]
+  const pos = new Float32Array(s.positions.length * 3)
+  s.positions.forEach((p, i) => {
+    for (let k = 0; k < 3; k++) pos[i * 3 + k] = (p[k]! * size[k]! - size[k]! / 2) * S
+  })
+  const geo = new BufferGeometry()
+  geo.setAttribute("position", new Float32BufferAttribute(pos, 3))
+  geo.setIndex(s.triangles.flat())
+  geo.computeVertexNormals()
+  return geo
+}
+
+/** Geometria sòlida de l'objecte (caixa, cilindre, perfil o forma lliure) centrada a la seva caixa. */
 export function refGeometry(g: RefObject): BufferGeometry {
+  if (g.shape === "mesh" && g.mesh) return meshGeometry(g, g.mesh)
   if (g.shape === "profile" && g.profile && g.profile.length >= 3) return profileGeometry(g)
   if (g.shape === "cylinder") {
     const axis = g.axis ?? "z"
