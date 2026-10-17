@@ -161,9 +161,12 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   `camHeightfield.ts` (mapa d'alçades de la cara de dalt: cel·la ≈ màx(1 mm, costat llarg / 2800), com a molt 6 M
   cel·les —600 k i / 800 a l'iPhone—; per decisió de l'usuari, 2026-10-17, abans 2,3 mm i es veia pixelat; cada tram de la fresa baixa les cel·les que toca el disc; endavant només es talla el
   que s'ha fet des de l'últim fotograma, enrere es refà de zero), amb `camSim.test.ts`. El 3D (`camSimScene.ts`) puja a la
-  GPU només les files canviades (textura RGBA: R = alçada, G = peça acabada); la malla de dalt és més baixa (1400 / 320
-  segments) i el color, la llum i els forats surten del mapa sencer a cada píxel, **interpolat** (bilineal fet al shader, la
-  textura és NEAREST): la vora d'un forat és la corba on la meitat és matèria, no l'escala de les cel·les. Pinta contínuament només mentre juga.
+  GPU només les files canviades (textura RGBA: R = alçada, G = peça acabada); el tauler és una caixa i, a cada píxel, el
+  shader segueix el raig de la càmera dins del tauler fins que troba matèria (`reliefMaterial`: passos de mitja cel·la i
+  afinat binari, amb la fondària escrita perquè l'eina entri als forats; si travessa, no pinta i es veu el martiri), amb
+  el mapa **interpolat** (bilineal fet al shader, la textura és NEAREST): la vora d'un forat és la corba on la meitat és
+  matèria. Per decisió de l'usuari, 2026-10-17 (es veia pixelat): abans era una malla desplaçada pel mapa i les vores
+  dels forats sortien en escala. Pinta contínuament només mentre juga.
 - Tests (`xcsPreview.test.ts`): mobles del catàleg amb el context real (el que es llegeix = el que s'ha escrit),
   `nesting_T01.xcs`, el programa real del taller i els per peça.
 

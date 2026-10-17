@@ -1,11 +1,12 @@
 import { OrbitControls } from "@react-three/drei"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import { useEffect, useMemo, useRef } from "react"
-import type { Group, LineSegments } from "three"
+import { Vector3 } from "three"
+import type { Group, LineSegments, Mesh } from "three"
 import { LOW_MEMORY } from "../../components/viewer/deviceLimits"
 import { createHeightfield, DEFAULT_LIMITS, LOW_LIMITS } from "./camHeightfield"
 import { advanceSim, toolAt, type SimCursor } from "./camSim"
-import { flushHeightTexture, heightMaterial, heightTexture, pathGeometries, topGeometry } from "./camSimScene"
+import { boardGeometry, flushHeightTexture, heightTexture, pathGeometries, reliefMaterial } from "./camSimScene"
 import type { CamSimClock } from "./useCamSim"
 
 const S = 0.001
@@ -43,7 +44,7 @@ function SimScene({ clock, paths, rapids }: { clock: CamSimClock; paths: boolean
   const sim = useMemo(() => {
     const hf = createHeightfield(L, W, T, LOW_MEMORY ? LOW_LIMITS : DEFAULT_LIMITS)
     const tex = heightTexture(hf)
-    return { hf, tex, mat: heightMaterial(hf, tex), geo: topGeometry(hf, LOW_MEMORY ? 320 : 1400), cur: { t: 0, fin: 0 } as SimCursor }
+    return { hf, tex, mat: reliefMaterial(hf, tex), geo: boardGeometry(hf), cur: { t: 0, fin: 0 } as SimCursor }
   }, [L, W, T])
   const lines = useMemo(() => pathGeometries(prog), [prog])
   useEffect(
@@ -76,7 +77,10 @@ function SimScene({ clock, paths, rapids }: { clock: CamSimClock; paths: boolean
   // Pausat: un fotograma quan canvia el temps (lliscador, botons) o el que es veu.
   useEffect(() => invalidate(), [clock.shown, paths, rapids, invalidate])
 
-  useFrame((_, dt) => {
+  const board = useRef<Mesh>(null)
+  useFrame(({ camera }, dt) => {
+    // La càmera en mm del tauler (el material hi tira els raigs).
+    if (board.current) (sim.mat.uniforms.camLocal!.value as Vector3).copy(board.current.worldToLocal(camera.position.clone()))
     clock.tick(Math.min(dt, 0.1))
     const t = clock.time.current
     advanceSim(sim.hf, prog, sim.cur, t)
@@ -92,16 +96,8 @@ function SimScene({ clock, paths, rapids }: { clock: CamSimClock; paths: boolean
   return (
     <group rotation={[-Math.PI / 2, 0, 0]} scale={S}>
       <group position={[-L / 2, -W / 2, 0]}>
-        {/* Cara de dalt (el mapa d'alçades) i els cantells; el martiri, a sota, es veu pels talls passants. */}
-        <mesh geometry={sim.geo} material={sim.mat} />
-        <mesh position={[L / 2, W / 2, T / 2]}>
-          <boxGeometry args={[L, W, T]} />
-          {[0, 1, 2, 3].map((i) => (
-            <meshStandardMaterial key={i} attach={`material-${i}`} color="#c49a6c" roughness={0.8} />
-          ))}
-          <meshBasicMaterial attach="material-4" visible={false} />
-          <meshBasicMaterial attach="material-5" visible={false} />
-        </mesh>
+        {/* El tauler (cara de dalt amb el que s'ha tret i els cantells); el martiri, a sota, es veu pels talls passants. */}
+        <mesh ref={board} geometry={sim.geo} material={sim.mat} />
         <mesh position={[L / 2, W / 2, -0.5]}>
           <planeGeometry args={[L + 80, W + 80]} />
           <meshStandardMaterial color="#6f7a6a" roughness={0.95} />
