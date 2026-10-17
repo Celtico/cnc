@@ -55,11 +55,14 @@ describe("electrodomèstics (v46)", () => {
     expect(b.panels.find((p) => p.role === "flap")!.holes.filter((h) => h.tag === "appliance")).toHaveLength(4)
   })
 
-  it("rentaplats: el front massa alt i el sòcol fora del rang avisen; el nínxol estret també", () => {
+  it("rentaplats: el sòcol fora del rang i el nínxol estret avisen; el front massa alt es fa del màxim", () => {
     const fixed = nicheModule("Rentaplats", "appliance-bosch-smv6zcx10e", 60)
     const w = warns(buildModule(fixed))
     expect(w.some((m) => m.includes("sòcol de 60") && m.includes("90–220"))).toBe(true)
-    expect(w.some((m) => m.includes("front del rentaplats fa 808") && m.includes("655–725"))).toBe(true)
+    // El front massa alt (808, el fabricant l'admet fins a 725) es fa del màxim, enrasat a dalt (per decisió de l'usuari,
+    // 2026-10-17): sense avís, amb la nota.
+    expect(w.some((m) => m.includes("front del rentaplats fa"))).toBe(false)
+    expect(buildModule(fixed).panels.find((p) => p.role === "flap")!.length).toBe(725)
     const narrow = nicheModule("Rentaplats", "appliance-bosch-smv6zcx10e", 143, { width: 580 })
     expect(warns(buildModule(narrow)).some((m) => m.includes("580 mm d'ample") && m.includes("≥ 600"))).toBe(true)
   })

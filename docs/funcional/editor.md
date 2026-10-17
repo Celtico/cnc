@@ -81,6 +81,11 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   `drawer-bottom` → Materials, `shelf-span` → Opcions de l'interior), també les subseccions (`components/foldOpen.ts`
   `openFolds`: el `FoldItem` s'obre pel seu acordió, es mostra i s'il·lumina un moment, `data-flash`). Un avís del mòdul
   sense peça marca les del tipus de què parla (`ROLE_HINT`: el fons, els laterals…) o, si no, enquadra tot el mòdul.
+  Els que no es poden arreglar sols porten **«Com es pot arreglar»** (`BuildWarning.options`: el text de cada opció i, si
+  en té, un botó que porta on es fa, `FixPlaceKey` → `FIX_PLACES`): un penjador que una columna no deixa posar
+  (escaire a la columna · moure el mòdul · fer-lo més estret), un tall que la CNC no fa (que travessi · a mà o amb CAM
+  3D), un prestatge que es vinclarà (divisor · gruixuts · tauler de 30). El front d'un electrodomèstic més alt del que
+  admet el fabricant ja no avisa: es fa del màxim, enrasat a dalt, amb el joc a sota (nota de l'aparell).
 - **Propietats** del que hi ha seleccionat i **només d'això**, en seccions plegables amb **una sola oberta alhora** (per decisió de l'usuari, 2026-10-13, i a tota l'app des del 2026-10-14: `FoldGroup` a l'inspector, recordada a la sessió `mobles:inspector-open`; les subseccions `size="sm"` de dins, una oberta entre elles; vegeu UI):
   - Moble: Resum (i avisos de fusteria), **Suport general** (si hi ha mòduls de terra; `SupportForm`: el suport de tots
     els mòduls de terra —Directe a terra · Sòcol · Potes vistes—, l'alçada, la pota, la retirada, fusta o alumini, el
@@ -176,7 +181,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     «Rentaplats», «Frigorífic»…; vegeu Model › Zones › Electrodomèstic) · Front ·
     **Opcions de l'interior** (`LuRows3`; abans «Prestatges i accessoris», reanomenada per decisió de l'usuari, 2026-10-16;
     surt sempre menys amb un front fix o amb calaixos; insígnia «3 · Barra · LED · 2 calaixos»:
-    primer els prestatges —Prestatges (quants) · Regulables · Filera System 32 si li toca, vegeu Mòdul · A ras · Retranqueig (sense a ras; el propi o «com el mòdul», i amb un pistó d'abatible al lateral, prou retirats per no tocar-lo: avís `shelf-strut`) · Gruixuts—, a sota
+    per grups plegables com les subseccions de la Caixa (per decisió de l'usuari, 2026-10-17: **Prestatges** `zone-shelves-shelves`, **Accessoris** `zone-shelves-accessories` i **Calaixos interiors** `zone-shelves-drawers`, cada un amb el seu resum): primer els prestatges —Prestatges (quants) · Regulables · Filera System 32 si li toca, vegeu Mòdul · A ras · Retranqueig (sense a ras; el propi o «com el mòdul», i amb un pistó d'abatible al lateral, prou retirats per no tocar-lo: avís `shelf-strut`) · Gruixuts—, a sota
     els accessoris —Penjar (Barra de penjar) i Llum (Tira LED), interruptor + `HardwarePick` «Com el mòdul»— i, darrere
     d'una porta (la seva o la d'una zona de més amunt), els **calaixos interiors** (`InnerDrawerRows`: Quantitat · Alçada
     de cada calaix · Guia o joc · Retirada del front, 25 per defecte de Preferències › Folgances · Suplement, el gruix del

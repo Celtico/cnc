@@ -156,6 +156,7 @@ const shelves = section("zone.shelves", "Opcions de l'interior", {
   code: UI.shelves,
   showIf: "Compartiment sense dividir, sense aparell que l'ocupi, amb lateral o divisor als dos costats; ni amb Calaixos ni Front fix",
 }, [
+  section("zone.shelves.shelvesGroup", "Prestatges", { icon: "subsection", code: UI.shelves, showIf: "Amb lateral o divisor als dos costats" }, [
   field("zone.shelves.count", "Prestatges", {
     code: UI.shelves,
     control: "number",
@@ -194,6 +195,8 @@ const shelves = section("zone.shelves", "Opcions de l'interior", {
     default: false,
     choices: [{ value: "on", label: "Gruixuts (buits)", reveals: ["zone.shelves.thickness"] }],
   }, [field("zone.shelves.thickness", "Gruix aparent", { code: UI.shelves, control: "number", default: 50 })]),
+  ]),
+  section("zone.shelves.accessoriesGroup", "Accessoris", { icon: "subsection", code: UI.shelves }, [
   field("zone.shelves.rail", "Penjar", {
     code: UI.shelves,
     control: "switch",
@@ -208,6 +211,8 @@ const shelves = section("zone.shelves", "Opcions de l'interior", {
     defaultEditable: true,
     choices: [{ value: "on", label: "Tira LED", reveals: ["zone.shelves.ledHardware"] }],
   }, [field("zone.shelves.ledHardware", "Ferratge", { code: UI.shelves, control: "hardware", defaultText: AS_MODULE })]),
+  ]),
+  section("zone.shelves.innerDrawersGroup", "Calaixos interiors", { icon: "subsection", code: UI.shelves, showIf: "Darrere d'una porta (la del compartiment o la d'una zona de més amunt)" }, [
   field("zone.shelves.innerDrawers", "Calaixos interiors", {
     code: UI.shelves,
     control: "number",
@@ -221,6 +226,7 @@ const shelves = section("zone.shelves", "Opcions de l'interior", {
     field("zone.shelves.innerDrawers.front", "Front", { code: UI.shelves, control: "choice", showIf: "Amb un joc de calaix", default: "wood", choices: [{ value: "wood", label: "De fusta" }, { value: "kit", label: "Metàl·lic (del joc)" }], note: "Per decisió de l'usuari, 2026-10-16: «calaixos sense frontal, tot ferratge»." }),
     field("zone.shelves.innerDrawers.setback", "Retirada del front", { code: UI.shelves, control: "number", defaultText: "Preferències › Folgances per defecte (25)" }),
     field("zone.shelves.innerDrawers.shim", "Suplement", { code: UI.shelves, control: "number", defaultText: "El gruix del cos" }),
+  ]),
   ]),
 ])
 

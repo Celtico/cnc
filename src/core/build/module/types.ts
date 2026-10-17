@@ -53,7 +53,15 @@ export interface BuildWarning {
   message: string
   zoneId?: string
   panelId?: string
+  /**
+   * Quan no es pot arreglar sol (per decisió de l'usuari, 2026-10-17: «dona les opcions per arreglar-ho»): què es pot fer,
+   * cada opció amb on es fa a l'editor (`where`: un lloc de `FIX_PLACES`, `features/editor/warningTarget.ts`), si en té.
+   */
+  options?: { text: string; where?: FixPlaceKey }[]
 }
+
+/** Els llocs de l'editor on es pot anar des d'una opció d'un avís. */
+export type FixPlaceKey = "position" | "dims" | "support" | "back" | "sides" | "materials" | "front" | "shelves" | "appliance" | "refPosition" | "partPosition"
 
 /** Un calaix fet amb un joc paramètric: el que cal comprar (números d'article) i la fusta que demana. */
 export interface KitOrder {

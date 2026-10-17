@@ -133,8 +133,12 @@ describe("els mobles d'abans passen al suport del moble", () => {
     const za = dw.root.appliance!
     const own = { ...dw, root: { ...dw.root, appliance: { hardware: za.hardware } } }
     const front = (h: number) => buildComposition(comp([box("a", 600), own], plinth({}, { height: h }))).panels.find((p) => p.id.startsWith("dw:") && p.role === "flap")!
-    // El front comença a dalt de les potes: 20 més de potes, 20 menys de front.
-    expect(front(100).length - front(120).length).toBeCloseTo(20)
+    // El front comença a dalt de les potes (o, si el fabricant el vol més curt, una mica més amunt): 20 més de potes, el
+    // front 20 mm més amunt o més curt.
+    const bottom = (h: number) => panelBox(front(h)).min[1]
+    expect(bottom(100)).toBeGreaterThanOrEqual(100)
+    expect(bottom(120)).toBeGreaterThanOrEqual(120)
+    expect(front(100).length).toBeGreaterThanOrEqual(front(120).length)
   })
 
   it("un mòdul sense base no pot anar sobre potes: va directe a terra", () => {

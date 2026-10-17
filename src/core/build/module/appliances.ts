@@ -187,7 +187,15 @@ export abstract class AppliancesBuilder extends DrawersBuilder {
       // El de baix com més curt millor dins del seu rang, perquè el de dalt hi entri (el que sobra).
       const L = r(Math.min(lo.max ?? Infinity, Math.max(lo.min ?? 0, T - J - (up.max ?? Infinity))))
       fronts.push({ y: y0, h: L, key: "lower", label: "Front de baix", range: lo }, { y: r(y0 + L + J), h: r(T - L - J), key: "upper", label: "Front de dalt", range: up })
-    } else fronts.push({ y: y0, h: T, key: "", label: "Front", range: range(f?.h) })
+    } else {
+      // Més alt del que admet el fabricant (per decisió de l'usuari, 2026-10-17: un rentaplats en un nínxol de 870 feia un
+      // front de 767 i en volia 765; i escurçar el mòdul el treia de línia amb els del costat): el front es fa del màxim,
+      // enrasat a dalt amb els fronts del costat, i el que sobra queda de joc a sota, damunt del sòcol (com al taller).
+      const fr = range(f?.h)
+      const h = fr?.max !== undefined && T > fr.max ? fr.max : T
+      if (h < T) note(`front de ${num(h)} mm (el màxim del fabricant), enrasat a dalt: ${num(r(T - h))} mm més de joc a sota`)
+      fronts.push({ y: r(y0 + T - h), h, key: "", label: "Front", ...(fr ? { range: fr } : {}) })
+    }
     const kindLabel = { dishwasher: "del rentaplats", fridge: "del frigorífic", washer: "de la rentadora" }[a.kind as "dishwasher" | "fridge" | "washer"] ?? "de l'electrodomèstic"
     const hinge = za.hinge ?? "left"
     const doorLike = doorLikeFront(a)

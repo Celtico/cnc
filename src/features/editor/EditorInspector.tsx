@@ -16,6 +16,7 @@ import type { Selection } from "../composition/StructureTree"
 import type { CompositionEdits } from "./editorCommands"
 import { InspectorAlerts } from "./InspectorAlerts"
 import type { CompositionWarning } from "../../core/build/buildComposition"
+import type { FixPlaceKey } from "../../core/build/buildModule"
 import { InspectorHeader } from "./InspectorHeader"
 import { ModuleSections, SceneFinishFields, ZoneSection } from "./InspectorSections"
 import { ModulePositionSection, ModuleTypeSection } from "./ModuleTypeSection"
@@ -55,7 +56,7 @@ export function EditorInspector({
 }: {
   inspectorOpen: string[]
   /** «Anar-hi» d'un avís. */
-  onGotoWarning?: (w: CompositionWarning) => void
+  onGotoWarning?: (w: CompositionWarning, where?: FixPlaceKey) => void
   setInspectorOpen: (v: string[]) => void
   comp: Composition
   setComp: SetComp

@@ -4,6 +4,9 @@ import type { LinearPiece } from "./linearOrders"
 import { refTouchesBox } from "./refCuts"
 import type { BuildWarning } from "./buildModule"
 
+/** Un avís d'un penjador, amb el número del mòdul (la composició hi posa el seu id). */
+type HangingWarning = BuildWarning & { moduleIndex: number }
+
 type Box = { min: [number, number, number]; max: [number, number, number] }
 
 /** Trossos de regleta més curts que això no es posen (no hi caben dos clips). */
@@ -20,9 +23,9 @@ const MIN_RAIL = 80
  * Modifica `extras` i `linear` (els de la composició, ja col·locats) i torna els avisos i els penjadors que no es fan (per
  * treure'ls de la comanda).
  */
-export function clipHangingToRefs(extras: Panel[], linear: LinearPiece[], refs: RefObject[], boxOf: (p: Panel) => Box): { warnings: BuildWarning[]; removed: { module: number; name: string }[] } {
+export function clipHangingToRefs(extras: Panel[], linear: LinearPiece[], refs: RefObject[], boxOf: (p: Panel) => Box): { warnings: HangingWarning[]; removed: { module: number; name: string }[] } {
   const cuts = refs.filter((o) => o.effect === "cut")
-  const warnings: BuildWarning[] = []
+  const warnings: HangingWarning[] = []
   const removed: { module: number; name: string }[] = []
   if (!cuts.length) return { warnings, removed }
   for (let i = extras.length - 1; i >= 0; i--) {
@@ -43,9 +46,17 @@ export function clipHangingToRefs(extras: Panel[], linear: LinearPiece[], refs: 
       removed.push({ module: p.module ?? 0, name: p.label.replace(/ \((esquerre|dret)\)$/, "") })
       const hook = extras.findIndex((x) => x.id === `${p.id}-hook`)
       if (hook >= 0) extras.splice(hook, 1)
+      const side = hanger[1] === "left" ? "esquerre" : "dret"
       warnings.push({
         code: "hanging",
-        message: `«${hits[0]!.name}» talla la cantonada del penjador ${hanger[1] === "left" ? "esquerre" : "dret"}: no hi cap i no es demana. Penja aquell costat d'una altra manera (escaire o placa a l'altra banda de la columna).`,
+        moduleIndex: p.module ?? 0,
+        panelId: `side-${hanger[1]}`,
+        message: `«${hits[0]!.name}» ocupa la cantonada del darrere ${hanger[1] === "left" ? "esquerra" : "dreta"} del mòdul, on va el penjador ${side}: el lateral hi queda retallat i el penjador no hi cap. Aquell penjador no es fa ni es demana.`,
+        options: [
+          { text: `Penjar el costat ${side} amb un escaire de penjar (o una placa) collat a la cara de la columna, sota la tapa: es posa a mà.` },
+          { text: "Moure el mòdul perquè la columna no arribi al lateral.", where: "position" },
+          { text: "Fer el mòdul més estret, fins a la columna: el lateral queda davant de la columna i el penjador hi torna a cabre.", where: "dims" },
+        ],
       })
     }
   }

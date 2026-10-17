@@ -295,7 +295,16 @@ export class Builder extends AppliancesBuilder {
     const innerH = rect.y1 - rect.y0
     const gap = (innerH - n * T) / (n + 1)
     if (width > 800 && t <= 19 && !hollow) {
-      this.warnings.push({ code: "shelf-span", message: `Prestatge de ${num(t)} mm amb una llum de ${num(width)} mm: es vinclarà (màxim recomanat 800).`, zoneId: zone.id })
+      this.warnings.push({
+        code: "shelf-span",
+        message: `Prestatge de ${num(t)} mm amb una llum de ${num(width)} mm: es vinclarà (màxim recomanat 800).`,
+        zoneId: zone.id,
+        options: [
+          { text: "Dividir el compartiment amb un divisor vertical al mig (Dividir, al compartiment)." },
+          { text: "Fer els prestatges gruixuts (buits): aguanten més.", where: "shelves" },
+          { text: "Fer el cos amb un tauler més gruixut (30 mm).", where: "materials" },
+        ],
+      })
     }
     const x0 = rect.x0 + (c.shelfClearance + inner) / 2
     const zF = d.D - setback

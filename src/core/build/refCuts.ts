@@ -4,6 +4,7 @@ import { normalizePanel } from "./buildCabinet"
 import { toLocal } from "./geometry"
 import { modulePlacements, refOnPanel } from "../model"
 import { pc } from "./polygonClip"
+import type { BuildWarning } from "./buildModule"
 
 type Box = { min: Vec3; max: Vec3 }
 const num = (v: number) => String(Math.round(v * 10) / 10).replace(".", ",")
@@ -33,7 +34,14 @@ interface RefCutProblem {
   refId: string
   panel: Panel
   message: string
+  options?: BuildWarning["options"]
 }
+
+/** Què es pot fer amb un tall que la CNC no fa (un buidat amb forma, un tall de costat). */
+const noCncOptions = (o: RefObject): NonNullable<BuildWarning["options"]> => [
+  { text: "Fer que travessi la peça de cara a cara: queda com un forat o un tall passant, que la CNC sí fa.", where: o.id.startsWith("part:") ? "partPosition" : "refPosition" },
+  { text: "Deixar-lo així i fer-lo a mà, o amb un programa de CAM 3D a partir del STEP (que ja porta la forma)." },
+]
 
 /**
  * Objectes que tallen: a cada peça que travessen en la seva direcció (`axis`, per defecte cap
@@ -59,7 +67,7 @@ export function applyRefCuts(panels: Panel[], refs: RefObject[], boxOf: (p: Pane
         hits?.add(o.id)
         const isPart = o.id.startsWith("part:")
         const side = sidewaysCut(o, sec, p, b, isExtra?.(p) ?? false, !isPart, added)
-        if (side) problems.push({ refId: o.id, panel: p, message: side })
+        if (side) problems.push({ refId: o.id, panel: p, message: side, ...(side.includes("pel cantell") ? { options: noCncOptions(o) } : {}) })
         continue
       }
       if (!refTouchesBox(o, b)) continue
@@ -71,7 +79,7 @@ export function applyRefCuts(panels: Panel[], refs: RefObject[], boxOf: (p: Pane
       if (hi - lo < 0.5) continue
       if (lo > n0 + 0.5 || hi < n1 - 0.5) {
         const blind = blindCut(o, sec, p, lo, hi, n0, n1, isExtra?.(p) ?? false)
-        if (blind) problems.push({ refId: o.id, panel: p, message: blind })
+        if (blind) problems.push({ refId: o.id, panel: p, message: blind, options: noCncOptions(o) })
         continue
       }
       const mid = (b.min[sec.a]! + b.max[sec.a]!) / 2

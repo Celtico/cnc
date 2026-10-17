@@ -1,7 +1,7 @@
 import type { CompositionBuild, CompositionWarning } from "../../core/build/buildComposition"
 import { moduleBoxToWorld } from "../../core/build/buildComposition"
 import { panelBox } from "../../core/build/geometry"
-import type { BuildWarning } from "../../core/build/buildModule"
+import type { BuildWarning, FixPlaceKey } from "../../core/build/buildModule"
 import type { Composition } from "../../core/model"
 import type { Selection } from "../composition/StructureTree"
 
@@ -9,7 +9,7 @@ type Code = BuildWarning["code"]
 
 /** On s'arregla un avís: a quin nivell (mòdul o compartiment) i quines seccions de l'inspector cal obrir (de fora a dins). */
 interface FixPlace {
-  level: "module" | "zone" | "moble"
+  level: "module" | "zone" | "moble" | "ref" | "part"
   folds: string[]
   /** Com ho diu el botó: «Caixa › Fons». */
   label: string
@@ -17,6 +17,21 @@ interface FixPlace {
 
 const MODULE = (folds: string[], label: string): FixPlace => ({ level: "module", folds, label })
 const ZONE = (folds: string[], label: string): FixPlace => ({ level: "zone", folds, label })
+
+/** Els llocs on porten les opcions d'un avís que no es pot arreglar sol (`BuildWarning.options`). */
+const FIX_PLACES: Record<FixPlaceKey, FixPlace> = {
+  position: MODULE(["mod-position"], "Posició"),
+  dims: MODULE(["mod-dims"], "Mides"),
+  support: { level: "moble", folds: ["moble-support"], label: "Suport general" },
+  back: MODULE(["mod-structure", "mod-carcass-back"], "Caixa › Fons"),
+  sides: MODULE(["mod-structure", "mod-carcass-sides"], "Caixa › Laterals"),
+  materials: MODULE(["mod-materials"], "Materials"),
+  front: ZONE(["zone-front"], "Front"),
+  shelves: ZONE(["zone-shelves", "zone-shelves-shelves"], "Interior › Prestatges"),
+  appliance: ZONE(["zone-appliance"], "Electrodomèstic"),
+  refPosition: { level: "ref", folds: ["ref-position"], label: "Posició de l'objecte" },
+  partPosition: { level: "part", folds: ["part-position"], label: "Posició de la peça" },
+}
 
 /**
  * Per a cada codi d'avís, la secció de l'inspector on es corregeix (per decisió de l'usuari, 2026-10-17: «mostrar al lloc
@@ -31,13 +46,13 @@ const FIX: Partial<Record<Code, FixPlace>> = {
   "drawer-box": ZONE(["zone-front"], "Front"),
   handle: ZONE(["zone-handle"], "Tirador"),
   push: ZONE(["zone-handle"], "Tirador"),
-  "shelf-span": ZONE(["zone-shelves"], "Opcions de l'interior"),
-  shelves: ZONE(["zone-shelves"], "Opcions de l'interior"),
-  hollow: ZONE(["zone-shelves"], "Opcions de l'interior"),
-  "shelf-strut": ZONE(["zone-shelves"], "Opcions de l'interior"),
-  rail: ZONE(["zone-shelves"], "Opcions de l'interior"),
-  light: ZONE(["zone-shelves"], "Opcions de l'interior"),
-  "inner-drawers": ZONE(["zone-shelves"], "Opcions de l'interior"),
+  "shelf-span": ZONE(["zone-shelves", "zone-shelves-shelves"], "Interior › Prestatges"),
+  shelves: ZONE(["zone-shelves", "zone-shelves-shelves"], "Interior › Prestatges"),
+  hollow: ZONE(["zone-shelves", "zone-shelves-shelves"], "Interior › Prestatges"),
+  "shelf-strut": ZONE(["zone-shelves", "zone-shelves-shelves"], "Interior › Prestatges"),
+  rail: ZONE(["zone-shelves", "zone-shelves-accessories"], "Interior › Accessoris"),
+  light: ZONE(["zone-shelves", "zone-shelves-accessories"], "Interior › Accessoris"),
+  "inner-drawers": ZONE(["zone-shelves", "zone-shelves-drawers"], "Interior › Calaixos interiors"),
   appliance: ZONE(["zone-appliance"], "Electrodomèstic"),
   layout: ZONE(["zone-split"], "Divisió"),
   "back-groove": MODULE(["mod-structure", "mod-carcass-back"], "Caixa › Fons"),
@@ -56,7 +71,9 @@ const FIX: Partial<Record<Code, FixPlace>> = {
 }
 
 /** On s'arregla un avís, com ho diu el botó («Caixa › Fons»), o res si no té un lloc. */
-export function fixLabel(w: Pick<CompositionWarning, "code" | "zoneId" | "moduleId">): string | null {
+export function fixLabel(w: Pick<CompositionWarning, "code" | "zoneId" | "moduleId" | "options">): string | null {
+  // Amb opcions, cada una porta el seu lloc.
+  if (w.options?.length) return null
   const p = FIX[w.code]
   if (!p) return null
   if (p.level === "zone" && !(w.zoneId && w.moduleId)) return null
@@ -76,6 +93,11 @@ const ROLE_HINT: Partial<Record<Code, string[]>> = {
   mitre: ["drawerFront", "side"],
 }
 
+/** Com ho diu el botó d'una opció («Posició»), o res si no té lloc. */
+export function placeLabel(where: FixPlaceKey | undefined): string | null {
+  return where ? FIX_PLACES[where].label : null
+}
+
 /** Les mides del moble per centrar l'escena (les mateixes que el visor: `frameSize`). */
 type Size = { width: number; height: number; depth: number }
 
@@ -90,8 +112,8 @@ interface WarningTarget {
 }
 
 /** On és i on s'arregla un avís (només el que se'n pot saber: les peces, el compartiment, el mòdul o l'objecte). */
-export function warningTarget(w: CompositionWarning, comp: Composition, build: CompositionBuild | undefined): WarningTarget {
-  const place = FIX[w.code] ?? null
+export function warningTarget(w: CompositionWarning, comp: Composition, build: CompositionBuild | undefined, where?: FixPlaceKey): WarningTarget {
+  const place = where ? FIX_PLACES[where] : w.options?.length ? null : (FIX[w.code] ?? null)
   const mb = w.moduleId ? build?.modules.find((m) => m.id === w.moduleId) : undefined
   // Les peces: la de l'avís (local del mòdul o ja de la composició), les del compartiment, les del mòdul o les de la peça lliure.
   let panels: string[] = []
@@ -127,14 +149,17 @@ export function warningTarget(w: CompositionWarning, comp: Composition, build: C
 
   // Què seleccionar: el que té la secció on s'arregla; si no, el més concret que hi ha.
   let select: Selection | null = null
-  if (place?.level === "zone" && w.zoneId && w.moduleId) select = { kind: "zone", moduleId: w.moduleId, zoneId: w.zoneId }
+  if (place?.level === "moble") select = { kind: "moble" }
+  else if (place?.level === "ref" && w.refId && !w.refId.startsWith("part:")) select = { kind: "ref", id: w.refId }
+  else if (place?.level === "part" && (w.partId || w.refId?.startsWith("part:"))) select = { kind: "part", id: w.partId ?? w.refId!.slice(5) }
+  else if (place?.level === "zone" && w.zoneId && w.moduleId) select = { kind: "zone", moduleId: w.moduleId, zoneId: w.zoneId }
   else if (place?.level === "module" && w.moduleId) select = { kind: "module", id: w.moduleId }
   else if (w.refId && !w.refId.startsWith("part:")) select = { kind: "ref", id: w.refId }
   else if (w.partId) select = { kind: "part", id: w.partId }
   else if (w.zoneId && w.moduleId) select = { kind: "zone", moduleId: w.moduleId, zoneId: w.zoneId }
   else if (w.moduleId) select = { kind: "module", id: w.moduleId }
   // Una secció de compartiment sense compartiment, o de mòdul sense mòdul: no es pot obrir.
-  const fix = place && select && ((place.level === "zone" && select.kind === "zone") || (place.level === "module" && select.kind === "module")) ? place : null
+  const fix = place && select && place.level === (select.kind === "moble" ? "moble" : select.kind) ? place : null
   return { select, panels, box, fix }
 }
 

@@ -2,7 +2,7 @@ import { type Module, visibleModule } from "../model"
 import { normalizePanel } from "./buildCabinet"
 import type { ModuleBuild, RearLimit } from "./module/types"
 import { Builder } from "./module/zones"
-export type { BuildWarning, KitOrder, ModuleBuild, Wiring } from "./module/types"
+export type { BuildWarning, FixPlaceKey, KitOrder, ModuleBuild, Wiring } from "./module/types"
 export { drawerBottomMaterial, frontMaterialOf, shapeOutline } from "./module/helpers"
 
 /** Construeix totes les peces d'un mòdul en coordenades del mòdul (base a Y = 0). */

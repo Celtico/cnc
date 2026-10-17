@@ -319,12 +319,15 @@ export function buildComposition(input: Composition): CompositionBuild {
   for (const pr of applyRefCuts([...panels, ...free.extras], [...comp.references, ...partCutters(comp)], panelBox, (p) => free.extras.includes(p), pieces, cutting)) {
     const moduleId = modules.find((m) => m.index === pr.panel.module)?.id
     const owner = pr.refId.startsWith("part:") ? { partId: pr.refId.slice(5) } : { refId: pr.refId }
-    warnings.push({ code: "ref-cut", message: pr.message, panelId: pr.panel.id, ...owner, ...(moduleId ? { moduleId } : {}) })
+    warnings.push({ code: "ref-cut", message: pr.message, panelId: pr.panel.id, ...owner, ...(moduleId ? { moduleId } : {}), ...(pr.options ? { options: pr.options } : {}) })
   }
   for (const piece of pieces) (free.extras.some((x) => piece.id.startsWith(`${x.id}-`)) ? free.extras : panels).push(piece)
   // La regleta i els penjadors dels penjats: la columna també els talla (`hangingCuts.ts`).
   const hanging = clipHangingToRefs(moduleExtras, linear, comp.references, panelBox)
-  warnings.push(...hanging.warnings)
+  for (const { moduleIndex, ...w } of hanging.warnings) {
+    const moduleId = modules.find((m) => m.index === moduleIndex)?.id
+    warnings.push({ ...w, ...(moduleId ? { moduleId } : {}) })
+  }
   for (const h of hanging.removed) {
     const k = fittingOrders.findIndex((l) => l.module === h.module && l.name === h.name)
     if (k < 0) continue

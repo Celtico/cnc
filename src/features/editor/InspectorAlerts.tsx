@@ -1,9 +1,10 @@
 import { Alert, Badge, Button, Stack, Text } from "@chakra-ui/react"
 import { useMemo } from "react"
 import { LuCrosshair, LuDoorOpen, LuTriangleAlert } from "react-icons/lu"
-import { fixLabel } from "./warningTarget"
+import { fixLabel, placeLabel } from "./warningTarget"
 import { FoldItem } from "../../components/Fold"
 import type { CompositionWarning } from "../../core/build/buildComposition"
+import type { FixPlaceKey } from "../../core/build/buildModule"
 import type { Composition, Module } from "../../core/model"
 import type { Project } from "../../db/db"
 import { ESTIMATED_WARNING, estimatedApplied } from "../photo/appliedState"
@@ -33,7 +34,7 @@ export function InspectorAlerts({
   collisions: SceneData["collisions"]
   photo: Project["photo"]
   /** Anar a un avís: el mostra al 3D i obre on s'arregla (`warningTarget`). */
-  onGoto?: (w: CompositionWarning) => void
+  onGoto?: (w: CompositionWarning, where?: FixPlaceKey) => void
 }) {
   // Mesures de la foto aplicades al moble que encara són estimades.
   const estimated = useMemo(() => estimatedApplied(photo), [photo])
@@ -114,6 +115,21 @@ export function InspectorAlerts({
                           × {count}
                         </Badge>
                       )}
+                      {w.options?.length ? (
+                        <Stack as="ul" gap={1} mt={2} ps={4} listStyleType="disc">
+                          <Text as="span" fontWeight="semibold" ms={-4}>Com es pot arreglar:</Text>
+                          {w.options.map((o, k) => (
+                            <li key={k}>
+                              {o.text}
+                              {o.where && onGoto && (
+                                <Button size="xs" variant="plain" ml={1} colorPalette="wood" onClick={() => onGoto(w, o.where)}>
+                                  <LuCrosshair /> {placeLabel(o.where)}
+                                </Button>
+                              )}
+                            </li>
+                          ))}
+                        </Stack>
+                      ) : null}
                       {onGoto && (() => {
                         const fix = fixLabel(w)
                         return (

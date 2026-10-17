@@ -14,12 +14,14 @@ describe("anar a un avís (per decisió de l'usuari, 2026-10-17)", () => {
     const c = comp()
     const b = buildComposition(c)
     const w = b.warnings.find((x) => x.code === "shelf-span")!
-    const t = warningTarget(w, c, b)
+    // Té opcions: cada una porta al seu lloc (la dels prestatges gruixuts, a «Opcions de l'interior»).
+    expect(w.options?.length).toBeGreaterThan(0)
+    expect(fixLabel(w)).toBeNull()
+    const t = warningTarget(w, c, b, "shelves")
     expect(t.select).toEqual({ kind: "zone", moduleId: "m", zoneId: "z" })
     expect(t.panels.some((id) => id.includes("shelf"))).toBe(true)
     expect(t.box).not.toBeNull()
-    expect(t.fix?.folds).toEqual(["zone-shelves"])
-    expect(fixLabel(w)).toBe("Opcions de l'interior")
+    expect(t.fix?.folds).toEqual(["zone-shelves", "zone-shelves-shelves"])
   })
 
   it("del mòdul: el tria i obre Caixa › Fons; la càmera mira el centre de la peça", () => {

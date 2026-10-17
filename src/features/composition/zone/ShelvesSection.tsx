@@ -1,5 +1,5 @@
 import { Switch } from "@chakra-ui/react"
-import { LuRows3 } from "react-icons/lu"
+import { LuInbox, LuLamp, LuRows3 } from "react-icons/lu"
 import type { ReactNode } from "react"
 import { FoldItem } from "../../../components/Fold"
 import { canHoldAccessories, canHoldShelves, moduleSlotItem, setShelves, slotOf, updateZone, type ModuleHardware, type Zone, type ZoneAccessory, type ZoneBounds } from "../../../core/model"
@@ -17,7 +17,9 @@ export function ZoneShelvesSection({ root, zone, onChange, hardware, bounds, sys
   const { settings } = useSettings()
   return (
     <FoldItem optionId="zone.shelves" id="zone-shelves" title="Opcions de l'interior" badge={shelvesBadge(zone, behindDoor)} icon={LuRows3}>
-      {canHoldShelves(bounds) && <>
+      {/* Per grups (per decisió de l'usuari, 2026-10-17), com les subseccions de la Caixa: Prestatges, Accessoris i Calaixos
+          interiors, cada un plegable amb el seu resum. */}
+      {canHoldShelves(bounds) && <FoldItem optionId="zone.shelves.shelvesGroup" id="zone-shelves-shelves" title="Prestatges" icon={LuRows3} size="sm" badge={zone.shelves?.n ? String(zone.shelves.n) : undefined}>
       <NumRow
         optionId="zone.shelves.count"
         label="Prestatges"
@@ -88,12 +90,20 @@ export function ZoneShelvesSection({ root, zone, onChange, hardware, bounds, sys
         />
       )}
       </>}
-      </>}
+      </FoldItem>}
       {/* Accessoris del compartiment: ferratges (barra de penjar, tira LED), no fusta; a sota dels prestatges (la tira
           LED va sota cada prestatge). */}
-      {canHoldAccessories(bounds) && <AccessoryRows root={root} zone={zone} hardware={hardware} onChange={onChange} />}
+      {canHoldAccessories(bounds) && (
+        <FoldItem optionId="zone.shelves.accessoriesGroup" id="zone-shelves-accessories" title="Accessoris" icon={LuLamp} size="sm" badge={(["rail", "led"] as const).filter((k) => zone[k]).map((k) => ACCESSORY_LABELS[k]).join(" · ") || undefined}>
+          <AccessoryRows root={root} zone={zone} hardware={hardware} onChange={onChange} />
+        </FoldItem>
+      )}
       {/* Calaixos interiors: darrere d'una porta, a baix de tot (els prestatges es reparteixen per sobre). */}
-      {behindDoor && canHoldShelves(bounds) && <InnerDrawerRows root={root} zone={zone} hardware={hardware} setback={settings.gaps.innerDrawerSetback ?? 25} body={bodyThickness} onChange={onChange} />}
+      {behindDoor && canHoldShelves(bounds) && (
+        <FoldItem optionId="zone.shelves.innerDrawersGroup" id="zone-shelves-drawers" title="Calaixos interiors" icon={LuInbox} size="sm" badge={zone.innerDrawers ? String(zone.innerDrawers.n) : undefined}>
+          <InnerDrawerRows root={root} zone={zone} hardware={hardware} setback={settings.gaps.innerDrawerSetback ?? 25} body={bodyThickness} onChange={onChange} />
+        </FoldItem>
+      )}
     </FoldItem>
   )
 }
@@ -164,7 +174,7 @@ function InnerDrawerRows({ root, zone, hardware, setback, body, onChange }: { ro
     <>
       <NumRow
         optionId="zone.shelves.innerDrawers"
-        label="Calaixos interiors"
+        label="Calaixos"
         suffix="u"
         value={d?.n ?? 0}
         min={0}

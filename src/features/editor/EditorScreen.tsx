@@ -19,6 +19,7 @@ import { EditorViewport } from "./EditorViewport"
 import { framePose, warningTarget } from "./warningTarget"
 import { openFolds } from "../../components/foldOpen"
 import type { CompositionWarning } from "../../core/build/buildComposition"
+import type { FixPlaceKey } from "../../core/build/buildModule"
 import { ElevationView } from "./ElevationView"
 import { SceneView } from "./SceneView"
 import { ViewerToolbar } from "./ViewerToolbar"
@@ -110,8 +111,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   const picks = viewerPicks({ comp, build, selection, select, selectModule, pick, shiftRef })
   // «Anar-hi» d'un avís (per decisió de l'usuari, 2026-10-17): tria on és, la càmera hi vola amb les peces marcades i
   // s'obre la secció on s'arregla. El marcatge es treu quan es tria una altra cosa.
-  const gotoWarning = (w: CompositionWarning) => {
-    const t = warningTarget(w, comp, build)
+  const gotoWarning = (w: CompositionWarning, where?: FixPlaceKey) => {
+    const t = warningTarget(w, comp, build, where)
     if (t.select) select(t.select)
     if (opts.viewTab !== "3d") opts.setViewTab("3d")
     camera.focusAlert(new Set(t.panels), t.box ? framePose(t.box, scene.frameSize) : null, JSON.stringify(t.select ?? selection))
