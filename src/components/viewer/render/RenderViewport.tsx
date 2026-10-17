@@ -74,13 +74,18 @@ export function RenderViewport({ canvas, engine, background, preview, notice, st
         <HStack gap={2}>
           {begun ? (
             <>
-              <Button size="sm" variant="outline" onClick={toggle} disabled={preparing}>
-                {running ? <LuPause /> : <LuPlay />} {running ? "Aturar" : "Continuar"}
-              </Button>
+              {/* Al mòbil, només la icona (per decisió de l'usuari, 2026-10-17: els tres botons no hi cabien). */}
+              <Tooltip content={running ? "Aturar" : "Continuar"}>
+                <Button size="sm" variant="outline" onClick={toggle} disabled={preparing} aria-label={running ? "Aturar" : "Continuar"} px={{ base: 2, md: 3 }}>
+                  {running ? <LuPause /> : <LuPlay />}
+                  <Box as="span" display={{ base: "none", md: "inline" }}>{running ? "Aturar" : "Continuar"}</Box>
+                </Button>
+              </Tooltip>
               {!running && (
                 <Tooltip content="Tornar a començar amb el moble tal com és ara">
-                  <Button size="sm" variant="ghost" onClick={startOver} disabled={preparing}>
-                    <LuRotateCcw /> De nou
+                  <Button size="sm" variant="ghost" onClick={startOver} disabled={preparing} aria-label="De nou" px={{ base: 2, md: 3 }}>
+                    <LuRotateCcw />
+                    <Box as="span" display={{ base: "none", md: "inline" }}>De nou</Box>
                   </Button>
                 </Tooltip>
               )}
