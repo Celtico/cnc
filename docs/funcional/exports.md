@@ -164,8 +164,10 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   GPU només les files canviades (textura RGBA: R = alçada, G = peça acabada); el tauler és una caixa i, a cada píxel, el
   shader segueix el raig de la càmera dins del tauler fins que troba matèria (`reliefMaterial`: passos de mitja cel·la i
   afinat binari, amb la fondària escrita perquè l'eina entri als forats; si travessa, no pinta i es veu el martiri), amb
-  el mapa **interpolat** (bilineal fet al shader, la textura és NEAREST): la vora d'un forat és la corba on la meitat és
-  matèria. Per decisió de l'usuari, 2026-10-17 (es veia pixelat): abans era una malla desplaçada pel mapa i les vores
+  la **vora de cada tall** guardada al mapa (canal B: distància amb signe del centre de la cel·la a la vora del disc de
+  la fresa, ±2 cel·les, `EDGE_CELLS`) i interpolada al shader (la textura és NEAREST): dins, el nivell més baix de les
+  quatre cel·les; fora, el més alt. La vora és la corba exacta de la fresa, no l'escala de les cel·les, i les parets
+  s'il·luminen amb la seva normal (zoom fins a 1/125 del tauler). Per decisió de l'usuari, 2026-10-17 (es veia pixelat): abans era una malla desplaçada pel mapa i les vores
   dels forats sortien en escala. Pinta contínuament només mentre juga.
 - Tests (`xcsPreview.test.ts`): mobles del catàleg amb el context real (el que es llegeix = el que s'ha escrit),
   `nesting_T01.xcs`, el programa real del taller i els per peça.

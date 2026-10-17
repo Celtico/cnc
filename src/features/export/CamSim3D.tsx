@@ -32,7 +32,7 @@ export default function CamSim3D({ clock, paths, rapids }: { clock: CamSimClock;
       <hemisphereLight args={["#ffffff", "#8a7a60", 0.9]} />
       <directionalLight position={[1, 3, 2]} intensity={1.4} />
       <SimScene clock={clock} paths={paths} rapids={rapids} />
-      <OrbitControls makeDefault enableDamping dampingFactor={0.12} target={[0, 0, 0]} minDistance={span * 0.03} maxDistance={span * 6} />
+      <OrbitControls makeDefault enableDamping dampingFactor={0.12} target={[0, 0, 0]} minDistance={span * 0.008} maxDistance={span * 6} />
     </Canvas>
   )
 }

@@ -3,7 +3,8 @@ import type { Pt } from "../../core/export/xcsPreview"
 /**
  * Simulació 3D de la Vista CAM: la cara de dalt del tauler com a **mapa d'alçades** (una cel·la quadrada cada `cell` mm).
  * Cada cel·la guarda l'alçada que queda (de 0, la cara de sota, a `T`, la de dalt) en un byte, ja a punt per pujar-lo a
- * una textura RGBA (R = alçada, G = peça acabada). 0 = passant (s'hi veu el martiri). Pur: el 3D només el pinta.
+ * una textura RGBA (R = alçada, G = peça acabada, B = **distància amb signe a la vora del tall** que l'ha deixat així: el
+ * 3D hi dibuixa la vora corba i no l'escala de les cel·les; `encodeEdge`). 0 = passant (s'hi veu el martiri). Pur: el 3D només el pinta.
  */
 
 export type P3 = [number, number, number]
@@ -35,6 +36,13 @@ export const DEFAULT_LIMITS: HeightfieldLimits = { maxCells: 6_000_000, minCell:
 /** iPhone i tauletes: la meitat de cel·les (memòria de Safari). */
 export const LOW_LIMITS: HeightfieldLimits = { maxCells: 600_000, minCell: 1, div: 800 }
 
+/**
+ * Canal B: distància amb signe (mm, negativa dins del tall) del centre de la cel·la a la vora del tall més proper, de −2 a
+ * +2 cel·les en un byte (128 = a la vora; 255 = lluny, sense cap tall a prop).
+ */
+export const EDGE_CELLS = 2
+const encodeEdge = (d: number, cell: number) => Math.max(0, Math.min(255, Math.round(128 + (d / (EDGE_CELLS * cell)) * 127)))
+
 /** Codi del byte: 0 = passant; 1…255 = de 0 a `T`. */
 const FULL = 255
 const encode = (z: number, T: number) => (z <= 1e-3 ? 0 : z >= T ? FULL : 1 + Math.round((z / T) * 254))
@@ -57,7 +65,7 @@ export function resetHeightfield(hf: Heightfield): void {
   for (let k = 0; k < d.length; k += 4) {
     d[k] = FULL
     d[k + 1] = 0
-    d[k + 2] = 0
+    d[k + 2] = FULL
     d[k + 3] = FULL
   }
   hf.dirty = { i0: 0, j0: 0, i1: hf.nx - 1, j1: hf.ny - 1 }
@@ -114,16 +122,19 @@ export function stampSegment(hf: Heightfield, a: P3, b: P3, rIn: number): void {
 
 function stampPiece(hf: Heightfield, a: P3, b: P3, r: number): void {
   const { cell, nx, ny, T, data } = hf
-  const i0 = Math.max(0, Math.floor((Math.min(a[0], b[0]) - r) / cell))
-  const i1 = Math.min(nx - 1, Math.floor((Math.max(a[0], b[0]) + r) / cell))
-  const j0 = Math.max(0, Math.floor((Math.min(a[1], b[1]) - r) / cell))
-  const j1 = Math.min(ny - 1, Math.floor((Math.max(a[1], b[1]) + r) / cell))
+  // Fins a 2 cel·les fora del disc: la distància a la vora (canal B) de les cel·les del voltant.
+  const m = r + EDGE_CELLS * cell
+  const i0 = Math.max(0, Math.floor((Math.min(a[0], b[0]) - m) / cell))
+  const i1 = Math.min(nx - 1, Math.floor((Math.max(a[0], b[0]) + m) / cell))
+  const j0 = Math.max(0, Math.floor((Math.min(a[1], b[1]) - m) / cell))
+  const j1 = Math.min(ny - 1, Math.floor((Math.max(a[1], b[1]) + m) / cell))
   if (i0 > i1 || j0 > j1) return
   const dx = b[0] - a[0]
   const dy = b[1] - a[1]
   const dz = b[2] - a[2]
   const len2 = dx * dx + dy * dy
   const r2 = r * r
+  const zMin = encode(Math.min(a[2], b[2]), T)
   let changed = false
   let ci0 = i1
   let ci1 = i0
@@ -133,33 +144,55 @@ function stampPiece(hf: Heightfield, a: P3, b: P3, r: number): void {
     const cy = (j + 0.5) * cell
     for (let i = i0; i <= i1; i++) {
       const cx = (i + 0.5) * cell
+      const k = (j * nx + i) * 4
+      // Distància del centre de la cel·la al recorregut (el tram, o el punt).
+      const s = len2 < 1e-12 ? 0 : Math.max(0, Math.min(1, ((cx - a[0]) * dx + (cy - a[1]) * dy) / len2))
+      const ex = a[0] + s * dx - cx
+      const ey = a[1] + s * dy - cy
+      const dist = Math.sqrt(ex * ex + ey * ey) - r
+      if (dist > 0) {
+        // Fora del disc però a prop: si aquí la matèria és més alta que el tall, la vora és a `dist`.
+        if (dist < EDGE_CELLS * cell && data[k]! > zMin) {
+          const e = encodeEdge(dist, cell)
+          if (e < data[k + 2]!) {
+            data[k + 2] = e
+            changed = true
+            if (i < ci0) ci0 = i
+            if (i > ci1) ci1 = i
+            if (j < cj0) cj0 = j
+            if (j > cj1) cj1 = j
+          }
+        }
+        continue
+      }
       let z: number
-      if (len2 < 1e-12) {
-        if ((cx - a[0]) ** 2 + (cy - a[1]) ** 2 > r2) continue
-        z = Math.min(a[2], b[2])
-      } else {
-        const s = ((cx - a[0]) * dx + (cy - a[1]) * dy) / len2
-        const px = a[0] + s * dx - cx
-        const py = a[1] + s * dy - cy
+      if (len2 < 1e-12) z = Math.min(a[2], b[2])
+      else {
+        const s2 = ((cx - a[0]) * dx + (cy - a[1]) * dy) / len2
+        const px = a[0] + s2 * dx - cx
+        const py = a[1] + s2 * dy - cy
         const perp2 = px * px + py * py
         if (perp2 > r2) continue
         // Tros del tram on el disc cobreix la cel·la: [s − Δ, s + Δ] ∩ [0, 1].
         const half = Math.sqrt((r2 - perp2) / len2)
-        const lo = Math.max(0, s - half)
-        const hi = Math.min(1, s + half)
+        const lo = Math.max(0, s2 - half)
+        const hi = Math.min(1, s2 + half)
         if (lo > hi) continue
         z = Math.min(a[2] + dz * lo, a[2] + dz * hi)
       }
       const code = encode(z, T)
-      const k = (j * nx + i) * 4
+      const e = encodeEdge(dist, cell)
       if (code < data[k]!) {
+        // Més avall: la vora d'aquesta cel·la passa a ser la d'aquest tall.
         data[k] = code
-        changed = true
-        if (i < ci0) ci0 = i
-        if (i > ci1) ci1 = i
-        if (j < cj0) cj0 = j
-        if (j > cj1) cj1 = j
-      }
+        data[k + 2] = e
+      } else if (code === data[k]! && e < data[k + 2]!) data[k + 2] = e
+      else continue
+      changed = true
+      if (i < ci0) ci0 = i
+      if (i > ci1) ci1 = i
+      if (j < cj0) cj0 = j
+      if (j > cj1) cj1 = j
     }
   }
   if (changed) markDirty(hf, ci0, cj0, ci1, cj1)

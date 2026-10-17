@@ -6,6 +6,7 @@ import { modulePlacements, refOnPanel } from "../model"
 import { pc } from "./polygonClip"
 
 type Box = { min: Vec3; max: Vec3 }
+const num = (v: number) => String(Math.round(v * 10) / 10).replace(".", ",")
 
 /** Eix normal d'una peça (0 = x, 1 = y, 2 = z): el del gruix. */
 function normalIndex(p: Panel): 0 | 1 | 2 {
@@ -63,6 +64,16 @@ export function applyRefCuts(panels: Panel[], refs: RefObject[], boxOf: (p: Pane
       }
       if (!refTouchesBox(o, b)) continue
       hits?.add(o.id)
+      // No travessa tot el gruix (per decisió de l'usuari, 2026-10-17: «que no foradi si no traspassa»): un buidat de la
+      // seva fondària des de la cara per on entra, no un forat passant.
+      const n0 = b.min[sec.a]!, n1 = b.max[sec.a]!
+      const lo = Math.max(sec.range[0], n0), hi = Math.min(sec.range[1], n1)
+      if (hi - lo < 0.5) continue
+      if (lo > n0 + 0.5 || hi < n1 - 0.5) {
+        const blind = blindCut(o, sec, p, lo, hi, n0, n1, isExtra?.(p) ?? false)
+        if (blind) problems.push({ refId: o.id, panel: p, message: blind })
+        continue
+      }
       const mid = (b.min[sec.a]! + b.max[sec.a]!) / 2
       const local = (pu: number, pv: number): [number, number] => {
         const q: [number, number, number] = [0, 0, 0]
@@ -271,6 +282,50 @@ function sidewaysCut(o: RefObject, sec: Section, p: Panel, b: Box, extra: boolea
   p.solidCuts = [...(p.solidCuts ?? []), { points: start, dir: [l1[0] - l0[0], l1[1] - l0[1], l1[2] - l0[2]] }]
   if (extra) return
   return `«${o.name}» travessa ${p.label} pel cantell (no de cara a cara): es veu al 3D, però a la CNC no es pot fer com a forat passant (seria un forat de cantell o un buidat).`
+}
+
+/**
+ * Un objecte que entra de cara però no travessa la peça (de `lo` a `hi` en el seu eix, dins del gruix de `n0` a `n1`):
+ * - des d'una cara, cercle de fins a Ø35 dins de la peça → **forat** de la seva Ø i fondària (com una cassoleta; més gros
+ *   no hi ha broca);
+ * - des d'una cara, rectangle dins de la peça → **buidat** rectangular (`grooves`, de la seva fondària);
+ * - la resta (un perfil, o un buidat que arriba al cantell, o un que queda dins del gruix sense tocar cap cara): el
+ *   booleà en 3D (`solidCuts`) i un avís, perquè al programa de la CNC no hi va.
+ */
+function blindCut(o: RefObject, sec: Section, p: Panel, lo: number, hi: number, n0: number, n1: number, extra: boolean): string | undefined {
+  const r1 = (v: number) => Math.round(v * 10) / 10
+  const depth = r1(hi - lo)
+  const fromMax = hi >= n1 - 0.5
+  const fromMin = lo <= n0 + 0.5
+  const at = (pu: number, pv: number, av: number): Vec3 => {
+    const q: [number, number, number] = [0, 0, 0]
+    q[sec.u] = pu
+    q[sec.v] = pv
+    q[sec.a] = av
+    return toLocal(p, q)
+  }
+  if (fromMax || fromMin) {
+    const surface = fromMax ? n1 : n0
+    const faceZ = at(0, 0, surface)[2]
+    const face: "A" | "B" = Math.abs(faceZ - p.thickness) < 0.5 ? "A" : "B"
+    const pts = sec.poly.map(([pu, pv]) => at(pu, pv, surface))
+    const bb = bounds(pts.map((q) => [q[0], q[1]] as [number, number]))
+    const inside = bb.x0 >= 1 && bb.y0 >= 1 && bb.x1 <= p.length - 1 && bb.y1 <= p.width - 1
+    if (inside && sec.circle && 2 * sec.circle.r <= 35 + 0.01) {
+      const c = at(sec.circle.cu, sec.circle.cv, surface)
+      p.holes = [...p.holes, { x: r1(c[0]), y: r1(c[1]), diameter: r1(2 * sec.circle.r), depth, face, tag: "ref" }]
+      return
+    }
+    if (inside && !sec.outline && sec.poly.length === 4) {
+      p.grooves = [...p.grooves, { x: r1(bb.x0), y: r1(bb.y0), w: r1(bb.x1 - bb.x0), h: r1(bb.y1 - bb.y0), depth, face, tag: "ref" }]
+      return
+    }
+  }
+  const start = sec.poly.map(([pu, pv]) => at(pu, pv, lo))
+  const a0 = at(0, 0, lo), a1 = at(0, 0, hi)
+  p.solidCuts = [...(p.solidCuts ?? []), { points: start, dir: [a1[0] - a0[0], a1[1] - a0[1], a1[2] - a0[2]] }]
+  if (extra) return
+  return `«${o.name}» entra ${num(depth)} mm a ${p.label} sense travessar-la: es veu al 3D, però a la CNC aquest buidat (${fromMax || fromMin ? "amb forma o fins al cantell" : "dins del gruix"}) no es fa.`
 }
 
 /** El punt és sobre el contorn del polígon (a 0,05 mm d'algun costat). */
