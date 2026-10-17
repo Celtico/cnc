@@ -68,7 +68,7 @@
   de fons i render; al 3D enquadrar, interior, casa de nines, sostre, ombres i render.
 - **3D** (`Ambient3D`): terra i parets amb `surfaceMaterial` (textura a mida real); les parets entre la càmera i l'habitació es
   fan transparents (casa de nines). La mateixa navegació que l'editor; clic per seleccionar (caixa taronja; Supr, Ctrl/⌘ D, R
-  i fletxes); **es mou amb les fletxes del gizmo** (`MoveGizmo`, X i Z; quadrícula, imant a les parets només en la direcció
+  i fletxes); **es mou amb les fletxes del gizmo** (`MoveGizmo`, X i Z, i la bola del mig lliure pel terra, X i Z alhora; quadrícula, imant a les parets només en la direcció
   de la fletxa amb un sol element, Alt sense imant, un pas de desfer). **La verda (Y) mou l'alçada** («Del terra», mai
   sota 0; per decisió de l'usuari): amb l'imant, a 60 mm s'enganxa al terra o a sobre d'un altre element que tingui a
   sota (planta que se solapa: una taula, un moble). Ratolí a sobre: contorn prim (`BoxFrame`); seleccionat, gruixut. Les peces d'un

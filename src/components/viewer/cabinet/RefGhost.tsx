@@ -6,7 +6,7 @@ import type { MaterialPref, RefObject } from "../../../core/model"
 import { useLatest } from "../../../lib/useLatest"
 import { BoxFrame } from "../BoxFrame"
 import { useViewerCursor } from "../cursor"
-import { MoveGizmo } from "../MoveGizmo"
+import { MoveGizmo, type GizmoHandle } from "../MoveGizmo"
 import type { Axis } from "../pixelScale"
 import { profileGeometry } from "../refGeometry"
 import { surfaceMaterial } from "../surfaceMaterial"
@@ -54,8 +54,9 @@ function useFacingAxis(): Axis | null {
 }
 
 /**
- * Objecte de referència (translúcid, o sòlid si té material). Seleccionat, es mou només amb les fletxes del gizmo (cada
- * una en la seva direcció; el cos no s'arrossega). S'enganxa a les arestes dels mòduls i dels altres objectes (Alt: sense
+ * Objecte de referència (translúcid, o sòlid si té material). Seleccionat, es mou només amb el gizmo: cada fletxa en la
+ * seva direcció i la bola del mig lliure (pel terra si hi és, per la paret si hi és, si no pel pla de la pantalla); el cos
+ * no s'arrossega. S'enganxa a les arestes dels mòduls i dels altres objectes (Alt: sense
  * imant). Amb el ratolí a sobre, contorn del color de selecció.
  */
 export function RefGhost({
@@ -95,6 +96,8 @@ export function RefGhost({
   const getThree = useThree((st) => st.get)
   const latest = useLatest(drag)
   const state = useRef<{ plane: Plane; grab: Vector3; axes: Axis[]; start: [number, number]; moved: boolean } | null>(null)
+  /** L'arrossegament d'ara és el de la bola (per marcar-la encara que només mogui en dues direccions). */
+  const freeDrag = useRef(false)
   const snap = useMemo((): SnapTargets => {
     const t = { x: [...targets.x], y: [...targets.y], z: [...targets.z] }
     for (const o of others) {
@@ -163,14 +166,24 @@ export function RefGhost({
   // Fletxes de moviment (com el gizmo de Blender o Fusion): cada una mou només en la seva
   // direcció. Pla que conté l'eix i mira cap a la càmera.
   const camera = useThree((st) => st.camera)
-  const startAxis = (a: Axis, e: ThreeEvent<PointerEvent>) => {
+  const startAxis = (a: GizmoHandle, e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation()
-    const dir = a === "x" ? new Vector3(1, 0, 0) : a === "y" ? new Vector3(0, 1, 0) : new Vector3(0, 0, 1)
     const toCam = camera.getWorldDirection(new Vector3()).negate()
-    const n = dir.clone().cross(toCam).cross(dir)
-    if (n.lengthSq() < 1e-6) return
+    let n: Vector3
+    let axes: Axis[]
+    if (a === "free") {
+      // La bola: lliure en el pla que toca. Al terra, pel terra; a la paret, per la paret; si no, el pla de la pantalla
+      // (es mou en les direccions que es poden, menys la que mira a la càmera).
+      n = g.onFloor ? new Vector3(0, 1, 0) : g.onWall ? new Vector3(0, 0, 1) : toCam
+      axes = g.onFloor ? (["x", "z"] as Axis[]) : g.onWall ? (["x", "y"] as Axis[]) : gizmoAxes
+    } else {
+      const dir = a === "x" ? new Vector3(1, 0, 0) : a === "y" ? new Vector3(0, 1, 0) : new Vector3(0, 0, 1)
+      n = dir.clone().cross(toCam).cross(dir)
+      axes = [a]
+    }
+    if (n.lengthSq() < 1e-6 || !axes.length) return
     const corner = new Vector3(g.x * S + offset[0], g.y * S + offset[1], g.z * S + offset[2])
-    state.current = { plane: new Plane().setFromNormalAndCoplanarPoint(n.normalize(), e.point), grab: e.point.clone().sub(corner), axes: [a], start: [e.clientX, e.clientY], moved: false }
+    state.current = { plane: new Plane().setFromNormalAndCoplanarPoint(n.normalize(), e.point), grab: e.point.clone().sub(corner), axes, start: [e.clientX, e.clientY], moved: false }
     ;(e.target as Element | null)?.setPointerCapture?.(e.pointerId)
     if (controls) controls.enabled = false
   }
@@ -214,7 +227,7 @@ export function RefGhost({
     </mesh>
       {/* Seleccionat: contorn gruixut que es veu sempre (també sobre un objecte sòlid i fosc); a sobre: més prim. */}
       {!outline && (selected || (hover && !drag)) && <BoxFrame w={(g.w + 4) * S} h={(g.h + 4) * S} d={(g.d + 4) * S} strong={selected} />}
-      {draggable && <MoveGizmo axes={gizmoAxes} active={drag?.axes.length === 1 ? drag.axes[0]! : null} onStart={startAxis} onMove={moveEvt} onEnd={end} />}
+      {draggable && <MoveGizmo axes={gizmoAxes} active={drag ? (drag.axes.length === 1 && !freeDrag.current ? drag.axes[0]! : "free") : null} onStart={(a, e) => { freeDrag.current = a === "free"; startAxis(a, e) }} onMove={moveEvt} onEnd={end} />}
       {drag && (
         <Html position={[0, (g.h / 2) * S, 0]} center zIndexRange={[30, 20]} style={{ pointerEvents: "none" }}>
           <span

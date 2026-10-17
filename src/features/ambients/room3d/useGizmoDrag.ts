@@ -1,7 +1,7 @@
 import { useThree, type ThreeEvent } from "@react-three/fiber"
 import { useMemo, useRef, useState } from "react"
 import { Plane, Vector3 } from "three"
-import type { Axis } from "../../../components/viewer/pixelScale"
+import type { GizmoHandle } from "../../../components/viewer/MoveGizmo"
 import { expandWalls, rad, snapToWalls, type Ambient } from "../../../core/model"
 import type { ItemGeometry } from "../ambientData"
 import { snapGrid } from "../planGeom"
@@ -10,7 +10,7 @@ import { useOrbitControls } from "../../../components/viewer/orbitControls"
 /** El gizmo per moure la selecció al 3D: on va (al centre de la selecció) i l'arrossegament de cada fletxa. */
 export function useGizmoDrag({ ambient, geos, selectedIds, onChange, snap, cameraLocked }: { ambient: Ambient; geos: Map<string, ItemGeometry | null>; selectedIds: string[]; onChange?: (a: Ambient, commit: boolean) => void; snap: boolean; cameraLocked: boolean }) {
   // Moure amb el gizmo: cada fletxa en la seva direcció (X o Z del plànol, i la verda en alçada, «Del terra») sobre un pla que conté l'eix i mira a la
-  // càmera; la resta, com al plànol (quadrícula, imant a les parets per a un sol element, Alt sense imant, un sol pas
+  // càmera; la bola del mig, lliure pel terra (X i Z alhora); la resta, com al plànol (quadrícula, imant a les parets per a un sol element, Alt sense imant, un sol pas
   // de desfer en deixar-lo anar).
   const camera = useThree((st) => st.camera)
   const orbit = useOrbitControls()
@@ -30,7 +30,7 @@ export function useGizmoDrag({ ambient, geos, selectedIds, onChange, snap, camer
     }
     return [(x0 + x1) / 2000, (bot + top) / 2000, (z0 + z1) / 2000]
   }, [sel, geos])
-  const drag = useRef<{ axis: Axis; plane: Plane; start: Vector3; from: Map<string, readonly [number, number, number]>; moved: boolean; last: Ambient; sx: number; sy: number } | null>(null)
+  const drag = useRef<{ axis: GizmoHandle; plane: Plane; start: Vector3; from: Map<string, readonly [number, number, number]>; moved: boolean; last: Ambient; sx: number; sy: number } | null>(null)
   /** Planta (rectangle del plànol, mm) d'un element girat. */
   const footprint = (it: Ambient["items"][number]) => {
     const g = geos.get(it.id)
@@ -39,13 +39,14 @@ export function useGizmoDrag({ ambient, geos, selectedIds, onChange, snap, camer
     const hw = (g.w * c + g.d * sn) / 2, hd = (g.w * sn + g.d * c) / 2
     return { x0: it.x - hw, x1: it.x + hw, y0: it.y - hd, y1: it.y + hd, h: g.max[1] }
   }
-  const [activeAxis, setActiveAxis] = useState<Axis | null>(null)
-  const startAxis = (a: Axis, e: ThreeEvent<PointerEvent>) => {
+  const [activeAxis, setActiveAxis] = useState<GizmoHandle | null>(null)
+  const startAxis = (a: GizmoHandle, e: ThreeEvent<PointerEvent>) => {
     if (!onChange || e.button !== 0) return
     e.stopPropagation()
+    // La bola del mig: lliure pel terra (X i Z del plànol; l'alçada, amb la fletxa verda).
     const dir = a === "x" ? new Vector3(1, 0, 0) : a === "y" ? new Vector3(0, 1, 0) : new Vector3(0, 0, 1)
     const toCam = camera.getWorldDirection(new Vector3()).negate()
-    const n = dir.clone().cross(toCam).cross(dir)
+    const n = a === "free" ? new Vector3(0, 1, 0) : dir.clone().cross(toCam).cross(dir)
     if (n.lengthSq() < 1e-6) return
     drag.current = {
       axis: a,
@@ -96,17 +97,18 @@ export function useGizmoDrag({ ambient, geos, selectedIds, onChange, snap, camer
       onChange(st.last, false)
       return
     }
-    let ox = st.axis === "x" ? snapGrid((p.x - st.start.x) * 1000) : 0
-    let oy = st.axis === "z" ? snapGrid((p.z - st.start.z) * 1000) : 0
+    const free = st.axis === "free"
+    let ox = st.axis === "x" || free ? snapGrid((p.x - st.start.x) * 1000) : 0
+    let oy = st.axis === "z" || free ? snapGrid((p.z - st.start.z) * 1000) : 0
     if (st.from.size === 1 && snap && !e.altKey) {
       const [id, f] = [...st.from][0]!
       const it = ambient.items.find((x) => x.id === id)
       const geo = geos.get(id)
       if (it && geo) {
         const sn = snapToWalls(f[0] + ox, f[1] + oy, geo.w, geo.d, it.rot, expandWalls(ambient.walls), 60)
-        // Només en la direcció de la fletxa: l'altra no es mou.
-        if (st.axis === "x") ox = Math.round(sn.x - f[0])
-        else oy = Math.round(sn.y - f[1])
+        // Només en la direcció de la fletxa: l'altra no es mou (la bola, totes dues).
+        if (st.axis === "x" || free) ox = Math.round(sn.x - f[0])
+        if (st.axis === "z" || free) oy = Math.round(sn.y - f[1])
       }
     }
     st.last = { ...ambient, items: ambient.items.map((it) => {

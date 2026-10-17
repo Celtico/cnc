@@ -246,7 +246,10 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   (frontisses, tiradors, potes) són del mòdul: clicar-los tria el mòdul.
 - **Moure** (per decisió de l'usuari **el cos no s'arrossega**, així sempre se sap cap on es mourà):
   - **Gizmo** (`viewer/MoveGizmo`): tres fletxes (vermella X de costat, verda Y amunt, blava Z endavant), de mida constant i
-    per sobre de tot; cada una arrossega només en la seva direcció (pla que conté l'eix i mira a la càmera). S'amaguen les
+    per sobre de tot; cada una arrossega només en la seva direcció (pla que conté l'eix i mira a la càmera). Al mig, una
+    **bola blanca per moure lliure** (per decisió de l'usuari, 2026-10-17; cursor `move`): al terra (`onFloor`) pel terra (X
+    i Z), a la paret (`onWall`) per la paret (X i Y), si no pel pla de la pantalla (les direccions que es poden, menys la
+    que mira a la càmera); el mateix imant per eix. Les nanses taronja dels mòduls no en porten. S'amaguen les
     fixades (al terra: Y; a la paret: Z) i la que mira a la càmera (`useFacingAxis`, |cos| > 0,97: vistes de costat o de dalt). `frontRaycast`: les fletxes es
     poden agafar encara que l'objecte sigui dins d'un altre, i el seu clic no tria el que hi ha davant. Per a objectes de
     referència (`RefGhost`), peces lliures, grups i models 3D. Imant de 15 mm a les vores dels mòduls, altres objectes, terra
