@@ -52,6 +52,17 @@ export const NON_CNC_MATERIALS: MaterialPref[] = [
   { id: "glass", name: "Vidre", thicknesses: [4, 5, 6, 8, 10], hasGrain: false, finish: { kind: "glass", color: "#cfe6e3" }, edge: "", cnc: false },
 ]
 
+/**
+ * Superfície sòlida tipus Corian (resina acrílica amb càrrega mineral; per decisió de l'usuari, 2026-10-17): es mecanitza
+ * a la CNC com la fusta (fresa, sense veta), es fan taulells, sobres, lavabos i mobles, i es veu com una pedra mat. És
+ * massís (el cantell és el mateix material, polit: no es canteja). Afegits a la v50.
+ */
+export const CORIAN_MATERIALS: MaterialPref[] = [
+  { id: "corian-white", name: "Corian blanc", thicknesses: [6, 12, 19], hasGrain: false, finish: { kind: "stone", color: "#f1efea", vein: "#e2ded6", veins: 0, size: 600, seed: 7, style: "granite", grain: 0.08, polish: 0.35 }, edge: "", solid: true, category: "board" },
+  { id: "corian-sand", name: "Corian sorra", thicknesses: [6, 12, 19], hasGrain: false, finish: { kind: "stone", color: "#ddd3c3", vein: "#a99a84", veins: 0, size: 600, seed: 13, style: "granite", grain: 0.35, polish: 0.35 }, edge: "", solid: true, category: "board" },
+  { id: "corian-grey", name: "Corian gris pedra", thicknesses: [6, 12, 19], hasGrain: false, finish: { kind: "stone", color: "#9d9b97", vein: "#6f6c67", veins: 0, size: 600, seed: 19, style: "granite", grain: 0.4, polish: 0.35 }, edge: "", solid: true, category: "board" },
+]
+
 /** Lacats brillants (vernís): com els mobles de catàleg de lacat negre. Afegits a la v15. */
 export const GLOSS_MATERIALS: MaterialPref[] = [
   { id: "mdf-lacquer-gloss-black", name: "Lacat negre brillant", thicknesses: [16, 19, 22], hasGrain: false, finish: { kind: "lacquer", color: "#161616", roughness: 0.3 }, edge: "Lacat (sense cantell)", category: "board", coat: 1 },
@@ -241,6 +252,7 @@ export const BUILTIN_MATERIALS: MaterialPref[] = upgradeToPhoto([
   ...APPLIANCE_MATERIALS,
   ...GLOSS_MATERIALS,
   ...RIFT_MATERIALS,
+  ...CORIAN_MATERIALS,
   ...CLADDING_MATERIALS,
   ...PHOTO_MATERIALS,
 ])

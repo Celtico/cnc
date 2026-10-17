@@ -255,7 +255,7 @@ export function EditorInspector({
         </Stack>
       ) : null}
 
-        <InspectorAlerts comp={comp} selection={selection} module={module} warnings={warnings} collisions={collisions} photo={project.photo} onGoto={onGotoWarning} />
+        <InspectorAlerts comp={comp} selection={selection} module={module} warnings={warnings} collisions={collisions} photo={project.photo} onGoto={onGotoWarning} setComp={setComp} />
       </FoldGroup>
     </Stack>
   )

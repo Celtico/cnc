@@ -379,6 +379,9 @@
   davant de les dues files, amb cantell als tres costats vistos; un «mòdul» més per a les refs (després de taulell i
   sòcol). Avís informatiu `island` (es cargolen entre elles, sense forats automàtics). Una illa amb un mòdul que no hi és
   o que no és lliure al terra no es fa. Pendent (part 2): un sol taulell i la base comuna. Test `build/islands.test.ts`.
+- **Avisos acceptats** (`Composition.acceptedWarnings`, opcional; per decisió de l'usuari, 2026-10-17): les claus dels
+  avisos que l'usuari resol a mà («Ho faig a mà» a l'inspector, vegeu Editor): no canvien la construcció, només que
+  l'avís surti com a informació.
   Les illes que es fan ara amb mòduls «Lliure al terra» són un tram: el sòcol del moble hi va a tot el voltant (per
   defecte; la plantilla «Cuina greige amb illa», `mag:greige-kitchen`, a inglet).
 - **Peces corregudes** (`comp.runs`, `core/build/runs.ts`, `activeRuns`; **sense UI des del 2026-10-13**, per decisió de

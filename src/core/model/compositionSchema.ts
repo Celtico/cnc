@@ -256,5 +256,10 @@ export const CompositionSchema = z.object({
   hardwarePlacements: z.array(HardwarePlacementSchema).optional(),
   /** Illes: mòduls d'esquena amb panells de remat (`IslandSchema`). Opcional. */
   islands: z.array(IslandSchema).optional(),
+  /**
+   * Avisos que l'usuari ha acceptat («Ho faig a mà»: un penjador amb escaire a la columna…), per la seva clau
+   * (`warningKey`): surten com a informació i no compten. Per decisió de l'usuari, 2026-10-17.
+   */
+  acceptedWarnings: z.array(z.string()).optional(),
 })
 export type Composition = z.infer<typeof CompositionSchema>

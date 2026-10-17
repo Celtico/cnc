@@ -85,7 +85,12 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   en té, un botó que porta on es fa, `FixPlaceKey` → `FIX_PLACES`): un penjador que una columna no deixa posar
   (escaire a la columna · moure el mòdul · fer-lo més estret), un tall que la CNC no fa (que travessi · a mà o amb CAM
   3D), un prestatge que es vinclarà (divisor · gruixuts · tauler de 30). El front d'un electrodomèstic més alt del que
-  admet el fabricant ja no avisa: es fa del màxim, enrasat a dalt, amb el joc a sota (nota de l'aparell).
+  admet el fabricant ja no avisa: es fa del màxim, enrasat a dalt, amb el joc a sota (nota de l'aparell). També en porten
+  l'aparell que no hi cap (mides · un altre aparell) i el mòdul d'un tram que no arriba a l'alçada dels del costat
+  (l'alçada que cal, a Mides). L'electrodomèstic d'un mòdul sense dividir porta a Mòdul › Tipus. Un avís amb opcions es
+  pot **acceptar** amb **«Ho faig a mà»** (`Composition.acceptedWarnings`, per la clau `warningKey`: codi, mòdul,
+  compartiment, peça…): surt com a informació («Ho fas a mà») i ja no compta; «Desfer» el torna a comptar. El número de
+  la secció compta només els que cal arreglar (ni els informatius ni els acceptats).
 - **Propietats** del que hi ha seleccionat i **només d'això**, en seccions plegables amb **una sola oberta alhora** (per decisió de l'usuari, 2026-10-13, i a tota l'app des del 2026-10-14: `FoldGroup` a l'inspector, recordada a la sessió `mobles:inspector-open`; les subseccions `size="sm"` de dins, una oberta entre elles; vegeu UI):
   - Moble: Resum (i avisos de fusteria), **Suport general** (si hi ha mòduls de terra; `SupportForm`: el suport de tots
     els mòduls de terra —Directe a terra · Sòcol · Potes vistes—, l'alçada, la pota, la retirada, fusta o alumini, el

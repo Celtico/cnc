@@ -78,6 +78,12 @@
   tenen la d'abans, `PREVIOUS_TILE_MM`). **v9**: `restorePhotoThicknesses` (16 · 19 · 30) i `TEMPLATE_MATERIALS` (Melamina 19
   i DM 10 de `DEFAULT_CABINET`, MDF lacats de les plantilles) s'afegeixen si falten. Un test comprova que tots els materials
   de plantilles i ambients del catàleg són a les preferències inicials.
+- **v50, Corian** (`CORIAN_MATERIALS`; per decisió de l'usuari, 2026-10-17: «es com la fusta però es poden fer lavabos i
+  mobles, és semblant a la pedra»): superfície sòlida (resina acrílica amb càrrega mineral) a Taulers: **Corian blanc**,
+  **Corian sorra** i **Corian gris pedra**, de 6 · 12 · 19 mm, sense veta, massissos (`solid`: el cantell és el mateix
+  material, polit, no es canteja), acabat de pedra mat (`stone`, gra fi, sense vetes). Es tallen a la CNC com un tauler; la
+  pica d'un lavabo (buidat amb fons corbat) és CAM 3D, com les altres formes que no són de fons pla (Exports › Vista CAM).
+  Les preferències d'abans els reben un sol cop (un d'esborrat no torna).
 - **v12, duplicats fora** (`mergeDuplicateMaterials`, additiu i sense perdre res): «Melamina 19» → «Melamina blanca» i
   «DM 10» → «DM (fons)» (eren iguals; només si encara són els inicials, `RETIRED_TEMPLATE_MATERIALS`, i el de sempre hi
   és; els gruixos hi passen) i les fulles «Pi» (`sim-pine`) → «Fulles de pi» (es confonia amb la fusta «Pi» de la

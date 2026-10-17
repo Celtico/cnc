@@ -25,7 +25,13 @@ import { applyHardware, resolveOps } from "../hardware"
 import type { ZoneRect } from "../layout"
 import { DrawersBuilder } from "./drawers"
 import { frontMaterialOf, num } from "./helpers"
-import type { HorizontalRef, VerticalRef } from "./types"
+import type { BuildWarning, HorizontalRef, VerticalRef } from "./types"
+
+/** Què es pot fer si l'aparell no hi cap o el moble no és com el demana el fabricant. */
+const APPLIANCE_FIT: BuildWarning["options"] = [
+  { text: "Canviar les mides del mòdul (o del compartiment) a les que demana el fabricant.", where: "dims" },
+  { text: "Triar un altre aparell que hi càpiga.", where: "appliance" },
+]
 
 /** Gruix del taulell que es suposa per dibuixar la placa quan el taulell no és del mòdul (només per veure-la). */
 const WORKTOP_GUESS = 30
@@ -60,7 +66,7 @@ export abstract class AppliancesBuilder extends DrawersBuilder {
     const n = this.applianceCount
     const name = `«${item.maker ? `${item.maker} ${item.ref ?? ""}`.trim() : item.name}»`
     const src = `${a.source.doc}, p. ${a.source.page}`
-    const warn = (message: string) => this.warnings.push({ code: "appliance", message, zoneId: zone.id })
+    const warn = (message: string, options?: BuildWarning["options"]) => this.warnings.push({ code: "appliance", message, zoneId: zone.id, ...(options ? { options } : {}) })
     // El que és com ha de ser (com es munta, què s'ha mecanitzat): a la nota de la comanda, no als avisos.
     const notes: string[] = []
     const note = (text: string) => notes.push(text)
@@ -83,7 +89,7 @@ export abstract class AppliancesBuilder extends DrawersBuilder {
   }
 
   /** El nínxol (la llum del compartiment) amb les mides del catàleg: ample, alt (en columna o penjat, el que toca) i fons. */
-  protected checkNiche(a: Appliance, rect: ZoneRect, name: string, src: string, warn: (m: string) => void, inform: (m: string) => void): void {
+  protected checkNiche(a: Appliance, rect: ZoneRect, name: string, src: string, warn: (m: string, o?: BuildWarning["options"]) => void, inform: (m: string) => void): void {
     const w = r(rect.x1 - rect.x0)
     const h = r(rect.y1 - rect.y0)
     const d = r(this.rearDepth(rect))
@@ -106,18 +112,18 @@ export abstract class AppliancesBuilder extends DrawersBuilder {
     if (shim) inform(`${name}: el nínxol fa ${num(h)} mm d'alt i l'aparell en vol com a molt ${num(hRange!.max!)} (${src}): posa un suplement de ${num(over)} mm a terra, sota les potes (un tros de tauler), i arribarà al taulell.`)
     else if (!inRange(h, hRange)) bad.push(`${num(h)} mm d'alt (en demana ${rangeText(hRange)}${wall ? " al moble penjat" : tall && a.tallNicheH ? " en columna" : ""})`)
     if (!inRange(d, dRange)) bad.push(`${num(d)} mm de fons (en demana ${rangeText(dRange)})`)
-    if (bad.length) warn(`${name}: l'aparell no hi cap com diu el fabricant: el nínxol fa ${bad.join(", ")} (${src}).`)
+    if (bad.length) warn(`${name}: l'aparell no hi cap com diu el fabricant: el nínxol fa ${bad.join(", ")} (${src}).`, APPLIANCE_FIT)
   }
 
   /** La campana telescòpica va en un moble penjat de les mides del catàleg (ample i fons del mòdul, alçada interior). */
-  protected checkCabinet(a: Appliance, rect: ZoneRect, name: string, src: string, warn: (m: string) => void): void {
+  protected checkCabinet(a: Appliance, rect: ZoneRect, name: string, src: string, warn: (m: string, o?: BuildWarning["options"]) => void): void {
     const c = a.cabinet
     if (!c) return
     const bad: string[] = []
     if (!inRange(this.d.W, c.w)) bad.push(`${num(this.d.W)} mm d'ample (en demana ${rangeText(c.w)})`)
     if (!inRange(this.d.D, c.d)) bad.push(`${num(this.d.D)} mm de fons (en demana ${rangeText(c.d)})`)
     if (!inRange(rect.y1 - rect.y0, c.h)) bad.push(`${num(rect.y1 - rect.y0)} mm d'alçada interior (en demana ${rangeText(c.h)})`)
-    if (bad.length) warn(`${name}: el moble no és com el demana el fabricant: fa ${bad.join(", ")} (${src}).`)
+    if (bad.length) warn(`${name}: el moble no és com el demana el fabricant: fa ${bad.join(", ")} (${src}).`, APPLIANCE_FIT)
   }
 
   /** Fondària útil del compartiment: del fons (o la columna de la casa) al davant de la caixa. */
@@ -165,7 +171,7 @@ export abstract class AppliancesBuilder extends DrawersBuilder {
    * tirador del front), de la mida que dona el compartiment (com tots els fronts: `frontTerritory`), amb el sòcol a sota
    * als aparells de terra, i muntat com diu el fabricant.
    */
-  protected buildApplianceFront(zone: Zone, za: ZoneAppliance, a: Appliance, rect: ZoneRect, n: number, name: string, src: string, warn: (m: string) => void, note: (m: string) => void, below?: HorizontalRef, above?: HorizontalRef, left?: VerticalRef, right?: VerticalRef): void {
+  protected buildApplianceFront(zone: Zone, za: ZoneAppliance, a: Appliance, rect: ZoneRect, n: number, name: string, src: string, warn: (m: string, o?: BuildWarning["options"]) => void, note: (m: string) => void, below?: HorizontalRef, above?: HorizontalRef, left?: VerticalRef, right?: VerticalRef): void {
     const ter = this.frontTerritory(rect, left, right)
     const floor = standsOnFloor(a) && !below
     const plinth = za.plinth ?? this.appliancePlinth ?? DEFAULT_APPLIANCE_PLINTH
@@ -236,7 +242,7 @@ export abstract class AppliancesBuilder extends DrawersBuilder {
    * `pilotHoles` = 1), les frontisses de moble i la guia lliscant, o les cassoletes de les frontisses de l'aparell
    * (rentadora). Coordenades del front: x = alçada des de baix, y = ample des de l'esquerra; cara A = darrere.
    */
-  protected mountApplianceFront(p: Panel, za: ZoneAppliance, a: Appliance, rect: ZoneRect, frontY: number, n: number, name: string, src: string, warn: (m: string) => void, note: (m: string) => void, hinge: "left" | "right", left?: VerticalRef, right?: VerticalRef): void {
+  protected mountApplianceFront(p: Panel, za: ZoneAppliance, a: Appliance, rect: ZoneRect, frontY: number, n: number, name: string, src: string, warn: (m: string, o?: BuildWarning["options"]) => void, note: (m: string) => void, hinge: "left" | "right", left?: VerticalRef, right?: VerticalRef): void {
     const item = za.hardware
     const P = item.params
     const L = p.length
@@ -305,7 +311,7 @@ export abstract class AppliancesBuilder extends DrawersBuilder {
    * compartiment, de lateral a lateral (menys `VENT_MARGIN`), arran del fons, prou fondo per a l'àrea. Sense peça a sobre,
    * l'aire ja surt (res a fer).
    */
-  protected ventOutlet(cm2: number, rect: ZoneRect, above: HorizontalRef | undefined, src: string, warn: (m: string) => void, note: (m: string) => void): void {
+  protected ventOutlet(cm2: number, rect: ZoneRect, above: HorizontalRef | undefined, src: string, warn: (m: string, o?: BuildWarning["options"]) => void, note: (m: string) => void): void {
     if (!above) return
     const w = rect.x1 - rect.x0 - 2 * VENT_MARGIN
     const depth = Math.ceil((cm2 * 100) / Math.max(1, w))
@@ -337,7 +343,7 @@ export abstract class AppliancesBuilder extends DrawersBuilder {
    * centrat a l'ample del compartiment i a `fromFront` del cantell de davant. Sense la peça (el taulell de pedra, que no és
    * del mòdul), la nota diu la mida i on.
    */
-  protected applianceCutout(a: Appliance, rect: ZoneRect, host: HorizontalRef | undefined, name: string, src: string, warn: (m: string) => void, note: (m: string) => void): void {
+  protected applianceCutout(a: Appliance, rect: ZoneRect, host: HorizontalRef | undefined, name: string, src: string, warn: (m: string, o?: BuildWarning["options"]) => void, note: (m: string) => void): void {
     const c = a.cutout!
     const w = c.w.min ?? c.w.max!
     const dd = c.d.min ?? c.d.max!

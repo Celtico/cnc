@@ -1,6 +1,6 @@
 import { floorTrams, isApplianceModule, moduleFootprint, moduleFrontFace, moduleRot, tramHeightMismatches, tramSides, type Composition, type Facing, type ModulePlacement, type ModuleRot, type Panel } from "../model"
 import type { LinearPiece } from "./linearOrders"
-import type { VentInlet } from "./module/types"
+import type { BuildWarning, VentInlet } from "./module/types"
 import { aluPlinth, plinthPieces, woodPlinthPanels, type PlinthFrame } from "./plinth"
 
 /** Marge a cada costat de la reixeta d'entrada d'aire (com la del moble, `appliances.ts`). */
@@ -12,7 +12,7 @@ interface TramPlinthBuild {
   panels: Panel[]
   extras: Panel[]
   linear: LinearPiece[]
-  warnings: { code: "layout" | "hardware" | "mitre"; message: string; moduleId?: string }[]
+  warnings: { code: "layout" | "hardware" | "mitre"; message: string; moduleId?: string; options?: BuildWarning["options"] }[]
 }
 
 /**
@@ -41,6 +41,7 @@ export function buildTramPlinths(comp: Composition, places: ModulePlacement[], m
         code: "layout",
         moduleId: w.module.id,
         message: `«${w.module.name}» arriba a ${num(w.top)} mm del terra i els baixos del costat a ${num(w.expected)} mm: el taulell no quedarà pla. Canvia-li l'alçada a ${num(w.module.carcass.height + w.expected - w.top)} mm.`,
+        options: [{ text: `Posar l'alçada del mòdul a ${num(w.module.carcass.height + w.expected - w.top)} mm.`, where: "dims" }],
       })
   if (s.kind !== "plinth") return out
   const pl = s.plinth

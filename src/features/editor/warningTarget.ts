@@ -95,6 +95,11 @@ const ROLE_HINT: Partial<Record<Code, string[]>> = {
   mitre: ["drawerFront", "side"],
 }
 
+/** La clau d'un avís per acceptar-lo (`Composition.acceptedWarnings`): el mateix avís al mateix lloc. */
+export function warningKey(w: Pick<CompositionWarning, "code" | "moduleId" | "zoneId" | "panelId" | "refId" | "partId">): string {
+  return [w.code, w.moduleId ?? "", w.zoneId ?? "", w.panelId ?? "", w.refId ?? "", w.partId ?? ""].join("|")
+}
+
 /** Com ho diu el botó d'una opció («Posició»), o res si no té lloc. */
 export function placeLabel(where: FixPlaceKey | undefined): string | null {
   return where ? FIX_PLACES[where].label : null
@@ -115,7 +120,7 @@ interface WarningTarget {
 
 /** On és i on s'arregla un avís (només el que se'n pot saber: les peces, el compartiment, el mòdul o l'objecte). */
 export function warningTarget(w: CompositionWarning, comp: Composition, build: CompositionBuild | undefined, where?: FixPlaceKey): WarningTarget {
-  const place = where ? FIX_PLACES[where] : w.options?.length ? null : (FIX[w.code] ?? null)
+  let place = where ? FIX_PLACES[where] : w.options?.length ? null : (FIX[w.code] ?? null)
   const mb = w.moduleId ? build?.modules.find((m) => m.id === w.moduleId) : undefined
   // Les peces: la de l'avís (local del mòdul o ja de la composició), les del compartiment, les del mòdul o les de la peça lliure.
   let panels: string[] = []
@@ -153,16 +158,34 @@ export function warningTarget(w: CompositionWarning, comp: Composition, build: C
     if (r) box = union([...(box ? [box] : []), { min: [r.x, r.y, r.z], max: [r.x + r.w, r.y + r.h, r.z + r.d] }])
   }
 
+  // L'electrodomèstic d'un mòdul sense dividir es tria al mòdul (Tipus), no al compartiment.
+  if ((place === FIX.appliance || place === FIX_PLACES.appliance) && w.moduleId && w.zoneId && comp.modules.find((m) => m.id === w.moduleId)?.root.id === w.zoneId) place = MODULE(["mod-type"], "Tipus")
+  // Un lloc del compartiment però l'avís només diu la peça (un gruix): el compartiment més petit que la conté.
+  let zoneId = w.zoneId
+  if (!zoneId && place?.level === "zone" && mb && panels.length) {
+    const m = comp.modules.find((x) => x.id === w.moduleId)
+    const c = center(panelBox(build!.panels.find((p) => p.id === panels[0])!))
+    let best: { id: string; size: number } | null = null
+    for (const [id, rect] of mb.build.layout.rects) {
+      if (!m) break
+      const z = moduleBoxToWorld(mb, { x0: rect.x0, x1: rect.x1, y0: rect.y0, y1: rect.y1, z0: 0, z1: m.carcass.depth + m.carcass.thickness })
+      const zb: Box = { min: [z.x0, z.y0, z.z0], max: [z.x1, z.y1, z.z1] }
+      const size = (z.x1 - z.x0) * (z.y1 - z.y0)
+      if (inside(c, zb) && (!best || size < best.size)) best = { id, size }
+    }
+    zoneId = best?.id
+  }
+
   // Què seleccionar: el que té la secció on s'arregla; si no, el més concret que hi ha.
   let select: Selection | null = null
   if (place?.level === "moble") select = { kind: "moble" }
   else if (place?.level === "ref" && w.refId && !w.refId.startsWith("part:")) select = { kind: "ref", id: w.refId }
   else if (place?.level === "part" && (w.partId || w.refId?.startsWith("part:"))) select = { kind: "part", id: w.partId ?? w.refId!.slice(5) }
-  else if (place?.level === "zone" && w.zoneId && w.moduleId) select = { kind: "zone", moduleId: w.moduleId, zoneId: w.zoneId }
+  else if (place?.level === "zone" && zoneId && w.moduleId) select = { kind: "zone", moduleId: w.moduleId, zoneId: zoneId }
   else if (place?.level === "module" && w.moduleId) select = { kind: "module", id: w.moduleId }
   else if (w.refId && !w.refId.startsWith("part:")) select = { kind: "ref", id: w.refId }
   else if (w.partId) select = { kind: "part", id: w.partId }
-  else if (w.zoneId && w.moduleId) select = { kind: "zone", moduleId: w.moduleId, zoneId: w.zoneId }
+  else if (zoneId && w.moduleId) select = { kind: "zone", moduleId: w.moduleId, zoneId: zoneId }
   else if (w.moduleId) select = { kind: "module", id: w.moduleId }
   // Una secció de compartiment sense compartiment, o de mòdul sense mòdul: no es pot obrir.
   const fix = place && select && place.level === (select.kind === "moble" ? "moble" : select.kind) ? place : null

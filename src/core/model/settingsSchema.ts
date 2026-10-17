@@ -70,7 +70,7 @@ const mm = z.number().finite()
  * v49: fora `optionPrefs` (per decisió de l'usuari, 2026-10-15: res de les opcions en cascada s'aplica a l'Editor fins que
  * no es tingui clar; Preferències › Opcions en cascada és un esborrany a part, `db.drafts`). Es treu en llegir.
  */
-export const SETTINGS_VERSION = 49
+export const SETTINGS_VERSION = 50
 
 
 // --- Objectes de referència (foto i editor) ------------------------------------------

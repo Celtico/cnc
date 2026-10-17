@@ -284,7 +284,18 @@ describe("v12: duplicats fora i noms únics", () => {
     expect(names).not.toContain("DM 10")
     expect(names).not.toContain("Pi")
     expect(names).toContain("Fulles de pi")
-    expect(SETTINGS_VERSION).toBe(49)
+    expect(SETTINGS_VERSION).toBe(50)
+  })
+
+  it("v50: les preferències d'abans reben els Corian (massissos, de CNC, sense veta), un sol cop", () => {
+    const old = { ...DEFAULT_SETTINGS, version: 49, materials: DEFAULT_SETTINGS.materials.filter((m) => !m.id.startsWith("corian-")) }
+    const res = parseSettings(JSON.parse(JSON.stringify(old)))
+    const corian = res.settings.materials.filter((m) => m.id.startsWith("corian-"))
+    expect(corian.map((m) => m.name)).toEqual(["Corian blanc", "Corian sorra", "Corian gris pedra"])
+    expect(corian.every((m) => m.solid && !m.hasGrain && m.cnc !== false && m.thicknesses.includes(12))).toBe(true)
+    // Un d'esborrat després de la v50 no torna.
+    const again = parseSettings(JSON.parse(JSON.stringify({ ...res.settings, materials: res.settings.materials.filter((m) => m.id !== "corian-white") })))
+    expect(again.settings.materials.some((m) => m.id === "corian-white")).toBe(false)
   })
 
   it("«Melamina 19» i «DM 10» inicials passen als de sempre (amb les referències de les preferències) i «Pi» a «Fulles de pi»", () => {

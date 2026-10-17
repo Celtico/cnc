@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { buildComposition } from "../../core/build/buildComposition"
 import { defaultModule, type Composition } from "../../core/model"
-import { fixLabel, framePose, warningTarget } from "./warningTarget"
+import { fixLabel, framePose, warningKey, warningTarget } from "./warningTarget"
 
 /** Un mòdul d'1000 d'ample amb un prestatge (avís `shelf-span`, del compartiment) i el fons de 19 en ranura (`back-groove`, del mòdul). */
 function comp(): Composition {
@@ -34,5 +34,18 @@ describe("anar a un avís (per decisió de l'usuari, 2026-10-17)", () => {
     expect(t.fix?.folds).toEqual(["mod-structure", "mod-carcass-back"])
     const pose = framePose(t.box!, { width: 1000, height: 700, depth: 400 })
     expect(pose.position[2]).toBeGreaterThan(pose.target[2])
+  })
+
+  it("l'electrodomèstic d'un mòdul sense dividir s'arregla al mòdul (Tipus), no al compartiment", () => {
+    const c = comp()
+    const w = { code: "appliance" as const, message: "x", moduleId: "m", zoneId: "z" }
+    const t = warningTarget(w, c, buildComposition(c), "appliance")
+    expect(t.select).toEqual({ kind: "module", id: "m" })
+    expect(t.fix?.folds).toEqual(["mod-type"])
+  })
+
+  it("la clau per acceptar un avís és la mateixa per al mateix avís al mateix lloc", () => {
+    expect(warningKey({ code: "hanging", moduleId: "m", panelId: "side-right" })).toBe(warningKey({ code: "hanging", moduleId: "m", panelId: "side-right" }))
+    expect(warningKey({ code: "hanging", moduleId: "m", panelId: "side-left" })).not.toBe(warningKey({ code: "hanging", moduleId: "m", panelId: "side-right" }))
   })
 })
