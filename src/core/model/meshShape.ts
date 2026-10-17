@@ -15,6 +15,8 @@ export const MeshCageSchema = z.object({
   f: z.array(z.array(z.number().int().min(0)).min(3)).min(2),
   /** Vegades que se suavitza (1–4; sense, 3). */
   level: z.number().int().min(1).max(4).optional(),
+  /** Arestes vives (parells d'índexs de `v`): no s'arrodoneixen (un cantell recte, una cantonada). */
+  crease: z.array(z.tuple([z.number().int().min(0), z.number().int().min(0)])).optional(),
 })
 export type MeshCage = z.infer<typeof MeshCageSchema>
 
@@ -60,14 +62,19 @@ export function boxCage(n = 2): MeshCage {
   return { v, f }
 }
 
-/** Una passada de Catmull-Clark (malla tancada): cada cara de k costats passa a k quadrats. */
-function catmullClark(v: V3[], f: number[][]): { v: V3[]; f: number[][] } {
+/**
+ * Una passada de Catmull-Clark (malla tancada): cada cara de k costats passa a k quadrats. Les **arestes vives** (`crease`)
+ * no s'arrodoneixen: el punt de l'aresta és el del mig, un vèrtex amb dues arestes vives les segueix (regla de la corba) i
+ * un amb tres o més (una cantonada) no es mou; les meitats segueixen sent vives.
+ */
+function catmullClark(v: V3[], f: number[][], crease: [number, number][] = []): { v: V3[]; f: number[][]; crease: [number, number][] } {
   const add = (a: V3, b: V3): V3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
   const mul = (a: V3, k: number): V3 => [a[0] * k, a[1] * k, a[2] * k]
   const facePts = f.map((fc) => mul(fc.reduce((s, i) => add(s, v[i]!), [0, 0, 0] as V3), 1 / fc.length))
+  const ek = (a: number, b: number) => (a < b ? `${a}_${b}` : `${b}_${a}`)
+  const sharp = new Set(crease.map(([a, b]) => ek(a, b)))
   // Arestes: les cares de cada costat.
   const edges = new Map<string, { a: number; b: number; faces: number[] }>()
-  const ek = (a: number, b: number) => (a < b ? `${a}_${b}` : `${b}_${a}`)
   f.forEach((fc, fi) =>
     fc.forEach((a, k) => {
       const b = fc[(k + 1) % fc.length]!
@@ -84,11 +91,11 @@ function catmullClark(v: V3[], f: number[][]): { v: V3[]; f: number[][] } {
   let k = 0
   for (const [key, e] of edges) {
     const mid = mul(add(v[e.a]!, v[e.b]!), 0.5)
-    const p = e.faces.length === 2 ? mul(add(add(v[e.a]!, v[e.b]!), add(facePts[e.faces[0]!]!, facePts[e.faces[1]!]!)), 0.25) : mid
+    const p = e.faces.length === 2 && !sharp.has(key) ? mul(add(add(v[e.a]!, v[e.b]!), add(facePts[e.faces[0]!]!, facePts[e.faces[1]!]!)), 0.25) : mid
     edgeIdx.set(key, edgeStart + k++)
     out.push(p)
   }
-  // Vèrtexs nous: (F + 2R + (n − 3)P) / n.
+  // Vèrtexs nous: (F + 2R + (n − 3)P) / n; amb arestes vives, la corba o la cantonada.
   const adjFaces: number[][] = v.map(() => [])
   const adjEdges: string[][] = v.map(() => [])
   f.forEach((fc, fi) => fc.forEach((i) => adjFaces[i]!.push(fi)))
@@ -98,6 +105,12 @@ function catmullClark(v: V3[], f: number[][]): { v: V3[]; f: number[][] } {
   }
   const moved: V3[] = v.map((p, i) => {
     const n = adjEdges[i]!.length
+    const vivid = adjEdges[i]!.filter((key) => sharp.has(key))
+    if (vivid.length > 2) return p
+    if (vivid.length === 2) {
+      const other = vivid.map((key) => { const e = edges.get(key)!; return v[e.a === i ? e.b : e.a]! })
+      return mul(add(add(mul(p, 6), other[0]!), other[1]!), 1 / 8)
+    }
     if (n < 3 || adjFaces[i]!.length !== n) return p
     const F = mul(adjFaces[i]!.reduce((s, fi) => add(s, facePts[fi]!), [0, 0, 0] as V3), 1 / adjFaces[i]!.length)
     const R = mul(adjEdges[i]!.reduce((s, key) => { const e = edges.get(key)!; return add(s, mul(add(v[e.a]!, v[e.b]!), 0.5)) }, [0, 0, 0] as V3), 1 / n)
@@ -113,22 +126,59 @@ function catmullClark(v: V3[], f: number[][]): { v: V3[]; f: number[][] } {
       faces.push([a, edgeIdx.get(ek(a, next))!, c, edgeIdx.get(ek(prev, a))!])
     })
   })
-  return { v: verts, f: faces }
+  const nextCrease: [number, number][] = []
+  for (const key of sharp) {
+    const e = edges.get(key)
+    if (!e) continue
+    const m = edgeIdx.get(key)!
+    nextCrease.push([e.a, m], [m, e.b])
+  }
+  return { v: verts, f: faces, crease: nextCrease }
 }
 
 /** La superfície suau de la caixa de control (de 0 a 1), en triangles (antihoraris vistos de fora). */
 export function subdivide(cage: MeshCage, level = cage.level ?? 3): { positions: V3[]; triangles: [number, number, number][] } {
-  let m = { v: cage.v as V3[], f: cage.f }
-  for (let i = 0; i < level; i++) m = catmullClark(m.v, m.f)
+  let m = { v: cage.v as V3[], f: cage.f, crease: (cage.crease ?? []) as [number, number][] }
+  // Cada passada multiplica les cares per 4: una caixa amb molt de detall en fa menys (si no, la superfície tindria
+  // centenars de milers de cares i l'app es quedaria penjada).
+  let n = level
+  while (n > 0 && cage.f.length * 4 ** n > MAX_FACES) n--
+  for (let i = 0; i < n; i++) m = catmullClark(m.v, m.f, m.crease)
   const triangles: [number, number, number][] = []
   for (const fc of m.f) for (let i = 1; i + 1 < fc.length; i++) triangles.push([fc[0]!, fc[i]!, fc[i + 1]!])
   return { positions: m.v, triangles }
 }
 
-/** Una passada de suavitzat aplicada a la mateixa caixa: més punts per modelar («Més detall»). */
+/** Cares de la superfície suau com a molt (`subdivide`). */
+const MAX_FACES = 40_000
+
+/** Punts de la caixa de control com a molt per fer-hi «Més detall» (cada cop en multiplica per 4). */
+export const MAX_CAGE_POINTS = 500
+
+/** Una passada de suavitzat aplicada a la mateixa caixa: més punts per modelar («Més detall»). Les arestes vives es queden. */
 export function refineCage(cage: MeshCage): MeshCage {
-  const m = catmullClark(cage.v as V3[], cage.f)
-  return { ...cage, v: m.v, f: m.f }
+  const m = catmullClark(cage.v as V3[], cage.f, (cage.crease ?? []) as [number, number][])
+  return { ...cage, v: m.v, f: m.f, ...(m.crease.length ? { crease: m.crease } : { crease: undefined }) }
+}
+
+/** Posa o treu «aresta viva» a les arestes de la caixa que tenen els dos punts triats. */
+export function toggleCrease(cage: MeshCage, ids: readonly number[]): MeshCage {
+  const sel = new Set(ids)
+  const ek = (a: number, b: number) => (a < b ? `${a}_${b}` : `${b}_${a}`)
+  const edges = new Map<string, [number, number]>()
+  for (const fc of cage.f) fc.forEach((a, k) => {
+    const b = fc[(k + 1) % fc.length]!
+    if (sel.has(a) && sel.has(b)) edges.set(ek(a, b), [Math.min(a, b), Math.max(a, b)])
+  })
+  if (!edges.size) return cage
+  const cur = new Map((cage.crease ?? []).map(([a, b]) => [ek(a, b), [a, b] as [number, number]]))
+  const allOn = [...edges.keys()].every((key) => cur.has(key))
+  for (const [key, e] of edges) {
+    if (allOn) cur.delete(key)
+    else cur.set(key, e)
+  }
+  const crease = [...cur.values()]
+  return { ...cage, crease: crease.length ? crease : undefined }
 }
 
 /**
@@ -200,7 +250,8 @@ export function rasterDepth(tris: [V3, V3, V3][], face: "A" | "B", T: number, st
       }
   }
   const r = (v: number) => Math.round(v * 100) / 100
-  const d: number[] = Array.from(best, (z) => (Number.isFinite(z) ? r(Math.max(0, Math.min(T, face === "A" ? T - z : z))) : 0))
+  // Per sobre de la cara (negatiu, fins a −T): la vora exacta és on passa per 0 (el 3D la segueix).
+  const d: number[] = Array.from(best, (z) => (Number.isFinite(z) ? r(Math.max(-T, Math.min(T, face === "A" ? T - z : z))) : 0))
   if (!d.some((x) => x > 0.05)) return null
   return { x0: r(x0), y0: r(y0), nx, ny, d }
 }
@@ -233,4 +284,134 @@ export function moveVertices(cage: MeshCage, ids: readonly number[], delta: [num
     }
   }
   return { ...cage, v }
+}
+
+/** Volum amb signe (positiu si les cares miren cap a fora). */
+function signedVolume(v: V3[], f: number[][]): number {
+  let vol = 0
+  for (const fc of f)
+    for (let i = 1; i + 1 < fc.length; i++) {
+      const p = v[fc[0]!]!, q = v[fc[i]!]!, r = v[fc[i + 1]!]!
+      vol += (p[0] * (q[1] * r[2] - q[2] * r[1]) - p[1] * (q[0] * r[2] - q[2] * r[0]) + p[2] * (q[0] * r[1] - q[1] * r[0])) / 6
+    }
+  return vol
+}
+
+/**
+ * Forma de revolució (com la «Revolució» de SolidWorks): el perfil `[radi, alçada, viva?]` de dalt a baix (radi i alçada de 0
+ * a 1; radi 0 = el punt de l'eix) girat en `n` costats al voltant de l'eix vertical. Els anells amb `viva` fan aresta viva
+ * (un cantell recte).
+ */
+function revolveCage(profile: [number, number, boolean?][], n = 8): MeshCage {
+  const v: V3[] = []
+  const rings: number[][] = profile.map(([r, y]) => {
+    if (r < 1e-6) {
+      v.push([0.5, y, 0.5])
+      return [v.length - 1]
+    }
+    return Array.from({ length: n }, (_, k) => {
+      const t = (k / n) * Math.PI * 2 + Math.PI / n
+      v.push([0.5 + 0.5 * r * Math.cos(t), y, 0.5 + 0.5 * r * Math.sin(t)])
+      return v.length - 1
+    })
+  })
+  const f: number[][] = []
+  for (let i = 0; i + 1 < rings.length; i++) {
+    const a = rings[i]!, b = rings[i + 1]!
+    for (let k = 0; k < n; k++) {
+      const k1 = (k + 1) % n
+      if (a.length === 1 && b.length === 1) continue
+      if (a.length === 1) f.push([a[0]!, b[k1]!, b[k]!])
+      else if (b.length === 1) f.push([a[k]!, a[k1]!, b[0]!])
+      else f.push([a[k]!, a[k1]!, b[k1]!, b[k]!])
+    }
+  }
+  const faces = signedVolume(v, f) < 0 ? f.map((fc) => [...fc].reverse()) : f
+  const crease: [number, number][] = []
+  profile.forEach(([, , viva], i) => {
+    const ring = rings[i]!
+    if (viva && ring.length > 1) for (let k = 0; k < n; k++) crease.push([ring[k]!, ring[(k + 1) % n]!])
+  })
+  return { v, f: faces, ...(crease.length ? { crease } : {}) }
+}
+
+/** La caixa de partida amb les dotze arestes del cub vives: una caixa amb les cares lleugerament bombades. */
+function sharpBoxCage(): MeshCage {
+  const c = boxCage()
+  const onEdge = (p: V3) => p.filter((x) => x === 0 || x === 1).length >= 2
+  const crease: [number, number][] = []
+  const seen = new Set<string>()
+  for (const fc of c.f)
+    fc.forEach((a, k) => {
+      const b = fc[(k + 1) % fc.length]!
+      const pa = c.v[a]!, pb = c.v[b]!
+      // Del mateix cantell del cub: tots dos hi són i comparteixen les dues coordenades de la vora.
+      const shared = [0, 1, 2].filter((i) => (pa[i] === 0 || pa[i] === 1) && pa[i] === pb[i]).length
+      const key = a < b ? `${a}_${b}` : `${b}_${a}`
+      if (onEdge(pa) && onEdge(pb) && shared >= 2 && !seen.has(key)) {
+        seen.add(key)
+        crease.push([a, b])
+      }
+    })
+  return { ...c, crease }
+}
+
+/**
+ * Formes de partida de l'editor (per decisió de l'usuari, 2026-10-17: «una col·lecció de formes per no començar sempre amb
+ * l'ovalat», «cantons rectes»): cada una ja amb les arestes vives que toquen.
+ */
+export const START_SHAPES: { id: string; label: string; make: () => MeshCage }[] = [
+  { id: "pillow", label: "Coixí", make: () => boxCage() },
+  { id: "box", label: "Caixa", make: () => sharpBoxCage() },
+  { id: "cylinder", label: "Cilindre", make: () => revolveCage([[0, 1], [1, 1, true], [1, 0, true], [0, 0]]) },
+  { id: "bowl", label: "Pica", make: () => revolveCage([[0, 1], [1, 1, true], [0.97, 0.45], [0.65, 0.04], [0, 0]]) },
+  { id: "steps", label: "Esglaons", make: () => revolveCage([[0, 1], [0.4, 1, true], [0.4, 0.66, true], [0.7, 0.66, true], [0.7, 0.33, true], [1, 0.33, true], [1, 0, true], [0, 0]]) },
+  { id: "cone", label: "Con", make: () => revolveCage([[0, 1], [1, 1, true], [0, 0]]) },
+  { id: "sphere", label: "Esfera", make: () => revolveCage([[0, 1], [0.75, 0.93], [1, 0.5], [0.75, 0.07], [0, 0]]) },
+]
+
+/**
+ * Extrudeix les cares que tenen tots els punts triats (com l'«Extrudir» de l'xShape): els punts de la zona es dupliquen,
+ * es mouen `dist` (de 0 a 1 de la caixa) cap a fora de la cara (la normal mitjana) i les vores de la zona fan cares noves
+ * de costat. Torna la caixa i els punts nous (els que queden triats).
+ */
+export function extrudeFaces(cage: MeshCage, ids: readonly number[], dist: number): { cage: MeshCage; ids: number[] } {
+  const sel = new Set(ids)
+  const region = cage.f.map((fc, i) => (fc.every((a) => sel.has(a)) ? i : -1)).filter((i) => i >= 0)
+  if (!region.length) return { cage, ids: [...ids] }
+  const v = cage.v.map((p) => [...p] as V3)
+  // Normal mitjana de la zona (Newell).
+  const nrm: V3 = [0, 0, 0]
+  for (const fi of region) {
+    const fc = cage.f[fi]!
+    fc.forEach((a, k) => {
+      const p = v[a]!, q = v[fc[(k + 1) % fc.length]!]!
+      nrm[0] += (p[1] - q[1]) * (p[2] + q[2])
+      nrm[1] += (p[2] - q[2]) * (p[0] + q[0])
+      nrm[2] += (p[0] - q[0]) * (p[1] + q[1])
+    })
+  }
+  const len = Math.hypot(...nrm) || 1
+  const dir: V3 = [nrm[0] / len, nrm[1] / len, nrm[2] / len]
+  const inRegion = new Set(region.flatMap((fi) => cage.f[fi]!))
+  const map = new Map<number, number>()
+  for (const a of inRegion) {
+    map.set(a, v.length)
+    const p = v[a]!
+    v.push([p[0] + dir[0] * dist, p[1] + dir[1] * dist, p[2] + dir[2] * dist])
+  }
+  // Vores de la zona: arestes que només són d'una cara de la zona (amb el sentit d'aquella cara).
+  const count = new Map<string, number>()
+  const ek = (a: number, b: number) => (a < b ? `${a}_${b}` : `${b}_${a}`)
+  for (const fi of region) cage.f[fi]!.forEach((a, k, fc) => count.set(ek(a, fc[(k + 1) % fc.length]!), (count.get(ek(a, fc[(k + 1) % fc.length]!)) ?? 0) + 1))
+  const f = cage.f.map((fc, i) => (region.includes(i) ? fc.map((a) => map.get(a)!) : fc))
+  for (const fi of region) {
+    const fc = cage.f[fi]!
+    fc.forEach((a, k) => {
+      const b = fc[(k + 1) % fc.length]!
+      if (count.get(ek(a, b)) !== 1) return
+      f.push([a, b, map.get(b)!, map.get(a)!])
+    })
+  }
+  return { cage: { ...cage, v, f }, ids: [...map.values()] }
 }

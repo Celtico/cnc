@@ -1,10 +1,11 @@
 import { OrbitControls } from "@react-three/drei"
 import { Canvas, useThree, type ThreeEvent } from "@react-three/fiber"
 import { useEffect, useMemo, useRef, useState } from "react"
-import { BufferGeometry, DoubleSide, Float32BufferAttribute, Plane, Vector3 } from "three"
+import { BufferGeometry, DoubleSide, Float32BufferAttribute, Plane, SphereGeometry, Vector3 } from "three"
 import { MoveGizmo, type GizmoHandle } from "../../components/viewer/MoveGizmo"
 import { useOrbitControls } from "../../components/viewer/orbitControls"
 import { meshGeometry } from "../../components/viewer/refGeometry"
+import { useColorModeValue } from "../../components/ui/color-mode"
 import { moveVertices, type MeshCage } from "../../core/model"
 
 const S = 0.001
@@ -17,6 +18,8 @@ type Size = { w: number; h: number; d: number }
  */
 export function MeshEditorCanvas(props: { cage: MeshCage; size: Size; level: number; selected: number[]; mirror: number[] | null; onSelect: (ids: number[]) => void; onPreview: (c: MeshCage) => void; onCommit: (c: MeshCage) => void }) {
   const span = Math.max(props.size.w, props.size.h, props.size.d) * S
+  // Els punts i les línies, foscos de dia i clars de nit (el fons del visor canvia amb el tema).
+  const ink = useColorModeValue("#2b2418", "#f3e8d4")
   return (
     <Canvas
       frameloop="demand"
@@ -31,35 +34,56 @@ export function MeshEditorCanvas(props: { cage: MeshCage; size: Size; level: num
     >
       <hemisphereLight args={["#ffffff", "#8a7a60", 1]} />
       <directionalLight position={[1, 3, 2]} intensity={1.3} />
-      <CageScene {...props} />
+      <CageScene {...props} ink={ink} />
       <OrbitControls makeDefault enableDamping dampingFactor={0.12} minDistance={span * 0.1} maxDistance={span * 10} />
     </Canvas>
   )
 }
 
-function CageScene({ cage, size, level, selected, mirror, onSelect, onPreview, onCommit }: Parameters<typeof MeshEditorCanvas>[0]) {
+function CageScene({ cage, size, level, selected, mirror, onSelect, onPreview, onCommit, ink }: Parameters<typeof MeshEditorCanvas>[0] & { ink: string }) {
   const surface = useMemo(() => meshGeometry(size, cage, level), [size, cage, level])
   useEffect(() => () => surface.dispose(), [surface])
   const at = (p: readonly number[]): [number, number, number] => [(p[0]! - 0.5) * size.w * S, (p[1]! - 0.5) * size.h * S, (p[2]! - 0.5) * size.d * S]
   // Línies de la caixa de control (cada aresta un cop).
   const lines = useMemo(() => {
     const seen = new Set<string>()
+    const sharp = new Set((cage.crease ?? []).map(([a, b]) => (a < b ? `${a}-${b}` : `${b}-${a}`)))
     const pos: number[] = []
+    const vivid: number[] = []
     for (const f of cage.f)
       f.forEach((a, k) => {
         const b = f[(k + 1) % f.length]!
         const key = a < b ? `${a}-${b}` : `${b}-${a}`
         if (seen.has(key)) return
         seen.add(key)
-        pos.push(...at(cage.v[a]!), ...at(cage.v[b]!))
+        ;(sharp.has(key) ? vivid : pos).push(...at(cage.v[a]!), ...at(cage.v[b]!))
       })
     const g = new BufferGeometry()
     g.setAttribute("position", new Float32BufferAttribute(pos, 3))
-    return g
+    // Les arestes vives, a part (taronja).
+    const gv = new BufferGeometry()
+    gv.setAttribute("position", new Float32BufferAttribute(vivid, 3))
+    return { g, gv }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `at` depèn només de `size`
   }, [cage, size])
-  useEffect(() => () => lines.dispose(), [lines])
+  useEffect(
+    () => () => {
+      lines.g.dispose()
+      lines.gv.dispose()
+    },
+    [lines],
+  )
   const r = Math.max(size.w, size.h, size.d) * S * 0.018
+  // Les esferes dels punts, compartides (amb molts punts, una geometria per punt i per render es menjava l'app).
+  const balls = useMemo(() => ({ hit: new SphereGeometry(r * 2.6, 8, 6), dot: new SphereGeometry(r, 12, 8), big: new SphereGeometry(r * 1.25, 12, 8) }), [r])
+  useEffect(
+    () => () => {
+      balls.hit.dispose()
+      balls.dot.dispose()
+      balls.big.dispose()
+    },
+    [balls],
+  )
   const sel = new Set(selected)
   const centroid = useMemo(() => {
     if (!selected.length) return null
@@ -112,12 +136,16 @@ function CageScene({ cage, size, level, selected, mirror, onSelect, onPreview, o
       <mesh geometry={surface}>
         <meshStandardMaterial color="#cdbb9c" roughness={0.6} transparent opacity={0.82} side={DoubleSide} />
       </mesh>
-      <lineSegments geometry={lines}>
-        <lineBasicMaterial color="#3d3326" transparent opacity={0.7} depthTest={false} />
+      <lineSegments geometry={lines.g}>
+        <lineBasicMaterial color={ink} transparent opacity={0.7} depthTest={false} />
+      </lineSegments>
+      <lineSegments geometry={lines.gv} renderOrder={19}>
+        <lineBasicMaterial color="#ea580c" depthTest={false} />
       </lineSegments>
       {cage.v.map((p, i) => (
         <mesh
           key={i}
+          geometry={balls.hit}
           position={at(p)}
           renderOrder={20}
           onClick={(e) => {
@@ -128,11 +156,9 @@ function CageScene({ cage, size, level, selected, mirror, onSelect, onPreview, o
           }}
         >
           {/* Una esfera invisible més grossa per tocar-lo fàcilment (amb el dit). */}
-          <sphereGeometry args={[r * 2.6, 8, 6]} />
           <meshBasicMaterial visible={false} />
-          <mesh raycast={() => null} renderOrder={21}>
-            <sphereGeometry args={[sel.has(i) ? r * 1.25 : r, 12, 8]} />
-            <meshBasicMaterial color={sel.has(i) ? "#c2410c" : mirror && mirror[i] !== i && selected.some((s) => mirror[s] === i) ? "#fb923c" : "#2b2418"} depthTest={false} />
+          <mesh raycast={() => null} renderOrder={21} geometry={sel.has(i) ? balls.big : balls.dot}>
+            <meshBasicMaterial color={sel.has(i) ? "#c2410c" : mirror && mirror[i] !== i && selected.some((s) => mirror[s] === i) ? "#fb923c" : ink} depthTest={false} />
           </mesh>
         </mesh>
       ))}

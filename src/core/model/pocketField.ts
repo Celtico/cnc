@@ -85,7 +85,7 @@ function mapDepth(m: NonNullable<Pocket["map"]>, x: number, y: number): number {
 export function pocketDepthFn(pk: Pocket): (x: number, y: number) => number {
   if (pk.map) {
     const m = pk.map
-    return (x, y) => Math.min(pk.depth, mapDepth(m, x, y))
+    return (x, y) => Math.min(pk.depth, Math.max(0, mapDepth(m, x, y)))
   }
   const poly = pocketPolygon(pk)
   const round = pk.round
@@ -108,14 +108,16 @@ function gridStep(w: number, h: number, step: number, maxNodes: number): number 
 }
 
 /** La fondària a cada node d'una graella que cobreix el buidat amb `margin` mm de més per cada costat. */
-export function pocketGrid(pk: Pocket, step: number, margin: number, maxNodes = 400_000): DepthGrid {
+export function pocketGrid(pk: Pocket, step: number, margin: number, maxNodes = 400_000, signed = false): DepthGrid {
   const b = pocketBounds(pk)
   const s = gridStep(b.x1 - b.x0 + 2 * margin, b.y1 - b.y0 + 2 * margin, step, maxNodes)
   const x0 = b.x0 - margin, y0 = b.y0 - margin
   const nx = Math.max(2, Math.ceil((b.x1 + margin - x0) / s) + 1)
   const ny = Math.max(2, Math.ceil((b.y1 + margin - y0) / s) + 1)
   const d = new Float32Array(nx * ny)
-  const f = pocketDepthFn(pk)
+  // `signed`: el mapa tal qual (negatiu per sobre de la cara), per trobar la vora del 3D.
+  const m = pk.map
+  const f = signed && m ? (x: number, y: number) => Math.min(pk.depth, mapDepth(m, x, y)) : pocketDepthFn(pk)
   for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) d[j * nx + i] = f(x0 + i * s, y0 + j * s)
   return { x0, y0, step: s, nx, ny, d }
 }
@@ -142,7 +144,7 @@ export function pocketSolids(pk: Pocket, T: number, maxCells = 10_000): { wall?:
   if (isFlatPocket(pk)) return out
   const b = pocketBounds(pk)
   const step = gridStep(b.x1 - b.x0, b.y1 - b.y0, 1, maxCells)
-  const g = pocketGrid(pk, step, step, maxCells * 1.2)
+  const g = pocketGrid(pk, step, step, maxCells * 1.2, true)
   const top = wallDepth > 0.01 ? wallDepth - 0.5 : -1
   // Cel·les on el fons baixa més que la paret (alguna cantonada).
   const { nx, ny, d } = g

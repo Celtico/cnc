@@ -4,7 +4,7 @@ import { Workspace } from "../../components/Workspace"
 import { useWorkspace } from "../../components/useWorkspace"
 import { TopBarActions } from "../../components/TopBar"
 import { toaster } from "../../components/ui/toaster"
-import { applySettingsToModule, compositionKind, CompositionSchema, emptyModule, partsOnlyKind, tableModule, withMobleMaterials, type Composition } from "../../core/model"
+import { applySettingsToModule, compositionKind, defaultMachine, CompositionSchema, emptyModule, partsOnlyKind, tableModule, withMobleMaterials, type Composition } from "../../core/model"
 import { readComposition, updateProjectComposition, type CompositionRead } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { StructureTree } from "../composition/StructureTree"
@@ -93,7 +93,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   useEditorAssistant({ projectId, name, kind, settings, comp, selection, getComp, applyLive, commitHistory })
 
   // El que es dibuixa i s'avisa: peces, mòduls, fantasmes, avisos, obertura i ressaltats.
-  const scene = useSceneData({ comp, build, materials: settings.materials, selectionKind: selection.kind, selectedZone, module, moduleIndex, moduleBuild, viewer: opts.viewer })
+  const scene = useSceneData({ comp, build, materials: settings.materials, machine: defaultMachine(settings.machines), selectionKind: selection.kind, selectedZone, module, moduleIndex, moduleBuild, viewer: opts.viewer })
   const edits = compositionEdits(setComp)
   const { duplicateHardware, removeHardware, hardwareActions } = hardwareCommands({
     comp,

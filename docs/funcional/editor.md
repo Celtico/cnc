@@ -344,11 +344,23 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   n'hi afegeixen; tocar el buit els treu; una esfera invisible més grossa per tocar-los amb el dit) i es mou amb les
   fletxes o la bola del gizmo de sempre (`MoveGizmo`); **Simetria (X)** mou el punt de l'altra banda en mirall
   (`mirrorPairs`, `moveVertices`); **Tots** tria tots els punts; **Més detall** parteix la caixa (`refineCage`: més punts
-  per modelar); **De nou** torna a la caixa de partida (`boxCage`: un cub de 2 × 2 per cara); desfer/refer (⌘Z). En
+  per modelar); **Extrudir** (amb tots els punts d'una o més cares triats) aixeca aquestes cares amb costats nous
+  (`extrudeFaces`, cap a fora segons la normal) i deixa triats els punts nous per moure'ls; **Aresta viva** (per decisió
+  de l'usuari, 2026-10-17: «cantons rectes») fa recte el cantell entre els punts triats, i un altre cop el torna suau
+  (`toggleCrease`, `MeshCage.crease`: Catmull-Clark amb arestes marcades; es pinten en taronja); **Començar amb:** posa una
+  forma de partida (`START_SHAPES`: Coixí —el cub suau de sempre—, Caixa —cantells vius—, Cilindre, Pica, Esglaons, Con,
+  Esfera; els de revolució surten de `revolveCage`) en lloc de començar sempre amb l'ovalat; desfer/refer (⌘Z). Perquè
+  no es pengi: «Més detall» fins a 500 punts (`MAX_CAGE_POINTS`) i la superfície suau fa menys passades si passaria de
+  40.000 cares; els booleans 3D de les peces amb buidats es recorden (`shapedGeometry`, les últimes 32) i el pla d'un
+  relleu també (`reliefPlan`: el programa de la peça i el del tauler en fan servir el mateix). Els punts i les línies
+  són clars amb el tema de nit. En
   **Aplicar**, la caixa de l'objecte s'ajusta a la forma (`normalizeCage`). Si talla, la peça que toca s'hi **fresa des de
   la cara per on entra** (`refCuts.ts` `meshCut`: els triangles a coordenades de la peça i `rasterDepth`, graella de 2 mm;
   el que quedaria sota una part que sobresurt també es buida, la fresa ve de dalt): un buidat amb mapa (`Pocket.map`) que
-  va al programa amb recorreguts 3D. Una forma que queda dins del gruix sense sortir per cap cara avisa.
+  va al programa amb recorreguts 3D. El mapa és **amb signe** (negatiu = la superfície passa per sobre de la cara): la
+  vora del buidat es talla on la superfície creua la cara, no a la graella, i surt llisa al 3D. Una forma que queda dins
+  del gruix sense sortir per cap cara avisa; un buidat més fondo que la fresa més llarga de la màquina també avisa
+  (`build/pocketReach.ts`: quants mm s'ha de pujar l'objecte o afegir una fresa més llarga), perquè el CAM no el faria.
 - **Relleu d'imatge** (Forma › «Relleu d'imatge», `core/model/imageRelief.ts`, `composition/reliefImage.ts`; per decisió de
   l'usuari, 2026-10-17: «importar imatges en blanc i negre perquè s'adapti al relleu»): es tria una imatge (qualsevol que
   obri el navegador), es redueix a 240 px pel costat llarg i es passa a grisos (`RefObject.image`: els bytes en base64). La

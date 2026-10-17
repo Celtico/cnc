@@ -27,6 +27,12 @@ function lowestZ(paths: P3[][]): number {
   return z
 }
 
+/** Què fer si cap fresa no hi arriba: la més llarga de la màquina i quant s'ha de pujar l'objecte. */
+function reachHint(m: Machine, depth: number): string {
+  const longest = Math.max(0, ...m.tools.filter((t) => t.kind === "router" && t.mounted && t.auto).map((t) => t.maxDepth))
+  return longest > 0 && longest < depth ? ` (la més llarga, ${num(longest)} mm): puja l'objecte que talla ${num(depth - longest)} mm o afegeix una fresa més llarga` : ""
+}
+
 /** Alçada de seguretat dels recorreguts (sobre la cara). */
 const SAFE = 5
 /** Punts com a molt per recorregut (un de més llarg es parteix). */
@@ -124,7 +130,7 @@ export function pocketMachining(
     const pts = dedupePolyline(trB(pk.points))
     const maxDia = maxToolDiameter(pts, "inside")
     const tool = rp.tool("pocket", rp.rules.pockets.tool, maxDia - 0.5, pk.depth) ?? pickRouter(m, maxDia - 0.5, pk.depth)
-    if (!tool) return { steps: [], warnings, skip: { why: `cap fresa de Ø < ${num(maxDia)} que arribi a ${num(pk.depth)} mm`, tool: true } }
+    if (!tool) return { steps: [], warnings, skip: { why: `cap fresa de Ø < ${num(maxDia)} que arribi a ${num(pk.depth)} mm${reachHint(m, pk.depth)}`, tool: true } }
     const n = name("Caixera")
     return { steps: [{ lines: pocketLines(n, pts, pk.depth, tool), tool, points: flatten(pts), depth: pk.depth, kind: "pocket", label: "caixera" }], warnings }
   }
@@ -134,7 +140,7 @@ export function pocketMachining(
   const rough = rp.tool("pocket", rp.rules.pockets.tool, Math.max(1, span - 1), pk.depth) ?? pickRouter(m, Math.max(1, Math.min(20, span - 1)), pk.depth)
   const ball = pickBallRouter(m, pk.depth)
   const finish = ball ?? pickRouter(m, Math.max(1, Math.min(8, span / 4)), pk.depth) ?? rough
-  if (!rough && !finish) return { steps: [], warnings, skip: { why: `cap fresa de Ø < ${num(span)} que arribi a ${num(pk.depth)} mm`, tool: true } }
+  if (!rough && !finish) return { steps: [], warnings, skip: { why: `cap fresa de Ø < ${num(span)} que arribi a ${num(pk.depth)} mm${reachHint(m, pk.depth)}`, tool: true } }
   if (!ball) warnings.push(`${pocketWhat(pk)}: sense fresa esfèrica (marca-la a Preferències › Màquines › Eines › Punta), l'acabat es fa amb la plana ${finish ? toolMslName(finish) : ""}: queden graons petits per polir`)
   const passes = reliefPlan(pk, defaultRelief(rough, finish, !!ball, rp.rules.grooves.maxPass))
   const total = reliefPoints(passes)

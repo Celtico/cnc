@@ -1,3 +1,5 @@
+import { pocketReachIssues } from "../../core/build/pocketReach"
+import type { Machine } from "../../core/model/machine"
 import { useMemo } from "react"
 import { panelBox } from "../../core/build/geometry"
 import type { ViewerModule } from "../../components/viewer/CabinetViewer"
@@ -22,6 +24,7 @@ export function useSceneData({
   comp,
   build,
   materials,
+  machine,
   selectionKind,
   selectedZone,
   module,
@@ -32,6 +35,8 @@ export function useSceneData({
   comp: Composition
   build: CompositionBuild | undefined
   materials: Settings["materials"]
+  /** La màquina per defecte: els buidats que cap fresa no fa (`pocketReachIssues`). */
+  machine?: Machine
   selectionKind: Selection["kind"]
   selectedZone: string | null
   module: Module | undefined
@@ -74,9 +79,9 @@ export function useSceneData({
   // Els de fusteria i, com que el build no llegeix Preferències, els de materials (no hi és, gruix que no té).
   const warnings = useMemo(() => {
     if (!build) return NO_WARNINGS
-    const own = materialIssues(build, comp, materials)
+    const own = [...materialIssues(build, comp, materials), ...pocketReachIssues(build.panels, machine)]
     return own.length ? [...build.warnings, ...own] : build.warnings
-  }, [build, comp, materials])
+  }, [build, comp, materials, machine])
   // Al 3D també els elements sense nesting (ferro, pedra, vidre…).
   const viewerPanels = useMemo(() => (build?.extras.length ? [...panels, ...build.extras] : panels), [build, panels])
   // L'ull de l'arbre: el que s'amaga no es dibuixa a l'editor (es fabrica igual i surt a Peces, Nesting i Exportar).

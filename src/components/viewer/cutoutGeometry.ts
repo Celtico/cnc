@@ -197,8 +197,28 @@ export function isShaped(p: Panel): boolean {
  * les parets dels forats), com els costats de la caixa a `panelMaterials`.
  */
 export function shapedGeometry(p: Panel): BufferGeometry {
-  return splitEdgeGroups(p.solidCuts?.length || p.pockets?.length ? solidCutGeometry(p) : cutoutGeometry(p), p)
+  if (!(p.solidCuts?.length || p.pockets?.length)) return splitEdgeGroups(cutoutGeometry(p), p)
+  // Els booleans 3D són lents (un relleu gran, ~1 s): la mateixa peça (cada cop que es reconstrueix el moble en surt un
+  // objecte nou) es treu de la memòria. Es torna una còpia: qui la rep la pot alliberar.
+  const key = JSON.stringify(p)
+  const hit = CSG_CACHE.get(key)
+  if (hit) {
+    CSG_CACHE.delete(key)
+    CSG_CACHE.set(key, hit)
+    return hit.clone()
+  }
+  const g = splitEdgeGroups(solidCutGeometry(p), p)
+  CSG_CACHE.set(key, g)
+  while (CSG_CACHE.size > 32) {
+    const old = CSG_CACHE.keys().next().value!
+    CSG_CACHE.get(old)?.dispose()
+    CSG_CACHE.delete(old)
+  }
+  return g.clone()
 }
+
+/** Les últimes peces amb booleans 3D (clau: la peça en JSON). */
+const CSG_CACHE = new Map<string, BufferGeometry>()
 
 /**
  * La geometria per dibuixar les arestes d'una peça amb booleans 3D o buidats: la peça sense restar (el booleà deixa

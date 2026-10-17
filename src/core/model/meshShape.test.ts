@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { buildComposition } from "../build/buildComposition"
 import type { Composition } from "./composition"
-import { boxCage, normalizeCage, refineCage, subdivide } from "./meshShape"
+import { boxCage, extrudeFaces, normalizeCage, refineCage, START_SHAPES, subdivide, toggleCrease } from "./meshShape"
 
 describe("forma lliure (caixa de control i Catmull-Clark, per decisió de l'usuari, 2026-10-17)", () => {
   it("la caixa de partida: 26 punts i 24 cares; suavitzada, una superfície tancada dins de la caixa", () => {
@@ -58,4 +58,55 @@ describe("forma lliure (caixa de control i Catmull-Clark, per decisió de l'usua
     expect(k.depth).toBeLessThanOrEqual(20)
     expect(b.warnings.filter((w) => w.code === "ref-cut")).toEqual([])
   })
+
+  it("formes de partida: totes tancades i cap a fora; la caixa amb arestes vives conserva les cantonades", () => {
+    for (const sh of START_SHAPES) {
+      const c = sh.make()
+      const s = subdivide(c, 2)
+      expect(closed(s.triangles), sh.id).toBe(true)
+      expect(volume(s), sh.id).toBeGreaterThan(0)
+    }
+    const box = subdivide(START_SHAPES.find((x) => x.id === "box")!.make(), 3)
+    expect(box.positions.some((p) => p.every((x) => Math.abs(x) < 1e-9))).toBe(true)
+    // El cilindre: tapes planes (la de dalt sencera a y = 1).
+    const cyl = subdivide(START_SHAPES.find((x) => x.id === "cylinder")!.make(), 3)
+    expect(cyl.positions.filter((p) => Math.abs(p[1] - 1) < 1e-9).length).toBeGreaterThan(20)
+  })
+
+  it("aresta viva: es posa i es treu a les arestes amb els dos punts triats", () => {
+    const c = boxCage()
+    const f = c.f[0]!
+    const on = toggleCrease(c, f)
+    expect(on.crease).toHaveLength(4)
+    expect(toggleCrease(on, f).crease).toBeUndefined()
+  })
+
+  it("extrudir una cara: punts nous, cares de costat i la malla segueix tancada", () => {
+    const c = boxCage()
+    const r = extrudeFaces(c, c.f[0]!, 0.3)
+    expect(r.ids).toHaveLength(4)
+    expect(r.cage.v.length).toBe(c.v.length + 4)
+    expect(r.cage.f.length).toBe(c.f.length + 4)
+    const s = subdivide(r.cage, 2)
+    expect(closed(s.triangles)).toBe(true)
+    expect(volume(s)).toBeGreaterThan(volume(subdivide(c, 2)))
+  })
 })
+
+function closed(tris: [number, number, number][]): boolean {
+  const e = new Map<string, number>()
+  for (const t of tris) for (let k = 0; k < 3; k++) {
+    const a = t[k]!, b = t[(k + 1) % 3]!
+    const key = a < b ? `${a}-${b}` : `${b}-${a}`
+    e.set(key, (e.get(key) ?? 0) + 1)
+  }
+  return [...e.values()].every((n) => n === 2)
+}
+function volume(s: ReturnType<typeof subdivide>): number {
+  let vol = 0
+  for (const [a, b, cc] of s.triangles) {
+    const p = s.positions[a]!, q = s.positions[b]!, r = s.positions[cc]!
+    vol += (p[0] * (q[1] * r[2] - q[2] * r[1]) - p[1] * (q[0] * r[2] - q[2] * r[0]) + p[2] * (q[0] * r[1] - q[1] * r[0])) / 6
+  }
+  return vol
+}

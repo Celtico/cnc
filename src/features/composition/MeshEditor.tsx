@@ -1,10 +1,10 @@
 import { Box, Button, HStack, IconButton, Stack, Switch, Text } from "@chakra-ui/react"
 import { useEffect, useMemo, useRef, useState } from "react"
-import { LuGrid3X3, LuRedo2, LuRefreshCcw, LuSquareDashedMousePointer, LuUndo2 } from "react-icons/lu"
+import { LuArrowUpFromLine, LuGrid3X3, LuRedo2, LuSlash, LuSquareDashedMousePointer, LuUndo2 } from "react-icons/lu"
 import { ChoiceChips } from "../../components/FormRow"
 import { FloatingWindow } from "../../components/FloatingWindow"
 import { Tooltip } from "../../components/ui/tooltip"
-import { boxCage, mirrorPairs, normalizeCage, refineCage, type MeshCage } from "../../core/model"
+import { boxCage, extrudeFaces, MAX_CAGE_POINTS, mirrorPairs, normalizeCage, refineCage, START_SHAPES, toggleCrease, type MeshCage } from "../../core/model"
 import { useHistory, useUndoKeys } from "../history/useHistory"
 import { MeshEditorCanvas } from "./MeshEditorScene"
 
@@ -14,7 +14,8 @@ type Box3 = { x: number; y: number; z: number; w: number; h: number; d: number }
  * Editor de la forma lliure d'un objecte (per decisió de l'usuari, 2026-10-17: «un editor de malla com el de SolidWorks»):
  * la caixa de control (punts i línies) i la superfície suau que en surt (Catmull-Clark, `meshShape.ts`). Es toca un punt
  * (amb Maj, se n'hi afegeixen) i es mou amb les fletxes o la bola; «Simetria» mou el punt de l'altra banda en mirall;
- * «Més detall» parteix la caixa (més punts per modelar). En aplicar, la caixa de l'objecte s'ajusta a la forma.
+ * «Més detall» parteix la caixa (més punts per modelar); «Extrudir» aixeca les cares triades amb costats nous; «Aresta viva»
+ * fa recte el cantell entre els punts triats; «Començar amb» tria una forma de partida (coixí, caixa, cilindre, pica…). En aplicar, la caixa de l'objecte s'ajusta a la forma.
  */
 export function MeshEditor({ open, box, initial, onClose, onApply }: { open: boolean; box: Box3; initial: MeshCage | undefined; onClose: () => void; onApply: (p: Box3 & { mesh: MeshCage }) => void }) {
   const start = initial ?? boxCage()
@@ -32,6 +33,11 @@ export function MeshEditor({ open, box, initial, onClose, onApply }: { open: boo
   }, [open])
   useUndoKeys(hist.undo, hist.redo, { enabled: open, scope: content })
   const mirror = useMemo(() => (sym ? mirrorPairs(cage) : null), [sym, cage])
+  // Alguna cara amb tots els punts triats (es pot extrudir).
+  const faceSelected = useMemo(() => {
+    const s = new Set(selected)
+    return cage.f.some((f) => f.every((a) => s.has(a)))
+  }, [cage, selected])
   const level = cage.level ?? 3
   const size = { w: box.w, h: box.h, d: box.d }
 
@@ -81,7 +87,7 @@ export function MeshEditor({ open, box, initial, onClose, onApply }: { open: boo
             <Button
               size="sm"
               variant="outline"
-              disabled={cage.v.length > 2000}
+              disabled={cage.v.length > MAX_CAGE_POINTS}
               onClick={() => {
                 hist.set(refineCage(cage))
                 setSelected([])
@@ -90,16 +96,23 @@ export function MeshEditor({ open, box, initial, onClose, onApply }: { open: boo
               <LuGrid3X3 /> Més detall
             </Button>
           </Tooltip>
-          <Tooltip content="Tornar a la caixa de partida">
+          <Tooltip content="Els punts triats s'aixequen amb les cares que tanquen (totes les cares amb els punts triats): costats nous per modelar">
             <Button
               size="sm"
-              variant="ghost"
+              variant="outline"
+              disabled={!faceSelected}
               onClick={() => {
-                hist.set(boxCage())
-                setSelected([])
+                const r = extrudeFaces(cage, selected, 0.15)
+                hist.set(r.cage)
+                setSelected(r.ids)
               }}
             >
-              <LuRefreshCcw /> De nou
+              <LuArrowUpFromLine /> Extrudir
+            </Button>
+          </Tooltip>
+          <Tooltip content="Les arestes entre els punts triats no s'arrodoneixen (un cantell recte); un altre cop, es tornen suaus">
+            <Button size="sm" variant="outline" disabled={selected.length < 2} onClick={() => hist.set(toggleCrease(cage, selected))}>
+              <LuSlash /> Aresta viva
             </Button>
           </Tooltip>
           <Switch.Root size="sm" checked={sym} onCheckedChange={(e) => setSym(e.checked)}>
@@ -115,6 +128,23 @@ export function MeshEditor({ open, box, initial, onClose, onApply }: { open: boo
             ]}
             value={String(Math.min(3, Math.max(2, level)))}
             onChange={(v) => hist.set({ ...cage, level: Number(v) })}
+          />
+        </HStack>
+        <HStack gap={2} wrap="wrap">
+          <Text fontSize="sm" color="fg.muted">
+            Començar amb:
+          </Text>
+          <ChoiceChips<string>
+            label="Forma de partida"
+            options={START_SHAPES.map((x) => ({ id: x.id, label: x.label }))}
+            value=""
+            retap
+            onChange={(id) => {
+              const sh = START_SHAPES.find((x) => x.id === id)
+              if (!sh) return
+              hist.set({ ...sh.make(), ...(cage.level ? { level: cage.level } : {}) })
+              setSelected([])
+            }}
           />
         </HStack>
         <Box h="max(320px, calc(100dvh - 320px))" borderWidth="1px" rounded="md" overflow="hidden" bg="bg.subtle">

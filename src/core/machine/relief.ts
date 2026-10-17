@@ -255,7 +255,9 @@ function roughPass(g: DepthGrid, o: NonNullable<ReliefOptions["rough"]>): Relief
     const dist = distanceInside(mask, g.nx, g.ny, g.step)
     // Contorns concèntrics: del més endins al de la vora (`stockXY` de la zona).
     const rings: { c: number; loops: Pt[][] }[] = []
-    for (let c = o.stockXY + g.step / 2; ; c += o.stepover) {
+    let dmax = 0
+    for (const v of dist) if (v > dmax) dmax = v
+    for (let c = o.stockXY + g.step / 2; c <= dmax; c += o.stepover) {
       const loops = isoLoops(dist, g.nx, g.ny, g.x0, g.y0, g.step, c)
       if (!loops.length) break
       rings.push({ c, loops })
@@ -352,6 +354,20 @@ function finishPasses(g: DepthGrid, o: NonNullable<ReliefOptions["finish"]>): Re
 
 /** Els recorreguts del buidat: desbast i acabat (els que tinguin eina). */
 export function reliefPlan(pk: Pocket, o: ReliefOptions): ReliefPass[] {
+  // És lent (segons en un relleu gran) i el programa de la peça i el del tauler en demanen el mateix: es recorda.
+  const key = JSON.stringify([pk, o])
+  const hit = PLANS.get(key)
+  if (hit) return hit
+  const out = computePlan(pk, o)
+  PLANS.set(key, out)
+  if (PLANS.size > 16) PLANS.delete(PLANS.keys().next().value!)
+  return out
+}
+
+/** Els últims plans calculats (clau: el buidat i les opcions en JSON). */
+const PLANS = new Map<string, ReliefPass[]>()
+
+function computePlan(pk: Pocket, o: ReliefOptions): ReliefPass[] {
   const margin = Math.max(o.rough?.tool.diameter ?? 0, o.finish?.tool.diameter ?? 0) / 2 + 3
   const g = pocketGrid(pk, o.step ?? 1, margin, o.maxNodes ?? 400_000)
   return [...(o.rough ? [roughPass(g, o.rough)] : []), ...(o.finish ? finishPasses(g, o.finish) : [])]

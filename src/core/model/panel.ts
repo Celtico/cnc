@@ -141,8 +141,11 @@ const PocketMapSchema = z.object({
   step: z.number().positive(),
   nx: z.number().int().min(2),
   ny: z.number().int().min(2),
-  /** Fondària a cada node, fila a fila (y creixent), de `nx` per fila. */
-  d: z.array(z.number().min(0)),
+  /**
+   * Fondària a cada node, fila a fila (y creixent), de `nx` per fila. Negativa: la forma hi passa per sobre de la cara (no
+   * es buida; serveix per trobar la vora exacta, on passa per 0).
+   */
+  d: z.array(z.number()),
 })
 
 export const PocketSchema = z.object({
