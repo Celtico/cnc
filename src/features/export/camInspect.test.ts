@@ -72,4 +72,13 @@ describe("camInspect", () => {
     expect(camInspect(view([{ ...o, plane: "Left" }]), { kind: "op", n: 3 })!.dims).toEqual([])
     expect(camInspect(view([o]), { kind: "op", n: 99 })).toBeNull()
   })
+
+  it("fresat pel centre en dues passades (ranura del fons de 10,8 amb fresa de 8): l'ample i les cotes del que es talla", () => {
+    // Anada i tornada a 2,8 l'una de l'altra, de 278 de llarg.
+    const path = { name: "p", kind: "polyline" as const, start: [300, 500] as [number, number], segs: [{ to: [578, 500] as [number, number] }, { to: [578, 502.8] as [number, number] }, { to: [300, 502.8] as [number, number] }], closed: false }
+    const o: CamOp = { ...base, n: 4, kind: "rough", ref: "A.1.H.3", depth: 8, path }
+    const i = camInspect(view([o]), { kind: "op", n: 4 })!
+    expect(i.lines[0]).toBe("Amplada 10,8 (8 d'eina + 2,8 entre passades) · llargada 286 mm")
+    expect(i.dims.filter((d) => d.title === "Alçada").map((d) => d.label)).toEqual(["10,8"])
+  })
 })

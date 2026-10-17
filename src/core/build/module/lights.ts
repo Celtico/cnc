@@ -67,7 +67,7 @@ export class LightsBuilder extends MountingBuilder {
     const W = spec.width, H = spec.height
     const len = r(rect.x1 - rect.x0 - 20)
     if (len < 50) return
-    const zFront = d.D - m.carcass.shelfSetback - spec.setback
+    const zFront = d.D - (this.shelfSetbackOf.get(zone.id) ?? m.carcass.shelfSetback) - spec.setback
     const ys = [rect.y1, ...shelfYs].map((y) => r(y - H))
     ys.forEach((y, i) => {
       this.extras.push({
@@ -128,7 +128,7 @@ export class LightsBuilder extends MountingBuilder {
     const k = spec.light!
     this.lightMaker ??= k.maker
     // A sota del moble (`under`): la cara de sota de la base, des del davant del mòdul.
-    const front = under ? d.D : d.D - m.carcass.shelfSetback
+    const front = under ? d.D : d.D - (this.shelfSetbackOf.get(zone.id) ?? m.carcass.shelfSetback)
     const len = rect.x1 - rect.x0
     const hosts: Panel["role"][] = under ? ["bottom"] : ["top", "fixedShelf", "shelf"]
     const lines: KitOrderLine[] = []

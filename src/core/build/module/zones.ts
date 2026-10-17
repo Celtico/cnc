@@ -283,7 +283,14 @@ export class Builder extends AppliancesBuilder {
     const blocked = d.inset && (!!zone.front || this.covered.has(zone.id))
     const flush = !!zone.shelves!.flush && !blocked
     if (zone.shelves!.flush && blocked) this.warnings.push({ code: "inset", message: "Prestatges a ras del davant amb fronts encastats: toparien amb el front. Es retiren com sempre.", zoneId: zone.id })
-    const setback = flush ? 0 : c.shelfSetback
+    // El del compartiment (si en té) o el del mòdul; i, amb un pistó d'abatible al lateral, prou retirats per no tocar-lo.
+    const own = flush ? 0 : (zone.shelves!.setback ?? c.shelfSetback)
+    const strut = this.strutClearance(zone)
+    const setback = strut !== undefined && own < strut ? strut : own
+    if (setback !== own) this.warnings.push({ code: "shelf-strut", message: `Prestatges retirats ${num(setback)} mm del davant (en lloc de ${num(own)}) perquè no toquin el pistó de l'abatible al lateral.`, zoneId: zone.id })
+    if (setback !== c.shelfSetback && !flush) this.shelfSetbackOf.set(zone.id, setback)
+    // El del mòdul ja ho avisa (`carcass.ts`); el propi, aquí.
+    if (zone.shelves!.setback !== undefined && blocked && setback < d.t) this.warnings.push({ code: "inset", message: `Prestatges retirats ${num(setback)} mm i el front encastat entra ${num(d.t)} mm: hi toparien. Retira'ls almenys ${num(d.t)} mm (Opcions de l'interior › Retranqueig).`, zoneId: zone.id })
     const depth = d.availDepth - setback
     const innerH = rect.y1 - rect.y0
     const gap = (innerH - n * T) / (n + 1)
@@ -336,6 +343,21 @@ export class Builder extends AppliancesBuilder {
         piece(`shelf-${idx}-spacer-${end}`, `${nm} (llistó ${end === "left" ? "esquerre" : "dret"})`, "spacer", depth - 2 * t, T - 2 * t, { ...NO_EDGES }, placement([x, y + t, zF - t], neg(Z), Y, X, end === "left" ? neg(X) : X))
     }
     return ys
+  }
+
+  /**
+   * Retranqueig mínim dels prestatges d'un compartiment amb un **pistó de gas** d'abatible (el seu front o el de la zona que
+   * el tapa; item amb `strutG`, obre amunt): el pistó va a `sideSetback` del darrere del front (`gasStrut`), Ø15,6, i el
+   * prestatge ha de quedar-ne 2 mm per darrere. Sense pistó, `undefined`.
+   */
+  protected strutClearance(zone: Zone): number | undefined {
+    const { d } = this
+    const f = zone.front ?? this.coverFront.get(zone.id)
+    if (f?.kind !== "flap" || f.dir !== "up") return undefined
+    const item = f.hardware ?? this.kit.flap.item
+    if (item.params.strutG === undefined) return undefined
+    const zB = d.frontZ - d.t - (item.params.sideSetback ?? 37)
+    return Math.ceil(d.D - zB + 7.8 + 2)
   }
 
   /** Rectangle que un front tapa: la llum més el que li toca dels panells del voltant, menys jocs. */

@@ -2,6 +2,7 @@ import type { KitOrderLine } from "./drawerKit"
 import { activeRuns, compositionKind, withSupport, isSolidMaterial, moduleRot, rotXZ, unrot, type ModuleRot, modelFootprint, modulePlacements, NO_EDGES, partsOnlyKind, partCutters, type Composition, type ModelObject, type Module, type Panel, type Vec3 } from "../model"
 import { applyRefCuts, migrateCableHoles, refTouchesBox } from "./refCuts"
 import { columnRearLimits, columnWalls, relayLegs } from "./columnWalls"
+import { clipHangingToRefs } from "./hangingCuts"
 import { buildModule, type BuildWarning, type KitOrder, type ModuleBuild, type Wiring } from "./buildModule"
 import type { LightOrder } from "./lightOrders"
 import { normalizePanel } from "./buildCabinet"
@@ -321,6 +322,17 @@ export function buildComposition(input: Composition): CompositionBuild {
     warnings.push({ code: "ref-cut", message: pr.message, panelId: pr.panel.id, ...owner, ...(moduleId ? { moduleId } : {}) })
   }
   for (const piece of pieces) (free.extras.some((x) => piece.id.startsWith(`${x.id}-`)) ? free.extras : panels).push(piece)
+  // La regleta i els penjadors dels penjats: la columna també els talla (`hangingCuts.ts`).
+  const hanging = clipHangingToRefs(moduleExtras, linear, comp.references, panelBox)
+  warnings.push(...hanging.warnings)
+  for (const h of hanging.removed) {
+    const k = fittingOrders.findIndex((l) => l.module === h.module && l.name === h.name)
+    if (k < 0) continue
+    const line = fittingOrders[k]!
+    const { note: _note, ...rest } = line
+    if (line.qty <= 1) fittingOrders.splice(k, 1)
+    else fittingOrders[k] = { ...rest, qty: line.qty - 1 }
+  }
   // Columnes de la casa que entren pel darrere: els fons que falten a les seves cares, amb les ranures (`columnWalls`).
   if (comp.references.some((o) => o.effect === "cut")) {
     const cw = columnWalls(panels, comp.references, modules.flatMap((m) => {

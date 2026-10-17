@@ -86,6 +86,24 @@ describe("catàleg Häfele (v35)", () => {
     expect(door.panels.flatMap((p) => p.holes).filter((h) => h.tag === "system32")).toHaveLength(0)
   })
 
+  it("pistó de gas: els prestatges del compartiment es retiren fins a darrere del pistó (avís) i el bracket del lateral no fa braços", () => {
+    const gas = structuredClone(HAFELE_GAS_STRUTS[0]!)
+    const zone = { shelves: { n: 1, adjustable: true }, front: { kind: "flap" as const, dir: "up" as const, glass: true, frame: structuredClone(HAFELE_GLASS_FRAMES[0]!), hardware: gas } }
+    const b = buildModule(mod(zone, { width: 600, height: 400, depth: 330 }))
+    const shelf = b.panels.find((p) => p.role === "shelf")!
+    const zFront = shelf.placement.origin[2]
+    const body = b.extras.find((p) => p.label.endsWith(": pistó"))!
+    // El davant del prestatge, per darrere del pistó (z del centre − Ø/2 − 2).
+    expect(zFront).toBeLessThanOrEqual(body.placement.origin[2] - 15.6 - 2 + 0.01)
+    expect(b.warnings.some((w) => w.code === "shelf-strut")).toBe(true)
+    // El bracket del lateral (forats `flap`) no dibuixa el braç d'un abatible de fusta.
+    for (const id of ["side-left", "side-right"]) expect(builtinSolids(b.panels.find((p) => p.id === id)!).filter((s) => s.mat === "dark")).toHaveLength(0)
+    // Un retranqueig propi més gran que el del pistó es respecta, sense avís.
+    const deep = buildModule(mod({ ...zone, shelves: { n: 1, adjustable: true, setback: 80 } }, { width: 600, height: 400, depth: 330 }))
+    expect(deep.panels.find((p) => p.role === "shelf")!.width).toBe(shelf.width - (80 - (330 - zFront)))
+    expect(deep.warnings.some((w) => w.code === "shelf-strut")).toBe(false)
+  })
+
   it("la comanda dels ferratges: frontisses, tirador i el joc de pistons, amb el número d'article", () => {
     const pull = structuredClone(HAFELE_GLASS_PULLS[0]!)
     const door = buildModule(mod({ front: { kind: "door", mode: "single", hinge: "left", glass: true, frame: structuredClone(HAFELE_GLASS_FRAMES[0]!), hardware: structuredClone(HAFELE_DUOMATIC_ALU[0]!), handle: pull } }))

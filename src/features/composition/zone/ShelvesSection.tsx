@@ -13,14 +13,14 @@ import { useSettings } from "../../settings/SettingsContext"
  * accessoris»; surt sempre menys amb un front fix o amb calaixos): prestatges (quantitat, regulació, a ras, gruix), els
  * accessoris i, darrere d'una porta, els **calaixos interiors** (`behindDoor`).
  */
-export function ZoneShelvesSection({ root, zone, onChange, hardware, bounds, system32, behindDoor = false, bodyThickness = 19 }: { /** El gruix del cos (el suplement per defecte). */ bodyThickness?: number; root: Zone; zone: Zone; onChange: (root: Zone) => void; hardware: ModuleHardware; bounds: ZoneBounds; system32?: { at: "shelves" | "front"; row: ReactNode }; /** Hi ha una porta davant (la seva o la d'una zona de més amunt): hi poden anar calaixos interiors. */ behindDoor?: boolean }) {
+export function ZoneShelvesSection({ root, zone, onChange, hardware, bounds, system32, behindDoor = false, bodyThickness = 19, moduleSetback = 20 }: { /** El gruix del cos (el suplement per defecte). */ bodyThickness?: number; /** El retranqueig dels prestatges del mòdul (el que s'hereta). */ moduleSetback?: number; root: Zone; zone: Zone; onChange: (root: Zone) => void; hardware: ModuleHardware; bounds: ZoneBounds; system32?: { at: "shelves" | "front"; row: ReactNode }; /** Hi ha una porta davant (la seva o la d'una zona de més amunt): hi poden anar calaixos interiors. */ behindDoor?: boolean }) {
   const { settings } = useSettings()
   return (
     <FoldItem optionId="zone.shelves" id="zone-shelves" title="Opcions de l'interior" badge={shelvesBadge(zone, behindDoor)} icon={LuRows3}>
       {canHoldShelves(bounds) && <>
       <NumRow
         optionId="zone.shelves.count"
-        label="Quantitat"
+        label="Prestatges"
         suffix="u"
         value={zone.shelves?.n ?? 0}
         min={0}
@@ -42,19 +42,33 @@ export function ZoneShelvesSection({ root, zone, onChange, hardware, bounds, sys
       {(zone.shelves?.n ?? 0) > 0 && <>
       {/* A ras del davant (a sang): el cantell del prestatge enrasat amb el de la caixa. */}
       <FormRow optionId="zone.shelves.flush" label="Davant">
-        <Switch.Root size="sm" pt="6px" checked={!!zone.shelves?.flush} onCheckedChange={(e) => onChange(setShelves(root, zone.id, { n: zone.shelves?.n ?? 0, adjustable: zone.shelves?.adjustable ?? true, ...(zone.shelves?.thickness ? { thickness: zone.shelves.thickness } : {}), ...(e.checked ? { flush: true } : {}) }))}>
+        <Switch.Root size="sm" pt="6px" checked={!!zone.shelves?.flush} onCheckedChange={(e) => onChange(setShelves(root, zone.id, patchShelves(zone, { flush: e.checked ? true : undefined })))}>
           <Switch.HiddenInput />
           <Switch.Control />
           <Switch.Label fontSize="sm">A ras del davant (a sang)</Switch.Label>
         </Switch.Root>
       </FormRow>
+      {/* Retirats: quant (el del compartiment o el del mòdul). Per decisió de l'usuari, 2026-10-17: amb portes de vidre i
+          pistons d'abatible els prestatges hi topaven i no es podia escurçar la fondària. */}
+      {!zone.shelves?.flush && (
+        <NumRow
+          optionId="zone.shelves.setback"
+          label="Retranqueig"
+          value={zone.shelves?.setback ?? moduleSetback}
+          min={0}
+          max={300}
+          step={1}
+          help={`Del davant de la caixa al cantell dels prestatges. ${zone.shelves?.setback === undefined ? `Com el mòdul (${moduleSetback} mm).` : `El mòdul: ${moduleSetback} mm.`} Amb un pistó d'abatible, es retiren sols el que calgui.`}
+          onChange={(v) => Number.isFinite(v) && v >= 0 && onChange(setShelves(root, zone.id, patchShelves(zone, { setback: v === moduleSetback ? undefined : v })))}
+        />
+      )}
       {/* Prestatges gruixuts (buits): queden més bé a la vista, sense porta. */}
       <FormRow optionId="zone.shelves.thick" label="Gruix">
         <Switch.Root
           size="sm"
           pt="6px"
           checked={!!zone.shelves?.thickness}
-          onCheckedChange={(e) => onChange(setShelves(root, zone.id, { n: zone.shelves?.n ?? 0, adjustable: zone.shelves?.adjustable ?? true, ...(zone.shelves?.flush ? { flush: true } : {}), ...(e.checked ? { thickness: 50 } : {}) }))}
+          onCheckedChange={(e) => onChange(setShelves(root, zone.id, patchShelves(zone, { thickness: e.checked ? 50 : undefined })))}
         >
           <Switch.HiddenInput />
           <Switch.Control />
@@ -82,6 +96,16 @@ export function ZoneShelvesSection({ root, zone, onChange, hardware, bounds, sys
       {behindDoor && canHoldShelves(bounds) && <InnerDrawerRows root={root} zone={zone} hardware={hardware} setback={settings.gaps.innerDrawerSetback ?? 25} body={bodyThickness} onChange={onChange} />}
     </FoldItem>
   )
+}
+
+/** Els prestatges del compartiment amb uns camps canviats (`undefined` el treu); la resta es queda (res amagat compta). */
+function patchShelves(zone: Zone, patch: Partial<NonNullable<Zone["shelves"]>>): NonNullable<Zone["shelves"]> {
+  const out: NonNullable<Zone["shelves"]> = { ...zone.shelves, n: zone.shelves?.n ?? 0, adjustable: zone.shelves?.adjustable ?? true }
+  for (const [k, v] of Object.entries(patch) as [keyof NonNullable<Zone["shelves"]>, unknown][]) {
+    if (v === undefined) delete out[k]
+    else (out as Record<string, unknown>)[k] = v
+  }
+  return out
 }
 
 /** Resum d'un accessori per a la insígnia. */

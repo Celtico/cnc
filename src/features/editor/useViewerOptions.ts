@@ -46,7 +46,8 @@ export function useViewerOptions(isObject: boolean) {
   // Amaga el panell de paràmetres perquè el 3D ocupi tot l'espai.
   const [formHidden, setFormHidden] = usePersistentFlag("mobles:editor-form-hidden")
   // Pestanya del visor: 3D, alçat (compartiments) o sobre la foto del lloc.
-  const [viewTab, setViewTabState] = useState<ViewTab>(readTab)
+  // Un objecte només té el 3D (sense pestanyes): mai l'alçat o la foto que s'hagi recordat d'un moble.
+  const [viewTab, setViewTabState] = useState<ViewTab>(() => (isObject ? "3d" : readTab()))
   const setViewTab = (t: ViewTab) => {
     setViewTabState(t)
     try {

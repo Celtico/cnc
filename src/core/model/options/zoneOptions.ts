@@ -156,7 +156,7 @@ const shelves = section("zone.shelves", "Opcions de l'interior", {
   code: UI.shelves,
   showIf: "Compartiment sense dividir, sense aparell que l'ocupi, amb lateral o divisor als dos costats; ni amb Calaixos ni Front fix",
 }, [
-  field("zone.shelves.count", "Quantitat", {
+  field("zone.shelves.count", "Prestatges", {
     code: UI.shelves,
     control: "number",
     range: { min: 0, max: 20, step: 1, suffix: "u" },
@@ -174,16 +174,23 @@ const shelves = section("zone.shelves", "Opcions de l'interior", {
   field("zone.shelves.flush", "Davant", {
     code: UI.shelves,
     control: "switch",
-    showIf: "Quantitat > 0",
+    showIf: "Prestatges > 0",
     default: false,
     defaultEditable: true,
-    choices: [{ value: "on", label: "A ras del davant (a sang)" }],
+    choices: [{ value: "on", label: "A ras del davant (a sang)", hides: ["zone.shelves.setback"] }],
     issue: "(menor) Surt també quan no compta: amb fronts Encastats (Mòdul › Caixa) i el compartiment amb front o tapat, la construcció retira igualment els prestatges i el «a ras» no fa res (només un avís).",
+  }),
+  field("zone.shelves.setback", "Retranqueig", {
+    code: UI.shelves,
+    control: "number",
+    showIf: "Prestatges > 0 i no a ras del davant",
+    range: { min: 0, max: 300, step: 1, suffix: "mm" },
+    defaultText: "Com el mòdul (Caixa › Retranqueig dels prestatges)",
   }),
   field("zone.shelves.thick", "Gruix", {
     code: UI.shelves,
     control: "switch",
-    showIf: "Quantitat > 0",
+    showIf: "Prestatges > 0",
     default: false,
     choices: [{ value: "on", label: "Gruixuts (buits)", reveals: ["zone.shelves.thickness"] }],
   }, [field("zone.shelves.thickness", "Gruix aparent", { code: UI.shelves, control: "number", default: 50 })]),

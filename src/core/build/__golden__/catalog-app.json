@@ -49,7 +49,7 @@
  },
  "floating-tv": {
   "panels": 41,
-  "extras": 5,
+  "extras": 6,
   "warnings": [
    "hollow",
    "material-heat"
@@ -459,7 +459,7 @@
  },
  "tv-long": {
   "panels": 28,
-  "extras": 5,
+  "extras": 6,
   "warnings": [],
   "p": [
    "back|trassera|2777x457x10|DM (fons)|none|e0000|h0|g0|c3:207c51f5|o-|@379d3b62",

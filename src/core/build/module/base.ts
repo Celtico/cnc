@@ -70,6 +70,8 @@ export class BuilderBase {
   readonly covered = new Set<string>()
   /** El front que tapa cada zona de `covered` (el de la zona de més amunt): els calaixos interiors hi miren les frontisses. */
   readonly coverFront = new Map<string, Front>()
+  /** Retranqueig dels prestatges de cada compartiment quan no és el del mòdul (el propi o el del pistó): la tira LED el segueix. */
+  protected readonly shelfSetbackOf = new Map<string, number>()
   /** Totes les zones per id. */
   protected readonly zones = new Map<string, Zone>()
   readonly verticals: VerticalRef[] = []

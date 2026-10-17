@@ -296,7 +296,18 @@ export const FRONT_KINDS = ["door", "drawers", "flap", "grille", "panel"] as con
 export interface Zone {
   id: string
   split?: { dir: "v" | "h"; sizes: (number | "auto")[]; children: Zone[] }
-  shelves?: { n: number; adjustable: boolean; thickness?: number; flush?: boolean }
+  shelves?: {
+    n: number
+    adjustable: boolean
+    thickness?: number
+    flush?: boolean
+    /**
+     * Retranqueig dels prestatges d'aquest compartiment (mm, del davant de la caixa al cantell del prestatge; sense: el del
+     * mòdul, Mòdul › Caixa). Amb un pistó d'abatible al lateral, la construcció els retira encara més si cal perquè no hi
+     * topin (per decisió de l'usuari, 2026-10-17).
+     */
+    setback?: number
+  }
   front?: Front
   /**
    * L'últim front de cada tipus que ha tingut el compartiment (res amagat compta: canviar el contingut de calaixos a
@@ -361,6 +372,7 @@ export const ZoneSchema: z.ZodType<Zone> = z.lazy(() =>
         thickness: mm.min(20).max(200).optional(),
         /** A ras del davant de la caixa (a sang), sense retranqueig: per als compartiments oberts. */
         flush: z.boolean().optional(),
+        setback: mm.min(0).max(300).optional(),
       })
       .optional(),
     front: FrontSchema.optional(),

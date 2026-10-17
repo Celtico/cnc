@@ -149,7 +149,8 @@ export function frontOptionsUse(module: Module): FrontOptionsUse {
     if (s && s.n > 0 && z.front?.kind !== "drawers") {
       // A ras del davant: sense retranqueig, llevat que un front encastat ho impedeixi (`buildShelves`).
       const blocked = inset && (!!z.front || covered)
-      if (!s.flush || blocked) use.shelfSetback = true
+      // Amb un retranqueig propi (Opcions de l'interior), el del mòdul no compta per a aquest compartiment.
+      if ((!s.flush && s.setback === undefined) || (blocked && s.setback === undefined)) use.shelfSetback = true
     }
   })
   return use

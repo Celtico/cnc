@@ -36,6 +36,8 @@ export function CamPreview({ sheets, machine }: { sheets: CamSheet[]; machine?: 
   /** Inspecció: la del ratolí (dibuix o llista) mana; si no n'hi ha, la fixada en tocar o clicar. */
   const [hover, setHover] = useState<{ t: CamTarget; from: "svg" | "list" } | null>(null)
   const [pin, setPin] = useState<CamTarget | null>(null)
+  /** On és el ratolí dins del dibuix: la fitxa hi va al costat (per decisió de l'usuari, 2026-10-17). */
+  const [cursor, setCursor] = useState<Cursor | null>(null)
   const sheet = sheets[Math.min(tab, sheets.length - 1)]
   const view = useMemo(() => (sheet ? camSheetView(sheet.text, machine) : null), [sheet, machine])
   const [wrap, cw] = useElementWidth<HTMLDivElement>(360)
@@ -145,7 +147,16 @@ export function CamPreview({ sheets, machine }: { sheets: CamSheet[]; machine?: 
           </Stack>
         ) : (
           <>
-            <Box position="relative" flexShrink={0}>
+            <Box
+              position="relative"
+              flexShrink={0}
+              onPointerMove={(e) => {
+                if (e.pointerType === "touch") return
+                const r = e.currentTarget.getBoundingClientRect()
+                setCursor({ x: e.clientX - r.left, y: e.clientY - r.top, w: r.width, h: r.height })
+              }}
+              onPointerLeave={() => setCursor(null)}
+            >
               <Box ref={wrap} w="full" overflow="auto" borderWidth="1px" rounded="md" bg="bg.subtle" maxH={{ base: "70vh", lg: "none" }}>
                 <CamSheetSvg
                   view={view}
@@ -161,7 +172,7 @@ export function CamPreview({ sheets, machine }: { sheets: CamSheet[]; machine?: 
                   onPick={pick}
                 />
               </Box>
-              {insp && <InspectBox insp={insp} left={insp.focus[0] > L / 2} />}
+              {insp && <InspectBox insp={insp} left={insp.focus[0] > L / 2} at={hover?.from === "svg" ? cursor : null} />}
             </Box>
             <Text fontSize="xs" color="fg.muted">
               Passa el ratolí (o toca) una peça, un forat o un fresat per veure'n les cotes.
@@ -186,10 +197,24 @@ export function CamPreview({ sheets, machine }: { sheets: CamSheet[]; machine?: 
   )
 }
 
-/** Fitxa de la inspecció, a un racó del dibuix (el contrari d'on és el que s'inspecciona). No intercepta el ratolí. */
-function InspectBox({ insp, left }: { insp: CamInspection; left: boolean }) {
+interface Cursor {
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
+/**
+ * Fitxa de la inspecció. Amb el ratolí, al costat del cursor (a la dreta i a sota; a l'altra banda si no hi cap); tocada
+ * (mòbil) o des de la llista, a un racó del dibuix (el contrari d'on és el que s'inspecciona). No intercepta el ratolí.
+ */
+function InspectBox({ insp, left, at }: { insp: CamInspection; left: boolean; at: Cursor | null }) {
+  const gap = 16
+  const place = at
+    ? { ...(at.x > at.w * 0.55 ? { right: `${at.w - at.x + gap}px` } : { left: `${at.x + gap}px` }), ...(at.y > at.h * 0.6 ? { bottom: `${at.h - at.y + gap}px` } : { top: `${at.y + gap}px` }) }
+    : { top: 2, ...(left ? { left: 2 } : { right: 2 }) }
   return (
-    <Stack position="absolute" top={2} {...(left ? { left: 2 } : { right: 2 })} maxW="min(340px, 70%)" gap={0.5} px={2.5} py={1.5} bg="bg.panel" borderWidth="1px" rounded="md" shadow="md" opacity={0.95} pointerEvents="none" fontSize="xs" aria-live="polite">
+    <Stack position="absolute" {...place} zIndex={1} maxW="min(340px, 70%)" gap={0.5} px={2.5} py={1.5} bg="bg.panel" borderWidth="1px" rounded="md" shadow="md" opacity={0.95} pointerEvents="none" fontSize="xs" aria-live="polite">
       <Text fontWeight="semibold">{insp.title}</Text>
       {insp.lines.map((l) => (
         <Text key={l} color="fg.muted" fontVariantNumeric="tabular-nums">

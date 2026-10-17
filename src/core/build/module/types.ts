@@ -48,6 +48,8 @@ export interface BuildWarning {
     | "unknown-material"
     | "thickness-not-listed"
     | "inner-drawers"
+    // Prestatges retirats més del que diu el compartiment perquè no toquin el pistó d'un abatible.
+    | "shelf-strut"
   message: string
   zoneId?: string
   panelId?: string

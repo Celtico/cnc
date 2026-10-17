@@ -163,6 +163,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             opts={opts}
             shownPanels={scene.shownPanels}
             chrome={chrome}
+            tabs={kind !== "objecte"}
             photo={
               <PhotoScreen
                 projectId={projectId}

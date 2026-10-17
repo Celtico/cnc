@@ -58,26 +58,45 @@ void main() {
 `
 
 // Colors ja en sRGB (sense conversió: el material no passa per la gestió de color de three).
+// Les cel·les es llegeixen interpolades (bilineal a mà: la textura és NEAREST perquè el codi 0 = passant no es pot barrejar):
+// la vora d'un forat o d'un buidat és la corba on la meitat és matèria, no l'escala de les cel·les (sortia pixelat).
 const FRAG = /* glsl */ `
 ${COMMON}
 uniform vec2 texel;
 uniform float cell;
 varying vec2 vXY;
+// Alçada i "acabat" interpolats sobre les cel·les que són matèria; w.x = fracció de matèria.
+vec3 smoothAt(vec2 uv) {
+  vec2 st = uv / texel - 0.5;
+  vec2 f = fract(st);
+  vec2 b = (floor(st) + 0.5) * texel;
+  vec4 a = texture2D(hTex, b);
+  vec4 c = texture2D(hTex, b + vec2(texel.x, 0.0));
+  vec4 d = texture2D(hTex, b + vec2(0.0, texel.y));
+  vec4 e = texture2D(hTex, b + texel);
+  vec4 w = vec4((1.0 - f.x) * (1.0 - f.y), f.x * (1.0 - f.y), (1.0 - f.x) * f.y, f.x * f.y);
+  vec4 r = vec4(a.r, c.r, d.r, e.r) * 255.0;
+  vec4 m = step(0.5, r) * w;
+  float sol = m.x + m.y + m.z + m.w;
+  vec4 h = (r - 1.0) / 254.0 * T;
+  float z = sol > 0.0 ? dot(h, m) / sol : 0.0;
+  float g = sol > 0.0 ? dot(vec4(a.g, c.g, d.g, e.g), m) / sol : 0.0;
+  return vec3(sol, z, g);
+}
 void main() {
   vec2 uv = vXY / size;
-  vec4 s = texture2D(hTex, uv);
-  float c = s.r * 255.0;
-  if (c < 0.5) discard;
-  float z = (c - 1.0) / 254.0 * T;
-  float hx = hAt(uv + vec2(texel.x, 0.0)) - hAt(uv - vec2(texel.x, 0.0));
-  float hy = hAt(uv + vec2(0.0, texel.y)) - hAt(uv - vec2(0.0, texel.y));
+  vec3 s = smoothAt(uv);
+  if (s.x < 0.5) discard;
+  float z = s.y;
+  float hx = smoothAt(uv + vec2(texel.x, 0.0)).y - smoothAt(uv - vec2(texel.x, 0.0)).y;
+  float hy = smoothAt(uv + vec2(0.0, texel.y)).y - smoothAt(uv - vec2(0.0, texel.y)).y;
   vec3 n = normalize(vec3(-hx, -hy, 2.0 * cell));
   float d = clamp((T - z) / T, 0.0, 1.0);
   float grain = 0.5 + 0.5 * sin(vXY.y * 0.35 + sin(vXY.x * 0.004) * 6.0 + sin(vXY.x * 0.031) * 0.8);
   vec3 top = mix(vec3(0.84, 0.69, 0.50), vec3(0.72, 0.56, 0.38), grain * 0.45);
   vec3 cut = vec3(0.93, 0.83, 0.66);
   vec3 base = d > 0.003 ? mix(cut, cut * 0.62, d) : top;
-  base = mix(base, vec3(0.55, 0.78, 0.5), s.g * 0.18);
+  base = mix(base, vec3(0.55, 0.78, 0.5), s.z * 0.18);
   float lit = 0.5 + 0.6 * max(dot(n, normalize(vec3(-0.35, -0.55, 0.76))), 0.0);
   gl_FragColor = vec4(base * lit, 1.0);
 }

@@ -43,7 +43,7 @@ function SimScene({ clock, paths, rapids }: { clock: CamSimClock; paths: boolean
   const sim = useMemo(() => {
     const hf = createHeightfield(L, W, T, LOW_MEMORY ? LOW_LIMITS : DEFAULT_LIMITS)
     const tex = heightTexture(hf)
-    return { hf, tex, mat: heightMaterial(hf, tex), geo: topGeometry(hf, LOW_MEMORY ? 320 : 720), cur: { t: 0, fin: 0 } as SimCursor }
+    return { hf, tex, mat: heightMaterial(hf, tex), geo: topGeometry(hf, LOW_MEMORY ? 320 : 1400), cur: { t: 0, fin: 0 } as SimCursor }
   }, [L, W, T])
   const lines = useMemo(() => pathGeometries(prog), [prog])
   useEffect(

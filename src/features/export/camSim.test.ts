@@ -98,9 +98,10 @@ describe("programa de la simulació", () => {
 describe("mapa d'alçades", () => {
   it("mida de cel·la adaptada i limitada", () => {
     const big = createHeightfield(2800, 2070, 19)
-    expect(big.nx * big.ny).toBeLessThanOrEqual(1_500_000)
-    expect(big.cell).toBeGreaterThanOrEqual(1)
-    expect(big.cell).toBeCloseTo(2800 / 1200, 6)
+    // Ordinador: cel·les d'1 mm en un tauler de 2800 (abans 2,3: els forats sortien pixelats).
+    expect(big.nx * big.ny).toBeLessThanOrEqual(6_000_000)
+    expect(big.cell).toBe(1)
+    expect(createHeightfield(5600, 2070, 19).nx * createHeightfield(5600, 2070, 19).ny).toBeLessThanOrEqual(6_000_000)
     const low = createHeightfield(2800, 2070, 19, LOW_LIMITS)
     expect(low.nx * low.ny).toBeLessThanOrEqual(600_000)
     const small = createHeightfield(300, 100, 19)

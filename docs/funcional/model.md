@@ -99,7 +99,9 @@
     ganxo es dibuixen (`extras` `hanger-left/right`, `-hook`, rol `hardware`); a la comanda, un per lateral (`order`). La
     **regleta** (ferratge per metres, motor `wallRail`: Libra B3, 33,5 × 5,6, barra de 2000) va contra la paret de lateral
     a lateral, a `railTop` (40) sota la tapa (només es dibuixa: a obra), i la comanda ajunta la dels penjats seguits (vegeu
-    Ferratges per metres). El penjador i la regleta van entre la paret i el fons: cal que el fons en deixi `gap` (15 mm,
+    Ferratges per metres). Davant d'un objecte que talla (una columna; `core/build/hangingCuts.ts`, per decisió de
+    l'usuari, 2026-10-17) la regleta es parteix i deixa lliure la columna (trossos de menys de 80 no es posen; la comanda,
+    els trossos) i el penjador que hi topa no es dibuixa ni es demana (avís `hanging`). El penjador i la regleta van entre la paret i el fons: cal que el fons en deixi `gap` (15 mm,
     el mínim del Libra H2; Häfele en dona 16–20): **el fons estàndard dels penjats és en ranura retirat 20**
     (`model/hungBack.ts`, `hungBack`: el fan els mòduls penjats nous —`defaultModule`, i amb ell plantilles, catàleg,
     col·leccions i mòduls de Preferències—, `applySettingsToModule` i penjar-ne un, `setModuleMount`; els mobles desats no

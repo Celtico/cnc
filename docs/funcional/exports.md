@@ -133,9 +133,12 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   d'operacions (tocar-ne una la marca).
 - **Cotes en passar el ratolí** (per decisió de l'usuari, 2026-10-16: «que et mostri totes les mides relacionades per poder
   comprovar la vista CAM»): passar el ratolí per una peça, un forat o un fresat el ressalta i hi dibuixa les cotes (el
-  `DimLine` dels plànols, amb gruix i lletra en píxels de pantalla a qualsevol zoom) i una fitxa a un racó del dibuix.
+  `DimLine` dels plànols, amb gruix i lletra en píxels de pantalla a qualsevol zoom) i una fitxa **al costat del cursor** (per
+  decisió de l'usuari, 2026-10-17; a l'altra banda si no hi cap); tocada (mòbil) o des de la llista, a un racó del dibuix.
   Peça: amplada × alçada i X/Y des de l'origen (baix a l'esquerra), distància als cantells dret i de dalt del tauler, llarg ×
-  ample i gir. Forat: Ø, fondària, X/Y des de l'origen i distància als cantells més propers de la peça (i als quatre a la
+  ample i gir. Un fresat o una ranura pel centre de l'eina (sense compensació) es cota pel que es talla —el camí més mig Ø
+  per banda—: la ranura del fons de 10,8 amb una fresa de 8 en dues passades surt «Amplada 10,8 (8 d'eina + 2,8 entre
+  passades)» i el recorregut a part (abans la cota de 2,8 era la distància entre les passades). Forat: Ø, fondària, X/Y des de l'origen i distància als cantells més propers de la peça (i als quatre a la
   fitxa). Contorn o tall: mida (o Ø), llargada del recorregut, eina i Ø, fondària, passades i sobrant; caixera, ranura i
   fresat: amplada, llargada, fondària i distància als cantells de la peça. Passar per una fila de la llista fa el mateix al
   dibuix, i al revés la fila s'il·lumina (i la llista s'hi desplaça si té barra pròpia). Al mòbil, **tocar** fixa la
@@ -155,11 +158,12 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   l'eina); les passades (`maxPass`) d'anada i tornada; les caixeres, un buidat en zig-zag inventat i el contorn; les
   rampes, la d'`approachSegment`. Només el pla `Top`: les operacions de cantell es diuen («n operacions de cantell no es
   veuen al 3D»). Lògica pura a `features/export/camSim.ts` (moviments en el temps, operació en curs, salts) i
-  `camHeightfield.ts` (mapa d'alçades de la cara de dalt: cel·la ≈ màx(1 mm, costat llarg / 1200), com a molt 1,5 M
-  cel·les —600 k i / 800 a l'iPhone—; cada tram de la fresa baixa les cel·les que toca el disc; endavant només es talla el
+  `camHeightfield.ts` (mapa d'alçades de la cara de dalt: cel·la ≈ màx(1 mm, costat llarg / 2800), com a molt 6 M
+  cel·les —600 k i / 800 a l'iPhone—; per decisió de l'usuari, 2026-10-17, abans 2,3 mm i es veia pixelat; cada tram de la fresa baixa les cel·les que toca el disc; endavant només es talla el
   que s'ha fet des de l'últim fotograma, enrere es refà de zero), amb `camSim.test.ts`. El 3D (`camSimScene.ts`) puja a la
-  GPU només les files canviades (textura RGBA: R = alçada, G = peça acabada); la malla de dalt és més baixa (720 / 320
-  segments) i el color, la llum i els forats surten del mapa sencer a cada píxel. Pinta contínuament només mentre juga.
+  GPU només les files canviades (textura RGBA: R = alçada, G = peça acabada); la malla de dalt és més baixa (1400 / 320
+  segments) i el color, la llum i els forats surten del mapa sencer a cada píxel, **interpolat** (bilineal fet al shader, la
+  textura és NEAREST): la vora d'un forat és la corba on la meitat és matèria, no l'escala de les cel·les. Pinta contínuament només mentre juga.
 - Tests (`xcsPreview.test.ts`): mobles del catàleg amb el context real (el que es llegeix = el que s'ha escrit),
   `nesting_T01.xcs`, el programa real del taller i els per peça.
 

@@ -187,6 +187,7 @@ export function ZoneSection({ module, zone, moduleBuild, updateModule, selectZon
         return cover ? { coveredBy: zoneLabel(cover, { root: cover.id === module.root.id }), coveredByFixed: cover.front?.kind === "panel", coveredByDoor: cover.front?.kind === "door" || cover.front?.kind === "flap" } : {}
       })()}
       bodyThickness={module.carcass.thickness}
+      shelfSetback={module.carcass.shelfSetback}
       hardware={module.hardware}
       noHandles={module.fronts.handles === "none"}
       openRatio={moduleBuild?.openRatios[zone.id]}

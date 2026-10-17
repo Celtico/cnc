@@ -167,7 +167,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     «Rentaplats», «Frigorífic»…; vegeu Model › Zones › Electrodomèstic) · Front ·
     **Opcions de l'interior** (`LuRows3`; abans «Prestatges i accessoris», reanomenada per decisió de l'usuari, 2026-10-16;
     surt sempre menys amb un front fix o amb calaixos; insígnia «3 · Barra · LED · 2 calaixos»:
-    primer els prestatges —Quantitat · Regulables · Filera System 32 si li toca, vegeu Mòdul · A ras · Gruixuts—, a sota
+    primer els prestatges —Prestatges (quants) · Regulables · Filera System 32 si li toca, vegeu Mòdul · A ras · Retranqueig (sense a ras; el propi o «com el mòdul», i amb un pistó d'abatible al lateral, prou retirats per no tocar-lo: avís `shelf-strut`) · Gruixuts—, a sota
     els accessoris —Penjar (Barra de penjar) i Llum (Tira LED), interruptor + `HardwarePick` «Com el mòdul»— i, darrere
     d'una porta (la seva o la d'una zona de més amunt), els **calaixos interiors** (`InnerDrawerRows`: Quantitat · Alçada
     de cada calaix · Guia o joc · Retirada del front, 25 per defecte de Preferències › Folgances · Suplement, el gruix del

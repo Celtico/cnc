@@ -30,7 +30,8 @@ interface HeightfieldLimits {
   div: number
 }
 
-export const DEFAULT_LIMITS: HeightfieldLimits = { maxCells: 1_500_000, minCell: 1, div: 1200 }
+// Ordinador: cel·les de ~1 mm en un tauler de 2800 (abans 2,3 mm: un forat de Ø5 eren dues cel·les i sortia pixelat).
+export const DEFAULT_LIMITS: HeightfieldLimits = { maxCells: 6_000_000, minCell: 1, div: 2800 }
 /** iPhone i tauletes: la meitat de cel·les (memòria de Safari). */
 export const LOW_LIMITS: HeightfieldLimits = { maxCells: 600_000, minCell: 1, div: 800 }
 

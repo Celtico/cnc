@@ -153,13 +153,23 @@ function inspectOp(view: CamSheetView, o: CamOp): CamInspection {
   const w = view.widths.get(o.n)
   const toolLine = `Eina ${tool} · Ø ${w ? fmtMm(w) : "?"}`
   if (!d || !d.outline.length) return { title, lines: [toolLine, depthLine(o)], dims: [], focus: [0, 0] }
-  const b = bbox(d.outline)
+  // Un fresat o una ranura sense compensació (el camí és el centre de l'eina): el que es talla és el camí més mig Ø per
+  // banda. Si no, una ranura de fons de 10,8 feta amb una fresa de 8 en dues passades sortia com «8» d'ample i «2,8»
+  // d'alt (la distància entre les dues passades).
+  const centreline = (o.kind === "rough" || o.kind === "slot") && (!o.side || o.side === "center") && !!w
+  const path = bbox(d.outline)
+  const b: Box = centreline ? { x0: path.x0 - w! / 2, y0: path.y0 - w! / 2, x1: path.x1 + w! / 2, y1: path.y1 + w! / 2 } : path
   const focus: Pt = [(b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2]
   const len = pathLength(d.outline, d.closed)
   const circle = o.path?.circle
   const size = circle ? `Ø ${fmtMm(2 * circle.r)}` : `${fmtMm(b.x1 - b.x0)} × ${fmtMm(b.y1 - b.y0)}`
   const lines: string[] = []
-  if (o.kind === "pocket" || o.kind === "rough" || o.kind === "slot") {
+  if (centreline) {
+    const long = Math.max(b.x1 - b.x0, b.y1 - b.y0)
+    const wide = Math.min(b.x1 - b.x0, b.y1 - b.y0)
+    const passes = wide > w! + EPS ? ` (${fmtMm(w!)} d'eina + ${fmtMm(wide - w!)} entre passades)` : ""
+    lines.push(`Amplada ${fmtMm(wide)}${passes} · llargada ${mm(long)}`, `Recorregut ${mm(len)}`)
+  } else if (o.kind === "pocket" || o.kind === "rough" || o.kind === "slot") {
     const long = o.kind === "pocket" ? Math.max(b.x1 - b.x0, b.y1 - b.y0) : len
     const wide = o.kind === "pocket" ? Math.min(b.x1 - b.x0, b.y1 - b.y0) : (w ?? 0)
     lines.push(`Amplada ${wide ? fmtMm(wide) : "?"} · llargada ${mm(long)}`)

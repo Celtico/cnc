@@ -97,8 +97,9 @@ export function ViewerToolbar({
     {/* Les vistes, sempre a la vista a baix del 3D (per decisió de l'usuari, 2026-10-16): botons d'icona sense text (el nom,
         al tooltip), amb la 3D (el 3/4 d'«Enquadrar»). La triada surt marcada mentre la càmera no es mou. */}
     {viewTab === "3d" && (
-      <Box position="absolute" bottom={3} left="50%" transform="translateX(-50%)" zIndex={2}>
-        <HStack {...segGroup} bg="bg.panel" role="group" aria-label="Vistes">
+      // A tota l'amplada i centrat (no `left: 50%`: l'amplada disponible era la meitat del visor i al mòbil saltava de línia).
+      <Box position="absolute" bottom={3} left={0} right={0} display="flex" justifyContent="center" pointerEvents="none" zIndex={2}>
+        <HStack {...segGroup} flexWrap="nowrap" pointerEvents="auto" bg="bg.panel" role="group" aria-label="Vistes">
           {VIEW_BUTTONS.map(([v, label, Icon, tip]) => {
             const on = framed && viewDir === v
             return (

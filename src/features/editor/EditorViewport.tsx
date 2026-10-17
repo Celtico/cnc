@@ -18,6 +18,7 @@ export function EditorViewport({
   scene,
   toolbar,
   chrome,
+  tabs = true,
 }: {
   opts: Pick<ViewerOptions, "viewTab" | "setViewTab" | "formHidden" | "setFormHidden" | "viewerState">
   shownPanels: Panel[]
@@ -26,6 +27,8 @@ export function EditorViewport({
   scene: ReactNode
   toolbar: ReactNode
   chrome: ReactNode
+  /** Les pestanyes 3D · Alçat · Foto (un objecte només té el 3D: sense pestanyes; per decisió de l'usuari, 2026-10-17). */
+  tabs?: boolean
 }) {
   const { viewTab, setViewTab, formHidden, setFormHidden, viewerState } = opts
 
@@ -54,12 +57,13 @@ export function EditorViewport({
         scene
       )}
       {viewTab === "3d" && viewerState.materialMode === "role" && (
-        <Box position="absolute" bottom={3} left={3} zIndex={2} display={{ base: "none", md: "block" }}>
+        // A sobre de la barra de les vistes (a baix al mig), que en un visor estret la tapava.
+        <Box position="absolute" bottom={16} left={3} zIndex={2} display={{ base: "none", md: "block" }}>
           <RoleLegend panels={shownPanels} />
         </Box>
       )}
       {/* La recepta del SegmentGroup força position: relative; el posicionem amb un embolcall. */}
-      <Box position="absolute" top={3} left="50%" transform="translateX(-50%)" zIndex={2}>
+      {tabs && <Box position="absolute" top={3} left="50%" transform="translateX(-50%)" zIndex={2}>
         <SegmentGroup.Root size="sm" bg="bg.panel" value={viewTab} onValueChange={(e) => e.value && setViewTab(e.value as ViewTab)}>
           <SegmentGroup.Indicator />
           {(
@@ -80,7 +84,7 @@ export function EditorViewport({
             </Tooltip>
           ))}
         </SegmentGroup.Root>
-      </Box>
+      </Box>}
       {/* Mòbil: ampliar el visor (amaga les pestanyes de sota). */}
       <IconButton
         position="absolute"

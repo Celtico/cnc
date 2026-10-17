@@ -226,11 +226,18 @@ function pinSolids(p: Panel, pins: readonly Hole[]): HwSolid[] {
   return out
 }
 
-/** Braç d'abatible: la placa al front (al forat) i el braç cap a dins, inclinat cap al mig del front. */
+/**
+ * Braç d'abatible: la placa al front (al forat) i el braç cap a dins, inclinat cap al mig del front. Només als fronts: els
+ * forats `flap` d'un lateral són els del bracket d'un pistó de gas, que ja es dibuixa sencer (`gasStrut`); i, al front, un
+ * parell a 32 o menys també és el bracket de porta del pistó, no un braç (sortien dues barres de 150 per bracket).
+ */
 function flapSolids(p: Panel): HwSolid[] {
   const out: HwSolid[] = []
-  for (const h of p.holes) {
-    if (h.tag !== "flap" || (h.face !== "A" && h.face !== "B")) continue
+  if (!FRONT_ROLES.has(p.role)) return out
+  const flaps = p.holes.filter((h) => h.tag === "flap")
+  for (const h of flaps) {
+    if (h.face !== "A" && h.face !== "B") continue
+    if (flaps.some((o) => o !== h && o.face === h.face && Math.hypot(o.x - h.x, o.y - h.y) <= 33)) continue
     const n: Vec3 = h.face === "A" ? [0, 0, 1] : [0, 0, -1]
     const { e } = nearestEdge(p, h.x, h.y)
     const a = cross(n, e)
