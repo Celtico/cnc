@@ -1,4 +1,4 @@
-import { bounds, bulgeOf, ccw, ccwB, flatten, meshWorldTriangles, movePocket, pocketBounds, pointInPolygon, rasterDepth, polygonArea, polygonTouchesRect, refSection, signedArea, type BPt, type Composition, type Cutout, type Panel, type RefObject, type Vec3 } from "../model"
+import { bounds, bulgeOf, ccw, ccwB, flatten, meshWorldTriangles, movePocket, reliefWorldTriangles, pocketBounds, pointInPolygon, rasterDepth, polygonArea, polygonTouchesRect, refSection, signedArea, type BPt, type Composition, type Cutout, type Panel, type RefObject, type Vec3 } from "../model"
 import { buildModule } from "./buildModule"
 import { normalizePanel } from "./buildCabinet"
 import { toLocal } from "./geometry"
@@ -58,8 +58,8 @@ export function applyRefCuts(panels: Panel[], refs: RefObject[], boxOf: (p: Pane
     for (const p of panels) {
       const b = boxOf(p)
       // Forma lliure (l'editor de malla): el que se'n pot fresar des de la cara per on entra, en qualsevol peça que toqui.
-      if (o.shape === "mesh") {
-        if (!o.mesh || !refTouchesBox(o, b)) continue
+      if (o.shape === "mesh" || o.shape === "image") {
+        if (!(o.shape === "mesh" ? o.mesh : o.image) || !refTouchesBox(o, b)) continue
         hits?.add(o.id)
         const msg = meshCut(o, p)
         if (msg && !(isExtra?.(p) ?? false)) problems.push({ refId: o.id, panel: p, message: msg })
@@ -382,21 +382,27 @@ function blindCut(o: RefObject, sec: Section, p: Panel, lo: number, hi: number, 
  * (`Pocket.map`). Retorna un avís si no es pot fer.
  */
 function meshCut(o: RefObject, p: Panel): string | undefined {
-  const tris = meshWorldTriangles(o).map((t) => t.map((q) => toLocal(p, q)) as [Vec3, Vec3, Vec3])
+  const world = o.shape === "image" ? reliefWorldTriangles(o) : meshWorldTriangles(o)
+  const tris = world.map((t) => t.map((q) => toLocal(p, q)) as [Vec3, Vec3, Vec3])
   let zmin = Infinity, zmax = -Infinity
   for (const t of tris) for (const q of t) {
     zmin = Math.min(zmin, q[2])
     zmax = Math.max(zmax, q[2])
   }
+  // Un relleu d'imatge és tot el que hi ha per sobre de la superfície dins de la caixa: arriba fins a dalt de la caixa.
+  if (o.shape === "image") {
+    for (const y of [o.y + o.h]) for (const x of [o.x, o.x + o.w]) for (const z of [o.z, o.z + o.d]) zmax = Math.max(zmax, toLocal(p, [x, y, z])[2])
+  }
   const T = p.thickness
   const face: "A" | "B" | null = zmax >= T - 0.5 && zmin < T - 0.05 ? "A" : zmin <= 0.5 && zmax > 0.05 ? "B" : null
   if (!face) return zmax > 0 && zmin < T ? `«${o.name}» queda dins del gruix de ${p.label} sense sortir per cap cara: no es pot fresar.` : undefined
   const area = p.length * p.width
-  const step = Math.max(2, Math.sqrt(area / 150_000))
+  // Una imatge porta detall fi: graella d'1 mm (si no passa de 400.000 punts).
+  const step = Math.max(o.shape === "image" ? 1 : 2, Math.sqrt(area / (o.shape === "image" ? 400_000 : 150_000)))
   const map = rasterDepth(tris, face, T, step, { x0: 0, y0: 0, x1: p.length, y1: p.width })
   if (!map) return undefined
   const x1 = map.x0 + (map.nx - 1) * step, y1 = map.y0 + (map.ny - 1) * step
-  const depth = Math.max(...map.d)
+  const depth = map.d.reduce((a, v) => (v > a ? v : a), 0)
   p.pockets = [...(p.pockets ?? []), { points: [[map.x0, map.y0], [x1, map.y0], [x1, y1], [map.x0, y1]], depth, face, map: { ...map, step }, tag: "ref" }]
   return depth >= T - 0.05 ? `«${o.name}» travessa ${p.label} en algun punt: a la CNC el buidat es deixa a la pell mínima.` : undefined
 }

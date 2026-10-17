@@ -153,7 +153,7 @@ export const REF = group("ref", "Objecte de referència", { icon: "ref", code: U
     code: UI.ref,
     control: "choice",
     default: "box",
-    choices: [{ value: "box", label: "Caixa" }, { value: "cylinder", label: "Cilindre", reveals: ["ref.orient"] }, { value: "profile", label: "Perfil", reveals: ["ref.orient"] }, { value: "mesh", label: "Forma lliure", hides: ["ref.orient"] }],
+    choices: [{ value: "box", label: "Caixa" }, { value: "cylinder", label: "Cilindre", reveals: ["ref.orient"] }, { value: "profile", label: "Perfil", reveals: ["ref.orient"] }, { value: "mesh", label: "Forma lliure", hides: ["ref.orient"] }, { value: "image", label: "Relleu d'imatge", hides: ["ref.orient"] }],
   }),
   section("ref.orient", "Orientació", { icon: "orient", code: UI.ref, control: "choice", showIf: "Forma ≠ Caixa, o Talla (no la forma lliure)", default: "z", choices: [{ value: "z", label: "Cap a la paret" }, { value: "y", label: "Vertical" }, { value: "x", label: "De costat" }] }),
   section("ref.size", "Mides", { icon: "dims", code: UI.ref, control: "number", defaultText: "600 × 600 × 100", hideable: false, why: STRUCTURAL }),

@@ -347,6 +347,14 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   la cara per on entra** (`refCuts.ts` `meshCut`: els triangles a coordenades de la peça i `rasterDepth`, graella de 2 mm;
   el que quedaria sota una part que sobresurt també es buida, la fresa ve de dalt): un buidat amb mapa (`Pocket.map`) que
   va al programa amb recorreguts 3D. Una forma que queda dins del gruix sense sortir per cap cara avisa.
+- **Relleu d'imatge** (Forma › «Relleu d'imatge», `core/model/imageRelief.ts`, `composition/reliefImage.ts`; per decisió de
+  l'usuari, 2026-10-17: «importar imatges en blanc i negre perquè s'adapti al relleu»): es tria una imatge (qualsevol que
+  obri el navegador), es redueix a 240 px pel costat llarg i es passa a grisos (`RefObject.image`: els bytes en base64). La
+  imatge va a la caixa de l'objecte vista des de dalt (amunt de la imatge = cap a la paret): el **negre** és el fons de la
+  caixa (el més fons) i el **blanc** la part de dalt (sense buidar); «Blanc = el més fons» ho gira. La caixa pren les
+  proporcions de la imatge i 10 mm d'alçada (la fondària del relleu): es posa amb la part de dalt a la cara de la peça. La
+  peça es buida per sobre de la superfície (`meshCut` amb els triangles de la imatge, graella d'1 mm) i va al programa amb
+  recorreguts 3D; el detall més fi que surt és el de la fresa (una esfèrica petita).
 - **Editor de perfils** (`composition/ProfileEditor.tsx`, com el mode vector de Figma): **Moure** (nodes i manegadors en
   rombe; Alt trenca el reflex; doble clic node ↔ corba), **Ploma** (clic = cantonada, clic i arrossegar = manegadors
   simètrics, clicar el primer node o Retorn tanca, Esc descarta), **Corbar** (arrossegar el punt del mig d'un costat,

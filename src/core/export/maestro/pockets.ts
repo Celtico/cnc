@@ -20,6 +20,13 @@ export const pocketWhat = (pk: Pocket) => {
   return `${kind} ${num(b.x1 - b.x0)} × ${num(b.y1 - b.y0)} × ${num(pk.depth)} a (${num(b.x0)}, ${num(b.y0)}) cara ${pk.face}`
 }
 
+/** La Z més baixa dels trams (sense `Math.min(...)`: un relleu en té massa per a la pila). */
+function lowestZ(paths: P3[][]): number {
+  let z = Infinity
+  for (const p of paths) for (const q of p) if (q[2] < z) z = q[2]
+  return z
+}
+
 /** Alçada de seguretat dels recorreguts (sobre la cara). */
 const SAFE = 5
 /** Punts com a molt per recorregut (un de més llarg es parteix). */
@@ -51,7 +58,7 @@ function toolpathLines(name: string, paths: P3[][], tool: MachineTool, ball: boo
   const first = paths.find((p) => p.length)?.[0]
   if (!first) return []
   const [fx, fy] = tr(first[0], first[1])
-  const minZ = Math.min(...paths.flatMap((p) => p.map((q) => q[2])))
+  const minZ = lowestZ(paths)
   const out = [
     ...(ball ? [comment(`FRESA ESFERICA ${toolMslName(tool)}`)] : []),
     `CreatePolyline(${cs(`${name}_Polyline`)}, ${num(fx)}, ${num(fy)});`,
@@ -138,7 +145,7 @@ export function pocketMachining(
       const n = name(pass.kind === "rough" ? "Desbast" : "Acabat")
       const lines = [comment(`${pocketWhat(pk)}: ${pass.label}`), ...toolpathLines(n, group, pass.tool, pass.ball, tr)]
       const pts = group.flatMap((q) => q.map((x) => tr(x[0], x[1])))
-      steps.push({ lines, tool: pass.tool, points: pts, depth: -Math.min(...group.flatMap((q) => q.map((x) => x[2]))), kind: "route", label: pass.label })
+      steps.push({ lines, tool: pass.tool, points: pts, depth: -lowestZ(group), kind: "route", label: pass.label })
     }
   }
   return { steps, warnings }

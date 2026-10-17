@@ -8,7 +8,7 @@ import { BoxFrame } from "../BoxFrame"
 import { useViewerCursor } from "../cursor"
 import { MoveGizmo, type GizmoHandle } from "../MoveGizmo"
 import type { Axis } from "../pixelScale"
-import { meshGeometry, profileGeometry } from "../refGeometry"
+import { imageGeometry, meshGeometry, profileGeometry } from "../refGeometry"
 import { surfaceMaterial } from "../surfaceMaterial"
 import { disposeMaterial } from "../textures"
 import { S, SELECT_COLOR } from "./constants"
@@ -116,7 +116,7 @@ export function RefGhost({
   const tint = hit ? "#dc2626" : selected ? SELECT_COLOR : g.effect === "cut" ? "#16a34a" : "#3b82f6"
   const draggable = selected && !!onMove
   const cyl = g.shape === "cylinder"
-  const profileGeo = useMemo(() => (g.shape === "profile" && g.profile && g.profile.length >= 3 ? profileGeometry(g) : g.shape === "mesh" && g.mesh ? meshGeometry(g, g.mesh, 2) : null), [g])
+  const profileGeo = useMemo(() => (g.shape === "profile" && g.profile && g.profile.length >= 3 ? profileGeometry(g) : g.shape === "mesh" && g.mesh ? meshGeometry(g, g.mesh, 2) : g.shape === "image" && g.image ? imageGeometry(g, g.image) : null), [g])
   // Amb material: sòlid, amb ombres, i surt a la Presentació i al render (els fantasmes no hi surten).
   const solidMat = useMemo(() => (g.material && g.effect !== "cut" && !outline ? surfaceMaterial(materials, g.material, Math.max(g.w, g.d), g.h) : null), [g.material, g.effect, g.w, g.h, g.d, outline, materials])
   // Totes les textures del material (color, normals, rugositat), no només `map`.
@@ -223,7 +223,7 @@ export function RefGhost({
       ) : (
         <meshStandardMaterial side={DoubleSide} color={hover && !selected && !hit ? SELECT_COLOR : tint} transparent opacity={outline ? 0.08 : selected || hit ? 0.38 : g.effect === "cut" ? 0.15 : hover ? 0.32 : 0.22} depthWrite={false} depthTest={g.effect !== "cut"} />
       )}
-      {((guides && !solidMat) || selected || hit || g.effect === "cut") && <Edges color={selected ? SELECT_COLOR : tint} threshold={cyl || profileGeo ? 30 : 1} depthTest={g.effect !== "cut"} renderOrder={g.effect === "cut" ? 9 : 0} />}
+      {((guides && !solidMat) || selected || hit || g.effect === "cut") && g.shape !== "image" && <Edges color={selected ? SELECT_COLOR : tint} threshold={cyl || profileGeo ? 30 : 1} depthTest={g.effect !== "cut"} renderOrder={g.effect === "cut" ? 9 : 0} />}
     </mesh>
       {/* Seleccionat: contorn gruixut que es veu sempre (també sobre un objecte sòlid i fosc); a sobre: més prim. */}
       {!outline && (selected || (hover && !drag)) && <BoxFrame w={(g.w + 4) * S} h={(g.h + 4) * S} d={(g.d + 4) * S} strong={selected} />}

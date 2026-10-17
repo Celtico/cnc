@@ -1,5 +1,5 @@
 import { BufferGeometry, BoxGeometry, CylinderGeometry, ExtrudeGeometry, Float32BufferAttribute, Matrix4, Shape, Vector3 } from "three"
-import { AXIS_INDEX, SECTION_AXES, sampleProfile, subdivide, toNodes, type MeshCage, type RefObject } from "../../core/model"
+import { AXIS_INDEX, SECTION_AXES, reliefLevels, sampleProfile, subdivide, toNodes, type ImageRelief, type MeshCage, type RefObject } from "../../core/model"
 
 /* Geometria dels objectes de referència (metres, centrada a la seva caixa): la fan servir el visor i les miniatures. */
 
@@ -43,9 +43,38 @@ export function meshGeometry(g: { w: number; h: number; d: number }, cage: MeshC
   return geo
 }
 
-/** Geometria sòlida de l'objecte (caixa, cilindre, perfil o forma lliure) centrada a la seva caixa. */
+/** El relleu d'una imatge (la superfície d'alçades) centrat a la seva caixa (metres), com a molt de 160 × 160 punts. */
+export function imageGeometry(g: { w: number; h: number; d: number }, img: ImageRelief): BufferGeometry {
+  const lv = reliefLevels(img)
+  const k = Math.max(1, Math.ceil(Math.max(img.w, img.h) / 160))
+  const nx = Math.ceil(img.w / k), nz = Math.ceil(img.h / k)
+  const pos = new Float32Array(nx * nz * 3)
+  for (let j = 0; j < nz; j++)
+    for (let i = 0; i < nx; i++) {
+      const si = Math.min(img.w - 1, i * k), sj = Math.min(img.h - 1, j * k)
+      const lvl = lv[sj * img.w + si]!
+      const o = (j * nx + i) * 3
+      pos[o] = (si / (img.w - 1) - 0.5) * g.w * S
+      pos[o + 1] = ((img.invert ? 1 - lvl : lvl) - 0.5) * g.h * S
+      pos[o + 2] = (sj / (img.h - 1) - 0.5) * g.d * S
+    }
+  const index: number[] = []
+  for (let j = 0; j < nz - 1; j++)
+    for (let i = 0; i < nx - 1; i++) {
+      const a = j * nx + i, b = a + 1, c = a + nx, d = c + 1
+      index.push(a, c, b, b, c, d)
+    }
+  const geo = new BufferGeometry()
+  geo.setAttribute("position", new Float32BufferAttribute(pos, 3))
+  geo.setIndex(index)
+  geo.computeVertexNormals()
+  return geo
+}
+
+/** Geometria sòlida de l'objecte (caixa, cilindre, perfil, forma lliure o relleu d'imatge) centrada a la seva caixa. */
 export function refGeometry(g: RefObject): BufferGeometry {
   if (g.shape === "mesh" && g.mesh) return meshGeometry(g, g.mesh)
+  if (g.shape === "image" && g.image) return imageGeometry(g, g.image)
   if (g.shape === "profile" && g.profile && g.profile.length >= 3) return profileGeometry(g)
   if (g.shape === "cylinder") {
     const axis = g.axis ?? "z"

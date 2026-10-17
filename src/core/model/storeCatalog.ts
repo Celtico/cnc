@@ -3,6 +3,8 @@ import type { PNode } from "./polygon"
 import { defaultModule, modulePlacements, DEFAULT_GRILLE, newId, partsOnlyKind, tableModule, type Carcass, type Composition, type CompositionKind, type Module, type RefObject, type Zone } from "./composition"
 import type { Template } from "./templates"
 import { applianceKitchen } from "./applianceModules"
+import { boxCage, refineCage } from "./meshShape"
+import { encodeLevels } from "./imageRelief"
 
 /**
  * Plantilles per a botigues de mobles (catàleg de `cad-mobles-cataleg.md`, més la categoria Cuina): per a cada tipus de
@@ -592,6 +594,42 @@ function dish(name: string, o: { mat: string; W: number; D: number; T: number; d
   return out
 }
 
+/**
+ * Una **forma lliure** que talla (l'editor de malla; per decisió de l'usuari, 2026-10-17: «fes peces de mostra de la nova
+ * eina»): la caixa de control de partida amb més detall, deformada per `f` (coordenades de 0 a 1 de la caixa), a (x, y, z)
+ * amb mida w × h × d. La peça que toca s'hi fresa des de dalt.
+ */
+function freeCut(name: string, x: number, y: number, z: number, w: number, hh: number, d: number, f: (p: [number, number, number]) => [number, number, number]): RefObject {
+  const c = refineCage(boxCage())
+  const r = (v: number) => Math.round(Math.min(1, Math.max(0, v)) * 1e4) / 1e4
+  return { id: newId("r"), name, effect: "cut", shape: "mesh", mesh: { ...c, v: c.v.map((p) => f(p).map(r) as [number, number, number]) }, x, y, z, w, h: hh, d }
+}
+
+/** Sabonera en forma de còdol: la cubeta més ampla per un costat i més fonda per l'altre. */
+const pebbleCut = (x: number, y: number, z: number): RefObject =>
+  freeCut("Còdol", x, y, z, 130, 40, 85, ([u, v, w]) => [v < 0.5 ? 0.5 + (u - 0.5) * (0.85 + 0.25 * w) : u, v < 0.3 ? v + 0.12 * u : v, v < 0.5 ? 0.5 + (w - 0.5) * (0.75 + 0.3 * u) : w])
+
+/** Safata amb el fons en ones: els punts de baix pugen i baixen al llarg. */
+const waveCut = (x: number, y: number, z: number, W: number, D: number): RefObject =>
+  freeCut("Ones", x, y, z, W, 34, D, ([u, v, w]) => [u, v < 0.3 ? 0.04 + 0.22 * (0.5 + 0.5 * Math.sin(u * Math.PI * 4)) : v, w])
+
+/** Pica orgànica: el fons més estret que la boca (una conca) i la boca una mica asimètrica. */
+const bowlCut = (x: number, y: number, z: number, W: number, H: number, D: number): RefObject =>
+  freeCut("Conca", x, y, z, W, H, D, ([u, v, w]) => (v < 0.5 ? [0.5 + (u - 0.5) * 0.55, v, 0.5 + (w - 0.5) * 0.6 + 0.05 * (u - 0.5)] : [u, v, w + 0.06 * Math.sin(u * Math.PI) * (w > 0.5 ? 1 : -1)]))
+
+/**
+ * Un **relleu d'imatge** que talla (per decisió de l'usuari, 2026-10-17: «importar imatges en blanc i negre perquè
+ * s'adapti al relleu»): la imatge feta aquí amb `level(u, v)` (0 negre, el més fons; 1 blanc, la cara) de `n` píxels pel
+ * costat llarg, sobre el tauler de gruix T, `depth` mm de fons.
+ */
+function imageCut(name: string, x: number, z: number, w: number, d: number, T: number, depth: number, level: (u: number, v: number) => number): RefObject {
+  const n = 160
+  const iw = w >= d ? n : Math.round((n * w) / d), ih = w >= d ? Math.round((n * d) / w) : n
+  const px = new Uint8Array(iw * ih)
+  for (let j = 0; j < ih; j++) for (let i = 0; i < iw; i++) px[j * iw + i] = Math.round(255 * Math.min(1, Math.max(0, level(i / (iw - 1), j / (ih - 1)))))
+  return { id: newId("r"), name, effect: "cut", shape: "image", image: { w: iw, h: ih, data: encodeLevels(px), name: `${name}.png` }, x, y: T - depth, z, w, h: depth, d }
+}
+
 /** Prestatge de dutxa (racó o recte) amb ranures passants perquè no s'hi aturi l'aigua. */
 function showerShelf(name: string, o: { mat: string; W: number; D: number; y: number }): FreePart[] {
   const T = 12
@@ -1001,6 +1039,16 @@ export const STORE_CATALOG: StoreCategory[] = [
         { name: "Sabonera", style: "Minimalista", materials: "Corian Glacier White de 19", colors: "blanc", use: "Sabonera amb cubeta fresada i escorredor", audience: "banys", price: 49, kind: "lliure", make: () => loose(dish("Sabonera", { mat: CW, W: 140, D: 100, T: 19, depth: 10, slot: true })) },
         { name: "Safata", style: "Contemporani", materials: "Corian Deep Nocturne de 19", colors: "negre", use: "Safata de 400 × 200 per al taulell del lavabo", audience: "banys de disseny", price: 89, kind: "lliure", make: () => loose(dish("Safata", { mat: CN, W: 400, D: 200, T: 19, depth: 9 })) },
         { name: "Prestatge de dutxa", style: "Funcional", materials: "Corian Cameo White de 12", colors: "blanc", use: "Prestatge amb ranures passants perquè l'aigua no s'hi aturi", audience: "dutxes", price: 79, kind: "lliure", make: () => loose(showerShelf("Prestatge de dutxa", { mat: CC, W: 500, D: 140, y: 1300 })) },
+      ]),
+      items("corian", "Forma lliure", [
+        { name: "Còdol", style: "Orgànic", materials: "Corian Glacier White de 19", colors: "blanc", use: "Sabonera amb la cubeta en forma de còdol (forma lliure: obre-la a Objectes de referència › «Còdol» › Forma)", audience: "banys de disseny", price: 59, kind: "lliure", make: () => loose([corianSlab("Sabonera", CW, 160, 110, 19)], [pebbleCut(15, 19 - 9, 12)]) },
+        { name: "Ones", style: "Contemporani", materials: "Corian Rain Cloud de 19", colors: "gris", use: "Safata amb el fons en ones (forma lliure)", audience: "rebedors i banys", price: 119, kind: "lliure", make: () => loose([corianSlab("Safata", CR, 420, 260, 19)], [waveCut(20, 19 - 11, 20, 380, 220)]) },
+        { name: "Conca", style: "Orgànic", materials: "Corian Cameo White (bloc de 57)", colors: "blanc trencat", use: "Lavabo d'un bloc amb la pica de forma lliure (conca) i el desguàs per sota", audience: "banys de disseny", price: 990, kind: "lliure", make: () => loose([corianSlab("Lavabo", CC, 600, 460, 57), cut("Desguàs", CC, 300 - 20, 230 - 20, 40, 40, 0, 57 - 34 + 2, oval(40, 40))], [bowlCut(60, 57 - 34, 65, 480, 70, 330)]) },
+      ]),
+      items("corian", "Relleu d'imatge", [
+        { name: "Ones", style: "Contemporani", materials: "Corian Glacier White de 19", colors: "blanc", use: "Plafó de paret amb ones concèntriques fresades (relleu d'una imatge en grisos: Objectes de referència › «Ones» › Forma)", audience: "rebedors i banys", price: 290, kind: "lliure", make: () => loose([corianSlab("Plafó", CW, 600, 400, 19)], [imageCut("Ones", 20, 20, 560, 360, 19, 5, (u, v) => 0.5 + 0.5 * Math.cos(Math.hypot((u - 0.5) * 560, (v - 0.5) * 360) / 14))]) },
+        { name: "Dunes", style: "Orgànic", materials: "Corian Sand Storm de 19", colors: "sorra", use: "Safata amb el fons en dunes (relleu d'imatge)", audience: "banys de disseny", price: 149, kind: "lliure", make: () => loose([corianSlab("Safata", CS, 400, 250, 19)], [imageCut("Dunes", 20, 20, 360, 210, 19, 6, (u, v) => 0.25 + 0.4 * (0.5 + 0.5 * Math.sin(u * 22 + Math.sin(v * 7) * 1.6)))]) },
+        { name: "Gotes", style: "Minimalista", materials: "Corian Deep Nocturne de 19", colors: "negre", use: "Plafó amb gotes fresades (relleu d'imatge)", audience: "banys i cuines", price: 260, kind: "lliure", make: () => loose([corianSlab("Plafó", CN, 600, 300, 19)], [imageCut("Gotes", 20, 20, 560, 260, 19, 4, (u, v) => { const gx = u * 14, gy = v * 6.5; const dd = Math.hypot(gx - Math.round(gx), gy - Math.round(gy)); return Math.min(1, dd / 0.38) })]) },
       ]),
     ],
   },

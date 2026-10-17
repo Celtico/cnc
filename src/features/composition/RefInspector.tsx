@@ -1,11 +1,12 @@
-import { Box, Button, HStack, IconButton, Menu, Portal, Stack, Text } from "@chakra-ui/react"
+import { Box, Button, HStack, IconButton, Menu, Portal, Stack, Text, Switch } from "@chakra-ui/react"
 import { segGroup, segItem } from "../../components/segmented"
-import { useState, type ReactNode } from "react"
+import { useRef, useState, type ReactNode } from "react"
 import { ProfileEditor } from "./ProfileEditor"
 import { MeshEditor } from "./MeshEditor"
+import { readReliefImage } from "./reliefImage"
 import type { IconType } from "react-icons"
 import { IconChoice, type IconOption } from "../../components/IconChoice"
-import { LuBox, LuCylinder, LuMoveDiagonal2, LuMoveHorizontal, LuMoveVertical, LuScissors, LuShield, LuSpline, LuArrowDownToLine, LuBrickWall, LuBookmark, LuCopy, LuEllipsis, LuMove, LuMoveDiagonal, LuPencilRuler, LuLink, LuPalette, LuShapes, LuTrash2 } from "react-icons/lu"
+import { LuBox, LuCylinder, LuMoveDiagonal2, LuMoveHorizontal, LuMoveVertical, LuScissors, LuShield, LuSpline, LuArrowDownToLine, LuBrickWall, LuBookmark, LuCopy, LuEllipsis, LuMove, LuMoveDiagonal, LuPencilRuler, LuLink, LuPalette, LuShapes, LuImage, LuTrash2 } from "react-icons/lu"
 import { FoldItem } from "../../components/Fold"
 import { toaster } from "../../components/ui/toaster"
 import { AXIS_INDEX, SECTION_AXES, anchorRef, boxCage, insertRefCopy, makeRoomForRef, refBlocksRow, toNodes, newId, type Composition, type RefObject } from "../../core/model"
@@ -18,6 +19,7 @@ import { MaterialSelect } from "../settings/MaterialSelect"
 export function RefInspector({ comp, id, onChange }: { comp: Composition; id: string; onChange: (c: Composition) => void }) {
   const [editing, setEditing] = useState(false)
   const [meshing, setMeshing] = useState(false)
+  const imageInput = useRef<HTMLInputElement>(null)
   const { settings } = useSettings()
   const o = comp.references.find((r) => r.id === id)
   if (!o) return null
@@ -28,7 +30,7 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
   const axisOpt = AXIS_OPTIONS.find((a) => a.value === axis)!
   // La direcció: la del cilindre i el perfil, o la del tall d'una caixa que talla.
   // La forma lliure no en té: talla des de la cara per on entra.
-  const oriented = shape !== "mesh" && (shape !== "box" || o.effect === "cut")
+  const oriented = shape !== "mesh" && shape !== "image" && (shape !== "box" || o.effect === "cut")
   const shapeOpt = SHAPE_OPTIONS.find((s) => s.id === shape)!
   const attached = o.onFloor && o.onWall ? "Terra i paret" : o.onFloor ? "Al terra" : o.onWall ? "A la paret" : "Res"
   return (
@@ -80,9 +82,12 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
                   update({ ...profilePatch(o), mesh: undefined })
                   setEditing(true)
                 } else if (v === "mesh") {
-                  update({ shape: "mesh", axis: undefined, profile: undefined, mesh: o.mesh ?? boxCage() })
+                  update({ shape: "mesh", axis: undefined, profile: undefined, mesh: o.mesh ?? boxCage(), image: undefined })
                   setMeshing(true)
-                } else update({ shape: undefined, axis: undefined, profile: undefined, mesh: undefined })
+                } else if (v === "image") {
+                  if (o.image) update({ shape: "image", axis: undefined, profile: undefined, mesh: undefined })
+                  else imageInput.current?.click()
+                } else update({ shape: undefined, axis: undefined, profile: undefined, mesh: undefined, image: undefined })
               }}
             />
             {o.shape === "profile" && (
@@ -95,6 +100,46 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
                 <LuShapes /> Editar la forma lliure…
               </Button>
             )}
+            {o.shape === "image" && o.image && (
+              <Stack gap={2}>
+                <Text fontSize="xs" color="fg.muted" truncate>
+                  {o.image.name ?? "Imatge"} · {o.image.w} × {o.image.h} px
+                </Text>
+                <Button size="xs" variant="outline" alignSelf="flex-start" onClick={() => imageInput.current?.click()}>
+                  <LuImage /> Canviar la imatge…
+                </Button>
+                <Switch.Root size="sm" checked={!!o.image.invert} onCheckedChange={(e) => update({ image: { ...o.image!, invert: e.checked || undefined } })}>
+                  <Switch.HiddenInput />
+                  <Switch.Control />
+                  <Switch.Label fontSize="sm">Blanc = el més fons</Switch.Label>
+                </Switch.Root>
+              </Stack>
+            )}
+            <input
+              ref={imageInput}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                e.target.value = ""
+                if (!f) return
+                readReliefImage(f)
+                  .then((image) =>
+                    update({
+                      shape: "image",
+                      axis: undefined,
+                      profile: undefined,
+                      mesh: undefined,
+                      image: { ...image, ...(o.image?.invert ? { invert: true } : {}) },
+                      // La caixa amb les proporcions de la imatge (vista des de dalt); el relleu, de 10 mm si no en tenia.
+                      d: Math.round((o.w * image.h) / image.w),
+                      ...(o.shape !== "image" ? { h: 10 } : {}),
+                    }),
+                  )
+                  .catch(() => toaster.create({ type: "error", title: "No s'ha pogut llegir la imatge" }))
+              }}
+            />
           </Stack>
         </FormRow>
       </FoldItem>
@@ -223,13 +268,14 @@ const AXIS_OPTIONS: IconOption<Axis>[] = [
 ]
 
 /** Forma de l'objecte: pastilles amb icona i nom (la icona també és la de la secció). */
-const SHAPES: { id: "box" | "cylinder" | "profile" | "mesh"; name: string; icon: IconType }[] = [
+const SHAPES: { id: "box" | "cylinder" | "profile" | "mesh" | "image"; name: string; icon: IconType }[] = [
   { id: "box", name: "Caixa", icon: LuBox },
   { id: "cylinder", name: "Cilindre", icon: LuCylinder },
   { id: "profile", name: "Perfil", icon: LuSpline },
   { id: "mesh", name: "Forma lliure", icon: LuShapes },
+  { id: "image", name: "Relleu d'imatge", icon: LuImage },
 ]
-const SHAPE_OPTIONS: { id: "box" | "cylinder" | "profile" | "mesh"; name: string; icon: IconType; label: ReactNode }[] = SHAPES.map((s) => ({
+const SHAPE_OPTIONS: { id: "box" | "cylinder" | "profile" | "mesh" | "image"; name: string; icon: IconType; label: ReactNode }[] = SHAPES.map((s) => ({
   ...s,
   label: (
     <>

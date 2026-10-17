@@ -59,9 +59,11 @@
   amb Corian, que hi pugui passar l'aigua»: lavabos massissos d'un bloc de 38 o 57 amb la pica fresada (fons arrodonit) i
   el desguàs per sota fins a la pica, mobles de lavabo amb el sobre-pica d'una peça, plats de dutxa amb el fons en pendent
   cap al desguàs del mig (un buidat de radi gran), taulells amb el forat de la pica i ranures d'escórrer fresades, sabonera,
-  safata i prestatge de dutxa amb ranures; tot fet amb les fondàries a què arriben les freses del taller (≤ 35)—,
+  safata i prestatge de dutxa amb ranures; i mostres de les eines noves: **Forma lliure** (sabonera còdol, safata d'ones,
+  lavabo «Conca», fets amb `freeCut`, la caixa de control deformada) i **Relleu d'imatge** (plafó d'ones concèntriques,
+  safata de dunes, plafó de gotes, `imageCut`: la imatge en grisos feta al codi); tot fet amb les fondàries a què arriben les freses del taller (≤ 35)—,
   Exterior) › tipus › 3 dissenys (nom, estil, mides, materials, ús, colors,
-  públic, `Template.price` orientatiu), 213 plantilles en una graella per categoria amb el tipus a la targeta. Fora: sofàs,
+  públic, `Template.price` orientatiu), 219 plantilles en una graella per categoria amb el tipus a la targeta. Fora: sofàs,
   butaques, cadires, miralls, gandules i carros (no són de tauler). Els mobles només de peces lliures (llits, capçals, taules
   de pedra) són del tipus `lliure` («Peces lliures»). Aparadors sobre potes de peces lliures: caixa «penjada» a l'alçada de les potes.
   `storeCatalog.test.ts`: totes sense avisos de disseny. Les mides de la descripció (`compositionDims`, també a les

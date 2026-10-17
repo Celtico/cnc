@@ -31,6 +31,54 @@
    "part|Prestatge de dutxa|500x140x12|Corian Cameo White|x|e0000|h0|g0|c5:84b1a7ad|o-|@584501fa"
   ]
  },
+ "store-corian-forma-lliure-1": {
+  "panels": 1,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "part|Sabonera|160x110x19|Corian Glacier White|x|e0000|h0|g0|c0|o-|@994343e7|k:1:d017617a"
+  ]
+ },
+ "store-corian-forma-lliure-2": {
+  "panels": 1,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "part|Safata|420x260x19|Corian Rain Cloud|x|e0000|h0|g0|c0|o-|@60fbc651|k:1:b1389d4f"
+  ]
+ },
+ "store-corian-forma-lliure-3": {
+  "panels": 1,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "part|Lavabo|600x460x57|Corian Cameo White|x|e0000|h0|g0|c0|o-|@eae1151f|k:2:a2be5e7c"
+  ]
+ },
+ "store-corian-relleu-d-imatge-1": {
+  "panels": 1,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "part|Plafó|600x400x19|Corian Glacier White|x|e0000|h0|g0|c0|o-|@45fb4f21|k:1:586d4404"
+  ]
+ },
+ "store-corian-relleu-d-imatge-2": {
+  "panels": 1,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "part|Safata|400x250x19|Corian Sand Storm|x|e0000|h0|g0|c0|o-|@766a8308|k:1:65912fa0"
+  ]
+ },
+ "store-corian-relleu-d-imatge-3": {
+  "panels": 1,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "part|Plafó|600x300x19|Corian Deep Nocturne|x|e0000|h0|g0|c0|o-|@cf220186|k:1:ab0def59"
+  ]
+ },
  "store-exterior-taula-exterior-1": {
   "panels": 1,
   "extras": 4,

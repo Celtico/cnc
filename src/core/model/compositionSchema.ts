@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { MeshCageSchema } from "./meshShape"
+import { ImageReliefSchema } from "./imageRelief"
 import { BPtSchema, ProfileNodeSchema } from "./panel"
 import { flatten, profileToOutline, toNodes, type BPt } from "./polygon"
 import { CameraPoseSchema } from "./camera"
@@ -33,12 +34,14 @@ export const RefObjectSchema = z.object({
    */
   effect: z.enum(["obstacle", "cut"]).optional(),
   /**
-   * Caixa (per defecte), cilindre, perfil 2D extrudit o **forma lliure** (`mesh`: la caixa de control suavitzada, l'editor de
-   * malla), dins de la caixa w × h × d.
+   * Caixa (per defecte), cilindre, perfil 2D extrudit, **forma lliure** (`mesh`: la caixa de control suavitzada, l'editor de
+   * malla) o **relleu d'una imatge** (`image`), dins de la caixa w × h × d.
    */
-  shape: z.enum(["box", "cylinder", "profile", "mesh"]).optional(),
+  shape: z.enum(["box", "cylinder", "profile", "mesh", "image"]).optional(),
   /** Forma lliure (`shape: "mesh"`): la caixa de control, de 0 a 1 dins de la caixa (`MeshCageSchema`). */
   mesh: MeshCageSchema.optional(),
+  /** Relleu d'una imatge en blanc i negre (`shape: "image"`): els grisos són l'alçada dins de la caixa (`ImageReliefSchema`). */
+  image: ImageReliefSchema.optional(),
   /**
    * Perfil (forma «profile»): contorn de la secció en mm, amb la cantonada mínima a (0, 0).
    * Coordenades (u, v) del pla perpendicular a la direcció: z → (x, y), y → (x, z), x → (z, y).
