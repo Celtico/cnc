@@ -1,20 +1,20 @@
 import { Switch } from "@chakra-ui/react"
-import { LuArrowDownToLine, LuFootprints, LuPanelBottom, LuSquareDashedBottom } from "react-icons/lu"
+import { LuArrowDownToLine, LuFootprints, LuPanelBottom } from "react-icons/lu"
 import { FormRow } from "../../components/FormRow"
 import { IconChoice } from "../../components/IconChoice"
 import { NumRow } from "../../components/NumRow"
-import { addBottomPlinth, bottomPlinthZone, hasBottom, removeBottomPlinth, setPlinthZone, type Base, type Carcass, type HardwareItem, type Module } from "../../core/model"
+import { addBottomPlinth, bottomPlinthZone, removeBottomPlinth, setPlinthZone, type Base, type Carcass, type HardwareItem, type Module } from "../../core/model"
 import { useSettings } from "../settings/SettingsContext"
 import { HardwarePick } from "./HardwarePick"
 
 type LegsBase = Extract<Base, { kind: "legs" }>
-type BaseChoice = "none" | "plinth" | "legs" | "open"
+type BaseChoice = "none" | "plinth" | "legs"
 
 /**
  * La **base del mòdul** d'un moble normal, com era abans de les cuines (per decisió de l'usuari, 2026-10-20: «si és moble,
  * la base com estava abans del lio de les cuines»; la cuina té el suport al Moble › Cuina, un per a tots els mòduls de
- * terra): una sola tria, Directe a terra · Sòcol · Potes (amb la pota i, si es vol, el sòcol davant de les potes) · Sense
- * base (obert per sota).
+ * terra): el Suport, Directe a terra · Sòcol · Potes (amb la pota i, si es vol, el sòcol davant de les potes). La peça de
+ * baix (Base: Sencera o Sense base) és una altra fila, la mateixa que a la cuina (cas 8 del model únic).
  *
  * El **Sòcol** és una drecera (per decisió de l'usuari, 2026-10-20: «0 casos especials»): «Sense base» i una zona a baix
  * de tot amb un front fix retirat (`addBottomPlinth`); l'Alçada i la Retirada són les d'aquesta zona. El sòcol d'abans
@@ -23,31 +23,29 @@ type BaseChoice = "none" | "plinth" | "legs" | "open"
 export function ModuleSupportFields({ module, base: vb, onChange }: { module: Module; /** La base tal com es construeix (`visibleModule`). */ base: Base; onChange: (m: Module) => void }) {
   const c = module.carcass
   const zone = bottomPlinthZone(module)
-  const value: BaseChoice = zone ? "plinth" : vb.kind === "legs" || vb.kind === "plinth" ? vb.kind : hasBottom(c) ? "none" : "open"
+  const value: BaseChoice = zone ? "plinth" : vb.kind === "legs" ? "legs" : "none"
   const setCarcass = (carcass: Carcass) => onChange({ ...module, carcass })
   const set = (base: Base) => setCarcass({ ...c, base })
   return (
     <>
-      <FormRow optionId="module.carcass.support" label="Base">
+      <FormRow optionId="module.carcass.support" label="Suport">
         <IconChoice
           hideLabel
-          label="Base"
+          label="Suport"
           value={value}
           options={[
             { value: "none", label: "Directe a terra", icon: LuArrowDownToLine, hint: "Directe a terra, sense sòcol ni potes" },
             { value: "plinth", label: "Sòcol", icon: LuPanelBottom, hint: "Sòcol retirat a sota: una zona amb un front fix" },
             { value: "legs", label: "Potes", icon: LuFootprints, hint: "Potes regulables" },
-            { value: "open", label: "Sense base (obert)", icon: LuSquareDashedBottom, hint: "Sense base: obert per sota" },
           ]}
           onChange={(k) => {
             if (k === value) return
             // Treure el sòcol fet amb una zona torna l'interior d'abans.
             const from = zone ? removeBottomPlinth(module) : module
             if (k === "plinth") return onChange(addBottomPlinth(from))
-            const { noBottom: _n, ...rest } = from.carcass
+            // La peça de baix (Base) es queda com era: és una altra opció.
             const base: Base = k === "legs" ? { kind: "legs", height: 100 } : { kind: "none" }
-            // «Sense base» és `noBottom` (la forma d'ara del `open` d'abans).
-            onChange({ ...from, carcass: k === "open" ? { ...rest, base, noBottom: true } : { ...rest, base } })
+            onChange({ ...from, carcass: { ...from.carcass, base } })
           }}
         />
       </FormRow>

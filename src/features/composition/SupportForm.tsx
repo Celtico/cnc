@@ -97,10 +97,10 @@ export function SupportForm({ comp, setComp }: { comp: Composition; setComp: (f:
 interface SupportIds { kind: string; height: string; leg: string; legInset: string }
 
 /**
- * Suport, alçada i pota: el mateix per a tots els mòduls de terra, només al Moble › Cuina (la Caixa del mòdul en
- * diu el text i hi porta amb «Modificar opció global»).
+ * Suport, alçada i pota: el mateix per a tots els mòduls de terra de la cuina. Surt al Moble › Cuina i, amb les mateixes
+ * opcions i el mateix valor, a la Caixa › Base de cada mòdul de terra (cas 15 del model únic).
  */
-function SupportBasics({ support: s, onChange: set, first, help, ids }: { support: FloorSupport; onChange: (patch: Partial<FloorSupport>) => void; first?: Module; help: string; ids: SupportIds }) {
+export function SupportBasics({ support: s, onChange: set, first, help, ids }: { support: FloorSupport; onChange: (patch: Partial<FloorSupport>) => void; first?: Module; help: string; ids: SupportIds }) {
   return (
     <>
       <FormRow optionId={ids.kind} label="Suport" help={help}>

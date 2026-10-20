@@ -142,12 +142,12 @@ export function ModulePositionFields({ comp, module, moduleX, updateModule }: { 
  * la retirada a la Caixa; el material dels fronts a Materials; l'espiga a Caixa › Laterals. Els ferratges per defecte del
  * mòdul no surten: cada compartiment tria el seu (o «Com el mòdul»).
  */
-export function ModuleSections({ module, updateModule, support, onOpenSupport, moble }: { module: Module; updateModule: (m: Module) => void; moduleBuild?: ModuleBuild | undefined; /** El cos del moble (el més repetit dels mòduls): «Com el moble» a Materials. */ moble?: { material: string; thickness: number }; /** El suport dels mòduls de terra (Moble › Cuina): la Caixa el diu. */ support?: FloorSupport; /** Porta a l'opció global (Moble › Cuina). */ onOpenSupport?: () => void }) {
+export function ModuleSections({ module, updateModule, support, onSupport, moble }: { module: Module; updateModule: (m: Module) => void; moduleBuild?: ModuleBuild | undefined; /** El cos del moble (el més repetit dels mòduls): «Com el moble» a Materials. */ moble?: { material: string; thickness: number }; /** El suport dels mòduls de terra (Moble › Cuina): la Caixa el diu. */ support?: FloorSupport; /** Canvia el suport de tots els mòduls de terra (Moble › Cuina). */ onSupport?: (patch: Partial<FloorSupport>) => void }) {
   const rows = moduleRows(module)
   return (
     <>
       <FoldItem optionId="module.carcass" id="mod-structure" title="Caixa" icon={LuFrame}>
-        <CarcassForm module={module} onChange={updateModule} section="structure" rows={rows} support={support} onOpenSupport={onOpenSupport} />
+        <CarcassForm module={module} onChange={updateModule} section="structure" rows={rows} support={support} onSupport={onSupport} />
       </FoldItem>
       <FoldItem optionId="module.materials" id="mod-materials" title="Materials" icon={LuPalette}>
         <MaterialsForm scope="module" carcass={module.carcass} {...(moble ? { moble } : {})} hasDrawers={hasDrawers(visibleModule(module).root)} hasFronts={rows.frontMaterial} onPatch={(patch) => updateModule({ ...module, carcass: { ...module.carcass, ...patch } })} />

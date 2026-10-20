@@ -2,7 +2,7 @@ import { AS_MODULE, STRUCTURAL, UI, field, section } from "./optionTypes"
 import { applianceFrontFields } from "./moduleOptions"
 
 const FROM_PREFS_GAPS = "Preferències › Folgances per defecte"
-const BY_APPLIANCE = "Si l'electrodomèstic que és el mòdul la fixa, no surt (la nota de dalt de la Caixa ho diu)."
+const BY_APPLIANCE = "Surt sempre: un electrodomèstic l'ajusta un cop en triar-lo i després es canvia com sempre (cas 12 del model únic)."
 const RAW_BACK = "`moduleRows().back` llegeix el fons de l'usuari sense `visibleModule`. Amb un electrodomèstic que fixa «Sense fons» (rentaplats, rentadora, frigorífic sota taulell; microones penjat), la fila Fons diu «Sense fons» però si el fons de l'usuari era en ranura surten igualment «Ranura del fons» i «Folgança de la ranura» (o «Retirada del fons» si era encastat), que la construcció no fa servir."
 
 /** Mòdul › Caixa, en l'ordre de l'inspector (`CarcassForm`, opcions en cascada). */
@@ -13,15 +13,14 @@ export const CARCASS = section("module.carcass", "Caixa", { icon: "carcass", cod
   field("module.carcass.support", "Suport", {
     code: UI.carcass,
     control: "choice",
-    showIf: `Mòdul de terra. Cuina: què hi ha (el del moble) i el botó «Modificar opció global», que porta al Moble › Cuina. Moble normal: una sola fila «Base», com abans de les cuines (Directe a terra · Sòcol · Potes · Sense base). Penjat: text «Penjat a la paret, a H mm del terra», es canvia a Posició. ${BY_APPLIANCE}`,
-    note: "Per decisió de l'usuari, 2026-10-15: «és un sòcol per a tots els mòduls i no un per a cada un»; 2026-10-16: «les opcions que siguin globals no repetir-les ni posar un missatge, sinó un botó que digui modificar opció global»; 2026-10-20: només a la cuina (Moble › Cuina); el moble normal té les opcions d'abans, a cada mòdul (`ModuleSupportFields`).",
+    showIf: "Mòdul de terra. Moble normal: el del mòdul (Directe a terra · Sòcol, una drecera de zones · Potes). Cuina: les mateixes opcions amb el valor de tota la cuina (Moble › Cuina; canviar-les aquí és canviar-les per a tots). Penjat: text «Penjat a la paret, a H mm del terra», es canvia a Posició.",
+    note: "Casos 8 i 15 del model únic (2026-10-20): el Suport i la Base (la peça de baix) són dues files, iguals al moble i a la cuina; a la cuina, el Suport és el de tota la cuina, amb les mateixes opcions que a Moble › Cuina.",
     default: "none",
     defaultEditable: true,
     choices: [
       { value: "none", label: "Directe a terra", reveals: ["module.carcass.bottom"] },
       { value: "plinth", label: "Sòcol", reveals: ["module.carcass.bottom", "module.carcass.plinthHeight", "module.carcass.plinthSetback"] },
       { value: "legs", label: "Potes", reveals: ["module.carcass.legHeight", "module.carcass.leg", "module.carcass.legPlinth", "module.carcass.underLight"], hides: ["module.carcass.bottom"] },
-      { value: "open", label: "Sense base (obert)", note: "moble normal: la mateixa tria (la cuina ho tria a la fila Base)" },
     ],
   }, [
     field("module.carcass.plinthHeight", "Alçada sòcol", { code: UI.moduleSupport, control: "number", showIf: "Suport = Sòcol", range: { min: 20, max: 300, step: 5, suffix: "mm" }, default: 60, defaultEditable: true }),

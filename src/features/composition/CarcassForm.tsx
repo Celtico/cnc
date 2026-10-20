@@ -1,5 +1,5 @@
 import { Button, HStack, Stack, Switch, Text } from "@chakra-ui/react"
-import { DEFAULT_GRILLE, UI_PATHS, addTopPlinth, bottomPlinthZone, removeTopPlinth, setPlinthZone, topPlinthZone, type FloorSupport, backChoices, hasBottom, moduleApplianceCarcass, visibleModule, boardChoices, hardwareSummary, jointApplies, materialByName, moduleRows, moduleSlotItem, type Base, type Carcass, type Module, type ModuleRows, type Top } from "../../core/model"
+import { DEFAULT_GRILLE, UI_PATHS, addTopPlinth, bottomPlinthZone, removeTopPlinth, setPlinthZone, topPlinthZone, type FloorSupport, backChoices, hasBottom, moduleApplianceCarcass, visibleModule, boardChoices, hardwareSummary, jointApplies, materialByName, moduleRows, moduleSlotItem, type Carcass, type Module, type ModuleRows, type Top } from "../../core/model"
 import { NumRow } from "../../components/NumRow"
 import { FoldItem } from "../../components/Fold"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
@@ -7,7 +7,7 @@ import { IconChoice } from "../../components/IconChoice"
 import { useState } from "react"
 import { ProfileEditor } from "./ProfileEditor"
 import { PRESETS, matchPreset } from "./profilePresets"
-import { LuCircle, LuColumns2, LuGlobe, LuPencilRuler, LuRectangleHorizontal, LuSquircle } from "react-icons/lu"
+import { LuCircle, LuColumns2, LuPencilRuler, LuRectangleHorizontal, LuSquircle } from "react-icons/lu"
 import { LuDrill, LuGrid3X3, LuInspectionPanel, LuLayers2, LuPanelBottom, LuPanelTop, LuSquareDashed, LuSquare, LuSquareDashedBottom, LuSquareSquare, LuSquareStack, LuTriangleRight, LuWind } from "react-icons/lu"
 import { useSettings } from "../settings/SettingsContext"
 import { MaterialSelect } from "../settings/MaterialSelect"
@@ -15,6 +15,7 @@ import { HardwarePick } from "./HardwarePick"
 import { HangerFields } from "./BaseFields"
 import { ModuleSupportFields } from "./ModuleSupportFields"
 import { GrillePatternFields } from "./GrillePatternFields"
+import { SupportBasics } from "./SupportForm"
 import { HollowRows } from "./HollowRows"
 
 type CarcassSection = "dims" | "structure"
@@ -29,7 +30,7 @@ const TOP_LABEL: Record<Top["kind"], string> = { full: "Sencera", ventSlot: "Ran
  * decisió de l'usuari, 2026-10-08: «l'Estil també a la Caixa»; abans eren a «Acabats»). Només el que la construcció
  * llegeix (`moduleRows`, `core/model/usedHardware.ts`). Els passacables són a `CableHolesForm`.
  */
-export function CarcassForm({ module, onChange, section, rows = moduleRows(module), support, onOpenSupport }: { module: Module; onChange: (m: Module) => void; section: CarcassSection; rows?: ModuleRows; /** El suport dels mòduls de terra (Moble › Cuina). */ support?: FloorSupport; /** Obre l'opció global: Moble › Cuina. */ onOpenSupport?: () => void }) {
+export function CarcassForm({ module, onChange, section, rows = moduleRows(module), support, onSupport }: { module: Module; onChange: (m: Module) => void; section: CarcassSection; rows?: ModuleRows; /** El suport dels mòduls de terra (Moble › Cuina). */ support?: FloorSupport; /** Canvia el suport de tots els mòduls de terra (Moble › Cuina). */ onSupport?: (patch: Partial<FloorSupport>) => void }) {
   const c = module.carcass
   const { gaps } = useSettings().settings
   const set = (patch: Partial<Carcass>) => onChange({ ...module, carcass: { ...c, ...patch } })
@@ -44,7 +45,7 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
   // Els sòcols fets amb zones (`plinthZones.ts`): la Base i la Tapa els mostren com a «Sòcol».
   const bottomZone = !support ? bottomPlinthZone(module) : undefined
   const topZone = topPlinthZone(module)
-  const baseBadge = c.base.kind === "wall" ? "Penjat" : supportKind === "plinth" || bottomZone ? "Sòcol" : supportKind === "legs" ? "Potes" : hasBottom(vc) ? (support ? "Sencera" : "Directe a terra") : "Sense base"
+  const baseBadge = c.base.kind === "wall" ? "Penjat" : supportKind === "plinth" || bottomZone ? "Sòcol" : supportKind === "legs" ? "Potes" : hasBottom(vc) ? "Directe a terra" : "Sense base"
   const sidesBadge = vc.sides.left && vc.sides.right ? "Els dos" : vc.sides.left ? "Esquerre" : vc.sides.right ? "Dret" : "Cap"
 
   if (section === "dims")
@@ -73,25 +74,23 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
                 ) : !support ? (
                   <ModuleSupportFields module={module} base={vc.base} onChange={onChange} />
                 ) : (
-                  // Una opció global (la de tots els mòduls de terra) no es repeteix al mòdul (per decisió de l'usuari,
-                  // 2026-10-16: «no repetir les opcions ni posar un missatge, sinó un botó que digui modificar opció global»): què
-                  // hi ha i un botó que porta al Moble › Cuina.
-                  <FormRow optionId="module.carcass.support" label="Suport">
-                    <Stack gap={2} pt="7px" align="flex-start">
-                      <Text fontSize="sm" color="fg.muted">
-                        {supportText(support, vc.base)}
-                      </Text>
-                      {onOpenSupport && (
-                        <Button size="xs" variant="outline" colorPalette="wood" onClick={onOpenSupport}>
-                          <LuGlobe /> Modificar opció global
-                        </Button>
-                      )}
-                    </Stack>
-                  </FormRow>
+                  // Cuina (cas 15 del model únic): les mateixes opcions que al Moble › Cuina, amb el mateix valor; canviar-les
+                  // aquí és canviar-les per a tots els mòduls de terra.
+                  <>
+                    <SupportBasics
+                      support={support}
+                      onChange={(patch) => onSupport?.(patch)}
+                      help="Per a tota la cuina: és el mateix que Moble › Cuina."
+                      ids={{ kind: "module.carcass.support", height: "module.carcass.legHeight", leg: "module.carcass.leg", legInset: "module.carcass.legInset" }}
+                    />
+                    {support.kind === "plinth" && (
+                      <NumRow optionId="module.carcass.plinthSetback" label="Retirada" help="Per a tota la cuina. De la cara dels fronts a la cara de davant del sòcol." value={support.plinth.setback} min={0} max={200} step={1} onChange={(setback) => setback >= 0 && setback <= 200 && onSupport?.({ plinth: { ...support.plinth, setback } })} />
+                    )}
+                  </>
                 )}
-                {/* La Base, sota el Suport (en depèn): amb potes hi és sempre (s'hi cargolen). */}
-                {/* Al moble normal, «Sense base» és una de les opcions de la Base (com abans de les cuines). */}
-                {!support ? null : vc.base.kind === "legs" ? null : (
+                {/* La Base (la peça de baix), sota el Suport, la mateixa fila al moble i a la cuina (cas 8 del model únic). Amb
+                    potes hi és sempre (s'hi cargolen); amb el sòcol fet amb una zona, el divisor fa de base (regla 2). */}
+                {vc.base.kind === "legs" || vc.base.kind === "wall" || bottomZone ? null : (
                   <FormRow optionId="module.carcass.bottom" label="Base" help={support && support.kind !== "floor" ? "Sense base, el mòdul no pot anar sobre potes: va directe a terra." : vc.base.kind === "plinth" ? "Sense base, el mòdul queda obert per sota fins al sòcol." : undefined}>
                     <IconChoice
                       hideLabel
@@ -434,16 +433,6 @@ const prefHint = (value: number, pref: number): string => (value === pref ? "Com
 
 /** Botó per tornar al valor de Preferències quan el mòdul en té un altre. */
 /** Una part de la caixa que no es tria aquí (penjat, potes, l'electrodomèstic): el que és, i el perquè a l'ajuda. */
-/** El suport d'un mòdul de terra en una línia: el del moble (o directe a terra, si no té base). */
-function supportText(s: FloorSupport | undefined, base: Base): string {
-  if (base.kind === "legs") {
-    const leg = base.hardware ? `«${base.hardware.name}»` : "genèriques"
-    return s?.kind === "plinth" ? `Sòcol del tram, sobre potes ${leg} de ${base.height} mm` : `Potes vistes ${leg} de ${base.height} mm`
-  }
-  if (s && s.kind !== "floor") return "Directe a terra (sense base, no pot anar sobre potes)"
-  return "Directe a terra"
-}
-
 function FixedRow({ label, text, help, optionId }: { label: string; text: string; help?: string; optionId: string }) {
   return (
     <FormRow label={label} help={help} optionId={optionId}>
