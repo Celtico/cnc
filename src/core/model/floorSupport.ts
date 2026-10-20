@@ -1,7 +1,7 @@
 import { activeRuns, compositionKind, freeX, moduleFootprint, moduleFrontFace, modulePlacements, partsOnlyKind, type ModulePlacement } from "./composition"
 import type { Composition, CompositionKind, PlinthRun } from "./compositionSchema"
 import type { Base, Module } from "./moduleSchema"
-import { isApplianceModule, moduleApplianceCarcass, visibleModule } from "./moduleVisible"
+import { isApplianceModule, visibleModule } from "./moduleVisible"
 import { moduleType } from "./moduleType"
 import type { FloorSupport, TramSides } from "./supportSchema"
 
@@ -193,9 +193,9 @@ export function withSupport(comp: Composition): Composition {
   const floorKey = baseKey({ kind: "none" })
   const modules = comp.modules.map((m) => {
     const b = m.carcass.base
-    // Un mòdul sense base (un cobreradiador) no pot anar sobre potes (s'hi cargolen): va directe a terra. L'electrodomèstic
-    // de terra (rentaplats, rentadora, frigorífic sota taulell) també: va sobre les seves potes, de terra fins al taulell.
-    const toFloor = b.kind === "open" || (b.kind !== "legs" && !!m.carcass.noBottom) || moduleApplianceCarcass(m)?.rule.support === false
+    // Un mòdul sense base (un cobreradiador, el nínxol d'un rentaplats: regla 2) no pot anar sobre potes (s'hi cargolen): va
+    // directe a terra.
+    const toFloor = b.kind === "open" || (b.kind !== "legs" && !!m.carcass.noBottom)
     const own = base.kind === "legs" && toFloor ? floorKey : key
     if (b.kind === "wall" || baseKey(b) === own) return m
     changed = true
@@ -252,9 +252,9 @@ export function setSupport(comp: Composition, support: FloorSupport): Compositio
   return withSupport({ ...comp, support })
 }
 
-/** Alçada fins on arriba un mòdul (de terra a dalt), amb el suport que porta (un electrodomèstic de terra, directe a terra). */
+/** Alçada fins on arriba un mòdul (de terra a dalt), amb el suport que porta. */
 function moduleTop(m: Module, y: number): number {
-  return (moduleApplianceCarcass(m)?.rule.support === false ? 0 : y) + m.carcass.height
+  return y + m.carcass.height
 }
 
 /**

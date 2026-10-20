@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { applianceById, carcassBounds, defaultModule, hasBottom, isApplianceModule, moduleApplianceCarcass, visibleModule, type Carcass, type Module } from "../model"
+import { applianceById, carcassBounds, defaultModule, hasBottom, isApplianceModule, moduleApplianceCarcass, setModuleAppliance, visibleModule, type Carcass, type Module } from "../model"
 import { buildModule } from "./buildModule"
 
 const mod = (c: Partial<Carcass>, root: Module["root"] = { id: "root" }): Module => ({ ...defaultModule("m", "M", c), root })
@@ -39,45 +39,48 @@ describe("«Sense base» (Carcass.noBottom) a qualsevol suport", () => {
   })
 })
 
-describe("la caixa que demana l'electrodomèstic (mòdul sense dividir)", () => {
+describe("la caixa que demana l'electrodomèstic (cas 12 del model únic: drecera un cop, després normal)", () => {
   const withAppliance = (c: Partial<Carcass>, id: string): Module => mod(c, { id: "root", appliance: { hardware: applianceById(id) } })
+  const picked = (c: Partial<Carcass>, id: string): Module => setModuleAppliance(mod(c), applianceById(id), 0)
 
-  it("rentaplats en un mòdul sencer: només el nínxol (sense base, tapa, fons, sòcol ni potes); els valors es conserven", () => {
-    const m = withAppliance({ base: { kind: "legs", height: 100 }, sides: { left: false, right: false } }, "appliance-bosch-smh6ycx02e")
+  it("rentaplats en un mòdul sencer: en triar-lo, la caixa queda sense base, tapa, fons ni potes (directe a terra)", () => {
+    const m = picked({ base: { kind: "legs", height: 100 }, sides: { left: false, right: false } }, "appliance-bosch-smh6ycx02e")
     expect(isApplianceModule(m)).toBe(true)
-    expect(moduleApplianceCarcass(m)!.rule).toEqual({ support: false, bottom: false, top: false, back: false, niche: true })
-    const v = visibleModule(m).carcass
-    expect(v.base).toEqual({ kind: "none" })
-    expect(v.noBottom).toBe(true)
-    expect(v.top.kind).toBe("none")
-    expect(v.back).toBe("none")
+    expect(m.carcass.base).toEqual({ kind: "none" })
+    expect(m.carcass.noBottom).toBe(true)
+    expect(m.carcass.top.kind).toBe("none")
+    expect(m.carcass.back).toBe("none")
     // Res de fusta de la caixa: només el front de moble.
     expect(buildModule(m).panels.map((p) => p.role)).toEqual(["flap"])
-    // Els de l'usuari no es toquen (tornen si es treu l'aparell).
-    expect(m.carcass.base.kind).toBe("legs")
+  })
+
+  it("després són opcions normals: l'aparell no canvia la caixa (una tapa posada a mà es fa)", () => {
+    const m = picked({}, "appliance-bosch-smh6ycx02e")
+    const withTop = { ...m, carcass: { ...m.carcass, top: { kind: "full" as const } } }
+    expect(visibleModule(withTop).carcass.top.kind).toBe("full")
+    expect(buildModule(withTop).panels.some((p) => p.role === "top")).toBe(true)
+  })
+
+  it("frigorífic de columna: en triar-lo, els dos laterals, base i tapa; el fons es queda com era", () => {
+    const m = picked({ height: 2100, sides: { left: false, right: true }, top: { kind: "none" }, back: "none" }, "appliance-bosch-kin86add0")
+    expect(m.carcass.sides).toEqual({ left: true, right: true })
     expect(m.carcass.top.kind).toBe("full")
+    expect(m.carcass.back).toBe("none")
   })
 
-  it("frigorífic de columna sense dividir: els dos laterals, base i tapa fixos; el fons es tria", () => {
-    const m = withAppliance({ height: 2100, sides: { left: false, right: true }, top: { kind: "none" }, back: "none" }, "appliance-bosch-kin86add0")
-    const { rule } = moduleApplianceCarcass(m)!
-    expect(rule).toEqual({ sides: true, bottom: true, top: true })
-    const v = visibleModule(m).carcass
-    expect(v.sides).toEqual({ left: true, right: true })
-    expect(v.top.kind).toBe("full")
-    expect(v.back).toBe("none")
-  })
-
-  it("microones al moble penjat: paret del darrere oberta (sense fons); en un altre lloc, el fons es tria", () => {
-    const hung = withAppliance({ base: { kind: "wall", height: 1450 } }, "appliance-bosch-bfl7221b1")
-    expect(visibleModule(hung).carcass.back).toBe("none")
-    const floor = withAppliance({}, "appliance-bosch-bfl7221b1")
-    expect(moduleApplianceCarcass(floor)!.rule.back).toBeUndefined()
+  it("microones: al moble penjat es queda penjat i sense fons; a terra, amb fons; després el fons es pot canviar", () => {
+    const m = picked({ base: { kind: "wall", height: 1450 } }, "appliance-bosch-bfl7221b1")
+    expect(m.carcass.base.kind).toBe("wall")
+    expect(m.carcass.back).toBe("none")
+    expect(picked({}, "appliance-bosch-bfl7221b1").carcass.back).not.toBe("none")
+    const back = { ...m, carcass: { ...m.carcass, back: "screwed" as const } }
+    expect(visibleModule(back).carcass.back).toBe("screwed")
   })
 
   it("la placa no ocupa el mòdul: cap part fixa", () => {
     const m = withAppliance({}, "appliance-bosch-pie631hc1e")
     expect(moduleApplianceCarcass(m)).toBeUndefined()
     expect(visibleModule(m).carcass.top.kind).toBe("full")
+    expect(setModuleAppliance(mod({}), applianceById("appliance-bosch-pie631hc1e"), 0).carcass.top.kind).toBe("full")
   })
 })

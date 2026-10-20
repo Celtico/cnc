@@ -1,27 +1,6 @@
 import { AS_MODULE, STRUCTURAL, UI, field, group, section, type OptionNode } from "./optionTypes"
 
-/** Mòdul › Tipus, Mides i Electrodomèstic (dades del registre de les opcions en cascada). */
-const type = section("module.type", "Tipus", { icon: "type", code: UI.type, hideable: false, why: STRUCTURAL, note: "Per decisió de l'usuari, 2026-10-16: «primer Tipus, on només es pot triar si és moble o electrodomèstic»; on va (a terra, penjat), a Posició." }, [
-  field("module.type.kind", "Tipus", {
-    code: UI.type,
-    control: "choice",
-    default: "moble",
-    hideable: false,
-    why: STRUCTURAL,
-    choices: [
-      { value: "moble", label: "Moble" },
-      { value: "appliance", label: "Electrodomèstic", reveals: ["module.type.appliance"], note: "no amb l'Interior dividit (es tria a cada compartiment)" },
-    ],
-  }),
-  field("module.type.appliance", "Aparell", {
-    code: UI.type,
-    control: "hardware",
-    showIf: "Tipus = Electrodomèstic",
-    defaultText: "Tria l'aparell",
-    note: "Per decisió de l'usuari, 2026-10-15: «quan és baix o penjat no poden sortir electrodomèstics»: tots es trien aquí (també la placa i la campana, que conserven l'Interior). Les opcions del front de moble, a la Caixa. Un aparell penjat (microones) penja el mòdul.",
-  }),
-])
-
+/** Mòdul › Posició, Mides i Electrodomèstic (dades del registre de les opcions en cascada). */
 const position = section("module.position", "Posició", { icon: "position", code: UI.type, hideable: false, why: STRUCTURAL, note: "Com abans del 2026-10-15 (per decisió de l'usuari, 2026-10-16). El mòdul de darrere d'una illa no té les opcions (es col·loca sol)." }, [
   field("module.position.mount", "Fila", {
     code: UI.sections,
@@ -105,7 +84,7 @@ export function applianceNodes(): OptionNode {
   ])
 }
 
-const MODULE_POSITION = [type, position, dims]
+const MODULE_POSITION = [position, dims]
 
 /** Mòdul › Materials (el front d'una zona dividida, al seu Front: el mateix que el d'una fulla). */
 const MODULE_TAIL: OptionNode[] = [

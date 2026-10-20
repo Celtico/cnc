@@ -2,7 +2,7 @@ import { DEFAULT_CABINET } from "./cabinet"
 import { isAppliance, isLegacyHardware, type ModuleHardware } from "./hardware"
 import { doorLikeFront, fillsNiche, standsOnFloor, takesFront, type Appliance } from "./appliance"
 import { canHoldFront, canHoldShelves, carcassBounds, childBounds, hasBottom, type ZoneBounds } from "./zoneSupport"
-import { applianceCarcass, applyApplianceCarcass, type ApplianceCarcass } from "./applianceCarcass"
+import { applianceCarcass, type ApplianceCarcass } from "./applianceCarcass"
 import { DEFAULT_GRILLE, type Carcass, type Front, type InnerDrawers, type Module, type Zone, type ZoneAppliance } from "./moduleSchema"
 
 // --- «Res amagat compta» -------------------------------------------------------------
@@ -43,9 +43,10 @@ function innerPerDrawerSlides(d: Pick<InnerDrawers, "n" | "height" | "heights">,
 }
 
 export function visibleModule(m: Module): Module {
-  // L'electrodomèstic que és el mòdul fixa parts de la caixa (`applianceCarcass`); les de l'usuari es conserven.
+  // L'electrodomèstic no canvia la caixa (cas 12 del model únic): en triar-lo, la drecera n'ajusta les opcions un cop
+  // (`setModuleAppliance`). Només el seu front de moble va per davant, com els del costat (`ApplianceCarcass.niche`).
   const rule = moduleApplianceCarcass(m)
-  const c = rule ? applyApplianceCarcass(m.carcass, rule.rule) : m.carcass
+  const c = m.carcass
   const carcass: Carcass = { ...c }
   // Base: «Sense base» és `noBottom` (el `open` d'abans, la mateixa caixa, passa a aquesta forma); amb potes no compta.
   if (c.base.kind === "open") {

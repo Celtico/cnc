@@ -54,7 +54,7 @@ describe("esborrany: la llavor de l'app", () => {
   })
   it("fletxes: a dins de (l'arbre), fa aparèixer i fa desaparèixer", () => {
     const ids = new Set(app.edges.map((e) => e.id))
-    expect(ids.has(edgeId("contains", "module.type", "module.type.kind"))).toBe(true)
+    expect(ids.has(edgeId("contains", "module.position", "module.position.mount"))).toBe(true)
     expect(ids.has(edgeId("contains", "module.position.mount", choiceId("module.position.mount", "hung")))).toBe(true)
     expect(ids.has(edgeId("reveals", choiceId("module.position.mount", "hung"), "module.position.height"))).toBe(true)
     expect(ids.has(edgeId("hides", choiceId("module.position.mount", "floor"), "module.position.gap"))).toBe(true)
@@ -76,15 +76,15 @@ describe("esborrany: editar i diferències", () => {
   it("afegir, canviar, treure i unir", () => {
     let d: CascadeDraft = addDraftNode(app, { id: "n1", kind: "option", label: "Opció nova" }, "module.carcass")
     d = updateDraftNode(d, "module.carcass.back", { label: "Fons de l'armari", note: "provar", when: "  " })
-    d = removeFromDraft(d, ["module.type"])
+    d = removeFromDraft(d, ["module.position"])
     d = setDraftEdgeKind(reparentDraft(d, "n1", choiceId("module.carcass.back", "groove")), edgeId("contains", choiceId("module.carcass.back", "groove"), "n1"), "reveals")
     d = reparentDraft(d, "n1", "module.carcass")
     const diff = diffDraft(d)
     expect([...diff.added]).toEqual(["n1"])
     expect(diff.changed.get("module.carcass.back")?.after.label).toBe("Fons de l'armari")
     // Treure una secció en treu tot el que té a dins.
-    expect(diff.removed.map((n) => n.id)).toContain("module.type.kind")
-    expect(diff.removed.map((n) => n.id)).toContain(choiceId("module.type.kind", "appliance"))
+    expect(diff.removed.map((n) => n.id)).toContain("module.position.mount")
+    expect(diff.removed.map((n) => n.id)).toContain(choiceId("module.position.mount", "hung"))
     // Unir d'una nansa a l'altra el posa a dins; la fletxa es pot canviar a «fa aparèixer».
     expect(diff.addedEdges.has(edgeId("reveals", choiceId("module.carcass.back", "groove"), "n1"))).toBe(true)
     expect(diff.addedEdges.has(edgeId("contains", "module.carcass", "n1"))).toBe(true)

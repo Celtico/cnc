@@ -6,7 +6,7 @@ import { IconChoice } from "../../components/IconChoice"
 import { NumRow } from "../../components/NumRow"
 import type { ModuleBuild } from "../../core/build/buildModule"
 import { splitChildSizes } from "../../core/build/layout"
-import { carcassBounds, coveringZone, freeX, hasDrawers, moduleHasInnerPieces, moduleRot, moduleRows, moduleSlotItem, mountOf, rowOf, setModuleMount, system32RowPlace, visibleModule, zoneBounds, type Composition, type FloorSupport, type Module, type Settings, type Zone } from "../../core/model"
+import { carcassBounds, coveringZone, freeX, hasDrawers, moduleHasInnerPieces, moduleRot, moduleRows, moduleSlotItem, mountOf, rowOf, setModuleAppliance, setModuleKind, setModuleMount, system32RowPlace, visibleModule, zoneBounds, type Composition, type FloorSupport, type Module, type Settings, type Zone } from "../../core/model"
 import { CarcassForm, InnerClearanceRow, MaterialsForm, ModuleFrontsFold } from "../composition/CarcassForm"
 import { AxisLabel } from "../../components/AxisLabel"
 import { System32Pick } from "../composition/HardwarePick"
@@ -157,7 +157,7 @@ export function ModuleSections({ module, updateModule, support, onOpenSupport, m
 }
 
 /** Les propietats d'un compartiment (`ZonePanel`) amb el que en sap la construcció. */
-export function ZoneSection({ module, zone, moduleBuild, updateModule, selectZone }: { module: Module; zone: Zone; moduleBuild: ModuleBuild | undefined; updateModule: (m: Module) => void; selectZone: (id: string) => void }) {
+export function ZoneSection({ module, zone, moduleBuild, moduleX, updateModule, selectZone }: { module: Module; zone: Zone; moduleBuild: ModuleBuild | undefined; moduleX: number | undefined; updateModule: (m: Module) => void; selectZone: (id: string) => void }) {
   return (
     <ZonePanel
       root={module.root}
@@ -175,7 +175,15 @@ export function ZoneSection({ module, zone, moduleBuild, updateModule, selectZon
       openRatio={moduleBuild?.openRatios[zone.id]}
       drawerHeights={moduleBuild?.drawerHeights[zone.id]}
       kits={moduleBuild?.hardwareKits.filter((k) => k.zoneId === zone.id)}
-      onChange={(root) => updateModule({ ...module, root })}
+      onChange={(root) => {
+        // L'aparell de l'Interior sense dividir (tot el mòdul) es tria al Contingut com a qualsevol zona (regla 1); triar-lo
+        // o treure'l adapta el mòdul (penjat o a terra, l'amplada del nínxol: `setModuleAppliance`), com una drecera.
+        const now = root.split ? undefined : root.appliance?.hardware
+        if (now === (module.root.split ? undefined : module.root.appliance?.hardware)) return updateModule({ ...module, root })
+        const { appliance: _a, ...bare } = root
+        const here = Math.round(moduleX ?? 0)
+        updateModule(now ? setModuleAppliance({ ...module, root: bare }, now, here) : setModuleKind({ ...module, root }, "moble", here))
+      }}
       onSelect={selectZone}
       childSizes={moduleBuild ? splitChildSizes(moduleBuild.layout, zone) : undefined}
       moduleFronts={<ModuleFrontsFold module={module} onChange={updateModule} />}

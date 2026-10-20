@@ -22,7 +22,7 @@ import type { CompositionWarning } from "../../core/build/buildComposition"
 import type { FixPlaceKey } from "../../core/build/buildModule"
 import { InspectorHeader } from "./InspectorHeader"
 import { ModuleSections, SceneFinishFields, ZoneSection } from "./InspectorSections"
-import { ModulePositionSection, ModuleTypeSection } from "./ModuleTypeSection"
+import { ModulePositionSection } from "./ModuleTypeSection"
 import { SupportForm } from "../composition/SupportForm"
 import type { SetComp } from "./useEditorDoc"
 import { clipOf, pasteClip } from "./pasteClip"
@@ -234,7 +234,7 @@ export function EditorInspector({
         </Stack>
       ) : selection.kind === "zone" && zone && module ? (
         <Stack gap={3}>
-          <ZoneSection module={module} zone={zone} moduleBuild={moduleBuild} updateModule={updateModule} selectZone={selectZone} />
+          <ZoneSection module={module} zone={zone} moduleBuild={moduleBuild} moduleX={build?.modules[moduleIndex]?.x} updateModule={updateModule} selectZone={selectZone} />
         </Stack>
       ) : module ? (
         // Seccions plegables independents (com Figma o Fusion): es poden tenir diverses
@@ -242,9 +242,6 @@ export function EditorInspector({
         // Ordre (per decisió de l'usuari, 2026-10-13; el Tipus, 2026-10-16): Tipus (moble o electrodomèstic i l'aparell) ·
         // Posició · Mides · Caixa · Portes (dividit) · Unió · Materials.
         <Stack gap={0}>
-          {/* El Tipus (moble o electrodomèstic) només a la cuina (per decisió de l'usuari, 2026-10-20: «tipus va a fora» al
-              moble normal, com abans de les cuines). */}
-          {kind === "cuina" && <ModuleTypeSection module={module} moduleX={build?.modules[moduleIndex]?.x} updateModule={updateModule} />}
           <ModulePositionSection comp={comp} module={module} moduleX={build?.modules[moduleIndex]?.x} updateModule={updateModule} islandFront={islandBack ? comp.modules.find((m) => m.id === islandBack.front)?.name : undefined} />
           <FoldItem optionId="module.dims" id="mod-dims" title="Mides" icon={LuMoveDiagonal} badge={`${module.carcass.width} × ${module.carcass.height}`}>
             <CarcassForm module={module} onChange={updateModule} section="dims" />

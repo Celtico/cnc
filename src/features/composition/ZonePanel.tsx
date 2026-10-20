@@ -207,10 +207,9 @@ export function ZonePanel({
         </>
       ) : (
         <>
-          {/* L'electrodomèstic és un contingut més del Front (per decisió de l'usuari, 2026-10-20): si ocupa el compartiment,
-              ni Prestatges ni Dividir. Un sol lloc per decisió: el de l'«Interior» d'un mòdul sense dividir (l'arrel) és a
-              Mòdul › Tipus. */}
-          <ZoneFrontSection root={root} zone={zone} openRatio={openRatio} drawerHeights={drawerHeights} onChange={onChange} hardware={hardware} noHandles={noHandles} kits={kits} bounds={bounds} afterHinge={system32?.at === "front" ? system32.row : undefined} interior={interior} appliance={zone.id !== root.id} moduleFronts={moduleFronts} {...(coveredBy ? { covered: { by: coveredBy, fixed: !!coveredByFixed, hinges: hingeSidesOf(coverFront), onMargin: (side: "left" | "right") => onChange(addSideMargin(root, zone.id, side)) } } : {})} />
+          {/* L'electrodomèstic és un contingut més del Front, a qualsevol zona i també a l'Interior (regla 1 del model únic):
+              si ocupa el compartiment, ni Prestatges ni Dividir. */}
+          <ZoneFrontSection root={root} zone={zone} openRatio={openRatio} drawerHeights={drawerHeights} onChange={onChange} hardware={hardware} noHandles={noHandles} kits={kits} bounds={bounds} afterHinge={system32?.at === "front" ? system32.row : undefined} interior={interior} appliance moduleFronts={moduleFronts} {...(coveredBy ? { covered: { by: coveredBy, fixed: !!coveredByFixed, hinges: hingeSidesOf(coverFront), onMargin: (side: "left" | "right") => onChange(addSideMargin(root, zone.id, side)) } } : {})} />
 
           {/* Només les direccions on el divisor té on unir-se (`splitDirsFor`): el vertical, a sota i a sobre; el
               travesser, als dos costats. Sense cap, o darrere d'un front fix, la secció no surt. */}

@@ -1,4 +1,4 @@
-import { APPLIANCE_LABELS, takesFront, type Appliance } from "./appliance"
+import { takesFront, type Appliance } from "./appliance"
 import type { Carcass } from "./moduleSchema"
 
 /**
@@ -61,19 +61,4 @@ export function applyApplianceCarcass(c: Carcass, rule: ApplianceCarcass): Carca
   if (rule.sides === true) out.sides = { left: true, right: true }
   if (rule.niche) delete out.hollow
   return out
-}
-
-const PART_LABELS: Record<CarcassPart, [string, string]> = {
-  support: ["amb suport", "directe a terra"],
-  bottom: ["amb base", "sense base"],
-  top: ["amb tapa", "sense tapa"],
-  back: ["amb fons", "sense fons"],
-  sides: ["amb els dos laterals", "sense laterals"],
-}
-
-/** «Rentaplats: sense base, sense tapa i sense fons» (l'ajuda de les files fixes de la Caixa). */
-export function applianceCarcassText(a: Appliance, rule: ApplianceCarcass): string {
-  const parts = (Object.keys(PART_LABELS) as CarcassPart[]).filter((k) => rule[k] !== undefined).map((k) => PART_LABELS[k][rule[k] ? 0 : 1])
-  const list = parts.length > 1 ? `${parts.slice(0, -1).join(", ")} i ${parts[parts.length - 1]}` : (parts[0] ?? "")
-  return `${APPLIANCE_LABELS[a.kind]}: ${list}. Ho demana l'aparell.`
 }

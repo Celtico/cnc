@@ -1,9 +1,8 @@
 import type { Range } from "./appliance"
-import { applianceDefaults, isFloorNiche } from "./applianceCarcass"
+import { applianceCarcass, applianceDefaults, applyApplianceCarcass, isFloorNiche } from "./applianceCarcass"
 import { moduleElevation } from "./composition"
 import { setModuleMount } from "./editOps"
 import { isAppliance } from "./hardwareLibrary"
-import { moduleApplianceCarcass } from "./moduleVisible"
 import type { HardwareItem } from "./hardwareSchema"
 import type { Module } from "./moduleSchema"
 import type { Composition } from "./compositionSchema"
@@ -89,21 +88,26 @@ export function setModuleKind(m: Module, kind: "moble" | "appliance", here: numb
  */
 export function setModuleAppliance(m: Module, item: HardwareItem | undefined, here: number): Module {
   // On arriba ara el mòdul (de terra a dalt): un nínxol de terra ja va directe a terra (les potes del suport no compten).
-  const top = (moduleApplianceCarcass(m)?.rule.support === false ? 0 : moduleElevation(m.carcass)) + m.carcass.height
+  const top = moduleElevation(m.carcass) + m.carcass.height
   const base = withType(withoutModuleAppliance(m), "appliance")
   if (!item || !isAppliance(item)) return base
   const a = item.appliance
   let out: Module = { ...base, root: { ...base.root, appliance: { hardware: item } } }
   const hung = out.carcass.base.kind === "wall"
   if (a.mount === "wall" && !hung) out = setModuleMount(out, "hung", here)
-  if (a.mount !== "wall" && hung) out = setModuleMount(out, "wall", here)
+  // Un aparell que es pot penjar (el microones amb nínxol de moble penjat) es queda on és.
+  if (a.mount !== "wall" && !a.wallNiche && hung) out = setModuleMount(out, "wall", here)
   const fit = (v: number, r: Range | undefined) => (r?.min !== undefined && v < r.min ? r.min : r?.max !== undefined && v > r.max ? r.max : v)
   const width = fit(out.carcass.width, a.niche?.w)
   // El nínxol de terra (rentaplats, rentadora, frigorífic sota taulell) va de terra fins a sota el taulell: l'alçada, la
   // de dalt del mòdul d'ara (el suport més la caixa: un buc de 720 sobre potes de 100 fa 820), enrasat amb els del costat.
   // Si l'aparell en demana una altra (un XXL de 865), ho diu l'avís del nínxol: no s'aixeca per sobre del taulell.
   const height = isFloorNiche(a) && out.carcass.base.kind !== "wall" ? top : out.carcass.height
-  return withType({ ...out, carcass: applianceDefaults(a, { ...out.carcass, width, height }) }, "appliance")
+  // Drecera (cas 12 del model únic, per decisió de l'usuari, 2026-10-20: «drecera un cop, després normal»): la caixa que
+  // demana l'aparell (sense base, tapa o fons, directe a terra...) s'escriu un cop a les opcions de la Caixa, que després
+  // es poden canviar com sempre.
+  const carcass = applianceDefaults(a, { ...out.carcass, width, height })
+  return withType({ ...out, carcass: applyApplianceCarcass(carcass, applianceCarcass(a, carcass.base.kind === "wall")) }, "appliance")
 }
 
 /**
