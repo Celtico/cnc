@@ -243,8 +243,21 @@ export const FrontSchema = z.discriminatedUnion("kind", [
      * `hardware` (la «Guia de calaix»); `drawerSlides[i]` (i ≥ 1) és la del calaix i o, `null`, la del de sota.
      */
     drawerSlides: z.array(FrontHardwareSchema.nullable()).max(10).optional(),
-    /** Front de vidre (per petició de l'usuari, 2026-10-20): marc d'una peça de fusta amb la finestra i el vidre al galze. */
+    /**
+     * Front de vidre (per decisió de l'usuari, 2026-10-20, com l'armari de la foto): cap front de fusta; el vidre és el
+     * davant de la caixa, en ranura als laterals del calaix (sense marc). Amb tirador o amb un joc de calaix, avís.
+     */
     glass: z.boolean().optional(),
+    /**
+     * Retirada (mm, per decisió de l'usuari, 2026-10-20): el front, més endins que els altres fronts. Sense: 0, a ras. Si
+     * entra a la caixa, el front va dins de la llum. Darrere d'una porta amb massa poca retirada, avís (no es retira sol).
+     */
+    setback: z.number().min(0).max(300).optional(),
+    /**
+     * Front metàl·lic del fabricant (per decisió de l'usuari, 2026-10-16: «calaixos sense frontal, tot ferratge»): amb un
+     * joc de calaix, cap front de fusta; la comanda del joc el demana. Sense joc, avís (es fa de fusta).
+     */
+    kitFront: z.boolean().optional(),
   }),
   z.object({
     kind: z.literal("flap"),
@@ -309,8 +322,6 @@ const ZoneApplianceSchema = repairAtomically(
 )
 
 /** Tipus de front (contingut) d'un compartiment. */
-/** Front de calaix de vidre sense posició del tirador: l'eix, a tants mm del cantell de dalt (al travesser del marc). */
-export const GLASS_HANDLE_TOP = 30
 export const FRONT_KINDS = ["door", "drawers", "flap", "grille", "panel"] as const satisfies readonly Front["kind"][]
 
 export interface Zone {
@@ -379,7 +390,6 @@ export interface InnerDrawers {
    * joc diu que cal el front interior del fabricant. Amb una caixa de fusta, no compta.
    */
   front?: "kit"
-  /** Fronts interiors de vidre (com `drawers.glass`): marc d'una peça de fusta amb la finestra i el vidre al galze. */
   glass?: boolean
   /**
    * Només a la construcció (`visibleZone`, no es desa): els **Calaixos** d'un compartiment tapat per les portes d'una zona
@@ -387,6 +397,8 @@ export interface InnerDrawers {
    * interiors»). Les alçades del front de calaixos («auto» reparteix): omplen tot el compartiment, com els de fora.
    */
   sizes?: (number | "auto")[]
+  /** Només a la construcció (`visibleZone`): el front de Calaixos del compartiment tapat, tal com és (regla 1). */
+  drawers?: Extract<Front, { kind: "drawers" }>
 }
 
 export const ZoneSchema: z.ZodType<Zone> = z.lazy(() =>
@@ -449,8 +461,9 @@ function migrateInnerDrawers(raw: unknown): unknown {
   const n = typeof d.n === "number" ? d.n : 1
   const height = typeof d.height === "number" ? d.height : 150
   const hs = Array.from({ length: n }, (_, i) => (Array.isArray(d.heights) && typeof d.heights[i] === "number" ? (d.heights[i] as number) : height))
-  const front: Record<string, unknown> = { kind: "drawers", n, heights: [...hs.slice(0, n - 1), "auto"] }
+  const front: Record<string, unknown> = { kind: "drawers", n, heights: [...hs.slice(0, n - 1), "auto"], setback: typeof d.setback === "number" ? d.setback : 25 }
   for (const k of ["hardware", "kit", "drawerSlides", "glass"] as const) if (d[k] !== undefined) front[k] = d[k]
+  if (d.front === "kit") front.kitFront = true
   const { innerDrawers: _d, ...rest } = z
   const busy = (z.shelves && typeof z.shelves === "object" && ((z.shelves as { n?: number }).n ?? 0) > 0) || !!z.rail || !!z.led
   if (!z.front && !busy) return { ...rest, front }

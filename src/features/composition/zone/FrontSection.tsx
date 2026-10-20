@@ -46,8 +46,7 @@ interface CoveredBy {
 /** Què es fa del contingut d'una zona tapada (regla 3: tapa, no esborra; regla 6: el que no es fa diu per què). */
 function coveredHelp(c: CoveredBy, k: Front["kind"] | "none" | "appliance"): string {
   if (c.fixed) return `La tapa el front fix de «${c.by}»: darrere no es fa res (es conserva).`
-  if (k === "drawers") return `Darrere de «${c.by}»: es fan per dins, amb el front retirat i sense tirador.`
-  if (k === "none") return `Darrere de «${c.by}».`
+  if (k === "drawers" || k === "none") return `Darrere de «${c.by}».`
   return `No es fa: el tapa «${c.by}» (es conserva i torna si treus el front de dalt).`
 }
 
@@ -83,7 +82,7 @@ export function ZoneFrontSection({ root, zone, onChange, openRatio, drawerHeight
   }
   const frontFields = (
     <>
-      {zone.front && <FrontFields front={zone.front} openRatio={openRatio} drawerHeights={drawerHeights} hardware={hardware} noHandles={noHandles || !!covered} kits={kits} bounds={bounds} afterHinge={afterHinge} onChange={(f) => onChange(setFront(root, zone.id, f))} />}
+      {zone.front && <FrontFields front={zone.front} openRatio={openRatio} drawerHeights={drawerHeights} hardware={hardware} noHandles={noHandles} kits={kits} bounds={bounds} afterHinge={afterHinge} onChange={(f) => onChange(setFront(root, zone.id, f))} />}
       {zone.front && !covered && moduleFronts}
       {/* Drecera (regla 4): una zona oberta estreta al costat de la frontissa, perquè el braç no topi amb els calaixos. */}
       {covered && !covered.fixed && zone.front?.kind === "drawers" && covered.hinges.length > 0 && (

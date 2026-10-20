@@ -57,6 +57,11 @@ export interface BuildWarning {
   zoneId?: string
   panelId?: string
   /**
+   * L'opció de l'inspector que el resol (un id del registre d'opcions, `core/model/options`): l'avís surt a sota d'aquella
+   * opció, al seu lloc (per decisió de l'usuari, 2026-10-20), a més de la llista d'avisos.
+   */
+  option?: string
+  /**
    * Quan no es pot arreglar sol (per decisió de l'usuari, 2026-10-17: «dona les opcions per arreglar-ho»): què es pot fer,
    * cada opció amb on es fa a l'editor (`where`: un lloc de `FIX_PLACES`, `features/editor/warningTarget.ts`), si en té.
    */

@@ -56,7 +56,7 @@ export class Builder extends AppliancesBuilder {
       z.split.children.forEach(parents)
     }
     parents(m.root)
-    this.glassWindows()
+    this.glassDrawersInfo()
 
     // 4) Passacables i extres.
     for (const hole of m.extras.cableHoles) this.cableHole(hole)

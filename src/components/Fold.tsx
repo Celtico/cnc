@@ -5,6 +5,7 @@ import { LuChevronRight } from "react-icons/lu"
 import { readSessionFlag, readSessionList, writeSessionFlag } from "./sessionState"
 import { useFoldRequest } from "./foldOpen"
 import { FoldContext, STATIC_VARIANTS, sectionKey, type FoldGroupState, type FoldVariant } from "./foldContext"
+import { InlineWarningList, useFoldWarnings } from "./inlineWarnings"
 
 /**
  * L'acordió de tota l'app (sobre `Accordion` de Chakra): un sol component per a les seccions dels inspectors, el
@@ -112,8 +113,11 @@ interface FoldItemProps {
 }
 
 /** Un element plegable: dins d'un `FoldGroup` fa servir el seu acordió; sol, en fa un de propi (independent). */
-export function FoldItem({ optionId: _optionId, ...props }: FoldItemProps) {
+export function FoldItem({ optionId: _optionId, ...rest }: FoldItemProps) {
   const group = useContext(FoldContext)
+  // Els avisos que s'arreglen en aquesta secció (sense una opció pròpia), a dalt de tot del contingut.
+  const warnings = useFoldWarnings(rest.id)
+  const props = warnings.length ? { ...rest, children: <Stack gap={3}><InlineWarningList items={warnings} />{rest.children}</Stack> } : rest
   if (!group) return <SoloFold {...props} />
   return <FoldItemBody {...props} group={group} />
 }

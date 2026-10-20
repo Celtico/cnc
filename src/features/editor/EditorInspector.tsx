@@ -1,4 +1,5 @@
 import { Badge, Box, Button, HStack, Stack, Text } from "@chakra-ui/react"
+import { useMemo } from "react"
 import { LuBox, LuCamera, LuLampFloor, LuMoveDiagonal, LuPalette, LuPanelBottom, LuPuzzle, LuWrench } from "react-icons/lu"
 import { FoldGroup, FoldItem } from "../../components/Fold"
 import type { CompositionBuild } from "../../core/build/buildComposition"
@@ -14,7 +15,9 @@ import { scopePlacements } from "../composition/placements"
 import { RefInspector } from "../composition/RefInspector"
 import type { Selection } from "../composition/StructureTree"
 import type { CompositionEdits } from "./editorCommands"
-import { InspectorAlerts } from "./InspectorAlerts"
+import { INFO, InspectorAlerts } from "./InspectorAlerts"
+import { inlineWarnings } from "./warningTarget"
+import { InlineWarningsContext } from "../../components/inlineWarnings"
 import type { CompositionWarning } from "../../core/build/buildComposition"
 import type { FixPlaceKey } from "../../core/build/buildModule"
 import { InspectorHeader } from "./InspectorHeader"
@@ -92,7 +95,10 @@ export function EditorInspector({
 
   // Sense separació entre blocs: les seccions plegables van enganxades (totes amb la
   // mateixa alçada de capçalera); els elements que no són secció porten el seu marge.
+  // Els avisos de la selecció al seu lloc (a sota de l'opció o a dalt de la secció on s'arreglen).
+  const inline = useMemo(() => inlineWarnings(warnings, selection, module?.id, INFO), [warnings, selection, module?.id])
   return (
+    <InlineWarningsContext.Provider value={inline}>
     <Stack gap={0}>
       {/* Una secció oberta alhora (per decisió de l'usuari, 2026-10-13): obrir-ne una tanca l'altra; es recorda a la
           sessió. Les subseccions de dins (`size="sm"`) continuen independents. */}
@@ -262,6 +268,7 @@ export function EditorInspector({
         <InspectorAlerts comp={comp} selection={selection} module={module} warnings={warnings} collisions={collisions} photo={project.photo} onGoto={onGotoWarning} setComp={setComp} />
       </FoldGroup>
     </Stack>
+    </InlineWarningsContext.Provider>
   )
 }
 

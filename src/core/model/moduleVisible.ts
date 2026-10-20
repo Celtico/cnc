@@ -3,7 +3,7 @@ import { isAppliance, isLegacyHardware, type ModuleHardware } from "./hardware"
 import { doorLikeFront, fillsNiche, standsOnFloor, takesFront, type Appliance } from "./appliance"
 import { canHoldFront, canHoldShelves, carcassBounds, childBounds, hasBottom, type ZoneBounds } from "./zoneSupport"
 import { applianceCarcass, applyApplianceCarcass, type ApplianceCarcass } from "./applianceCarcass"
-import { DEFAULT_GRILLE, type Carcass, type InnerDrawers, type Module, type Zone, type ZoneAppliance } from "./moduleSchema"
+import { DEFAULT_GRILLE, type Carcass, type Front, type InnerDrawers, type Module, type Zone, type ZoneAppliance } from "./moduleSchema"
 
 // --- «Res amagat compta» -------------------------------------------------------------
 
@@ -229,6 +229,26 @@ function visibleAppliance(a: ZoneAppliance, bounds: ZoneBounds): ZoneAppliance {
   }
 }
 
+/** Uns Calaixos tal com es fan, a fora o darrere d'una porta (el mateix a tot arreu: regla 1 del model únic). */
+function visibleDrawers(f: Extract<Front, { kind: "drawers" }>, kitDefault: boolean): Extract<Front, { kind: "drawers" }> {
+  const heights = f.heights.slice(0, f.n)
+  while (heights.length < f.n) heights.push("auto")
+  const drawers = { ...f, heights }
+  // Les opcions del joc només compten amb un joc de calaix (el triat al calaix o, sense guia pròpia, el del mòdul);
+  // amb la guia normal, el camp no es veu.
+  const kit = f.hardware ? f.hardware.engine === "drawerKit" : kitDefault
+  if (!kit || !f.kit || !Object.keys(f.kit).length) delete drawers.kit
+  // La guia de cada calaix: només amb un joc, alçades a mida i dels calaixos que hi ha (el primer és la «Guia de
+  // calaix»); cap = cap.
+  const own = (f.drawerSlides ?? []).slice(0, f.n).map((h, i) => (i > 0 && h && h.engine === "drawerKit" ? h : null))
+  if (!kit || !perDrawerSlides(f, kit ? { engine: "drawerKit" } : undefined) || !own.some((h) => h)) delete drawers.drawerSlides
+  else drawers.drawerSlides = own
+  if (!drawers.glass) delete drawers.glass
+  if (!drawers.setback) delete drawers.setback
+  if (!drawers.kitFront) delete drawers.kitFront
+  return drawers
+}
+
 /**
  * Un compartiment tal com es veu (vegeu `visibleModule`). `kitDefault`: la guia del mòdul és un joc de calaix (els
  * calaixos sense guia pròpia el fan servir). El «Tirador» de cada front compta sempre (també «Cap (push)»): el del mòdul
@@ -241,17 +261,12 @@ function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: Zon
   // Tapat pel front d'una zona de més amunt (`walkBuiltZones`): el seu front no es fa (es conserva a la composició) i el
   // compartiment és com si fos obert (els prestatges, la barra i la llum de dins sí que es fan).
   if (covered) {
-    // Els **Calaixos** d'un compartiment tapat per portes (no per un front fix) es fan com a calaixos interiors: els
-    // mateixos calaixos, amb el front interior retirat i sense tirador, i omplen el compartiment (`InnerDrawers.sizes`).
+    // Els **Calaixos** d'un compartiment tapat per portes (no per un front fix) són els mateixos calaixos (regla 1: amb
+    // el seu tirador, vidre, alçades i retirada) i omplen el compartiment; es fan darrere de la porta (`InnerDrawers`).
     const f = z.front
     if (f?.kind === "drawers" && !fixedCover && !z.split) {
-      const inner: InnerDrawers = { n: f.n, height: 150, sizes: Array.from({ length: f.n }, (_, i) => f.heights[i] ?? "auto") }
-      if (f.hardware) inner.hardware = f.hardware
-      if (f.kit) inner.kit = f.kit
-      if (f.drawerSlides) inner.drawerSlides = f.drawerSlides
-      if (f.glass) inner.glass = true
-      if (z.innerDrawers?.setback !== undefined) inner.setback = z.innerDrawers.setback
-      out.innerDrawers = inner
+      const drawers = visibleDrawers(f, kitDefault)
+      out.innerDrawers = { n: f.n, height: 150, sizes: drawers.heights, drawers }
     }
     delete out.front
   }
@@ -353,19 +368,7 @@ function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: Zon
     delete out.shelves
     delete out.rail
     delete out.led
-    const heights = f.heights.slice(0, f.n)
-    while (heights.length < f.n) heights.push("auto")
-    const drawers = { ...f, heights }
-    // Les opcions del joc només compten amb un joc de calaix (el triat al calaix o, sense guia pròpia, el del mòdul);
-    // amb la guia normal, el camp no es veu.
-    const kit = f.hardware ? f.hardware.engine === "drawerKit" : kitDefault
-    if (!kit || !f.kit || !Object.keys(f.kit).length) delete drawers.kit
-    // La guia de cada calaix: només amb un joc, alçades a mida i dels calaixos que hi ha (el primer és la «Guia de
-    // calaix»); cap = cap.
-    const own = (f.drawerSlides ?? []).slice(0, f.n).map((h, i) => (i > 0 && h && h.engine === "drawerKit" ? h : null))
-    if (!kit || !perDrawerSlides(f, kit ? { engine: "drawerKit" } : undefined) || !own.some((h) => h)) delete drawers.drawerSlides
-    else drawers.drawerSlides = own
-    out.front = drawers
+    out.front = visibleDrawers(f, kitDefault)
   } else if (f?.kind === "door") {
     const door = { ...f }
     // Sense vidre, el marc triat no compta; de vidre: frontisses del perfil, cap cassoleta ni tirador (la frontissa i el

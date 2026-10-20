@@ -3,7 +3,6 @@ import { LuArrowDownToLine, LuArrowUpToLine, LuDoorClosed, LuDoorOpen, LuFlipHor
 import type { ReactNode } from "react"
 import { FoldItem } from "../../../components/Fold"
 import {
-  GLASS_HANDLE_TOP,
   KIT_CLOSINGS,
   isDrawerKit,
   perDrawerSlides,
@@ -142,14 +141,26 @@ export function FrontFields({ front, openRatio, drawerHeights, onChange, hardwar
               <DrawerHeights front={front} real={drawerHeights} onChange={onChange} />
             </FoldItem>
           )}
-          {/* Front de vidre (per petició de l'usuari, 2026-10-20): marc de fusta d'una peça amb el vidre al galze. */}
-          <FormRow optionId="zone.front.drawers.glass" label="Vidre" help={front.glass ? "Marc d'una peça de fusta amb la finestra calada i un vidre de 4 mm al galze de darrere. El tirador va al travesser de dalt." : undefined}>
-            <Switch.Root size="sm" pt="6px" checked={!!front.glass} onCheckedChange={(e) => onChange(e.checked ? { ...front, glass: true } : (({ glass: _g, ...rest }) => rest)(front))}>
-              <Switch.HiddenInput />
-              <Switch.Control />
-              <Switch.Label fontSize="sm">Front de vidre</Switch.Label>
-            </Switch.Root>
+          {/* El front (per decisió de l'usuari, 2026-10-20): de fusta, de vidre (el vidre és el front, en ranura als laterals,
+              sense marc) o el metàl·lic del fabricant (amb un joc de calaix; sense, avís a sota). */}
+          <FormRow optionId="zone.front.drawers.face" label="Front" help={front.kitFront ? "Cap front de fusta: el front metàl·lic del joc (la comanda el demana al distribuïdor)." : front.glass ? "El vidre fa de front, sense marc: en ranura als laterals del calaix, damunt del fons (amb un joc de calaix, amb els adaptadors de vidre). Els forats del tirador els fa el vidrier." : undefined}>
+            <ChoiceChips
+              label="Front"
+              value={front.kitFront ? "kit" : front.glass ? "glass" : "wood"}
+              options={[
+                { id: "wood" as const, label: "Fusta" },
+                { id: "glass" as const, label: "Vidre" },
+                { id: "kit" as const, label: "Metàl·lic (del joc)" },
+              ]}
+              onChange={(v) => {
+                const { glass: _g, kitFront: _k, ...rest } = front
+                onChange(v === "glass" ? { ...rest, glass: true } : v === "kit" ? { ...rest, kitFront: true } : rest)
+              }}
+            />
           </FormRow>
+          {/* Retirada (per decisió de l'usuari, 2026-10-20): una opció de tots els calaixos; no es retiren sols darrere d'una
+              porta (avís a sota si la porta hi topa). */}
+          <NumRow optionId="zone.front.drawers.setback" label="Retirada" suffix="mm" value={front.setback ?? 0} min={0} max={300} step={1} help="Quant van més endins que els altres fronts. 0: a ras. Si entren a la caixa, el front va dins de la llum." onChange={(v) => Number.isFinite(v) && onChange(v > 0 ? { ...front, setback: v } : (({ setback: _s, ...rest }) => rest)(front))} />
           <HardwarePick optionId="zone.front.drawers.slide" slot="slide" label={perDrawerSlides(front, front.hardware ?? hardware.slide) ? "Guia del calaix 1" : undefined} current={front.hardware ?? hardware.slide} inherited={hardware.slide} onPick={(h) => onChange(withHardware(front, h))} />
           {/* Amb un joc de calaix, la guia de cada un dels altres calaixos (els de sobre segueixen el de sota). */}
           {perDrawerSlides(front, front.hardware ?? hardware.slide) && <DrawerSlides front={front} kits={kits} onChange={onChange} />}
@@ -168,21 +179,20 @@ export function FrontFields({ front, openRatio, drawerHeights, onChange, hardwar
                 )}
                 {handlePick(front, kit)}
                 {hasHandle && (
-                  <FoldItem optionId="zone.front.drawers.handleOptions" id="zone-handle" title="Opcions del tirador" icon={LuSettings2} size="sm" badge={front.handleTop !== undefined || front.glass ? `A dalt · ${front.handleTop ?? GLASS_HANDLE_TOP} mm` : "Centrat"}>
+                  <FoldItem optionId="zone.front.drawers.handleOptions" id="zone-handle" title="Opcions del tirador" icon={LuSettings2} size="sm" badge={front.handleTop !== undefined ? `A dalt · ${front.handleTop} mm` : "Centrat"}>
                     <FormRow optionId="zone.front.drawers.handlePosition" label="Posició del tirador">
                       <ChoiceChips
                         label="Posició del tirador"
-                        value={front.handleTop !== undefined || front.glass ? "top" : "center"}
-                        // Amb vidre, el tirador va al travesser de dalt (el mig és la finestra): «Centrat» no surt.
+                        value={front.handleTop !== undefined ? "top" : "center"}
                         options={[
-                          ...(front.glass ? [] : [{ id: "center" as const, label: "Centrat" }]),
+                          { id: "center" as const, label: "Centrat" },
                           { id: "top" as const, label: "A dalt" },
                         ]}
                         onChange={(v) => onChange(v === "top" ? { ...front, handleTop: 40 } : (({ handleTop: _t, ...rest }) => rest)(front))}
                       />
                     </FormRow>
-                    {(front.handleTop !== undefined || front.glass) && (
-                      <NumRow optionId="zone.front.drawers.handleTop" label="Des de dalt" value={front.handleTop ?? GLASS_HANDLE_TOP} min={0} max={1000} step={5} onChange={(handleTop) => Number.isFinite(handleTop) && onChange({ ...front, handleTop })} help={front.glass ? "Del cantell de dalt del front a l'eix del tirador, al travesser de dalt del marc." : "Del cantell de dalt del front a l'eix del tirador. Com a molt, el mig del front."} />
+                    {front.handleTop !== undefined && (
+                      <NumRow optionId="zone.front.drawers.handleTop" label="Des de dalt" value={front.handleTop} min={0} max={1000} step={5} onChange={(handleTop) => Number.isFinite(handleTop) && onChange({ ...front, handleTop })} help="Del cantell de dalt del front a l'eix del tirador. Com a molt, el mig del front." />
                     )}
                   </FoldItem>
                 )}

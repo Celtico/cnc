@@ -4,6 +4,7 @@ import { panelBox } from "../../core/build/geometry"
 import type { BuildWarning, FixPlaceKey } from "../../core/build/buildModule"
 import type { Composition } from "../../core/model"
 import type { Selection } from "../composition/StructureTree"
+import type { InlineWarning, InlineWarnings } from "../../components/inlineWarnings"
 
 type Code = BuildWarning["code"]
 
@@ -80,6 +81,33 @@ export function fixLabel(w: Pick<CompositionWarning, "code" | "zoneId" | "module
   if (p.level === "zone" && !(w.zoneId && w.moduleId)) return null
   if (p.level === "module" && !w.moduleId) return null
   return p.label
+}
+
+/**
+ * Els avisos de la selecció al seu lloc de l'inspector (`InlineWarnings`): els d'un compartiment, a la zona seleccionada;
+ * els del mòdul (sense compartiment), al mòdul. A sota de la seva opció (`option`) o, si no en diu cap, a dalt de la
+ * secció on s'arreglen (`FIX`). `info`: els que només informen.
+ */
+export function inlineWarnings(warnings: CompositionWarning[], selection: Selection, moduleId: string | undefined, info: (w: CompositionWarning) => boolean): InlineWarnings {
+  const byOption = new Map<string, InlineWarning[]>()
+  const byFold = new Map<string, InlineWarning[]>()
+  if (!moduleId || (selection.kind !== "zone" && selection.kind !== "module")) return { byOption, byFold }
+  const put = (map: Map<string, InlineWarning[]>, key: string, w: CompositionWarning) => {
+    const list = map.get(key) ?? []
+    if (!list.some((x) => x.message === w.message)) list.push({ message: w.message, info: info(w) })
+    map.set(key, list)
+  }
+  for (const w of warnings) {
+    if (w.moduleId !== moduleId) continue
+    if (selection.kind === "zone" ? w.zoneId !== selection.zoneId : !!w.zoneId) continue
+    if (w.option) put(byOption, w.option, w)
+    else {
+      const p = w.options?.length ? null : FIX[w.code]
+      const fold = p && (p.level === "zone") === (selection.kind === "zone") ? p.folds.at(-1) : undefined
+      if (fold) put(byFold, fold, w)
+    }
+  }
+  return { byOption, byFold }
 }
 
 /** De quines peces parla un avís del mòdul que no en porta cap. */

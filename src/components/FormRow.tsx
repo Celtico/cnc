@@ -2,15 +2,18 @@ import { Box, Button, Grid, HStack, Stack, Text } from "@chakra-ui/react"
 import type { ReactNode } from "react"
 import { segGroup, segItem } from "./segmented"
 import { SectionLabel } from "./SectionLabel"
+import { InlineWarningList, useOptionWarnings } from "./inlineWarnings"
 
 /**
  * Fila de formulari, la mateixa a tota l'app (com la Configuració de macOS o l'inspector de Figma):
  * l'etiqueta a l'esquerra, el control i l'ajuda a la dreta. S'adapta a l'amplada **del lloc on
  * és** (consulta de contenidor, no de pantalla): en un panell estret o al mòbil, l'etiqueta va a
  * sobre. `maxW` limita l'amplada del control (els números no s'estiren fins a la vora). A l'Editor, `optionId` és l'id
- * de la fila al registre de les opcions en cascada (`core/model/options`): només marca la fila (`data-option`).
+ * de la fila al registre de les opcions en cascada (`core/model/options`): marca la fila (`data-option`) i hi posa a sota
+ * els avisos d'aquesta opció (`useOptionWarnings`).
  */
 export function FormRow({ label, help, maxW, optionId, children }: { label: ReactNode; help?: ReactNode; maxW?: string; optionId?: string; children: ReactNode }) {
+  const warnings = useOptionWarnings(optionId)
   return (
     <Box className="form-row" css={{ containerType: "inline-size" }} minW={0} data-option={optionId}>
       <Grid
@@ -38,6 +41,7 @@ export function FormRow({ label, help, maxW, optionId, children }: { label: Reac
               {help}
             </Text>
           )}
+          <InlineWarningList items={warnings} />
         </Stack>
       </Grid>
     </Box>

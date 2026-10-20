@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { defaultModule, type Module } from "../model"
+import { DEFAULT_HARDWARE_LIBRARY, defaultModule, type Module } from "../model"
 import { buildModule } from "./buildModule"
 import { panelBox } from "./geometry"
 
@@ -24,19 +24,20 @@ describe("sòcol de dalt (fins al sostre)", () => {
   })
 })
 
-describe("fronts de calaix de vidre", () => {
-  it.each([2, 4])("el front porta la finestra calada, el galze i el vidre a part; els forats queden al marc (%i calaixos)", (n) => {
+describe("fronts de calaix de vidre (l'armari de la foto: el vidre és el front, en ranura, sense marc)", () => {
+  it.each([2, 4])("cap front de fusta; els laterals amb la ranura del vidre; el vidre a part (%i calaixos)", (n) => {
     const m = base()
     const b = buildModule({ ...m, root: { id: "r", front: { kind: "drawers", n, heights: Array(n).fill("auto"), glass: true } as never } })
-    const fronts = b.panels.filter((p) => p.role === "drawerFront")
-    expect(fronts).toHaveLength(n)
-    for (const f of fronts) {
-      const win = f.cutouts?.find((c) => c.tag === "glass")
-      expect(win?.kind).toBe("rect")
-      if (win?.kind !== "rect") continue
-      expect(f.grooves.some((g) => g.tag === "glass-rebate")).toBe(true)
-      for (const h of f.holes) expect(h.x < win.x || h.x > win.x + win.w || h.y < win.y || h.y > win.y + win.h).toBe(true)
-    }
+    expect(b.panels.filter((p) => p.role === "drawerFront")).toHaveLength(0)
+    const sides = b.panels.filter((p) => p.role === "drawerSide")
+    expect(sides).toHaveLength(2 * n)
+    for (const s of sides) expect(s.grooves.some((g) => g.tag === "glass")).toBe(true)
     expect(b.extras.filter((p) => p.material === "Vidre")).toHaveLength(n)
+  })
+  it("amb tirador, els forats al vidre", () => {
+    const m = base()
+    const handle = DEFAULT_HARDWARE_LIBRARY.find((h) => h.category === "handle")!
+    const b = buildModule({ ...m, root: { id: "r", front: { kind: "drawers", n: 2, heights: ["auto", "auto"], glass: true, handle } as never } })
+    expect(b.extras.filter((p) => p.material === "Vidre").every((g) => (g.cutouts ?? []).some((h) => h.tag === "handle"))).toBe(true)
   })
 })

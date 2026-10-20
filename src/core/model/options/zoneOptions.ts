@@ -40,7 +40,8 @@ const drawers = group("zone.front.drawers", "Calaixos", { code: UI.frontFields, 
   section("zone.front.drawers.heights", "Alçada dels calaixos", { icon: "subsection", code: UI.frontFields, showIf: "Més d'un calaix" }, [
     field("zone.front.drawers.height", "Alçada 1…n", { code: UI.drawers, control: "number", defaultText: "Auto (l'última, el que sobra)" }),
   ]),
-  field("zone.front.drawers.glass", "Vidre", { code: UI.frontFields, control: "switch", default: false, choices: [{ value: "on", label: "Front de vidre" }], note: "Per petició de l'usuari, 2026-10-20: marc de fusta d'una peça, finestra calada i vidre al galze." }),
+  field("zone.front.drawers.face", "Front", { code: UI.frontFields, control: "choice", default: "wood", choices: [{ value: "wood", label: "Fusta" }, { value: "glass", label: "Vidre" }, { value: "kit", label: "Metàl·lic (del joc)" }], note: "Per decisió de l'usuari, 2026-10-20: el vidre és el front, en ranura als laterals del calaix, sense marc (amb un joc, al lloc del front); el metàl·lic, el del fabricant del joc (2026-10-16). Les combinacions que no es poden fer avisen a sota." }),
+  field("zone.front.drawers.setback", "Retirada", { code: UI.frontFields, control: "number", range: { min: 0, max: 300, step: 1, suffix: "mm" }, default: 0, note: "Per decisió de l'usuari, 2026-10-20: una opció de tots els calaixos; no es retiren sols darrere d'una porta (avís a sota)." }),
   field("zone.front.drawers.slide", "Guia de calaix", {
     code: UI.frontFields,
     control: "hardware",
@@ -71,9 +72,9 @@ const drawers = group("zone.front.drawers", "Calaixos", { code: UI.frontFields, 
       code: UI.frontFields,
       control: "choice",
       default: "center",
-      choices: [{ value: "center", label: "Centrat", hides: ["zone.front.drawers.handleTop"], note: "no amb vidre (el mig és la finestra)" }, { value: "top", label: "A dalt", reveals: ["zone.front.drawers.handleTop"] }],
+      choices: [{ value: "center", label: "Centrat", hides: ["zone.front.drawers.handleTop"] }, { value: "top", label: "A dalt", reveals: ["zone.front.drawers.handleTop"] }],
     }),
-    field("zone.front.drawers.handleTop", "Des de dalt", { code: UI.frontFields, control: "number", showIf: "Posició = A dalt (amb vidre, sempre: 30 mm, al travesser de dalt)", default: 40 }),
+    field("zone.front.drawers.handleTop", "Des de dalt", { code: UI.frontFields, control: "number", showIf: "Posició = A dalt", default: 40 }),
   ]),
 ])
 
