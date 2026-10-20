@@ -42,23 +42,24 @@ export class DrawersBuilder extends FrontsBuilder {
     const bg = m.fronts.betweenGap
     const hs = innerDrawerHeights(inner)
     const want = r(hs.reduce((a, b) => a + b, 0) + (inner.n - 1) * bg)
-    if (want > rect.y1 - rect.y0 + 0.5)
+    // Els Calaixos d'un compartiment tapat per portes (`sizes`): omplen el compartiment, com els de fora.
+    if (!inner.sizes && want > rect.y1 - rect.y0 + 0.5)
       this.warnings.push({ code: "layout", message: `Els ${inner.n} calaixos interiors fan ${fmtNum(want, 1)} mm i el compartiment ${fmtNum(rect.y1 - rect.y0, 1)}: l'últim es fa més baix. Posa'n menys o fes-los més baixos.`, zoneId: zone.id })
-    const y1 = r(Math.min(rect.y1, rect.y0 + want))
+    const y1 = inner.sizes ? rect.y1 : r(Math.min(rect.y1, rect.y0 + want))
     const faceZ = r(d.D - (inner.setback ?? 25))
     // Sense suplements (per decisió de l'usuari, 2026-10-20: «0 casos especials»): el marge per a les frontisses és una
     // zona estreta oberta al costat (una divisió; «Marge a les frontisses»), i la guia va al seu divisor. Si la frontissa
     // toca directament els calaixos, s'avisa.
     for (const side of hinges)
       if ((side === "left" ? left : right)?.outer)
-        this.warnings.push({ code: "inner-drawers", message: `Calaixos interiors tocant el lateral de les frontisses (${side === "left" ? "esquerra" : "dreta"}): el braç i la placa de la frontissa hi topen en obrir. Deixa-hi un marge: Calaixos interiors › «Marge a les frontisses» (una zona estreta oberta al costat).`, zoneId: zone.id })
+        this.warnings.push({ code: "inner-drawers", message: `Calaixos darrere de la porta tocant el lateral de les frontisses (${side === "left" ? "esquerra" : "dreta"}): el braç i la placa de la frontissa hi topen en obrir. Deixa-hi un marge: Front › «Marge a les frontisses» (una zona estreta oberta al costat).`, zoneId: zone.id })
     const box: ZoneRect = { ...rect, y1 }
     if (box.x1 - box.x0 < MIN_INNER_DRAWER_W)
       this.warnings.push({ code: "inner-drawers", message: `Als calaixos interiors els queden ${fmtNum(Math.max(0, box.x1 - box.x0), 1)} mm (com a mínim ${MIN_INNER_DRAWER_W}): fes el compartiment més ample.`, zoneId: zone.id })
     const front: Extract<Front, { kind: "drawers" }> = {
       kind: "drawers",
       n: inner.n,
-      heights: [...hs.slice(0, inner.n - 1), "auto"],
+      heights: inner.sizes ?? [...hs.slice(0, inner.n - 1), "auto"],
       ...(inner.hardware ? { hardware: inner.hardware } : {}),
       ...(inner.kit ? { kit: inner.kit } : {}),
       ...(inner.drawerSlides ? { drawerSlides: inner.drawerSlides } : {}),
@@ -69,9 +70,12 @@ export class DrawersBuilder extends FrontsBuilder {
       this.buildDrawers(zone, front, box, box, left, right)
     } finally {
       this.inner = null
-      // Les alçades «Auto» de l'inspector són les dels calaixos de fora, no les d'aquests.
-      if (own) this.drawerHeights[zone.id] = own
-      else delete this.drawerHeights[zone.id]
+      // Les alçades «Auto» de l'inspector són les dels calaixos de fora, no les d'aquests (els tapats per portes, sí: són
+      // els del Front del compartiment).
+      if (!inner.sizes) {
+        if (own) this.drawerHeights[zone.id] = own
+        else delete this.drawerHeights[zone.id]
+      }
     }
     return y1
   }

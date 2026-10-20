@@ -55,6 +55,8 @@ export function usedHardwareSlots(module: Module): SlotUse {
     if (z.rail) add("rail", 1, "barres de penjar")
     if (z.led) add("led", 1, "llums")
     if (z.appliance) applianceSlots(m, z.appliance, add)
+    // Els calaixos tapats per portes (es fan per dins, sense tirador): la guia.
+    if (z.innerDrawers) add("slide", z.innerDrawers.n, "calaixos")
     if (!z.front || covered) return
     frontSlots(m, z.front, add)
   })
@@ -144,6 +146,8 @@ export function frontOptionsUse(module: Module): FrontOptionsUse {
       if (!inset && !isRoot) use.betweenGap = true
     }
     if (z.split) return
+    // Els calaixos tapats per portes (regla 3: es fan per dins) també es reparteixen amb la folgança entre fronts.
+    if (z.innerDrawers && z.innerDrawers.n >= 2) use.betweenGap = true
     if (z.led) use.shelfSetback = true
     const s = z.shelves
     if (s && s.n > 0 && z.front?.kind !== "drawers") {

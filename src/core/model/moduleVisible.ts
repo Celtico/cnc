@@ -38,7 +38,7 @@ export function innerDrawerHeights(d: Pick<InnerDrawers, "n" | "height" | "heigh
 }
 
 /** Com `perDrawerSlides`, als calaixos interiors: amb un joc, més d'un calaix i alguna alçada diferent. */
-export function innerPerDrawerSlides(d: Pick<InnerDrawers, "n" | "height" | "heights">, slide: { engine: string } | undefined): boolean {
+function innerPerDrawerSlides(d: Pick<InnerDrawers, "n" | "height" | "heights">, slide: { engine: string } | undefined): boolean {
   return !!slide && slide.engine === "drawerKit" && d.n > 1 && new Set(innerDrawerHeights(d)).size > 1
 }
 
@@ -131,8 +131,9 @@ export function withInnerClearance<T extends { modules: Module[] }>(comp: T, inn
 export function hasDrawers(root: Zone): boolean {
   let hit = false
   // Els calaixos d'un compartiment tapat pel front d'una zona de més amunt no es fan.
-  walkBuiltZones(root, (z, { covered }) => {
-    if (z.front?.kind === "drawers" && !covered) hit = true
+  walkBuiltZones(root, (z) => {
+    // Tapats per portes també es fan (calaixos interiors).
+    if (z.front?.kind === "drawers") hit = true
     // Els calaixos interiors (darrere d'una porta) també porten fons del calaix: el seu material es tria igual.
     if (z.innerDrawers && !z.split) hit = true
   })
@@ -239,7 +240,21 @@ function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: Zon
   delete out.fronts
   // Tapat pel front d'una zona de més amunt (`walkBuiltZones`): el seu front no es fa (es conserva a la composició) i el
   // compartiment és com si fos obert (els prestatges, la barra i la llum de dins sí que es fan).
-  if (covered) delete out.front
+  if (covered) {
+    // Els **Calaixos** d'un compartiment tapat per portes (no per un front fix) es fan com a calaixos interiors: els
+    // mateixos calaixos, amb el front interior retirat i sense tirador, i omplen el compartiment (`InnerDrawers.sizes`).
+    const f = z.front
+    if (f?.kind === "drawers" && !fixedCover && !z.split) {
+      const inner: InnerDrawers = { n: f.n, height: 150, sizes: Array.from({ length: f.n }, (_, i) => f.heights[i] ?? "auto") }
+      if (f.hardware) inner.hardware = f.hardware
+      if (f.kit) inner.kit = f.kit
+      if (f.drawerSlides) inner.drawerSlides = f.drawerSlides
+      if (f.glass) inner.glass = true
+      if (z.innerDrawers?.setback !== undefined) inner.setback = z.innerDrawers.setback
+      out.innerDrawers = inner
+    }
+    delete out.front
+  }
   // Un front d'un compartiment que no és aguantat pels quatre costats (`canHoldFront`, `zoneSupport.ts`) no es fa: el
   // compartiment és com obert (es conserva i torna amb la peça que hi falta). Tampoc no tapa els de dins.
   if (out.front && !canHoldFront(bounds, out.front.kind)) delete out.front
@@ -307,16 +322,23 @@ function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: Zon
       if (d.front === "kit" || !d.glass) delete d.glass
       // Alçades a mida: les dels calaixos que hi ha; totes iguals = la comuna.
       const hs = innerDrawerHeights(d)
-      if (new Set(hs).size > 1) d.heights = hs
+      if (d.sizes) delete d.heights
+      else if (new Set(hs).size > 1) d.heights = hs
       else {
         delete d.heights
         d.height = hs[0] ?? d.height
       }
       // La guia de cada calaix: com als calaixos de fora (només amb un joc i alçades diferents).
       const own = (d.drawerSlides ?? []).slice(0, d.n).map((h, i) => (i > 0 && h && h.engine === "drawerKit" ? h : null))
-      if (!kit || !innerPerDrawerSlides(d, { engine: "drawerKit" }) || !own.some((h) => h)) delete d.drawerSlides
+      if (!kit || (!d.sizes && !innerPerDrawerSlides(d, { engine: "drawerKit" })) || !own.some((h) => h)) delete d.drawerSlides
       else d.drawerSlides = own
       out.innerDrawers = d
+      // Omplen el compartiment: ni prestatges ni accessoris (es conserven).
+      if (d.sizes) {
+        delete out.shelves
+        delete out.rail
+        delete out.led
+      }
     }
   }
   const f = out.front

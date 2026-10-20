@@ -166,7 +166,7 @@ export function ZoneSection({ module, zone, moduleBuild, updateModule, selectZon
       {...(() => {
         // Com es construeix: un front que no es fa (compartiment sense un costat, `zoneSupport.ts`) no tapa res.
         const cover = coveringZone(visibleModule(module).root, zone.id)
-        return cover ? { coveredBy: zoneLabel(cover, { root: cover.id === module.root.id }), coveredByFixed: cover.front?.kind === "panel", coveredByDoor: cover.front?.kind === "door" || cover.front?.kind === "flap", ...(cover.front ? { coverFront: cover.front } : {}) } : {}
+        return cover ? { coveredBy: zoneLabel(cover, { root: cover.id === module.root.id }), coveredByFixed: cover.front?.kind === "panel", ...(cover.front ? { coverFront: cover.front } : {}) } : {}
       })()}
       bodyThickness={module.carcass.thickness}
       shelfSetback={module.carcass.shelfSetback}
@@ -178,7 +178,6 @@ export function ZoneSection({ module, zone, moduleBuild, updateModule, selectZon
       onChange={(root) => updateModule({ ...module, root })}
       onSelect={selectZone}
       childSizes={moduleBuild ? splitChildSizes(moduleBuild.layout, zone) : undefined}
-      allDrawerHeights={moduleBuild?.drawerHeights}
       moduleFronts={<ModuleFrontsFold module={module} onChange={updateModule} />}
       // La filera System 32 del mòdul: als Prestatges o al Front d'aquest compartiment, si li toca (`system32RowPlace`).
       system32={(() => {

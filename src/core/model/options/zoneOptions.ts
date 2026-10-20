@@ -64,6 +64,7 @@ const drawers = group("zone.front.drawers", "Calaixos", { code: UI.frontFields, 
     field("zone.front.drawers.kit.bottom", "Fons del calaix", { code: UI.drawers, control: "text", note: "Només es llegeix: el gruix el demana el joc." }),
     field("zone.front.drawers.kit.info", "Joc", { code: UI.drawers, control: "text", note: "NL, números d'article i peces de fusta que ha fet la construcció." }),
   ]),
+  field("zone.front.drawers.margin", "Marge a les frontisses", { code: UI.frontSection, control: "buttons", showIf: "Tapats per una porta amb frontisses al costat", note: "Per decisió de l'usuari, 2026-10-20: drecera que divideix la zona amb una zona oberta de 50 mm al costat de la frontissa (`addSideMargin`)." }),
   field("zone.front.drawers.handle", "Tirador", { code: UI.frontFields, control: "hardware", defaultText: AS_MODULE }),
   section("zone.front.drawers.handleOptions", "Opcions del tirador", { icon: "subsection", code: UI.frontFields, showIf: "Amb tirador (ni push del joc ni «Cap (push)»)" }, [
     field("zone.front.drawers.handlePosition", "Posició del tirador", {
@@ -226,42 +227,6 @@ const shelves = group("zone.shelves", "Opcions de l'interior", {
     defaultEditable: true,
     choices: [{ value: "on", label: "Tira LED", reveals: ["zone.shelves.ledHardware"] }],
   }, [field("zone.shelves.ledHardware", "Ferratge", { code: UI.shelves, control: "hardware", defaultText: AS_MODULE })]),
-  ]),
-  section("zone.shelves.innerDrawersGroup", "Calaixos interiors", { icon: "subsection", code: UI.shelves, showIf: "Darrere d'una porta (la del compartiment o la d'una zona de més amunt)" }, [
-  field("zone.shelves.innerDrawers", "Calaixos interiors", {
-    code: UI.shelves,
-    control: "number",
-    showIf: "Darrere d'una porta (la del compartiment o la d'una zona de més amunt)",
-    default: 0,
-    choices: [{ value: ">0", label: "1 o més", reveals: ["zone.shelves.innerDrawers.heights", "zone.shelves.innerDrawers.slide", "zone.shelves.innerDrawers.setback", "zone.shelves.innerDrawers.margin"] }],
-    note: "Per decisió de l'usuari, 2026-10-16: «posar calaixos darrere una porta», a la secció de l'interior. A baix de tot; front interior baix, sense tirador, retirat (`Zone.innerDrawers`). Per decisió de l'usuari, 2026-10-20: les mateixes opcions que Front › Calaixos (alçada de cada calaix, guia de cada calaix, opcions del joc), amb els mateixos components.",
-  }, [
-    section("zone.shelves.innerDrawers.heights", "Alçada dels calaixos", { icon: "subsection", code: UI.shelves, showIf: "Més d'un calaix (amb un, la fila «Alçada»)" }, [
-      field("zone.shelves.innerDrawers.height", "Alçada 1…n", { code: UI.shelves, control: "number", default: 180, note: "Totes iguals = `height`; si no, `heights`." }),
-    ]),
-    field("zone.shelves.innerDrawers.slide", "Guia", {
-      code: UI.shelves,
-      control: "hardware",
-      defaultText: AS_MODULE,
-      choices: [
-        { value: "slide", label: "Una guia", hides: ["zone.shelves.innerDrawers.kit", "zone.shelves.innerDrawers.slides"] },
-        { value: "kit", label: "Un joc de calaix (doble paret)", reveals: ["zone.shelves.innerDrawers.kit", "zone.shelves.innerDrawers.slides"] },
-      ],
-    }, [
-      field("zone.shelves.innerDrawers.slides", "Guia del calaix 2…n", { code: UI.shelves, control: "hardware", showIf: "Joc de calaix, més d'un calaix i alguna alçada diferent", defaultText: "Com el calaix de sota" }),
-    ]),
-    section("zone.shelves.innerDrawers.kit", "Opcions de la guia de calaix", { icon: "subsection", code: UI.shelves, showIf: "La guia (pròpia o del mòdul) és un joc" }, [
-      field("zone.shelves.innerDrawers.front", "Front", { code: UI.shelves, control: "choice", default: "wood", choices: [{ value: "wood", label: "De fusta" }, { value: "kit", label: "Metàl·lic (del joc)" }], note: "Per decisió de l'usuari, 2026-10-16: «calaixos sense frontal, tot ferratge»." }),
-      field("zone.shelves.innerDrawers.kit.closing", "Tancament", { code: UI.shelves, control: "choice", defaultText: "El primer que ven el joc" }),
-      field("zone.shelves.innerDrawers.kit.back", "Darrere", { code: UI.shelves, control: "choice", defaultText: "Fusta" }),
-      field("zone.shelves.innerDrawers.kit.finish", "Color dels laterals", { code: UI.shelves, control: "choice", showIf: "El joc té més d'un acabat" }),
-      field("zone.shelves.innerDrawers.kit.bottom", "Fons del calaix", { code: UI.shelves, control: "text", note: "Només es llegeix: el gruix el demana el joc." }),
-      field("zone.shelves.innerDrawers.kit.info", "Joc", { code: UI.shelves, control: "text", note: "NL, números d'article i peces de fusta que ha fet la construcció." }),
-    ]),
-    field("zone.shelves.innerDrawers.glass", "Vidre", { code: UI.shelves, control: "switch", showIf: "Front de fusta", default: false, choices: [{ value: "on", label: "Front de vidre" }] }),
-    field("zone.shelves.innerDrawers.setback", "Retirada del front", { code: UI.shelves, control: "number", defaultText: "Preferències › Folgances per defecte (25)" }),
-    field("zone.shelves.innerDrawers.margin", "Marge a les frontisses", { code: UI.shelves, control: "buttons", showIf: "Darrere d'una porta amb frontisses", choices: [{ value: "left", label: "A l'esquerra" }, { value: "right", label: "A la dreta" }], note: "Per decisió de l'usuari, 2026-10-20 («0 casos especials»; abans, el suplement): divideix el compartiment amb una zona oberta de 50 mm al costat (`addSideMargin`); la guia va al divisor." }),
-  ]),
   ]),
 ])
 

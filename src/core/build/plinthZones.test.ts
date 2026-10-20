@@ -45,6 +45,19 @@ describe("sòcols fets amb zones (0 casos especials)", () => {
     expect(back.carcass.top.kind).toBe("full")
     expect(back.root).toEqual(m0.root)
   })
+  it("els dos sòcols alhora: germans de l'interior a la mateixa divisió, i es poden treure en qualsevol ordre", () => {
+    const m0 = base()
+    const both = addTopPlinth(addBottomPlinth(m0, 80, 30), 60)
+    expect(bottomPlinthZone(both)).toMatchObject({ height: 80, setback: 30 })
+    expect(topPlinthZone(both)?.height).toBe(60)
+    expect(both.root.split?.children).toHaveLength(3)
+    const other = addBottomPlinth(addTopPlinth(m0, 60), 80, 30)
+    expect(bottomPlinthZone(other)?.height).toBe(80)
+    expect(topPlinthZone(other)?.height).toBe(60)
+    expect(removeBottomPlinth(removeTopPlinth(both)).root).toEqual(m0.root)
+    expect(removeTopPlinth(removeBottomPlinth(both)).root).toEqual(m0.root)
+    expect(topPlinthZone(removeBottomPlinth(both))?.height).toBe(60)
+  })
 })
 
 describe("enganxar propietats d'un mòdul", () => {

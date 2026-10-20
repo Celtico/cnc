@@ -1,11 +1,10 @@
 import { Badge, Box, Button, HStack, Stack, Text } from "@chakra-ui/react"
-import { useEffect } from "react"
 import { LuBox, LuCamera, LuLampFloor, LuMoveDiagonal, LuPalette, LuPanelBottom, LuPuzzle, LuWrench } from "react-icons/lu"
 import { FoldGroup, FoldItem } from "../../components/Fold"
 import type { CompositionBuild } from "../../core/build/buildComposition"
 import type { ModuleBuild } from "../../core/build/buildModule"
 import { activeIslands } from "../../core/build/islands"
-import { drawersBehindDoors, groupItems, groupMulti, hasDrawers, hasDrawersBehindDoors, mobleBody, moveMultiBy, newGroupName, partJoinery, partsOnlyKind, removeGroup, removeMulti, visibleModule, type Composition, type compositionKind, type Module, type MultiItem, type Settings, type Zone } from "../../core/model"
+import { groupItems, groupMulti, hasDrawers, mobleBody, moveMultiBy, newGroupName, partJoinery, partsOnlyKind, removeGroup, removeMulti, visibleModule, type Composition, type compositionKind, type Module, type MultiItem, type Settings, type Zone } from "../../core/model"
 import type { Project } from "../../db/db"
 import { CarcassForm, MaterialsForm } from "../composition/CarcassForm"
 import { HardwarePlacements, PlacementInspector, type PlacementActions } from "../composition/HardwarePlacements"
@@ -85,14 +84,6 @@ export function EditorInspector({
   const totalHoles = panels.reduce((n, p) => n + p.holes.length, 0)
   // El mòdul triat és el de darrere d'una illa (es col·loca sol): la Posició ho diu i no en mostra els camps.
   const islandBack = module ? activeIslands(comp).find((i) => i.back === module.id) : undefined
-  // Calaixos tapats per les portes de tot el mòdul (mòduls d'abans del 2026-10-20, quan desapareixien): passen a calaixos
-  // interiors amb l'alçada del seu compartiment (`drawersBehindDoors`; en posar les portes ho fa Mòdul › Portes).
-  useEffect(() => {
-    if (!module || !moduleBuild || !hasDrawersBehindDoors(module.root)) return
-    const leaf: Record<string, number> = {}
-    for (const [id, r] of moduleBuild.layout.rects) leaf[id] = r.y1 - r.y0
-    updateModule({ ...module, root: drawersBehindDoors(module.root, moduleBuild.drawerHeights, leaf, module.fronts.betweenGap) })
-  }, [module, moduleBuild, updateModule])
   // «Duplicar» d'un grup o de la selecció múltiple: el mateix camí que ⌘D.
   const duplicateSelection = () => {
     const clip = clipOf(comp, selection, zone)

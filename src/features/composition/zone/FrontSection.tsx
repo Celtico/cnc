@@ -1,8 +1,8 @@
-import { Text } from "@chakra-ui/react"
+import { Button, HStack } from "@chakra-ui/react"
 import { useState, type ReactNode } from "react"
-import { LuRefrigerator } from "react-icons/lu"
+import { LuPlus, LuRefrigerator } from "react-icons/lu"
 import { FoldItem } from "../../../components/Fold"
-import { APPLIANCE_LABELS, UI_PATHS, canHoldFront, fillsNiche, findZone, frontLimitsHelp, isAppliance, setFront, switchFront, updateZone, type Front, type ModuleHardware, type Zone, type ZoneBounds } from "../../../core/model"
+import { APPLIANCE_LABELS, canHoldFront, fillsNiche, findZone, frontLimitsHelp, isAppliance, setFront, switchFront, updateZone, type Front, type ModuleHardware, type Zone, type ZoneBounds } from "../../../core/model"
 import type { KitOrder } from "../../../core/build/buildModule"
 import { FormRow } from "../../../components/FormRow"
 import { FRONT_ICONS } from "../zoneIcons"
@@ -31,16 +31,24 @@ export interface FrontInterior {
 /** La insígnia del Front: el contingut i, si n'hi ha, el resum de l'interior («Obert · 3 · Barra»). */
 const withInterior = (label: string, interior?: FrontInterior) => (interior?.badge ? `${label} · ${interior.badge}` : label)
 
-/** El Front d'un compartiment tapat pel front d'una zona de més amunt: no es fa (opcions en cascada: el de dalt mana). */
-export function CoveredFront({ id, title, coveredBy, interior }: { id: string; title: string; coveredBy: string; interior?: FrontInterior }) {
-  return (
-    <FoldItem optionId="zone.front" id={id} title={title} badge={withInterior("Tapat", interior)} icon={FRONT_ICONS.none}>
-      <Text fontSize="sm" color="fg.muted">
-        El tapen les portes de «{coveredBy}» ({UI_PATHS.doors}): aquest compartiment no en porta (el que hi havia es conserva i torna si treus les portes).
-      </Text>
-      {interior?.node}
-    </FoldItem>
-  )
+/** Una zona tapada pel front d'una zona de més amunt. */
+interface CoveredBy {
+  /** El nom de la zona que la tapa. */
+  by: string
+  /** La tapa un front fix: darrere no es fa res. */
+  fixed: boolean
+  /** Els costats amb frontisses de la porta que la tapa. */
+  hinges: readonly ("left" | "right")[]
+  /** «Marge a les frontisses»: la zona oberta estreta al costat. */
+  onMargin: (side: "left" | "right") => void
+}
+
+/** Què es fa del contingut d'una zona tapada (regla 3: tapa, no esborra; regla 6: el que no es fa diu per què). */
+function coveredHelp(c: CoveredBy, k: Front["kind"] | "none" | "appliance"): string {
+  if (c.fixed) return `La tapa el front fix de «${c.by}»: darrere no es fa res (es conserva).`
+  if (k === "drawers") return `Darrere de «${c.by}»: es fan per dins, amb el front retirat i sense tirador.`
+  if (k === "none") return `Darrere de «${c.by}».`
+  return `No es fa: el tapa «${c.by}» (es conserva i torna si treus el front de dalt).`
 }
 
 /**
@@ -48,7 +56,7 @@ export function CoveredFront({ id, title, coveredBy, interior }: { id: string; t
  * és un contingut més (`appliance`): el tria i les seves opcions surten a sota (`ApplianceFields`); la placa i la campana
  * (no ocupen el nínxol) porten a més el front del compartiment, a sota de l'aparell.
  */
-export function ZoneFrontSection({ root, zone, onChange, openRatio, drawerHeights, hardware, noHandles = false, kits, bounds, afterHinge, interior, appliance = false, moduleFronts }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; openRatio?: number; drawerHeights?: number[]; hardware: ModuleHardware; noHandles?: boolean; kits?: KitOrder[]; /** Què aguanta el compartiment: els fronts que no s'hi poden fixar no surten (el triat, sí). */ bounds: ZoneBounds; /** Després de la «Frontissa» (la filera System 32 del mòdul). */ afterHinge?: ReactNode; /** Les opcions de l'interior, a sota del contingut (no n'hi ha amb calaixos ni un front fix). */ interior?: FrontInterior; /** Hi pot anar un electrodomèstic (el d'un mòdul sense dividir es tria a Mòdul › Tipus). */ appliance?: boolean; /** «Fronts del mòdul» (estil i folgances de tots els fronts), a sota de les opcions del front si n'hi ha. */ moduleFronts?: ReactNode }) {
+export function ZoneFrontSection({ root, zone, onChange, openRatio, drawerHeights, hardware, noHandles = false, kits, bounds, afterHinge, interior, appliance = false, moduleFronts, covered }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; openRatio?: number; drawerHeights?: number[]; hardware: ModuleHardware; noHandles?: boolean; kits?: KitOrder[]; /** Què aguanta el compartiment: els fronts que no s'hi poden fixar no surten (el triat, sí). */ bounds: ZoneBounds; /** Després de la «Frontissa» (la filera System 32 del mòdul). */ afterHinge?: ReactNode; /** Les opcions de l'interior, a sota del contingut (no n'hi ha amb calaixos ni un front fix). */ interior?: FrontInterior; /** Hi pot anar un electrodomèstic (el d'un mòdul sense dividir es tria a Mòdul › Tipus). */ appliance?: boolean; /** «Fronts del mòdul» (estil i folgances de tots els fronts), a sota de les opcions del front si n'hi ha. */ moduleFronts?: ReactNode; /** Tapat pel front d'una zona de més amunt (regla 3 del model únic): el Contingut es tria igual i es fa per dins. */ covered?: CoveredBy }) {
   const all = Object.keys(FRONT_LABELS) as (Front["kind"] | "none")[]
   const current = zone.front?.kind ?? "none"
   const options = all.filter((k) => k === current || canHoldFront(bounds, k))
@@ -75,8 +83,20 @@ export function ZoneFrontSection({ root, zone, onChange, openRatio, drawerHeight
   }
   const frontFields = (
     <>
-      {zone.front && <FrontFields front={zone.front} openRatio={openRatio} drawerHeights={drawerHeights} hardware={hardware} noHandles={noHandles} kits={kits} bounds={bounds} afterHinge={afterHinge} onChange={(f) => onChange(setFront(root, zone.id, f))} />}
-      {zone.front && moduleFronts}
+      {zone.front && <FrontFields front={zone.front} openRatio={openRatio} drawerHeights={drawerHeights} hardware={hardware} noHandles={noHandles || !!covered} kits={kits} bounds={bounds} afterHinge={afterHinge} onChange={(f) => onChange(setFront(root, zone.id, f))} />}
+      {zone.front && !covered && moduleFronts}
+      {/* Drecera (regla 4): una zona oberta estreta al costat de la frontissa, perquè el braç no topi amb els calaixos. */}
+      {covered && !covered.fixed && zone.front?.kind === "drawers" && covered.hinges.length > 0 && (
+        <FormRow optionId="zone.front.drawers.margin" label="Marge a les frontisses" help="Divideix la zona amb una zona oberta de 50 mm al costat de la frontissa: el braç i la placa no topen amb els calaixos. Després és una zona com les altres.">
+          <HStack gap={2} wrap="wrap" pt="2px">
+            {covered.hinges.map((side) => (
+              <Button key={side} size="xs" variant="outline" onClick={() => covered.onMargin(side)}>
+                <LuPlus /> {side === "left" ? "A l'esquerra" : "A la dreta"}
+              </Button>
+            ))}
+          </HStack>
+        </FormRow>
+      )}
       {/* Les opcions de l'interior, a sota del contingut i de les seves opcions: canvien amb el contingut triat. */}
       {interior?.node}
     </>
@@ -89,7 +109,7 @@ export function ZoneFrontSection({ root, zone, onChange, openRatio, drawerHeight
   return (
           <FoldItem optionId="zone.front" id="zone-front" title="Front" badge={badge} icon={applianceMode ? LuRefrigerator : FRONT_ICONS[current]}>
             {/* Tipus de front: un botó amb la icona de cada tipus (el nom, al tooltip, a sota i a la insígnia). */}
-            <FormRow optionId="zone.front.kind" label="Contingut" help={applianceMode ? undefined : limits}>
+            <FormRow optionId="zone.front.kind" label="Contingut" help={covered ? coveredHelp(covered, applianceMode ? "appliance" : current) : applianceMode ? undefined : limits}>
               <IconChoice<Front["kind"] | "none" | "appliance">
                 hideLabel
                 label="Contingut"

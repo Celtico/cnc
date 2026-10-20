@@ -92,6 +92,8 @@ function anyBuiltFront(z: Zone, sides: Sides, covered = false, isRoot = true): b
 function anyBuiltDrawers(z: Zone, sides: Sides, covered = false, isRoot = true): boolean {
   const built = frontBuilt(z, sides, covered, isRoot)
   if (built && z.front!.kind === "drawers") return true
+  // Tapats per portes també es fan (per dins, regla 3), aguantats pels dos costats.
+  if (covered && !z.split && z.front?.kind === "drawers" && frontHeld(sides)) return true
   const n = z.split?.children.length ?? 0
   return !!z.split?.children.some((c, i) => anyBuiltDrawers(c, childSides(sides, z.split!.dir, i, n), covered || built, false))
 }
@@ -176,7 +178,7 @@ function scrambleZone(z: Zone, r: Rnd, noHandles: boolean, covered: boolean, sid
     if (r() < 0.6) out.shelves = randomShelves(r)
     if (r() < 0.3) out.rail = {}
     if (r() < 0.3) out.led = {}
-  } else if (((f?.kind === "drawers" || f?.kind === "panel") && !covered) || fixedCover || inNiche(z, covered)) {
+  } else if (f?.kind === "drawers" || (f?.kind === "panel" && !covered) || fixedCover || inNiche(z, covered)) {
     // Calaixos o front fix (el seu o el de tota la zona que el tapa): les seccions Prestatges i Accessoris no surten.
     if (r() < 0.6) out.shelves = randomShelves(r)
     if (r() < 0.3) out.rail = {}
@@ -202,7 +204,7 @@ function scrambleZone(z: Zone, r: Rnd, noHandles: boolean, covered: boolean, sid
     const any = pick(r, [undefined, ...(held ? REMEMBERED.filter((x) => x.kind !== "door") : [...REMEMBERED, { kind: "door", mode: "single", hinge: "right", hardware: structuredClone(DEFAULT_MODULE_HARDWARE.dowel) } as Front])])
     if (any) out.front = structuredClone(any)
     else delete out.front
-  } else if (f) out.front = scrambleFront(f, r, noHandles)
+  } else if (f) out.front = scrambleFront(f, r, noHandles || (covered && f.kind === "drawers"))
   return out
 }
 
@@ -222,12 +224,12 @@ function scrambleAppliance(a: NonNullable<Zone["appliance"]>, r: Rnd, gone: bool
   return out
 }
 
-/** Un front qualsevol (amb ferratges propis dolents) a un compartiment tapat pel front d'una zona de més amunt. */
+/** Un front qualsevol (amb ferratges propis dolents) a un compartiment tapat pel front d'una zona de més amunt. Calaixos no: tapats es fan per dins (regla 3 del model únic). */
 function coverFront(z: Zone, r: Rnd): Zone {
   if (z.split) return { ...z, split: { ...z.split, children: z.split.children.map((c) => coverFront(c, r)) } }
+  if (z.front?.kind === "drawers") return z
   const bad = structuredClone(DEFAULT_MODULE_HARDWARE.dowel)
   const front = pick(r, [
-    { kind: "drawers", n: 3, heights: ["auto", "auto", "auto"], hardware: bad },
     { kind: "flap", dir: "down", hardware: bad, handle: OTHER_HANDLE },
     { kind: "door", mode: "single", hinge: "left", hardware: bad },
     { kind: "grille", pattern: DEFAULT_GRILLE, mount: "removable", hinge: "left" },

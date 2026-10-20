@@ -7,12 +7,10 @@ import {
   duplicateZone,
   parentOf,
   removeZone,
-  updateZone,
+  addSideMargin,
   setFront,
   splitZone,
   switchFront,
-  drawersBehindDoors,
-  drawersWithoutDoors,
   unsplitZone,
   flipSplit,
   canHoldAccessories,
@@ -31,7 +29,7 @@ import {
 import type { KitOrder } from "../../core/build/buildModule"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { SplitSizes, SplitThickness } from "./zone/SplitSizes"
-import { CoveredFront, ZoneFrontSection } from "./zone/FrontSection"
+import { ZoneFrontSection } from "./zone/FrontSection"
 import { ZoneShelvesSection } from "./zone/ShelvesSection"
 import { FrontFields } from "./zone/FrontFields"
 import { ActionsMenu } from "../../components/ActionsMenu"
@@ -115,7 +113,6 @@ export function ZonePanel({
   splitExtra,
   coveredBy,
   coveredByFixed = false,
-  coveredByDoor = false,
   coverFront,
   bodyThickness,
   shelfSetback,
@@ -123,7 +120,6 @@ export function ZonePanel({
   system32,
   onSelect,
   childSizes,
-  allDrawerHeights,
   moduleFronts,
 }: {
   root: Zone
@@ -134,8 +130,6 @@ export function ZonePanel({
    * fronts que no s'hi poden fixar).
    */
   bounds: ZoneBounds
-  /** El front que el tapa és una porta (o un abatible): hi poden anar calaixos interiors. */
-  coveredByDoor?: boolean
   /** El front de la zona de més amunt que el tapa (els costats de les frontisses, per als calaixos interiors). */
   coverFront?: Front
   /** El gruix del cos del mòdul (el mínim dels divisors gruixuts). */
@@ -171,13 +165,12 @@ export function ZonePanel({
    * `layout` del mòdul): les de les zones «Auto» i el que sobra a l'última.
    */
   childSizes?: number[]
-  /** Les alçades reals de cada pila de calaixos del mòdul (`ModuleBuild.drawerHeights`): les dels calaixos interiors en posar portes a una zona dividida. */
-  allDrawerHeights?: Record<string, number[]>
   /** «Fronts del mòdul» (`ModuleFrontsFold`: estil i folgances de tots els fronts), dins del Front si en porta. */
   moduleFronts?: ReactNode
 }) {
-  // Hi ha on fer servir prestatges i accessoris: tapat per portes (com obert), o el seu contingut no l'omple.
-  const shelvesBehind = coveredBy ? !coveredByFixed : !fillsZone(zone.front)
+  // Hi ha on fer servir prestatges i accessoris: el seu contingut no l'omple (tapat per portes, igual), i no el tapa un
+  // front fix.
+  const shelvesBehind = !(coveredBy && coveredByFixed) && !fillsZone(zone.front)
   // Darrere d'un front fix (el seu o, a les dades d'abans, el de tota la zona que el tapa si es fes) no es divideix: les
   // peces no es veurien ni es farien servir.
   const behindFixed = coveredBy ? !!coveredByFixed : zone.front?.kind === "panel"
@@ -187,9 +180,8 @@ export function ZonePanel({
   // front (es conserva) no es fa i el compartiment és com obert (`visibleZone`). Sense una peça a cada costat (lateral o
   // divisor), cap prestatge: no surt (es conserva i torna amb els laterals). Amb calaixos o un front fix (darrere no hi ha
   // res a fer servir), tampoc; ni tapat per un front fix de tota la zona.
-  const behindDoor = coveredBy ? !!coveredByDoor : zone.front?.kind === "door" || zone.front?.kind === "flap"
   const interior = !zone.split && !niche && shelvesBehind && (canHoldShelves(bounds) || canHoldAccessories(bounds))
-    ? { node: <ZoneShelvesSection root={root} zone={zone} onChange={onChange} hardware={hardware} bounds={bounds} system32={system32} behindDoor={behindDoor} kits={kits} hingeSides={hingeSidesOf(coveredBy ? coverFront : zone.front)} {...(shelfSetback !== undefined ? { moduleSetback: shelfSetback } : {})} />, badge: shelvesBadge(zone, behindDoor) }
+    ? { node: <ZoneShelvesSection root={root} zone={zone} onChange={onChange} hardware={hardware} bounds={bounds} system32={system32} {...(shelfSetback !== undefined ? { moduleSetback: shelfSetback } : {})} />, badge: shelvesBadge(zone) }
     : undefined
   return (
     <Stack gap={0}>
@@ -197,7 +189,7 @@ export function ZonePanel({
       {zone.split ? (
         <>
           {/* El Front de la zona dividida, a dalt de tot (per decisió de l'usuari, 2026-10-20): les portes que la tapen. */}
-          {coveredBy ? <CoveredFront id="zone-front" title="Front" coveredBy={coveredBy} /> : <SplitFrontSection root={root} zone={zone} onChange={onChange} hardware={hardware} noHandles={noHandles} bounds={bounds} afterHinge={system32?.at === "front" ? system32.row : undefined} {...(allDrawerHeights ? { drawerHeights: allDrawerHeights } : {})} moduleFronts={moduleFronts} />}
+          <SplitFrontSection root={root} zone={zone} onChange={onChange} hardware={hardware} noHandles={noHandles} bounds={bounds} afterHinge={system32?.at === "front" ? system32.row : undefined} moduleFronts={moduleFronts} {...(coveredBy ? { coveredBy } : {})} />
           <FoldItem optionId="zone.split" id="zone-split" title={`Divisió ${zone.split.dir === "v" ? "vertical" : "horitzontal"}`} badge={`${zone.split.children.length} zones`} icon={zone.split.dir === "v" ? LuColumns2 : LuRows2}>
             <SplitSizes root={root} zone={zone} onChange={onChange} onSelect={onSelect} childSizes={childSizes} />
             <SplitThickness root={root} zone={zone} onChange={onChange} {...(bodyThickness ? { bodyThickness } : {})} />
@@ -223,7 +215,7 @@ export function ZonePanel({
           {/* L'electrodomèstic és un contingut més del Front (per decisió de l'usuari, 2026-10-20): si ocupa el compartiment,
               ni Prestatges ni Dividir. Un sol lloc per decisió: el de l'«Interior» d'un mòdul sense dividir (l'arrel) és a
               Mòdul › Tipus. */}
-          {coveredBy ? <CoveredFront id="zone-front" title="Front" coveredBy={coveredBy} interior={interior} /> : <ZoneFrontSection root={root} zone={zone} openRatio={openRatio} drawerHeights={drawerHeights} onChange={onChange} hardware={hardware} noHandles={noHandles} kits={kits} bounds={bounds} afterHinge={system32?.at === "front" ? system32.row : undefined} interior={interior} appliance={zone.id !== root.id} moduleFronts={moduleFronts} />}
+          <ZoneFrontSection root={root} zone={zone} openRatio={openRatio} drawerHeights={drawerHeights} onChange={onChange} hardware={hardware} noHandles={noHandles} kits={kits} bounds={bounds} afterHinge={system32?.at === "front" ? system32.row : undefined} interior={interior} appliance={zone.id !== root.id} moduleFronts={moduleFronts} {...(coveredBy ? { covered: { by: coveredBy, fixed: !!coveredByFixed, hinges: hingeSidesOf(coverFront), onMargin: (side: "left" | "right") => onChange(addSideMargin(root, zone.id, side)) } } : {})} />
 
           {/* Només les direccions on el divisor té on unir-se (`splitDirsFor`): el vertical, a sota i a sobre; el
               travesser, als dos costats. Sense cap, o darrere d'un front fix, la secció no surt. */}
@@ -259,15 +251,20 @@ export function ZonePanel({
  * amb penjador i maleter darrere) que tapen tots els seus compartiments. Només Cap · Una · Dues i les opcions de la porta
  * (`FrontFields`). Un altre front d'una zona dividida (el front fix d'abans) no es fa i surt com a «Cap» (es conserva).
  */
-export function SplitFrontSection({ root, zone, onChange, hardware, noHandles, bounds, afterHinge, drawerHeights, moduleFronts }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; hardware: ModuleHardware; noHandles: boolean; /** Què aguanta la zona (`canHoldFront`: pels quatre costats). */ bounds: ZoneBounds; /** Després de la «Frontissa» (la filera System 32 del mòdul). */ afterHinge?: ReactNode; /** Les alçades reals de cada pila de calaixos (`ModuleBuild.drawerHeights`): les dels calaixos interiors en posar portes. */ drawerHeights?: Record<string, number[]>; /** «Fronts del mòdul», a sota de les opcions de la porta. */ moduleFronts?: ReactNode }) {
+export function SplitFrontSection({ root, zone: splitZone, onChange, hardware, noHandles, bounds, afterHinge, moduleFronts, coveredBy }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; hardware: ModuleHardware; noHandles: boolean; /** Què aguanta la zona (`canHoldFront`: pels quatre costats). */ bounds: ZoneBounds; /** Després de la «Frontissa» (la filera System 32 del mòdul). */ afterHinge?: ReactNode; /** Nom de la zona de més amunt que la tapa: les seves portes no es fan (es conserven). */ coveredBy?: string; /** «Fronts del mòdul», a sota de les opcions de la porta. */ moduleFronts?: ReactNode }) {
+  // Una divisió horitzontal amb fronts fixos a dins (el sòcol de baix o de dalt) i un sol compartiment més: les portes no
+  // els tapen, van a aquest compartiment (la drecera crea una porta normal en una zona normal). Mateixos costats que la zona.
+  const kids = splitZone.split?.dir === "h" && !splitZone.front ? splitZone.split.children : []
+  const others = kids.filter((c) => c.front?.kind !== "panel")
+  const redirected = kids.length > others.length && others.length === 1
+  const zone = redirected ? others[0]! : splitZone
   const door = zone.front?.kind === "door" ? zone.front : undefined
   const value = door?.mode ?? "none"
   const canDoor = canHoldFront(bounds, "door")
   const choose = (mode: "none" | "single" | "double") => {
-    // Els calaixos de dins passen a calaixos interiors amb portes i tornen en treure-les (`drawersBehindDoors`, sobre el
-    // subarbre d'aquesta zona).
-    if (mode === "none") return onChange(updateZone(switchFront(root, zone.id, "none"), zone.id, drawersWithoutDoors))
-    const base = updateZone(door ? root : switchFront(root, zone.id, "door"), zone.id, (z) => drawersBehindDoors(z, drawerHeights))
+    // Els calaixos de dins no canvien (regla 3 del model únic): tapats, es fan per dins.
+    if (mode === "none") return onChange(switchFront(root, zone.id, "none"))
+    const base = door ? root : switchFront(root, zone.id, "door")
     const f = findZone(base, zone.id)?.front
     if (f?.kind !== "door") return
     // Una porta nova va amb les frontisses a un costat on hi ha on posar-les.
@@ -276,7 +273,7 @@ export function SplitFrontSection({ root, zone, onChange, hardware, noHandles, b
   }
   return (
     <FoldItem optionId="module.doors" id="zone-front" title="Front" icon={door ? LuDoorClosed : LuSquareDashed} badge={door ? (door.mode === "double" ? "Dues portes" : "Una porta") : "Obert"}>
-      <FormRow optionId="module.doors.mode" label="Portes" help={frontLimitsHelp(bounds, ["none", "door"], door ? "door" : "none") ?? "De dalt a baix de la zona: tapen tots els seus compartiments (armari amb penjador i maleter darrere)."}>
+      <FormRow optionId="module.doors.mode" label="Portes" help={coveredBy && door ? `No es fan: les tapen les portes de «${coveredBy}» (es conserven).` : frontLimitsHelp(bounds, ["none", "door"], door ? "door" : "none") ?? (redirected ? "Van al compartiment entre els sòcols (els fronts fixos queden a la vista)." : "De dalt a baix de la zona: tapen tots els seus compartiments (armari amb penjador i maleter darrere).")}>
         <ChoiceChips
           label="Portes"
           value={value}
@@ -295,8 +292,8 @@ export function SplitFrontSection({ root, zone, onChange, hardware, noHandles, b
   )
 }
 
-/** Resum de les «Opcions de l'interior» per a la insígnia del Front: prestatges, accessoris i calaixos interiors que hi ha («3 · Barra · 2 calaixos»). */
-function shelvesBadge(zone: Zone, behindDoor: boolean): string | undefined {
-  const parts = [...(zone.shelves?.n ? [String(zone.shelves.n)] : []), ...(["rail", "led"] as const).filter((k) => zone[k]).map((k) => (k === "rail" ? "Barra" : "LED")), ...(behindDoor && zone.innerDrawers ? [`${zone.innerDrawers.n} ${zone.innerDrawers.n === 1 ? "calaix" : "calaixos"}`] : [])]
+/** Resum de les «Opcions de l'interior» per a la insígnia del Front: prestatges i accessoris que hi ha («3 · Barra»). */
+function shelvesBadge(zone: Zone): string | undefined {
+  const parts = [...(zone.shelves?.n ? [String(zone.shelves.n)] : []), ...(["rail", "led"] as const).filter((k) => zone[k]).map((k) => (k === "rail" ? "Barra" : "LED"))]
   return parts.length ? parts.join(" · ") : undefined
 }

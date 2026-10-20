@@ -381,10 +381,16 @@ export interface InnerDrawers {
   front?: "kit"
   /** Fronts interiors de vidre (com `drawers.glass`): marc d'una peça de fusta amb la finestra i el vidre al galze. */
   glass?: boolean
+  /**
+   * Només a la construcció (`visibleZone`, no es desa): els **Calaixos** d'un compartiment tapat per les portes d'una zona
+   * de més amunt (per decisió de l'usuari, 2026-10-20: «si el Front tingués les opcions, no farien falta els calaixos
+   * interiors»). Les alçades del front de calaixos («auto» reparteix): omplen tot el compartiment, com els de fora.
+   */
+  sizes?: (number | "auto")[]
 }
 
 export const ZoneSchema: z.ZodType<Zone> = z.lazy(() =>
-  z.object({
+  z.preprocess(migrateInnerDrawers, z.object({
     id: z.string(),
     split: z
       .object({
@@ -426,8 +432,39 @@ export const ZoneSchema: z.ZodType<Zone> = z.lazy(() =>
         glass: z.boolean().optional(),
       })
       .optional(),
-  }),
+  })),
 )
+
+/**
+ * Els **Calaixos interiors** d'abans (`innerDrawers`, una opció pròpia) passen a ser el que són amb el model únic
+ * (2026-10-20, regla 3: el front d'una zona dividida tapa, no esborra): una zona amb Contingut «Calaixos». Si el
+ * compartiment no tenia res més, els calaixos són el seu Front (els tapa la porta de més amunt); si tenia la seva porta o
+ * prestatges a sobre, es divideix en horitzontal: els calaixos a baix, la resta a dalt, i la porta tapa totes dues.
+ */
+function migrateInnerDrawers(raw: unknown): unknown {
+  if (typeof raw !== "object" || raw === null) return raw
+  const z = raw as Record<string, unknown> & { id?: unknown; innerDrawers?: Record<string, unknown>; split?: unknown; front?: unknown; shelves?: unknown; rail?: unknown; led?: unknown }
+  const d = z.innerDrawers
+  if (!d || typeof d !== "object" || z.split || typeof z.id !== "string") return raw
+  const n = typeof d.n === "number" ? d.n : 1
+  const height = typeof d.height === "number" ? d.height : 150
+  const hs = Array.from({ length: n }, (_, i) => (Array.isArray(d.heights) && typeof d.heights[i] === "number" ? (d.heights[i] as number) : height))
+  const front: Record<string, unknown> = { kind: "drawers", n, heights: [...hs.slice(0, n - 1), "auto"] }
+  for (const k of ["hardware", "kit", "drawerSlides", "glass"] as const) if (d[k] !== undefined) front[k] = d[k]
+  const { innerDrawers: _d, ...rest } = z
+  const busy = (z.shelves && typeof z.shelves === "object" && ((z.shelves as { n?: number }).n ?? 0) > 0) || !!z.rail || !!z.led
+  if (!z.front && !busy) return { ...rest, front }
+  const { front: own, shelves, rail, led, ...parent } = rest
+  const top: Record<string, unknown> = { id: `${z.id}-a` }
+  if (shelves !== undefined) top.shelves = shelves
+  if (rail !== undefined) top.rail = rail
+  if (led !== undefined) top.led = led
+  return {
+    ...parent,
+    ...(own ? { front: own } : {}),
+    split: { dir: "h", sizes: [hs.reduce((a, b) => a + b, 0), "auto"], children: [{ id: `${z.id}-c`, front }, top] },
+  }
+}
 
 /** Un front recordat sota la clau d'un altre tipus (dada tocada) no es llegeix. */
 function dropMismatchedFronts(raw: unknown): unknown {

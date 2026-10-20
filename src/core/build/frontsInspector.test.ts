@@ -29,11 +29,11 @@ describe("ferratges que el mòdul fa servir (`usedHardwareSlots`)", () => {
   it("front fix o obert: cap ferratge", () => {
     expect(keys(usedHardwareSlots(withRoot(mod(), { kind: "panel" }))).filter((s) => s !== "dowel" && s !== "system32")).toEqual([])
   })
-  it("els fronts tapats pel front de tota la zona no compten", () => {
+  it("els fronts tapats pel front de tota la zona no compten, llevat dels calaixos (es fan per dins: regla 3)", () => {
     const inner = divided(drawers3, { kind: "flap", dir: "down" })
     const m: Module = { ...inner, root: { ...inner.root, front: { kind: "door", mode: "double", hinge: "left" } } }
     const used = usedHardwareSlots(m)
-    expect(used.has("slide")).toBe(false)
+    expect(used.get("slide")?.count).toBe(3)
     expect(used.has("flap")).toBe(false)
     expect(used.get("hinge")).toEqual({ count: 2, what: "portes" })
   })

@@ -41,8 +41,18 @@ export function topPlinthZone(m: Pick<Module, "carcass" | "root">): PlinthZone |
   return { zone: z, height: h, setback: z.front.kind === "panel" ? (z.front.setback ?? 0) : 0 }
 }
 
-/** Afegeix la zona del sòcol a un extrem de l'«Interior» (l'interior d'abans passa a ser l'altra zona). */
-function wrap(root: Zone, plinth: Zone, height: number, at: "bottom" | "top"): Zone {
+/**
+ * Afegeix la zona del sòcol a un extrem de l'«Interior» (l'interior d'abans passa a ser l'altra zona). Si a l'altre extrem
+ * ja hi ha l'altre sòcol (`merge`), la zona s'afegeix a la mateixa divisió: els dos sòcols són germans de l'interior.
+ */
+function wrap(root: Zone, plinth: Zone, height: number, at: "bottom" | "top", merge: boolean): Zone {
+  const s = root.split
+  if (merge && s) {
+    if (at === "bottom") return { ...root, split: { ...s, sizes: [height, ...s.sizes], children: [plinth, ...s.children] } }
+    // L'última zona era la que sobrava: si cap altra no és «auto», ho passa a ser la que hi havia abans de la nova.
+    const sizes = s.sizes.includes("auto") ? s.sizes : s.sizes.map((x, k) => (k === s.sizes.length - 1 ? "auto" : x))
+    return { ...root, split: { ...s, sizes: [...sizes, height], children: [...s.children, plinth] } }
+  }
   return at === "bottom"
     ? { id: newId(), split: { dir: "h", sizes: [height, "auto"], children: [plinth, root] } }
     : { id: newId(), split: { dir: "h", sizes: ["auto", height], children: [root, plinth] } }
@@ -55,8 +65,8 @@ function unwrap(root: Zone, at: "bottom" | "top"): Zone {
   const children = s.children.filter((_, k) => k !== i)
   const sizes = s.sizes.filter((_, k) => k !== i)
   if (children.length === 1) return children[0]!
-  // L'última zona d'una divisió és la que sobra.
-  return { ...root, split: { ...s, children, sizes: sizes.map((x, k) => (k === sizes.length - 1 ? "auto" : x)) } }
+  // L'última zona d'una divisió és la que sobra (si cap altra no és «auto»).
+  return { ...root, split: { ...s, children, sizes: sizes.includes("auto") ? sizes : sizes.map((x, k) => (k === sizes.length - 1 ? "auto" : x)) } }
 }
 
 /**
@@ -66,7 +76,7 @@ function unwrap(root: Zone, at: "bottom" | "top"): Zone {
 export function addBottomPlinth(m: Module, height = 60, setback = 30): Module {
   if (bottomPlinthZone(m)) return m
   const plinth: Zone = { id: newId(), front: { kind: "panel", setback } }
-  return { ...m, carcass: { ...m.carcass, base: { kind: "none" }, noBottom: true }, root: wrap(m.root, plinth, height, "bottom") }
+  return { ...m, carcass: { ...m.carcass, base: { kind: "none" }, noBottom: true }, root: wrap(m.root, plinth, height, "bottom", !!topPlinthZone(m)) }
 }
 
 /** Treu el sòcol de baix fet amb una zona: torna la base sencera, directe a terra. */
@@ -84,7 +94,7 @@ export function addTopPlinth(m: Module, height = 60, setback = 0): Module {
   if (topPlinthZone(m) || m.carcass.top.kind === "none") return m
   const plinth: Zone = { id: newId(), front: setback ? { kind: "panel", setback } : { kind: "panel" } }
   const { topFiller: _f, tableTop: _t, ...carcass } = m.carcass
-  return { ...m, carcass: { ...carcass, height: Math.min(2800, carcass.height + height), top: { kind: "none" } }, root: wrap(m.root, plinth, height, "top") }
+  return { ...m, carcass: { ...carcass, height: Math.min(2800, carcass.height + height), top: { kind: "none" } }, root: wrap(m.root, plinth, height, "top", !!bottomPlinthZone(m)) }
 }
 
 /** Treu el sòcol de dalt fet amb una zona: el mòdul torna a l'alçada d'abans, amb la tapa sencera. */

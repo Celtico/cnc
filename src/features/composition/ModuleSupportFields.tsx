@@ -54,7 +54,7 @@ export function ModuleSupportFields({ module, base: vb, onChange }: { module: Mo
       {zone && (
         <>
           <NumRow optionId="module.carcass.plinthHeight" label="Alçada sòcol" value={zone.height} min={20} max={300} step={5} suffix="mm" help="La zona de baix de l'Interior (la pots seleccionar a l'arbre)." onChange={(height) => Number.isFinite(height) && height >= 1 && onChange(setPlinthZone(module, "bottom", { height }))} />
-          <NumRow optionId="module.carcass.plinthSetback" label="Retirada" value={zone.setback} min={0} max={200} step={1} suffix="mm" help="Del davant de la caixa al davant del sòcol (el front fix de la zona)." onChange={(setback) => Number.isFinite(setback) && setback >= 0 && onChange(setPlinthZone(module, "bottom", { setback }))} />
+          <NumRow optionId="module.carcass.plinthSetback" label="Retirada" value={zone.setback} min={0} max={200} step={1} suffix="mm" help="0: com els altres fronts. Més: dins de la llum i retirat del davant de la caixa (el front fix de la zona)." onChange={(setback) => Number.isFinite(setback) && setback >= 0 && onChange(setPlinthZone(module, "bottom", { setback }))} />
         </>
       )}
       {!zone && c.base.kind === "plinth" && (
