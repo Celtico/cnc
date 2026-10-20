@@ -23,14 +23,15 @@ const door = group("zone.front.door", "Porta", { code: UI.frontFields, showIf: "
     defaultEditable: true,
     choices: [{ value: "left", label: "Esquerra" }, { value: "right", label: "Dreta" }],
   }),
-  field("zone.front.door.glass", "Vitrina", {
+  field("zone.front.door.glass", "Front", {
     code: UI.frontFields,
-    control: "switch",
-    default: false,
+    control: "choice",
+    default: "wood",
     defaultEditable: true,
-    choices: [{ value: "on", label: "Porta de vidre amb marc", reveals: ["zone.front.door.frame"], hides: ["zone.system32"], note: "frontissa i tirador, només els de marc d'alumini" }],
+    choices: [{ value: "wood", label: "Fusta" }, { value: "glass", label: "Vidre", reveals: ["zone.front.door.frame"], hides: ["zone.system32"], note: "frontissa i tirador, només els de marc d'alumini" }],
+    note: "Cas 10 del model únic: la mateixa fila «Front: Fusta · Vidre» que als calaixos i a l'abatible. El vidre de la porta va en un marc d'alumini (s'hi claven les frontisses); el del calaix, en ranura (decisió de l'usuari, 2026-10-20).",
   }),
-  field("zone.front.door.frame", "Marc", { code: UI.frontFields, control: "hardware", showIf: "Vitrina", defaultText: AS_MODULE }),
+  field("zone.front.door.frame", "Marc", { code: UI.frontFields, control: "hardware", showIf: "Front: Vidre", defaultText: AS_MODULE }),
   field("zone.front.door.hinge", "Frontissa", { code: UI.frontFields, control: "hardware", defaultText: AS_MODULE }),
   field("zone.front.door.handle", "Tirador", { code: UI.frontFields, control: "hardware", defaultText: AS_MODULE, note: "«Cap (push)»: cap forat." }),
 ])
@@ -80,8 +81,8 @@ const drawers = group("zone.front.drawers", "Calaixos", { code: UI.frontFields, 
 
 const flap = group("zone.front.flap", "Abatible", { code: UI.frontFields, showIf: "Contingut = Abatible" }, [
   field("zone.front.flap.dir", "Obre cap a", { code: UI.frontFields, control: "choice", default: "down", defaultEditable: true, choices: [{ value: "down", label: "Avall" }, { value: "up", label: "Amunt" }] }),
-  field("zone.front.flap.glass", "Vitrina", { code: UI.frontFields, control: "switch", default: false, choices: [{ value: "on", label: "Abatible de vidre amb marc", reveals: ["zone.front.flap.frame"], hides: ["zone.front.flap.handleOptions"] }] }),
-  field("zone.front.flap.frame", "Marc", { code: UI.frontFields, control: "hardware", showIf: "Vitrina", defaultText: AS_MODULE }),
+  field("zone.front.flap.glass", "Front", { code: UI.frontFields, control: "choice", default: "wood", choices: [{ value: "wood", label: "Fusta" }, { value: "glass", label: "Vidre", reveals: ["zone.front.flap.frame"], hides: ["zone.front.flap.handleOptions"] }], note: "Cas 10 del model únic: com la porta (marc d'alumini)." }),
+  field("zone.front.flap.frame", "Marc", { code: UI.frontFields, control: "hardware", showIf: "Front: Vidre", defaultText: AS_MODULE }),
   field("zone.front.flap.arm", "Braç d'abatible", { code: UI.frontFields, control: "hardware", defaultText: AS_MODULE }),
   field("zone.front.flap.handle", "Tirador", { code: UI.frontFields, control: "hardware", defaultText: AS_MODULE }),
   section("zone.front.flap.handleOptions", "Opcions del tirador", { icon: "subsection", code: UI.frontFields, showIf: "Sense vidre i amb tirador" }, [
@@ -211,7 +212,7 @@ const shelves = group("zone.shelves", "Opcions de l'interior", {
     showIf: "Prestatges > 0",
     default: false,
     choices: [{ value: "on", label: "Gruixuts (buits)", reveals: ["zone.shelves.thickness"] }],
-  }, [field("zone.shelves.thickness", "Gruix aparent", { code: UI.shelves, control: "number", default: 50 })]),
+  }, [field("zone.shelves.thickness", "Gruix aparent", { code: UI.shelves, control: "number", defaultText: "Cas 9 del model únic: el mateix a les parets, els prestatges i els divisors (`HollowRows`): el més gran de 50 i 2 × tauler + 12; mínim 2 × tauler + 6" })]),
   ]),
   section("zone.shelves.accessoriesGroup", "Accessoris", { icon: "subsection", code: UI.shelves }, [
   field("zone.shelves.rail", "Penjar", {
@@ -254,7 +255,7 @@ export const ZONE = group("zone", "Compartiment", { icon: "zone", code: UI.secti
       default: false,
       choices: [{ value: "on", label: "Gruixuts (buits)", reveals: ["zone.split.thickness"] }],
       note: "Per petició de l'usuari, 2026-10-20: «al fer divisions ficar l'opció de gruixuts (buits)». Els divisors (o prestatges fixos) de la divisió, fets com els prestatges gruixuts: dues pells, llistons i una tira al davant (`Zone.split.thickness`).",
-    }, [field("zone.split.thickness", "Gruix aparent", { code: UI.split, control: "number", default: 50 })]),
+    }, [field("zone.split.thickness", "Gruix aparent", { code: UI.split, control: "number", defaultText: "Cas 9 del model únic: el mateix a les parets, els prestatges i els divisors (`HollowRows`): el més gran de 50 i 2 × tauler + 12; mínim 2 × tauler + 6" })]),
     field("zone.split.innerClearance", "Peces de dins", { code: UI.carcass, control: "number", showIf: "L'«Interior» dividit", defaultText: "Preferències › Folgances per defecte" }),
   ]),
 ])

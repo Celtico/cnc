@@ -110,13 +110,9 @@ export function FrontFields({ front, openRatio, drawerHeights, onChange, hardwar
               />
             </FormRow>
           )}
-          <FormRow optionId="zone.front.door.glass" label="Vitrina" help={front.glass ? "Marc de perfil d'alumini (el triat a «Marc») i vidre; la frontissa i el tirador es trien a sota. No és de CNC: surt a Peces, a «Elements sense nesting», amb les mides per demanar-ho." : undefined}>
-            <Switch.Root size="sm" pt="6px" checked={!!front.glass} onCheckedChange={(e) => onChange({ ...front, glass: e.checked || undefined })}>
-              <Switch.HiddenInput />
-              <Switch.Control />
-              <Switch.Label fontSize="sm">Porta de vidre amb marc</Switch.Label>
-            </Switch.Root>
-          </FormRow>
+          {/* Fusta o Vidre, la mateixa opció que el Front dels calaixos (cas 10 del model únic). La porta de vidre penja d'un
+              marc d'alumini (s'hi claven les frontisses); el calaix, en canvi, el porta en ranura. */}
+          <FaceRow optionId="zone.front.door.glass" glass={!!front.glass} onChange={(glass) => onChange({ ...front, glass: glass || undefined })} help={front.glass ? "El vidre va dins d'un marc de perfil d'alumini (el triat a «Marc»), on es claven les frontisses; el tirador es tria a sota. No és de CNC: surt a Peces, a «Elements sense nesting», amb les mides per demanar-ho." : undefined} />
           {/* La de vidre porta el marc d'alumini (ferratge `glassFrame`); la frontissa i el tirador es trien igual que a les
               de fusta (per decisió de l'usuari): al perfil no es mecanitza res, la placa de la frontissa sí, al lateral. */}
           {front.glass && <HardwarePick optionId="zone.front.door.frame" slot="glassFrame" label="Marc" current={front.frame ?? moduleSlotItem(hardware, "glassFrame")} inherited={moduleSlotItem(hardware, "glassFrame")} onPick={(h) => onChange(h ? { ...front, frame: h } : (({ frame: _f, ...rest }) => rest)(front))} />}
@@ -215,13 +211,7 @@ export function FrontFields({ front, openRatio, drawerHeights, onChange, hardwar
               onChange={(dir) => onChange({ ...front, dir })}
             />
           </FormRow>
-          <FormRow optionId="zone.front.flap.glass" label="Vitrina" help={front.glass ? "Marc de perfil d'alumini i vidre, com la porta de vidre; el braç i el tirador es trien a sota. No és de CNC: surt a Peces, a «Elements sense nesting»." : undefined}>
-            <Switch.Root size="sm" pt="6px" checked={!!front.glass} onCheckedChange={(e) => onChange({ ...front, glass: e.checked || undefined })}>
-              <Switch.HiddenInput />
-              <Switch.Control />
-              <Switch.Label fontSize="sm">Abatible de vidre amb marc</Switch.Label>
-            </Switch.Root>
-          </FormRow>
+          <FaceRow optionId="zone.front.flap.glass" glass={!!front.glass} onChange={(glass) => onChange({ ...front, glass: glass || undefined })} help={front.glass ? "El vidre va dins d'un marc de perfil d'alumini, com a la porta, on es fixa el braç; el tirador es tria a sota. No és de CNC: surt a Peces, a «Elements sense nesting»." : undefined} />
           {front.glass && <HardwarePick optionId="zone.front.flap.frame" slot="glassFrame" label="Marc" current={front.frame ?? moduleSlotItem(hardware, "glassFrame")} inherited={moduleSlotItem(hardware, "glassFrame")} onPick={(h) => onChange(h ? { ...front, frame: h } : (({ frame: _f, ...rest }) => rest)(front))} />}
           <HardwarePick optionId="zone.front.flap.arm" slot="flap" current={front.hardware ?? hardware.flap} inherited={hardware.flap} help={front.glass ? "A l'abatible de vidre, el braç es fixa al perfil amb l'adaptador (Häfele 563.25.960): cap forat al tauler." : undefined} onPick={(h) => onChange(withHardware(front, h))} />
           {handlePick(front)}
@@ -327,4 +317,21 @@ export function FrontFields({ front, openRatio, drawerHeights, onChange, hardwar
         </Stack>
       )
   }
+}
+
+/** **Front**: Fusta o Vidre, la mateixa fila a la porta i a l'abatible que als calaixos (cas 10 del model únic). */
+function FaceRow({ optionId, glass, help, onChange }: { optionId: string; glass: boolean; help?: string | undefined; onChange: (glass: boolean) => void }) {
+  return (
+    <FormRow optionId={optionId} label="Front" help={help}>
+      <ChoiceChips
+        label="Front"
+        value={glass ? "glass" : "wood"}
+        options={[
+          { id: "wood" as const, label: "Fusta" },
+          { id: "glass" as const, label: "Vidre" },
+        ]}
+        onChange={(v) => onChange(v === "glass")}
+      />
+    </FormRow>
+  )
 }

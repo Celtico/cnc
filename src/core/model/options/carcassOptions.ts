@@ -165,9 +165,8 @@ export const CARCASS = section("module.carcass", "Caixa", { icon: "carcass", cod
     default: false,
     defaultEditable: true,
     choices: [{ value: "on", label: "Gruixuts (buits)", reveals: ["module.carcass.hollowThickness"], note: "Cantonades passa a text «A inglet». El mateix nom que Prestatges › Gruix i Divisió › Gruix (2026-10-20)." }],
-    showIf: "No és el nínxol d'un electrodomèstic de terra (rentaplats, rentadora, frigorífic sota taulell)",
     issue: "(menor) Surt també sense laterals, base ni tapa, quan no hi ha cap paret a fer buida.",
-  }, [field("module.carcass.hollowThickness", "Gruix aparent", { code: UI.carcass, control: "number", showIf: "Parets buides", defaultText: "El més gran de 60 i 2 × gruix + 20" })]),
+  }, [field("module.carcass.hollowThickness", "Gruix aparent", { code: UI.carcass, control: "number", showIf: "Parets buides", defaultText: "Cas 9 del model únic: el mateix a les parets, els prestatges i els divisors (`HollowRows`): el més gran de 50 i 2 × tauler + 12; mínim 2 × tauler + 6" })]),
   field("module.carcass.joint", "Cantonades", {
     code: UI.carcass,
     control: "choice",

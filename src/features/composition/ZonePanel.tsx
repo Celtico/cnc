@@ -126,8 +126,8 @@ export function ZonePanel({
   bounds: ZoneBounds
   /** El front de la zona de més amunt que el tapa (els costats de les frontisses, per als calaixos interiors). */
   coverFront?: Front
-  /** El gruix del cos del mòdul (el mínim dels divisors gruixuts). */
-  bodyThickness?: number
+  /** El gruix del cos del mòdul (el Gruix dels prestatges i els divisors gruixuts). */
+  bodyThickness: number
   /** El retirada dels prestatges del mòdul (Mòdul › Caixa): el que hereten els del compartiment. */
   shelfSetback?: number
   /** % d'àrea oberta si la zona té reixeta. */
@@ -175,7 +175,7 @@ export function ZonePanel({
   // divisor), cap prestatge: no surt (es conserva i torna amb els laterals). Amb calaixos o un front fix (darrere no hi ha
   // res a fer servir), tampoc; ni tapat per un front fix de tota la zona.
   const interior = !zone.split && !niche && shelvesBehind && (canHoldShelves(bounds) || canHoldAccessories(bounds))
-    ? { node: <ZoneShelvesSection root={root} zone={zone} onChange={onChange} hardware={hardware} bounds={bounds} system32={system32} {...(shelfSetback !== undefined ? { moduleSetback: shelfSetback } : {})} />, badge: shelvesBadge(zone) }
+    ? { node: <ZoneShelvesSection root={root} zone={zone} onChange={onChange} board={bodyThickness} hardware={hardware} bounds={bounds} system32={system32} {...(shelfSetback !== undefined ? { moduleSetback: shelfSetback } : {})} />, badge: shelvesBadge(zone) }
     : undefined
   return (
     <Stack gap={0}>
@@ -187,7 +187,7 @@ export function ZonePanel({
           <ZoneFrontSection root={root} zone={zone} onChange={onChange} hardware={hardware} noHandles={noHandles} bounds={bounds} afterHinge={system32?.at === "front" ? system32.row : undefined} moduleFronts={moduleFronts} kinds={SPLIT_FRONTS} hides={hiddenInside(zone)} {...(coveredBy ? { covered: { by: coveredBy, fixed: !!coveredByFixed, hinges: [], onMargin: () => {} } } : {})} />
           <FoldItem optionId="zone.split" id="zone-split" title={`Divisió ${zone.split.dir === "v" ? "vertical" : "horitzontal"}`} badge={`${zone.split.children.length} zones`} icon={zone.split.dir === "v" ? LuColumns2 : LuRows2}>
             <SplitSizes root={root} zone={zone} onChange={onChange} onSelect={onSelect} childSizes={childSizes} />
-            <SplitThickness root={root} zone={zone} onChange={onChange} {...(bodyThickness ? { bodyThickness } : {})} />
+            <SplitThickness root={root} zone={zone} onChange={onChange} board={bodyThickness} />
             <HStack wrap="wrap">
               <Button size="sm" variant="outline" onClick={() => onChange(addChild(root, zone.id))}>
                 <LuPlus /> Afegir zona

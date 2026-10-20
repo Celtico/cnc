@@ -6,6 +6,7 @@ import { canHoldAccessories, canHoldShelves, moduleSlotItem, setShelves, slotOf,
 import { NumRow } from "../../../components/NumRow"
 import { FormRow } from "../../../components/FormRow"
 import { HardwarePick } from "../HardwarePick"
+import { HollowRows } from "../HollowRows"
 
 /**
  * **«Opcions de l'interior»** d'un compartiment sense dividir (per decisió de l'usuari, 2026-10-16; abans «Prestatges i
@@ -14,7 +15,7 @@ import { HardwarePick } from "../HardwarePick"
  * secció pròpia: van dins del Front, a sota del «Contingut» (canvien amb el contingut triat). L'id `zone.shelves` és el
  * grup del registre.
  */
-export function ZoneShelvesSection({ root, zone, onChange, hardware, bounds, system32, moduleSetback = 20 }: { /** El retirada dels prestatges del mòdul (el que s'hereta). */ moduleSetback?: number; root: Zone; zone: Zone; onChange: (root: Zone) => void; hardware: ModuleHardware; bounds: ZoneBounds; system32?: { at: "shelves" | "front"; row: ReactNode } }) {
+export function ZoneShelvesSection({ root, zone, onChange, hardware, bounds, system32, moduleSetback = 20, board }: { /** El gruix del tauler del mòdul. */ board: number; /** El retirada dels prestatges del mòdul (el que s'hereta). */ moduleSetback?: number; root: Zone; zone: Zone; onChange: (root: Zone) => void; hardware: ModuleHardware; bounds: ZoneBounds; system32?: { at: "shelves" | "front"; row: ReactNode } }) {
   return (
     <>
       {/* Per grups (per decisió de l'usuari, 2026-10-17), com les subseccions de la Caixa: Prestatges, Accessoris i Calaixos
@@ -64,31 +65,14 @@ export function ZoneShelvesSection({ root, zone, onChange, hardware, bounds, sys
           onChange={(v) => Number.isFinite(v) && v >= 0 && onChange(setShelves(root, zone.id, patchShelves(zone, { setback: v === moduleSetback ? undefined : v })))}
         />
       )}
-      {/* Prestatges gruixuts (buits): queden més bé a la vista, sense porta. */}
-      <FormRow optionId="zone.shelves.thick" label="Gruix">
-        <Switch.Root
-          size="sm"
-          pt="6px"
-          checked={!!zone.shelves?.thickness}
-          onCheckedChange={(e) => onChange(setShelves(root, zone.id, patchShelves(zone, { thickness: e.checked ? 50 : undefined })))}
-        >
-          <Switch.HiddenInput />
-          <Switch.Control />
-          <Switch.Label fontSize="sm">Gruixuts (buits)</Switch.Label>
-        </Switch.Root>
-      </FormRow>
-      {zone.shelves?.thickness && (
-        <NumRow
-          optionId="zone.shelves.thickness"
-          label="Gruix aparent"
-          value={zone.shelves.thickness}
-          min={20}
-          max={200}
-          step={5}
-          onChange={(thickness) => onChange(setShelves(root, zone.id, { ...zone.shelves!, thickness }))}
-          help={zone.front ? "Dues pells, llistons i una tira al davant. Sense porta es veuen més bé." : "Dues pells, llistons i una tira al davant: fan el prestatge com si fos de fusta gruixuda."}
-        />
-      )}
+      {/* Prestatges gruixuts (buits): el mateix Gruix que les parets i els divisors. */}
+      <HollowRows
+        optionIds={{ thick: "zone.shelves.thick", thickness: "zone.shelves.thickness" }}
+        value={zone.shelves?.thickness}
+        board={board}
+        what="Els prestatges"
+        onChange={(thickness) => onChange(setShelves(root, zone.id, patchShelves(zone, { thickness })))}
+      />
       </>}
       </FoldItem>}
       {/* Accessoris del compartiment: ferratges (barra de penjar, tira LED), no fusta; a sota dels prestatges (la tira

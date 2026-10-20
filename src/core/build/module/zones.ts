@@ -356,7 +356,7 @@ export class Builder extends AppliancesBuilder {
     const want = zone.shelves!.thickness
     const T = want && want >= 2 * t + 6 ? want : t
     const hollow = T > t
-    if (want && !hollow) this.warnings.push({ code: "hollow", message: `Prestatges de ${want} mm: amb tauler de ${t} cal un gruix d'almenys ${2 * t + 6} mm. Es fan massissos.`, zoneId: zone.id })
+    if (want && !hollow) this.warnings.push({ code: "hollow", message: `Prestatges de ${want} mm: amb tauler de ${t} cal un gruix d'almenys ${2 * t + 6} mm. Es fan massissos.`, zoneId: zone.id, option: "zone.shelves.thickness" })
     const width = rect.x1 - rect.x0
     // Prestatges fixos (sense «Regulables») d'un mòdul dividit: també la folgança de les peces de dins.
     const inner = zone.shelves!.adjustable ? 0 : this.innerGap()

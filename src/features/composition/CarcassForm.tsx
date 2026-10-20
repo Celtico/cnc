@@ -15,6 +15,7 @@ import { HardwarePick } from "./HardwarePick"
 import { HangerFields } from "./BaseFields"
 import { ModuleSupportFields } from "./ModuleSupportFields"
 import { GrillePatternFields } from "./GrillePatternFields"
+import { HollowRows } from "./HollowRows"
 
 type CarcassSection = "dims" | "structure"
 
@@ -245,31 +246,14 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
               </HStack>
             </FormRow>}
 
-            {/* Parets buides: caixa de dues pells que fa el moble com si fos de fusta gruixuda (al nínxol d'un aparell, no). */}
-            {<FormRow optionId="module.carcass.hollow" label="Gruix" help="Laterals, base i tapa gruixuts, fets com els prestatges i les divisions gruixuts: dues pells, llistons i una tira al davant.">
-              <Switch.Root
-                size="sm"
-                pt="6px"
-                checked={!!c.hollow}
-                onCheckedChange={(e) => set({ hollow: e.checked ? { thickness: Math.max(60, 2 * c.thickness + 20) } : undefined })}
-              >
-                <Switch.HiddenInput />
-                <Switch.Control />
-                <Switch.Label fontSize="sm">Gruixuts (buits)</Switch.Label>
-              </Switch.Root>
-            </FormRow>}
-            {c.hollow && (
-              <NumRow
-                optionId="module.carcass.hollowThickness"
-                label="Gruix aparent"
-                value={c.hollow.thickness}
-                min={2 * c.thickness + 6}
-                max={300}
-                step={5}
-                onChange={(thickness) => set({ hollow: { thickness } })}
-                help={`Laterals, base i tapa: pell de fora i de dins de ${c.thickness} mm, llistons a dins i una tira al davant. L'interior va igual.`}
-              />
-            )}
+            {/* Parets buides: caixa de dues pells que fa el moble com si fos de fusta gruixuda (el mateix Gruix que els prestatges i els divisors). */}
+            <HollowRows
+              optionIds={{ thick: "module.carcass.hollow", thickness: "module.carcass.hollowThickness" }}
+              value={c.hollow?.thickness}
+              board={c.thickness}
+              what="Laterals, base i tapa"
+              onChange={(thickness) => set({ hollow: thickness ? { thickness } : undefined })}
+            />
 
             {/* Cantonades: com s'uneix la tapa amb els laterals. */}
             {/* Sense laterals, o sense tapa ni base a baix dels laterals (amb sòcol la base queda

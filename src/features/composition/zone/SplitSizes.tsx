@@ -1,9 +1,10 @@
 import { Box, Button, HStack, Stack, Switch, Text } from "@chakra-ui/react"
 import { setSplitSize, setSplitThickness, type Zone } from "../../../core/model"
-import { NumberField, NumRow } from "../../../components/NumRow"
+import { NumberField } from "../../../components/NumRow"
 import { FormRow } from "../../../components/FormRow"
 import { splitRows } from "../zoneLabel"
 import { fmtNum } from "../../../lib/format"
+import { HollowRows } from "../HollowRows"
 
 /**
  * La mida de cada zona d'una divisió, al pare (per decisió de l'usuari, 2026-10-08: «a les obertures no té sentit
@@ -71,32 +72,16 @@ export function SplitSizes({ root, zone, onChange, onSelect, childSizes }: { roo
  * gruixuts (buits)»): com Prestatges › Gruix, l'interruptor i el gruix aparent. Vertical: els divisors; horitzontal: els
  * prestatges fixos.
  */
-export function SplitThickness({ root, zone, onChange, bodyThickness }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; bodyThickness?: number }) {
+export function SplitThickness({ root, zone, onChange, board }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; board: number }) {
   if (!zone.split) return null
   const thickness = zone.split.thickness
-  const what = zone.split.dir === "v" ? "divisors" : "prestatges fixos"
-  const min = bodyThickness ? 2 * bodyThickness + 6 : undefined
   return (
-    <>
-      <FormRow optionId="zone.split.thick" label="Gruix">
-        <Switch.Root size="sm" pt="6px" checked={!!thickness} onCheckedChange={(e) => onChange(setSplitThickness(root, zone.id, e.checked ? 50 : undefined))}>
-          <Switch.HiddenInput />
-          <Switch.Control />
-          <Switch.Label fontSize="sm">Gruixuts (buits)</Switch.Label>
-        </Switch.Root>
-      </FormRow>
-      {thickness && (
-        <NumRow
-          optionId="zone.split.thickness"
-          label="Gruix aparent"
-          value={thickness}
-          min={20}
-          max={200}
-          step={5}
-          onChange={(v) => Number.isFinite(v) && v >= 20 && onChange(setSplitThickness(root, zone.id, v))}
-          help={`Els ${what} d'aquesta divisió: dues pells, llistons i una tira al davant, com els prestatges gruixuts.${min ? ` Almenys ${fmtNum(min)} mm (2 × tauler + 6); si no, es fan massissos.` : ""}`}
-        />
-      )}
-    </>
+    <HollowRows
+      optionIds={{ thick: "zone.split.thick", thickness: "zone.split.thickness" }}
+      value={thickness}
+      board={board}
+      what={zone.split.dir === "v" ? "Els divisors d'aquesta divisió" : "Els prestatges fixos d'aquesta divisió"}
+      onChange={(v) => onChange(setSplitThickness(root, zone.id, v))}
+    />
   )
 }
