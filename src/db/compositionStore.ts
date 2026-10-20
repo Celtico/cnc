@@ -1,4 +1,4 @@
-import { CompositionSchema, cabinetToComposition, normalizeComposition, parseCameraPose, repairComposition, withSupport, type CameraPose, type Composition } from "../core/model"
+import { CompositionSchema, cabinetToComposition, normalizeComposition, parseCameraPose, repairComposition, withSupport, withZonePlinths, type CameraPose, type Composition } from "../core/model"
 import { panelBox } from "../core/build/geometry"
 import { migrateCableHoles } from "../core/build/refCuts"
 import { db, safeParams, type Project } from "./db"
@@ -53,7 +53,8 @@ export function readComposition(project: Pick<Project, "params" | "composition" 
   // Sense cap mòdul (un moble nou, un objecte buit) es queda així: l'Editor treballa amb 0 mòduls.
   // Els passacables dels mòduls (versió anterior) passen a ser objectes que tallen.
   // Un sol suport per als mòduls de terra i el sòcol de cada tram (els mobles d'abans el prenen dels seus mòduls).
-  return { composition: withSupport(migrateCableHoles(normalizeComposition(composition), panelBox)), problems, unreadable: false }
+  // Els sòcols d'abans (la peça de la caixa al moble normal, la de sobre la tapa) passen a les dreceres de zones.
+  return { composition: withZonePlinths(withSupport(migrateCableHoles(normalizeComposition(composition), panelBox))), problems, unreadable: false }
 }
 
 /** Composició d'un projecte, reparada si cal i migrant el mòdul de caixa antic. */

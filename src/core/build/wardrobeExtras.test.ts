@@ -1,26 +1,25 @@
 import { describe, expect, it } from "vitest"
-import { DEFAULT_HARDWARE_LIBRARY, defaultModule, type Module } from "../model"
+import { DEFAULT_HARDWARE_LIBRARY, bottomPlinthZone, defaultModule, topPlinthZone, withZonePlinths, type Module } from "../model"
 import { buildModule } from "./buildModule"
-import { panelBox } from "./geometry"
 
 const base = (): Module => defaultModule("a", "Armari", { width: 800, height: 2000, depth: 560 })
 
-describe("sòcol de dalt (fins al sostre)", () => {
-  it("un tauler dret sobre la tapa, de tota l'amplada, retirat del davant", () => {
+describe("sòcols d'abans (casos 6 i 7 del model únic: només les dreceres de zones)", () => {
+  it("la peça de sobre la tapa passa al sòcol de dalt fet amb una zona: mateixa alçada total i retirada", () => {
     const m = base()
-    const b = buildModule({ ...m, carcass: { ...m.carcass, topFiller: { height: 80, setback: 10 } } })
-    const f = b.panels.find((p) => p.id === "top-filler")!
-    expect(f).toBeDefined()
-    const box = panelBox(f)
-    expect(box.min[1]).toBeCloseTo(2000)
-    expect(box.max[1]).toBeCloseTo(2080)
-    expect(box.max[0] - box.min[0]).toBeCloseTo(800)
-    expect(box.max[2]).toBeCloseTo(560 - 10)
+    const [o] = withZonePlinths({ modules: [{ ...m, carcass: { ...m.carcass, topFiller: { height: 80, setback: 10 } } }] }).modules
+    expect(o!.carcass.topFiller).toBeUndefined()
+    expect(o!.carcass.height).toBe(m.carcass.height + 80)
+    expect(topPlinthZone(o!)).toMatchObject({ height: 80, setback: 10 })
+    expect(buildModule(o!).panels.some((p) => p.id === "top-filler")).toBe(false)
   })
-  it("sense tapa, no es fa", () => {
+  it("al moble normal, el sòcol de la caixa passa al de baix fet amb una zona; a la cuina es queda", () => {
     const m = base()
-    const b = buildModule({ ...m, carcass: { ...m.carcass, top: { kind: "none" }, topFiller: { height: 80, setback: 0 } } })
-    expect(b.panels.some((p) => p.id === "top-filler")).toBe(false)
+    const plinth = { ...m, carcass: { ...m.carcass, base: { kind: "plinth" as const, height: 70, setback: 25 } } }
+    const [o] = withZonePlinths({ modules: [plinth] }).modules
+    expect(o!.carcass.base.kind).toBe("none")
+    expect(bottomPlinthZone(o!)).toMatchObject({ height: 70, setback: 25 })
+    expect(withZonePlinths({ kind: "cuina", modules: [plinth] }).modules[0]).toBe(plinth)
   })
 })
 

@@ -149,7 +149,8 @@ export const CarcassSchema = z.object({
   /**
    * **Sòcol de dalt** (per petició de l'usuari, 2026-10-20: «el sòcol de la tapa», l'armari fins al sostre): un tauler del
    * gruix del cos, de tota l'amplada, dret sobre la tapa, `height` mm d'alt i retirat `setback` del davant de la caixa.
-   * Tapa el buit fins al sostre. Només amb tapa (sense tauler de taula).
+   * Tapa el buit fins al sostre. D'abans (cas 7 del model únic): només es llegeix, i en obrir el moble passa a la drecera
+   * de zones (`addTopPlinth`, `withZonePlinths`); no es fa.
    */
   topFiller: z.object({ height: mm.min(10).max(600), setback: mm.min(0).max(200) }).optional(),
   sides: z.object({ left: z.boolean(), right: z.boolean() }),

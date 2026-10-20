@@ -3,6 +3,7 @@ import { buildComposition } from "../build/buildComposition"
 import { splitChildSizes } from "../build/layout"
 import {
   setSupport,
+  withZonePlinths,
   applySettingsToModule,
   backChoices,
   boardChoices,
@@ -329,7 +330,7 @@ function apply(comp: Composition, name: ToolName, input: never, ctx: ToolContext
       if (!support) return { comp: next, result: { module_id: m.id } }
       const cur = next.support ?? { kind: "floor" as const, height: 100, plinth: { setback: 20 } }
       const s = support
-      return { comp: setSupport(next, { ...cur, kind: s.kind, ...(s.height ? { height: s.height } : {}), ...(s.setback !== undefined ? { plinth: { ...cur.plinth, setback: s.setback } } : {}) }), result: { module_id: m.id, support: "el de tots els mòduls de terra" } }
+      return { comp: withZonePlinths(setSupport(next, { ...cur, kind: s.kind, ...(s.height ? { height: s.height } : {}), ...(s.setback !== undefined ? { plinth: { ...cur.plinth, setback: s.setback } } : {}) })), result: { module_id: m.id, support: "el de tots els mòduls de terra" } }
     }
     case "split_zone": {
       const i = input as In<"split_zone">

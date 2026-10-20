@@ -1,4 +1,4 @@
-import { NO_EDGES, type Carcass, type Cutout, type EdgeBanding, type Panel, type PanelRole, type Vec3, UI_PATHS, frontOptionsUse } from "../../model"
+import { NO_EDGES, type Cutout, type EdgeBanding, type Panel, type PanelRole, type Vec3, UI_PATHS, frontOptionsUse } from "../../model"
 import { X, Y, Z, dowelJoint, neg, placement, r, threeAlong, toLocal } from "../geometry"
 import { MIN_OPEN_RATIO, grilleCutouts, type Rect } from "../grille"
 import { BuilderBase } from "./base"
@@ -18,7 +18,6 @@ export class CarcassBuilder extends BuilderBase {
     if (d.hasTop) this.buildHorizontal("top")
     if (c.back !== "none") this.buildBack()
     if (c.base.kind === "plinth") this.buildPlinth()
-    if (c.topFiller && d.hasTop && !c.tableTop) this.buildTopFiller(c.topFiller)
     if (d.hollow)
       this.warnings.push({ code: "hollow", message: `Parets buides de ${d.hollow} mm: cada paret són dues pells, llistons a dins i una tira al davant, encolats abans de muntar el moble.` })
     else if (c.hollow)
@@ -439,15 +438,6 @@ export class CarcassBuilder extends BuilderBase {
     // Tapa amb ranura d'aire: no porta ranura del fons i el fons s'atura a sota (no hi entra).
     if (!d.hasTop || c.top.kind === "ventSlot") return d.interior.y1
     return d.interior.y1 + c.grooveDepth
-  }
-
-  /** Sòcol de dalt (`Carcass.topFiller`): dret sobre la tapa, de tota l'amplada, fins al sostre. */
-  protected buildTopFiller(f: NonNullable<Carcass["topFiller"]>): void {
-    const { m, d } = this
-    const t = d.t
-    const z0 = d.D - f.setback - t
-    this.add(this.basePanel("top-filler", "socol d", "Sòcol de dalt", "plinth", d.W, f.height, t, m.carcass.material, "x", edges("bottom", "left", "right"), placement([0, d.H, z0], X, Y, Z, Z)))
-    this.warnings.push({ code: "top-filler", info: true, message: `Sòcol de dalt de ${fmtNum(f.height)} mm: es cargola a la tapa per dins amb escaires; tallar-lo a l'alçada real del sostre a l'obra.` })
   }
 
   protected buildPlinth(): void {

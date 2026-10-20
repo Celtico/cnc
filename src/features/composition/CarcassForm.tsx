@@ -188,8 +188,8 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
                 {vc.top.kind === "full" && c.top.kind === "full" && <TableTopFields module={module} onChange={onChange} />}
                 {/* Sòcol de dalt (per petició de l'usuari, 2026-10-20), una drecera («0 casos especials»): una zona a dalt de tot
                     amb un front fix; el divisor fa de tapa (`addTopPlinth`). El d'abans (`topFiller`, una peça sobre la
-                    tapa) es conserva als mòduls que el porten. */}
-                {!c.topFiller && (topZone || (vc.top.kind !== "none" && !vc.tableTop)) && (
+                    tapa) passa a aquesta drecera en obrir el moble (`withZonePlinths`). */}
+                {(topZone || (vc.top.kind !== "none" && !vc.tableTop)) && (
                   <>
                     <FormRow optionId="module.carcass.topFiller" label="Sòcol de dalt" help={topZone ? "La zona de dalt de l'Interior, amb un front fix: el divisor de sota fa de tapa." : undefined}>
                       <Switch.Root size="sm" pt="6px" checked={!!topZone} onCheckedChange={(e) => onChange(e.checked ? addTopPlinth(module) : removeTopPlinth(module))}>
@@ -202,23 +202,6 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
                       <>
                         <NumRow optionId="module.carcass.topFillerHeight" label="Alçada" value={topZone.height} min={10} max={600} step={5} suffix="mm" help={`El moble fa ${c.height} mm d'alt, amb el sòcol. Posa-hi el buit fins al sostre.`} onChange={(height) => Number.isFinite(height) && height >= 10 && onChange(setPlinthZone(module, "top", { height }))} />
                         <NumRow optionId="module.carcass.topFillerSetback" label="Retirada" value={topZone.setback} min={0} max={200} step={1} suffix="mm" help="0: com els altres fronts. Més: dins de la llum i retirat del davant de la caixa." onChange={(setback) => Number.isFinite(setback) && setback >= 0 && onChange(setPlinthZone(module, "top", { setback }))} />
-                      </>
-                    )}
-                  </>
-                )}
-                {c.topFiller && vc.top.kind !== "none" && !vc.tableTop && (
-                  <>
-                    <FormRow optionId="module.carcass.topFiller" label="Sòcol de dalt">
-                      <Switch.Root size="sm" pt="6px" checked={!!c.topFiller} onCheckedChange={(e) => set({ topFiller: e.checked ? { height: 60, setback: 0 } : undefined })}>
-                        <Switch.HiddenInput />
-                        <Switch.Control />
-                        <Switch.Label fontSize="sm">Fins al sostre</Switch.Label>
-                      </Switch.Root>
-                    </FormRow>
-                    {c.topFiller && (
-                      <>
-                        <NumRow optionId="module.carcass.topFillerHeight" label="Alçada" value={c.topFiller.height} min={10} max={600} step={5} help={`Dret sobre la tapa: el moble fa ${c.height + c.topFiller.height} mm d'alt. Posa-hi el buit fins al sostre.`} onChange={(height) => Number.isFinite(height) && height >= 10 && set({ topFiller: { ...c.topFiller!, height } })} />
-                        <NumRow optionId="module.carcass.topFillerSetback" label="Retirada" value={c.topFiller.setback} min={0} max={200} step={1} help="Del davant de la caixa al davant del sòcol (0: a ras de la caixa, darrere les portes)." onChange={(setback) => Number.isFinite(setback) && setback >= 0 && set({ topFiller: { ...c.topFiller!, setback } })} />
                       </>
                     )}
                   </>

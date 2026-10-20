@@ -75,8 +75,8 @@ export function visibleModule(m: Module): Module {
   if (c.top.kind !== "full") delete carcass.tableTop
   // Cantonada en L: només si aquell costat no té lateral.
   if (c.corner && c.sides[c.corner]) delete carcass.corner
-  // Sòcol de dalt: només amb tapa i sense tauler de taula (dret sobre la tapa).
-  if (c.top.kind === "none" || carcass.tableTop) delete carcass.topFiller
+  // Sòcol de dalt d'abans: no es fa (passa a la drecera de zones en obrir el moble, `withZonePlinths`).
+  delete carcass.topFiller
   const root = visibleZone(m.root, kitDefaultOf(m), false, carcassBounds(carcass), false, true)
   // Fons del calaix: només amb calaixos que es fan (la fila de Materials no surt sense).
   if (!hasDrawers(root) || !c.drawerBottomMaterial) delete carcass.drawerBottomMaterial

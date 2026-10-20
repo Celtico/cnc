@@ -119,17 +119,28 @@ export function setPlinthZone(m: Module, at: "bottom" | "top", patch: { height?:
 }
 
 /**
- * Moble nou d'una plantilla (galeries, ambients, assistent): fora de la cuina, els mòduls amb el sòcol de la caixa d'abans
- * (`base: plinth`) passen al sòcol fet amb una zona (`addBottomPlinth`), el mateix que fa la drecera de Caixa › Base. La
- * cuina (sòcol de tram, amb potes) no es toca.
+ * Els sòcols d'abans passen als fets amb zones (casos 6 i 7 del model únic: només les dreceres), en crear un moble d'una
+ * plantilla (galeries, ambients, assistent) i en obrir-ne un de desat:
+ * - fora de la cuina, el sòcol de la caixa (`base: plinth`) passa a `addBottomPlinth`, el mateix que fa la drecera de
+ *   Caixa › Base. La cuina (sòcol de tram, amb potes) no es toca;
+ * - a tots, la peça de sobre la tapa (`topFiller`) passa a `addTopPlinth`, la drecera de Caixa › Tapa.
  */
 export function withZonePlinths<T extends Pick<Composition, "modules" | "kind" | "runs" | "support">>(comp: T): T {
-  if (comp.support || compositionKind(comp) === "cuina" || !comp.modules.some((m) => m.carcass.base.kind === "plinth")) return comp
+  const bottom = !comp.support && compositionKind(comp) !== "cuina"
+  const old = (m: Module) => !!m.carcass.topFiller || (bottom && m.carcass.base.kind === "plinth")
+  if (!comp.modules.some(old)) return comp
   return {
     ...comp,
-    modules: comp.modules.map((m) => {
+    modules: comp.modules.map((m0) => {
+      if (!old(m0)) return m0
+      let m = m0
+      const f = m.carcass.topFiller
+      if (f) {
+        const { topFiller: _f, ...carcass } = m.carcass
+        m = addTopPlinth({ ...m, carcass }, f.height, f.setback)
+      }
       const b = m.carcass.base
-      return b.kind === "plinth" ? addBottomPlinth({ ...m, carcass: { ...m.carcass, base: { kind: "none" } } }, b.height, b.setback) : m
+      return bottom && b.kind === "plinth" ? addBottomPlinth({ ...m, carcass: { ...m.carcass, base: { kind: "none" } } }, b.height, b.setback) : m
     }),
   }
 }

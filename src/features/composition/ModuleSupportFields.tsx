@@ -18,7 +18,7 @@ type BaseChoice = "none" | "plinth" | "legs" | "open"
  *
  * El **Sòcol** és una drecera (per decisió de l'usuari, 2026-10-20: «0 casos especials»): «Sense base» i una zona a baix
  * de tot amb un front fix retirat (`addBottomPlinth`); l'Alçada i la Retirada són les d'aquesta zona. El sòcol d'abans
- * (`Base.plinth`, una peça pròpia) es conserva als mòduls que el porten.
+ * (`Base.plinth`, una peça pròpia) passa a aquesta drecera en obrir el moble (`withZonePlinths`).
  */
 export function ModuleSupportFields({ module, base: vb, onChange }: { module: Module; /** La base tal com es construeix (`visibleModule`). */ base: Base; onChange: (m: Module) => void }) {
   const c = module.carcass
@@ -55,12 +55,6 @@ export function ModuleSupportFields({ module, base: vb, onChange }: { module: Mo
         <>
           <NumRow optionId="module.carcass.plinthHeight" label="Alçada sòcol" value={zone.height} min={20} max={300} step={5} suffix="mm" help="La zona de baix de l'Interior (la pots seleccionar a l'arbre)." onChange={(height) => Number.isFinite(height) && height >= 1 && onChange(setPlinthZone(module, "bottom", { height }))} />
           <NumRow optionId="module.carcass.plinthSetback" label="Retirada" value={zone.setback} min={0} max={200} step={1} suffix="mm" help="0: com els altres fronts. Més: dins de la llum i retirat del davant de la caixa (el front fix de la zona)." onChange={(setback) => Number.isFinite(setback) && setback >= 0 && onChange(setPlinthZone(module, "bottom", { setback }))} />
-        </>
-      )}
-      {!zone && c.base.kind === "plinth" && (
-        <>
-          <NumRow optionId="module.carcass.plinthHeight" label="Alçada sòcol" value={c.base.height} min={20} max={300} step={5} onChange={(height) => c.base.kind === "plinth" && set({ ...c.base, height })} />
-          <NumRow optionId="module.carcass.plinthSetback" label="Retirada" value={c.base.setback} min={0} max={100} step={5} onChange={(setback) => c.base.kind === "plinth" && set({ ...c.base, setback })} />
         </>
       )}
       {c.base.kind === "legs" && <LegsFields base={c.base} thickness={c.thickness} onChange={set} />}
