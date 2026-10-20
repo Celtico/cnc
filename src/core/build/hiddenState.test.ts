@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { DEFAULT_GRILLE, DEFAULT_HARDWARE_KITS, DEFAULT_MODULE_HARDWARE, HARDWARE_SLOTS, defaultModule, isLegacyHardware, setFront, setShelves, usedHardwareSlots, type Carcass, type Composition, type Front, type Module, type ModuleHardware, type Zone } from "../model"
+import { DEFAULT_GRILLE, DEFAULT_HARDWARE_KITS, coversSplit, DEFAULT_MODULE_HARDWARE, HARDWARE_SLOTS, defaultModule, isLegacyHardware, setFront, setShelves, usedHardwareSlots, type Carcass, type Composition, type Front, type Module, type ModuleHardware, type Zone } from "../model"
 import { buildComposition } from "./buildComposition"
 import { catalogCorpus, int, MATERIALS, pick, randomComposition, rng, type Rnd } from "./testCorpus"
 
@@ -140,7 +140,7 @@ const frontHeld = (sides: Sides): boolean => sides.left && sides.right
  * qualsevol nivell, per decisió de l'usuari, 2026-10-20; el front fix de tota la zona no es fa).
  */
 const frontBuilt = (z: Zone, sides: Sides, covered: boolean, _isRoot: boolean): boolean =>
-  !!z.front && frontHeld(sides) && !covered && (!z.split || z.front.kind === "door") && !inNiche(z, covered)
+  !!z.front && frontHeld(sides) && !covered && (!z.split || coversSplit(z.front.kind)) && !inNiche(z, covered)
 
 /**
  * Electrodomèstic (v46, Electrodomèstic del compartiment): només en un compartiment sense dividir i no tapat. Els que
@@ -198,10 +198,10 @@ function scrambleZone(z: Zone, r: Rnd, noHandles: boolean, covered: boolean, sid
     const any = pick(r, [undefined, ...REMEMBERED])
     if (any) out.front = structuredClone(any)
     else delete out.front
-  } else if ((!held || (z.split && f?.kind !== "door")) && !covered) {
+  } else if ((!held || (z.split && !(f && coversSplit(f.kind)))) && !covered) {
     // Sense un lateral o divisor a cada costat el front no es fa (el compartiment és com obert): qualsevol front o cap.
-    // D'una zona dividida només es fan les portes: qualsevol altre front o cap.
-    const any = pick(r, [undefined, ...(held ? REMEMBERED.filter((x) => x.kind !== "door") : [...REMEMBERED, { kind: "door", mode: "single", hinge: "right", hardware: structuredClone(DEFAULT_MODULE_HARDWARE.dowel) } as Front])])
+    // D'una zona dividida només es fan els que la poden tapar (`coversSplit`): qualsevol altre front o cap.
+    const any = pick(r, [undefined, ...(held ? REMEMBERED.filter((x) => !coversSplit(x.kind)) : [...REMEMBERED, { kind: "door", mode: "single", hinge: "right", hardware: structuredClone(DEFAULT_MODULE_HARDWARE.dowel) } as Front])])
     if (any) out.front = structuredClone(any)
     else delete out.front
   } else if (f) out.front = scrambleFront(f, r, noHandles || (covered && f.kind === "drawers"))
@@ -419,7 +419,7 @@ describe("independència del camí: el mateix estat visible fa el mateix moble",
     const door = rootFront({ kind: "door", mode: "single", hinge: "left" })
     expect(run([shelvesN(3), rail, panel, door])).toBe(run([shelvesN(3), rail, door]))
   })
-  it("front de tota la zona: només les portes es fan (a qualsevol divisió); el front fix es conserva sense fer-se", () => {
+  it("front de tota la zona (regla 3): porta, abatible, reixeta i front fix es fan a qualsevol divisió i tapen les de dins", () => {
     // L'«Interior» dividit en dos (ids fixos) i els seus compartiments.
     const split = (dir: "v" | "h"): Op => (m) => ({ ...m, root: { id: m.root.id, split: { dir, sizes: ["auto", "auto"], children: [{ id: "a" }, { id: "b" }] } } })
     const at = (id: string, f: (z: Zone) => Zone): Op => (m) => ({ ...m, root: { ...m.root, split: { ...m.root.split!, children: m.root.split!.children.map((c) => (c.id === id ? f(c) : c)) } } })
@@ -428,20 +428,21 @@ describe("independència del camí: el mateix estat visible fa el mateix moble",
     const acc = at("b", (z) => ({ ...z, rail: {}, led: {} }))
     const panel = rootFront({ kind: "panel" })
     const door = rootFront({ kind: "door", mode: "double", hinge: "left" })
-    // El front fix de tota la zona ja no es tria (Mòdul › Portes: només portes): no es fa ni amaga res (res amagat compta).
     const ref = run([split("h"), shelves, rows, acc])
-    for (const p of permutations([shelves, rows, acc, panel])) expect(run([split("h"), ...p])).toBe(ref)
-    // Les portes de l'arrel, sí (armari amb penjador darrere): prestatges i accessoris hi són i el front fix d'abans no compta.
+    // Front fix de tota la zona: es fa i darrere no es fa res (es conserva).
+    expect(run([split("h"), shelves, rows, acc, panel])).not.toBe(ref)
+    for (const p of permutations([shelves, rows, acc, panel])) expect(run([split("h"), ...p])).toBe(run([split("h"), panel]))
+    // Les portes: prestatges i accessoris hi són (per dins).
     expect(run([split("h"), shelves, rows, acc, panel, door])).toBe(run([split("h"), shelves, rows, acc, door]))
     expect(run([split("h"), shelves, rows, acc, door])).not.toBe(ref)
     expect(run([split("h"), shelves, rows, acc, door])).not.toBe(run([split("h"), door]))
-    // Treure les portes: com sense front.
+    // Treure el front: com sense front.
     expect(run([split("h"), shelves, acc, door, rootFront(null)])).toBe(run([split("h"), shelves, acc]))
-    // Una divisió de dins amb portes (per decisió de l'usuari, 2026-10-20) es fa i tapa els seus compartiments; amb un
-    // front fix, no es fa ni tapa res.
+    // Una divisió de dins amb un front que tapa: es fa i tapa els seus compartiments.
     const nested = (front?: Front): Op => (m) => ({ ...m, root: { id: m.root.id, split: { dir: "h", sizes: ["auto", "auto"], children: [{ id: "p", ...(front ? { front } : {}), split: { dir: "v", sizes: ["auto", "auto"], children: [{ id: "a", shelves: { n: 2, adjustable: false } }, { id: "c", front: { kind: "drawers", n: 2, heights: ["auto", "auto"] } }] } }, { id: "b" }] } } })
     expect(run([nested({ kind: "door", mode: "double", hinge: "left" })])).not.toBe(run([nested()]))
-    expect(run([nested({ kind: "panel" })])).toBe(run([nested()]))
+    expect(run([nested({ kind: "panel" })])).not.toBe(run([nested()]))
+    expect(run([nested({ kind: "flap", dir: "down" })])).not.toBe(run([nested()]))
     // Amb les portes de l'arrel, tot el de dins queda tapat (també el front de la divisió de dins, que no compta).
     expect(run([nested({ kind: "panel" }), door])).toBe(run([nested(), door]))
     expect(run([nested(), door])).not.toBe(run([nested()]))

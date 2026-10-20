@@ -1,5 +1,5 @@
 import { Button, HStack, Menu, Stack, Text } from "@chakra-ui/react"
-import { LuArrowUp, LuClipboardPaste, LuCopy, LuColumns2, LuRows2, LuPlus, LuSquareSplitHorizontal, LuSquareSplitVertical, LuTrash2, LuUngroup, LuDoorClosed, LuFlipHorizontal2, LuSquareDashed } from "react-icons/lu"
+import { LuArrowUp, LuClipboardPaste, LuCopy, LuColumns2, LuRows2, LuPlus, LuSquareSplitHorizontal, LuSquareSplitVertical, LuTrash2, LuUngroup } from "react-icons/lu"
 import type { ReactNode } from "react"
 import { FoldItem } from "../../components/Fold"
 import {
@@ -8,30 +8,24 @@ import {
   parentOf,
   removeZone,
   addSideMargin,
-  setFront,
   splitZone,
-  switchFront,
   unsplitZone,
   flipSplit,
   canHoldAccessories,
-  canHoldFront,
   canHoldShelves,
-  frontLimitsHelp,
   splitDirsFor,
-  findZone,
   nicheAppliance,
   pasteZone,
+  coversSplit,
   type Front,
   type ModuleHardware,
   type Zone,
   type ZoneBounds,
 } from "../../core/model"
 import type { KitOrder } from "../../core/build/buildModule"
-import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { SplitSizes, SplitThickness } from "./zone/SplitSizes"
 import { ZoneFrontSection } from "./zone/FrontSection"
 import { ZoneShelvesSection } from "./zone/ShelvesSection"
-import { FrontFields } from "./zone/FrontFields"
 import { ActionsMenu } from "../../components/ActionsMenu"
 import { toaster } from "../../components/ui/toaster"
 import { readClip, writeClip } from "../editor/clipboard"
@@ -188,8 +182,9 @@ export function ZonePanel({
 
       {zone.split ? (
         <>
-          {/* El Front de la zona dividida, a dalt de tot (per decisió de l'usuari, 2026-10-20): les portes que la tapen. */}
-          <SplitFrontSection root={root} zone={zone} onChange={onChange} hardware={hardware} noHandles={noHandles} bounds={bounds} afterHinge={system32?.at === "front" ? system32.row : undefined} moduleFronts={moduleFronts} {...(coveredBy ? { coveredBy } : {})} />
+          {/* El Front de la zona dividida, a dalt de tot: el mateix panell que el d'una fulla (regla 1), amb els fronts que la
+              poden tapar (regla 3: porta, abatible, reixeta o front fix). */}
+          <ZoneFrontSection root={root} zone={zone} onChange={onChange} hardware={hardware} noHandles={noHandles} bounds={bounds} afterHinge={system32?.at === "front" ? system32.row : undefined} moduleFronts={moduleFronts} kinds={SPLIT_FRONTS} hides={hiddenInside(zone)} {...(coveredBy ? { covered: { by: coveredBy, fixed: !!coveredByFixed, hinges: [], onMargin: () => {} } } : {})} />
           <FoldItem optionId="zone.split" id="zone-split" title={`Divisió ${zone.split.dir === "v" ? "vertical" : "horitzontal"}`} badge={`${zone.split.children.length} zones`} icon={zone.split.dir === "v" ? LuColumns2 : LuRows2}>
             <SplitSizes root={root} zone={zone} onChange={onChange} onSelect={onSelect} childSizes={childSizes} />
             <SplitThickness root={root} zone={zone} onChange={onChange} {...(bodyThickness ? { bodyThickness } : {})} />
@@ -245,51 +240,22 @@ export function ZonePanel({
   )
 }
 
+/** Els continguts del Front d'una zona dividida: els que la poden tapar (`coversSplit`). */
+const SPLIT_FRONTS: (Front["kind"] | "none")[] = ["none", "door", "flap", "grille", "panel"]
+
 /**
- * El **Front d'una zona dividida** (per decisió de l'usuari, 2026-10-20: «totes les divisions tinguin les opcions de front, a
- * sobre de la divisió, al primer nivell»; abans Mòdul › Portes, només a l'arrel): portes de dalt a baix de la zona (armari
- * amb penjador i maleter darrere) que tapen tots els seus compartiments. Només Cap · Una · Dues i les opcions de la porta
- * (`FrontFields`). Un altre front d'una zona dividida (el front fix d'abans) no es fa i surt com a «Cap» (es conserva).
+ * Els fronts de dins d'una zona dividida que el seu front tapa i no es fan (regla 6: es diu quins). Els calaixos, no: es
+ * fan per dins. Darrere d'un front fix, cap.
  */
-export function SplitFrontSection({ root, zone: splitZone, onChange, hardware, noHandles, bounds, afterHinge, moduleFronts, coveredBy }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; hardware: ModuleHardware; noHandles: boolean; /** Què aguanta la zona (`canHoldFront`: pels quatre costats). */ bounds: ZoneBounds; /** Després de la «Frontissa» (la filera System 32 del mòdul). */ afterHinge?: ReactNode; /** Nom de la zona de més amunt que la tapa: les seves portes no es fan (es conserven). */ coveredBy?: string; /** «Fronts del mòdul», a sota de les opcions de la porta. */ moduleFronts?: ReactNode }) {
-  // Una divisió horitzontal amb fronts fixos a dins (el sòcol de baix o de dalt) i un sol compartiment més: les portes no
-  // els tapen, van a aquest compartiment (la drecera crea una porta normal en una zona normal). Mateixos costats que la zona.
-  const kids = splitZone.split?.dir === "h" && !splitZone.front ? splitZone.split.children : []
-  const others = kids.filter((c) => c.front?.kind !== "panel")
-  const redirected = kids.length > others.length && others.length === 1
-  const zone = redirected ? others[0]! : splitZone
-  const door = zone.front?.kind === "door" ? zone.front : undefined
-  const value = door?.mode ?? "none"
-  const canDoor = canHoldFront(bounds, "door")
-  const choose = (mode: "none" | "single" | "double") => {
-    // Els calaixos de dins no canvien (regla 3 del model únic): tapats, es fan per dins.
-    if (mode === "none") return onChange(switchFront(root, zone.id, "none"))
-    const base = door ? root : switchFront(root, zone.id, "door")
-    const f = findZone(base, zone.id)?.front
-    if (f?.kind !== "door") return
-    // Una porta nova va amb les frontisses a un costat on hi ha on posar-les.
-    const hinge = mode === "single" && !bounds[f.hinge] && bounds[f.hinge === "left" ? "right" : "left"] ? (f.hinge === "left" ? "right" : "left") : f.hinge
-    onChange(setFront(base, zone.id, { ...f, mode, hinge }))
+function hiddenInside(zone: Zone): string[] {
+  if (!zone.front || !coversSplit(zone.front.kind)) return []
+  const out: string[] = []
+  const walk = (z: Zone) => {
+    if (z.split) return z.split.children.forEach(walk)
+    if (z.front && (zone.front!.kind === "panel" || z.front.kind !== "drawers")) out.push(zoneLabel(z))
   }
-  return (
-    <FoldItem optionId="module.doors" id="zone-front" title="Front" icon={door ? LuDoorClosed : LuSquareDashed} badge={door ? (door.mode === "double" ? "Dues portes" : "Una porta") : "Obert"}>
-      <FormRow optionId="module.doors.mode" label="Portes" help={coveredBy && door ? `No es fan: les tapen les portes de «${coveredBy}» (es conserven).` : frontLimitsHelp(bounds, ["none", "door"], door ? "door" : "none") ?? (redirected ? "Van al compartiment entre els sòcols (els fronts fixos queden a la vista)." : "De dalt a baix de la zona: tapen tots els seus compartiments (armari amb penjador i maleter darrere).")}>
-        <ChoiceChips
-          label="Portes"
-          value={value}
-          // Dues portes: frontisses als dos costats (cal un lateral o un divisor a cada un). El triat surt sempre.
-          options={[
-            { id: "none" as const, label: <><LuSquareDashed /> Cap</> },
-            ...(canDoor || value === "single" ? [{ id: "single" as const, label: <><LuDoorClosed /> Una</> }] : []),
-            ...((canDoor && bounds.left && bounds.right) || value === "double" ? [{ id: "double" as const, label: <><LuFlipHorizontal2 /> Dues</> }] : []),
-          ]}
-          onChange={choose}
-        />
-      </FormRow>
-      {door && <FrontFields front={door} noMode hardware={hardware} noHandles={noHandles} bounds={bounds} afterHinge={afterHinge} onChange={(f) => onChange(setFront(root, zone.id, f))} />}
-      {door && moduleFronts}
-    </FoldItem>
-  )
+  zone.split?.children.forEach(walk)
+  return out
 }
 
 /** Resum de les «Opcions de l'interior» per a la insígnia del Front: prestatges i accessoris que hi ha («3 · Barra»). */

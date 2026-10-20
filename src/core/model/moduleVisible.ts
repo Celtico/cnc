@@ -229,6 +229,9 @@ function visibleAppliance(a: ZoneAppliance, bounds: ZoneBounds): ZoneAppliance {
   }
 }
 
+/** Els fronts que poden tapar una zona dividida (regla 3 del model únic): els de dins es fan igual, per dins. */
+export const coversSplit = (k: Front["kind"]): boolean => k === "door" || k === "flap" || k === "grille" || k === "panel"
+
 /** Uns Calaixos tal com es fan, a fora o darrere d'una porta (el mateix a tot arreu: regla 1 del model únic). */
 function visibleDrawers(f: Extract<Front, { kind: "drawers" }>, kitDefault: boolean): Extract<Front, { kind: "drawers" }> {
   const heights = f.heights.slice(0, f.n)
@@ -273,10 +276,9 @@ function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: Zon
   // Un front d'un compartiment que no és aguantat pels quatre costats (`canHoldFront`, `zoneSupport.ts`) no es fa: el
   // compartiment és com obert (es conserva i torna amb la peça que hi falta). Tampoc no tapa els de dins.
   if (out.front && !canHoldFront(bounds, out.front.kind)) delete out.front
-  // El front d'una zona dividida només es fa amb portes (el Front de la zona dividida, a qualsevol nivell; per decisió de
-  // l'usuari, 2026-10-20: abans només a l'arrel, Mòdul › Portes). El front fix de tota la zona ja no es pot triar: no es
-  // fa (es conserva) i no tapa els de dins (res amagat compta).
-  if (out.front && z.split && out.front.kind !== "door") delete out.front
+  // El front d'una zona dividida (regla 3 del model únic): els que poden tapar les zones de dins (porta, abatible, reixeta o
+  // front fix) es fan i les tapen; els altres (calaixos) no es fan (es conserven).
+  if (out.front && z.split && !coversSplit(out.front.kind)) delete out.front
   // Electrodomèstic (v46): només en un compartiment sense dividir i que no tapa cap front de més amunt (l'inspector no
   // l'ensenya en cap altre). Si ocupa el compartiment (el nínxol), ni Front ni prestatges ni accessoris (es conserven).
   if (out.appliance && (covered || z.split || !isAppliance(out.appliance.hardware))) delete out.appliance

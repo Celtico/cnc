@@ -1,4 +1,4 @@
-import { applianceNodes, splitFrontNode } from "./moduleOptions"
+import { applianceNodes } from "./moduleOptions"
 import { AS_MODULE, STRUCTURAL, UI, field, group, section } from "./optionTypes"
 
 const S32 = "La de tot el mòdul (`module.hardware.system32`): surt on la fan servir, als Prestatges (regulables) o al Front (després de la Frontissa d'una porta de fusta o d'una reixeta amb frontisses), mai a tots dos."
@@ -140,7 +140,7 @@ const front = section("zone.front", "Front", {
   code: UI.frontSection,
   hideable: false,
   why: STRUCTURAL,
-  showIf: "Compartiment sense dividir i sense un aparell que l'ocupi. Tapat per les portes del mòdul: «Front · Tapat», només text.",
+  showIf: "Qualsevol zona sense un aparell que l'ocupi (regla 1 del model únic). Dividida: només els fronts que la poden tapar (Porta, Abatible, Reixeta, Front fix). Tapada per un front de més amunt: es tria igual i es fa per dins.",
 }, [
   field("zone.front.kind", "Contingut", {
     code: UI.frontSection,
@@ -246,7 +246,6 @@ export const ZONE = group("zone", "Compartiment", { icon: "zone", code: UI.secti
     issue: "(dades) Dividir passa al primer fill els prestatges, el front, la barra i l'aparell però no la llum (`led`): dividir un compartiment amb Llum la perd.",
     why: "Amagada, no es pot dividir cap compartiment (els dividits continuen igual).",
   }),
-  splitFrontNode(),
   section("zone.split", "Divisió vertical / horitzontal", { icon: "split", code: UI.zonePanel, showIf: "Compartiment dividit (és l'única secció)", hideable: false, why: STRUCTURAL }, [
     field("zone.split.sizes", "Amplada / Alçada 1…n", { code: UI.split, control: "number", defaultText: "Totes «Auto» (l'última, el que sobra)", hideable: false, why: STRUCTURAL }),
     field("zone.split.thick", "Gruix", {

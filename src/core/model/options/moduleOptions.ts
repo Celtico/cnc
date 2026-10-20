@@ -107,7 +107,7 @@ export function applianceNodes(): OptionNode {
 
 const MODULE_POSITION = [type, position, dims]
 
-/** Mòdul › Materials (les portes d'una zona dividida, al seu Front: `splitFrontNode`). */
+/** Mòdul › Materials (el front d'una zona dividida, al seu Front: el mateix que el d'una fulla). */
 const MODULE_TAIL: OptionNode[] = [
   materialsNodes("module"),
 ]
@@ -145,18 +145,3 @@ export function materialsNodes(at: "module" | "moble"): OptionNode {
 export const MODULE_GROUP = (carcass: OptionNode): OptionNode =>
   group("module", "Mòdul", { icon: "module", code: UI.inspector, showIf: "Un mòdul seleccionat", note: "Ordre: Tipus · Mides · Caixa · Materials (les portes d'una zona dividida, al seu Front)." }, [...MODULE_POSITION, carcass, ...MODULE_TAIL])
 
-/** El Front d'una zona dividida (portes de dalt a baix de la zona), a sobre de la Divisió. Els ids d'abans (Mòdul › Portes). */
-export function splitFrontNode(): OptionNode {
-  return section("module.doors", "Front (zona dividida)", { icon: "doors", code: UI.zonePanel, showIf: "Zona dividida, a qualsevol nivell (a sobre de la Divisió); tapada per les portes d'una zona de més amunt: «Front · Tapat»", note: "Per decisió de l'usuari, 2026-10-20: totes les divisions tenen el Front, a sobre de la divisió (abans Mòdul › Portes, només a l'arrel). Les opcions de la porta són les mateixes que Compartiment › Front › Porta (els mateixos ids: amagar-ne una l'amaga als dos llocs)." }, [
-    field("module.doors.mode", "Portes", {
-      code: UI.zonePanel,
-      control: "choice",
-      default: "none",
-      choices: [
-        { value: "none", label: "Cap" },
-        { value: "single", label: "Una", note: "si la zona es pot tapar pels quatre costats" },
-        { value: "double", label: "Dues", note: "a més, lateral als dos costats" },
-      ],
-    }),
-  ])
-}
