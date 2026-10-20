@@ -8,7 +8,7 @@ import { catalogCorpus } from "./testCorpus"
  * electrodomèstics…). Només queden les notes de les construccions que la plantilla ensenya a propòsit i el moble real de
  * casa (`tv-living-room`, amb les mides del menjador: portes de més de 600).
  */
-const DEMO = new Set(["mitre", "push", "hollow", "table", "inset", "material-heat"])
+const DEMO = new Set(["mitre", "push", "hollow", "table", "inset", "material-heat", "glass-drawers"])
 const REAL: Record<string, string[]> = { "tv-living-room": ["door-too-wide"] }
 
 describe("avisos de les plantilles", () => {

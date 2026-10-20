@@ -105,7 +105,7 @@ export class DrawersBuilder extends FrontsBuilder {
   /** L'avís informatiu dels fronts de calaix de vidre (un cop per mòdul). */
   protected glassDrawersInfo(): void {
     if (this.glassDrawers)
-      this.warnings.push({ code: "layout", info: true, message: "Fronts de calaix de vidre: vidre de 4 mm en ranura als laterals del calaix, damunt del fons (amb un joc de calaix, al lloc del front, amb els adaptadors de vidre del fabricant). Els forats del tirador els fa el vidrier. El vidre no és de CNC: surt a «Elements sense nesting»." })
+      this.warnings.push({ code: "glass-drawers", info: true, message: "Fronts de calaix de vidre: vidre de 4 mm en ranura als laterals del calaix, damunt del fons (amb un joc de calaix, al lloc del front, amb els adaptadors de vidre del fabricant). Els forats del tirador els fa el vidrier. El vidre no és de CNC: surt a «Elements sense nesting»." })
     this.glassDrawers = false
   }
 

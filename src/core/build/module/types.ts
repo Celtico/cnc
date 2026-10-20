@@ -25,6 +25,7 @@ export interface BuildWarning {
     | "hollow"
     | "table"
     | "layout"
+    | "glass-drawers"
     | "no-side"
     | "material-heat"
     | "collision"

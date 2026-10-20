@@ -1,4 +1,200 @@
 {
+ "store-bany-armari-de-bany-3": {
+  "panels": 7,
+  "extras": 5,
+  "warnings": [],
+  "p": [
+   "back|trassera|777x377x10|DM (fons)|none|e0000|h0|g0|c2:669acf16|o-|@f3e88dad",
+   "bottom|baix|762x200x19|MDF lacat greige|x|e0010|h6:a13701c4|g1:e0658745|c0|o-|@d1b5e04a",
+   "flap|abatible|796x396x19|MDF lacat greige|y|e1111|h2:65df76e2|g0|c2:5d3e4116|o-|@a644c725",
+   "shelf|estanter|761x150x19|MDF lacat greige|x|e0010|h0|g0|c0|o-|@908c7665",
+   "side|lat d|400x200x19|MDF lacat greige|x|e0011|h30:65b4cba8|g1:295de104|c0|o-|@3039e5c5",
+   "side|lat e|400x200x19|MDF lacat greige|x|e1001|h30:22ea0048|g1:a5cb4592|c0|o-|@4247ff77",
+   "top|dalt|762x200x19|MDF lacat greige|x|e1000|h6:a13701c4|g1:bce6b3fb|c0|o-|@3a5d08da"
+  ]
+ },
+ "store-bany-moble-auxiliar-1": {
+  "panels": 7,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "bottom|baix|412x300x19|Freixe xapat|x|e0010|h6:2bb65620|g0|c0|o-|@0f452697",
+   "shelf|estanter 1|411x280x19|Freixe xapat|x|e0010|h0|g0|c0|o-|@95ba07d8",
+   "shelf|estanter 2|411x280x19|Freixe xapat|x|e0010|h0|g0|c0|o-|@f636fbfa",
+   "shelf|estanter 3|411x280x19|Freixe xapat|x|e0010|h0|g0|c0|o-|@2777e552",
+   "side|lat d|1200x300x19|Freixe xapat|x|e0110|h6:045e190c|g0|c0|o-|@0dc970cf",
+   "side|lat e|1200x300x19|Freixe xapat|x|e1100|h6:045e190c|g0|c0|o-|@9d06bf6b",
+   "top|dalt|412x300x19|Freixe xapat|x|e1000|h6:2bb65620|g0|c0|o-|@ec660fb1"
+  ]
+ },
+ "store-bany-moble-auxiliar-2": {
+  "panels": 13,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "back|trassera|900x500x10|DM (fons)|none|e0000|h0|g0|c0|o-|@70a44698",
+   "bottom|baix|462x370x19|Melamina blanca|x|e0010|h6:97d4bf03|g0|c0|o-|@5111a3aa",
+   "drawerBack|darrere calaix|405x170x16|Melamina blanca|x|e1000|h4:05d454be|g0|c0|o-|@3e36b1f1",
+   "drawerBottom|fons calaix|420x357x10|DM (fons)|none|e0000|h0|g0|c0|o-|@9ae7b517",
+   "drawerFront|frontal calaix|496x225x19|Melamina blanca|x|e1111|h4:8088a13a|g1:ad601909|c2:2793fb2b|o-|@09f1e908",
+   "drawerSide|lateral calaix|350x192x16|Melamina blanca|x|e1000|h6:2e0e8878|g1:84e1fe9f|c0|o-|@a2dec4ca",
+   "drawerSide|lateral calaix|350x192x16|Melamina blanca|x|e1000|h6:79a26059|g1:84e1fe9f|c0|o-|@3308ddee",
+   "fixedShelf|estanter fixe|462x370x19|Melamina blanca|x|e0010|h6:97d4bf03|g0|c0|o-|@8085f93c",
+   "flap|abatible|608x496x19|Melamina blanca|x|e1111|h2:916c0747|g0|c2:7245bf3f|o-|@5915373a",
+   "plinth|socol|462x60x19|Melamina blanca|x|e0000|h0|g0|c0|o-|@6738297a",
+   "side|lat d|900x370x19|Melamina blanca|x|e0110|h43:e1bde96d|g0|c0|o-|@97f3235a",
+   "side|lat e|900x370x19|Melamina blanca|x|e1100|h43:a11d30d4|g0|c0|o-|@641cff2b",
+   "top|dalt|462x370x19|Melamina blanca|x|e1000|h6:97d4bf03|g0|c0|o-|@0d982211"
+  ]
+ },
+ "store-bany-moble-auxiliar-3": {
+  "panels": 3,
+  "extras": 0,
+  "warnings": [
+   "mitre"
+  ],
+  "p": [
+   "side|lat d|450x300x30|Roure massís / xapat|x|e1011|h0|g0|c0|o-|@31e8dfb4|m:right",
+   "side|lat e|450x300x30|Roure massís / xapat|x|e1011|h0|g0|c0|o-|@84a01218|m:right",
+   "top|dalt|450x300x30|Roure massís / xapat|x|e1010|h0|g0|c0|o-|@948cd610|m:left,right"
+  ]
+ },
+ "store-corian-lavabo-mass-s-1": {
+  "panels": 1,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "part|Lavabo|600x460x57|Corian Glacier White|x|e0000|h0|g0|c0|o-|@eae1151f|k:2:611973bf"
+  ]
+ },
+ "store-corian-lavabo-mass-s-2": {
+  "panels": 1,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "part|Lavabo doble|1200x480x57|Corian Cameo White|x|e0000|h0|g0|c0|o-|@d288e5f9|k:4:efa71a32"
+  ]
+ },
+ "store-corian-lavabo-mass-s-3": {
+  "panels": 1,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "part|Lavabo|500x400x38|Corian Deep Nocturne|x|e0000|h0|g0|c0|o-|@45fb4f21|k:2:fd4921a5"
+  ]
+ },
+ "store-corian-moble-de-lavabo-1": {
+  "panels": 10,
+  "extras": 5,
+  "warnings": [
+   "push"
+  ],
+  "p": [
+   "back|trassera|777x408.5x10|DM (fons)|none|e0000|h0|g0|c2:d04a5486|o-|@0d5d14ad",
+   "bottom|baix|762x460x19|Melamina blanca|x|e0010|h6:1813b2fe|g1:226bda92|c0|o-|@aa9cb286",
+   "drawerBack|darrere calaix|705x361x16|Melamina blanca|x|e1000|h4:f4003304|g0|c0|o-|@93c54ca1",
+   "drawerBottom|fons calaix|720x407x10|DM (fons)|none|e0000|h0|g0|c0|o-|@0193a689",
+   "drawerFront|frontal calaix|796x416x19|Corian Glacier White|x|e1111|h4:0eb5b914|g1:47751f93|c0|o-|@e0e1bfe6|push",
+   "drawerSide|lateral calaix|400x383x16|Melamina blanca|x|e1000|h6:7c4adb06|g1:45309763|c0|o-|@b949ccd6",
+   "drawerSide|lateral calaix|400x383x16|Melamina blanca|x|e1000|h6:c961d480|g1:45309763|c0|o-|@944e0a6f",
+   "part|Sobre-pica|800x480x38|Corian Glacier White|x|e0000|h0|g0|c0|o-|@97c05962|k:2:f11e63af",
+   "side|lat d|460x420x19|Melamina blanca|y|e1001|h9:63dd5ee1|g1:a14f5452|c0|o-|@14e53e66",
+   "side|lat e|460x420x19|Melamina blanca|y|e1100|h9:dfe7597e|g1:6a490adf|c0|o-|@0c38bf1e"
+  ]
+ },
+ "store-corian-moble-de-lavabo-2": {
+  "panels": 26,
+  "extras": 5,
+  "warnings": [
+   "push"
+  ],
+  "p": [
+   "back|trassera|977x438.5x10|DM (fons)|none|e0000|h0|g0|c2:3896ff5a|o-|@36776972",
+   "bottom|baix|962x470x19|Melamina gris|x|e0010|h9:ca4ce237|g1:9366b373|c0|o-|@9f079ab8",
+   "divider|divisor|440x431x19|Melamina gris|y|e0100|h11:70fac091|g0|c0|o-|@d789e923",
+   "drawerBack|darrere calaix|414.5x166.5x16|Melamina gris|x|e1000|h4:068a8202|g0|c0|o-|@45d45849",
+   "drawerBack|darrere calaix|414.5x166.5x16|Melamina gris|x|e1000|h4:068a8202|g0|c0|o-|@696c3088",
+   "drawerBack|darrere calaix|414.5x166.5x16|Melamina gris|x|e1000|h4:068a8202|g0|c0|o-|@7f7f583f",
+   "drawerBack|darrere calaix|414.5x166.5x16|Melamina gris|x|e1000|h4:068a8202|g0|c0|o-|@9f622902",
+   "drawerBottom|fons calaix|429.5x407x10|DM (fons)|none|e0000|h0|g0|c0|o-|@74960359",
+   "drawerBottom|fons calaix|429.5x407x10|DM (fons)|none|e0000|h0|g0|c0|o-|@a8526814",
+   "drawerBottom|fons calaix|429.5x407x10|DM (fons)|none|e0000|h0|g0|c0|o-|@dc9c6b6e",
+   "drawerBottom|fons calaix|429.5x407x10|DM (fons)|none|e0000|h0|g0|c0|o-|@ec761dd3",
+   "drawerFront|frontal calaix|496.5x221.5x19|Corian Rain Cloud|x|e1111|h4:59af4764|g1:9e5d50ee|c0|o-|@7464723a|push",
+   "drawerFront|frontal calaix|496.5x221.5x19|Corian Rain Cloud|x|e1111|h4:59af4764|g1:9e5d50ee|c0|o-|@f393f3ae|push",
+   "drawerFront|frontal calaix|496.5x221.5x19|Corian Rain Cloud|x|e1111|h4:ea6bb838|g1:2df4367e|c0|o-|@1d21f305|push",
+   "drawerFront|frontal calaix|496.5x221.5x19|Corian Rain Cloud|x|e1111|h4:ea6bb838|g1:2df4367e|c0|o-|@b2137d09|push",
+   "drawerSide|lateral calaix|400x188.5x16|Melamina gris|x|e1000|h6:295eb97a|g1:45309763|c0|o-|@33f30ac6",
+   "drawerSide|lateral calaix|400x188.5x16|Melamina gris|x|e1000|h6:295eb97a|g1:45309763|c0|o-|@43bd5a80",
+   "drawerSide|lateral calaix|400x188.5x16|Melamina gris|x|e1000|h6:295eb97a|g1:45309763|c0|o-|@861e4e27",
+   "drawerSide|lateral calaix|400x188.5x16|Melamina gris|x|e1000|h6:295eb97a|g1:45309763|c0|o-|@eec1760d",
+   "drawerSide|lateral calaix|400x188.5x16|Melamina gris|x|e1000|h6:6e67af9a|g1:45309763|c0|o-|@36bbfd2e",
+   "drawerSide|lateral calaix|400x188.5x16|Melamina gris|x|e1000|h6:6e67af9a|g1:45309763|c0|o-|@40f3259a",
+   "drawerSide|lateral calaix|400x188.5x16|Melamina gris|x|e1000|h6:6e67af9a|g1:45309763|c0|o-|@b4923eed",
+   "drawerSide|lateral calaix|400x188.5x16|Melamina gris|x|e1000|h6:6e67af9a|g1:45309763|c0|o-|@fca475a9",
+   "part|Sobre-pica|1000x490x57|Corian Rain Cloud|x|e0000|h0|g0|c0|o-|@da36a07d|k:2:6af5ec07",
+   "side|lat d|470x450x19|Melamina gris|y|e1001|h11:88125832|g1:c0e4efb8|c0|o-|@318c216c",
+   "side|lat e|470x450x19|Melamina gris|y|e1100|h11:be0d3b7e|g1:c233f0fa|c0|o-|@0c38bf1e"
+  ]
+ },
+ "store-corian-moble-de-lavabo-3": {
+  "panels": 11,
+  "extras": 5,
+  "warnings": [],
+  "p": [
+   "back|trassera|877x438.5x10|DM (fons)|none|e0000|h0|g0|c2:08b662a9|o-|@36776972",
+   "bottom|baix|862x460x19|Roure massís / xapat|x|e0010|h6:b81d7a45|g1:54ebf0a7|c0|o-|@5fe31a13",
+   "drawerBack|darrere calaix|805x154x16|Roure massís / xapat|x|e1000|h4:31654812|g0|c0|o-|@b9ea7272",
+   "drawerBottom|fons calaix|820x407x10|DM (fons)|none|e0000|h0|g0|c0|o-|@0a6a70d0",
+   "drawerFront|frontal calaix|896x206x19|Roure massís / xapat|x|e1111|h4:ad3eeda0|g1:06d7401e|c2:77d4dcff|o-|@e0e1bfe6",
+   "drawerSide|lateral calaix|400x176x16|Roure massís / xapat|x|e1000|h6:05f2ad60|g1:45309763|c0|o-|@5964066b",
+   "drawerSide|lateral calaix|400x176x16|Roure massís / xapat|x|e1000|h6:da205f84|g1:45309763|c0|o-|@a2b3e4ad",
+   "fixedShelf|estanter fixe|862x430x19|Roure massís / xapat|x|e0010|h6:6eaefbe3|g0|c0|o-|@fe17e0a5",
+   "part|Sobre-pica|900x480x38|Corian Sand Storm|x|e0000|h0|g0|c0|o-|@97c05962|k:2:757a0a7e",
+   "side|lat d|460x450x19|Roure massís / xapat|y|e1001|h22:6a3ef2fd|g1:29417237|c0|o-|@d556a193",
+   "side|lat e|460x450x19|Roure massís / xapat|y|e1100|h22:30e15b14|g1:c233f0fa|c0|o-|@0c38bf1e"
+  ]
+ },
+ "store-corian-plat-de-dutxa-1": {
+  "panels": 1,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "part|Plat de dutxa|1200x800x38|Corian Glacier White|x|e0000|h0|g0|c0|o-|@e874f12d|k:2:1fb3664d"
+  ]
+ },
+ "store-corian-plat-de-dutxa-2": {
+  "panels": 1,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "part|Plat de dutxa|1400x900x38|Corian Sand Storm|x|e0000|h0|g0|c0|o-|@65e78974|k:2:f03ccbb0"
+  ]
+ },
+ "store-corian-plat-de-dutxa-3": {
+  "panels": 1,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "part|Plat de dutxa|900x900x38|Corian Cameo White|x|e0000|h0|g0|c0|o-|@65e78974|k:2:1dfeb90e"
+  ]
+ },
+ "store-corian-taulell-amb-escorredor-1": {
+  "panels": 1,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "part|Taulell|2000x620x19|Corian Glacier White|x|e0000|h0|g0|c1:65091273|o-|@4c84f899|k:5:ae37032f"
+  ]
+ },
+ "store-corian-taulell-amb-escorredor-2": {
+  "panels": 1,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "part|Taulell|1400x600x19|Corian Rain Cloud|x|e0000|h0|g0|c1:a6391131|o-|@b7a665cb|k:4:f838f894"
+  ]
+ },
  "store-corian-taulell-amb-escorredor-3": {
   "panels": 1,
   "extras": 0,

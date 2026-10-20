@@ -2,7 +2,9 @@ import { DEFAULT_JOINERY, type FreePart } from "./freePart"
 import type { PNode } from "./polygon"
 import { defaultModule, modulePlacements, DEFAULT_GRILLE, newId, partsOnlyKind, tableModule, type Carcass, type Composition, type CompositionKind, type Module, type RefObject, type Zone } from "./composition"
 import type { Template } from "./templates"
-import { applianceKitchen } from "./applianceModules"
+import { applianceById, applianceKitchen } from "./applianceModules"
+import { setModuleAppliance } from "./moduleType"
+import { addTopPlinth } from "./plinthZones"
 import { boxCage, refineCage } from "./meshShape"
 import { encodeLevels } from "./imageRelief"
 
@@ -641,7 +643,56 @@ function showerShelf(name: string, o: { mat: string; W: number; D: number; y: nu
 
 // --- Catàleg --------------------------------------------------------------------------------------
 
+// --- Sistema nou (el model únic de l'editor, 2026-10-20) ------------------------------------------------------------
+// Mobles fets només amb zones, divisions i fronts (cap peça especial): calaixos darrere de portes amb Retirada, vidre en
+// ranura, sòcols de zona a baix i a dalt, fronts que tapen una zona dividida, electrodomèstics a qualsevol zona i Gruix.
+
+/** El front d'una zona dividida, que tapa les de dins (regla 3). */
+const covering = (front: NonNullable<Zone["front"]>, z: Zone): Zone => ({ ...z, front })
+const twoDoors = (glass = false): NonNullable<Zone["front"]> => ({ kind: "door", mode: "double", hinge: "left", ...(glass ? { glass: true } : {}) })
+/** Calaixos amb la Retirada (darrere d'una porta: el front i el tirador queden darrere de la porta). */
+const drawersBack = (n: number, setback: number, glass = false): Zone => ({ id: id(), front: { kind: "drawers", n, heights: auto(n), setback, ...(glass ? { glass: true } : {}) } })
+/** «Marge a les frontisses»: una zona oberta de 50 mm a cada costat de les frontisses. */
+const hingeMargins = (z: Zone, sides: "left" | "right" | "both"): Zone =>
+  sides === "both" ? v([50, "auto", 50], [open(), z, open()]) : sides === "left" ? v([50, "auto"], [open(), z]) : v(["auto", 50], [z, open()])
+const appliance = (ref: string): Zone => ({ id: id(), appliance: { hardware: applianceById(`appliance-${ref}`) } })
+/** Un mòdul que és un electrodomèstic: la drecera ajusta la caixa un cop (cas 12). */
+const applianceBox = (m: Module, ref: string): Module => setModuleAppliance(m, applianceById(`appliance-${ref}`), 0)
+const withTopPlinth = (m: Module, height: number, setback = 0): Module => addTopPlinth(m, height, setback)
+const thickSplit = (z: Zone, thickness: number): Zone => ({ ...z, split: { ...z.split!, thickness } })
+
 export const STORE_CATALOG: StoreCategory[] = [
+  {
+    id: "sistema",
+    name: "Sistema nou",
+    types: [
+      items("sistema", "Calaixos darrere de portes", [
+        { name: "Rober", style: "Contemporani", materials: "melamina blanca, fronts de roure", colors: "blanc, roure natural", use: "Armari de dues portes amb calaixos a dins (Retirada 60 i Marge a les frontisses) i barra a dalt", audience: "dormitoris", price: 1290, make: () => one(box("Armari", { w: 1000, h: 2200, d: 600, mat: WHITE, front: OAKM, base: plinth(80, 30) }, covering(twoDoors(), h([620, "auto"], [hingeMargins(drawersBack(3, 60), "both"), rail()])))) },
+        { name: "Vitrina", style: "Escandinau", materials: "freixe amb portes de vidre i calaixos de vidre en ranura", colors: "freixe, vidre", use: "Vitrina de portes de vidre amb calaixos de vidre a dins, sense marc", audience: "menjadors", price: 1490, make: () => one(box("Vitrina", { w: 800, h: 1900, d: 450, mat: ASH, base: plinth(60, 20) }, covering(twoDoors(true), h([560, "auto"], [hingeMargins(drawersBack(3, 60, true), "both"), open(3)])))) },
+        { name: "Bany", style: "Minimalista", materials: "MDF lacat greige", colors: "greige", use: "Moble penjat d'una porta amb dos calaixos a dins i marge al costat de la frontissa", audience: "banys", price: 590, make: () => one(box("Moble de bany", { w: 600, h: 700, d: 450, mat: GREIGE, base: hung(450) }, covering({ kind: "door", mode: "single", hinge: "left" }, h([360, "auto"], [hingeMargins(drawersBack(2, 60), "left"), open(1)])))) },
+      ]),
+      items("sistema", "Sòcols de zona", [
+        { name: "Fins al sostre", style: "Contemporani", materials: "melamina gris", colors: "gris", use: "Armari amb sòcol a baix i sòcol de dalt fins al sostre, tots dos zones amb un front fix", audience: "pisos amb sostres alts", price: 1390, make: () => one(withTopPlinth(box("Armari", { w: 800, h: 2200, d: 600, mat: GREY, base: plinth(80, 30) }, covering(twoDoors(), h([900, "auto"], [open(2), rail()]))), 150)) },
+        { name: "Retirat", style: "Modern", materials: "MDF lacat antracita", colors: "antracita", use: "Calaixera amb el sòcol molt retirat: sembla que suri", audience: "salons", price: 790, make: () => one(box("Calaixera", { w: 1200, h: 650, d: 450, mat: ANTH, base: plinth(120, 80), push: true }, v(auto(2), [drawers(3), drawers(3)]))) },
+        { name: "Marc", style: "Minimalista", materials: "roure", colors: "roure natural", use: "Prestatgeria amb sòcol a ras i sòcol de dalt: un marc tancat", audience: "despatxos", price: 690, make: () => one(withTopPlinth(box("Prestatgeria", { w: 800, h: 1900, d: 350, mat: OAK, base: plinth(60, 0) }, open(5)), 60)) },
+      ]),
+      items("sistema", "Fronts que tapen divisions", [
+        { name: "Rebost", style: "Funcional", materials: "melamina blanca", colors: "blanc", use: "Columna de dues portes que tapen calaixos a baix i prestatges a dalt", audience: "cuines i rebosts", price: 890, make: () => one(box("Rebost", { w: 600, h: 2100, d: 580, mat: WHITE, base: plinth(80, 30) }, covering(twoDoors(), h([700, "auto"], [hingeMargins(drawersBack(4, 60), "both"), open(4)])))) },
+        { name: "Abatible", style: "Escandinau", materials: "freixe", colors: "freixe", use: "Moble penjat amb un abatible que tapa dues zones amb prestatges", audience: "entrades", price: 490, make: () => one(box("Penjat", { w: 1000, h: 400, d: 350, mat: ASH, base: hung(1400) }, covering({ kind: "flap", dir: "up" }, v(auto(2), [open(1), open(1)])))) },
+        { name: "Reixeta", style: "Contemporani", materials: "MDF lacat verd oliva", colors: "verd oliva", use: "Moble de TV amb una reixeta que tapa tres zones (els aparells respiren)", audience: "salons", price: 690, make: () => one(box("Moble TV", { w: 1600, h: 450, d: 450, mat: OLIVE, base: legs(150) }, covering(grille().front!, v(auto(3), [open(1), open(1), open(1)])))) },
+      ]),
+      items("sistema", "Electrodomèstic a qualsevol zona", [
+        { name: "Columna", style: "Contemporani", materials: "MDF lacat blau fosc", colors: "blau fosc", use: "Columna amb calaixos, forn, microones i porta: cada aparell és el Contingut d'una zona", audience: "cuines obertes", price: 1590, make: () => one(box("Columna", { w: 600, h: 2200, d: 580, mat: NAVY, base: plinth(80, 30) }, h([700, 590, 381, "auto"], [drawers(2), appliance("bosch-hba514es4"), appliance("bosch-bfl7221b1"), doors(2)]))) },
+        { name: "Safareig", style: "Funcional", materials: "melamina blanca", colors: "blanc", use: "Rentadora integrada al costat d'un armari: en triar-la, la caixa s'ajusta sola un cop", audience: "safareigs", price: 990, make: () => row([applianceBox(box("Rentadora", { w: 600, h: 820, d: 600, mat: WHITE }, open()), "bosch-wiw24307es"), box("Armari", { w: 600, h: 820, d: 600, mat: WHITE }, door("right", 1))]) },
+        { name: "Penjat", style: "Minimalista", materials: "MDF lacat greige", colors: "greige", use: "Moble penjat amb el microones a dins i porta al costat", audience: "cuines petites", price: 690, make: () => one(box("Penjat", { w: 1000, h: 402, d: 350, mat: GREIGE, base: hung(1450) }, v([564, "auto"], [appliance("bosch-bfl7221b1"), door("right", 1)]))) },
+      ]),
+      items("sistema", "Gruix", [
+        { name: "Bloc", style: "Modern", materials: "MDF lacat antracita, parets de 60", colors: "antracita", use: "Prestatgeria de parets gruixudes (buides): sembla massissa", audience: "salons", price: 990, make: () => one(box("Prestatgeria", { w: 900, h: 1600, d: 380, mat: ANTH, hollow: 60 }, open(3))) },
+        { name: "Llibres", style: "Escandinau", materials: "roure, prestatges de 50", colors: "roure natural", use: "Prestatgeria amb prestatges gruixuts a ras", audience: "despatxos", price: 890, make: () => one(box("Prestatgeria", { w: 1000, h: 1800, d: 300, mat: OAK }, fixed(4, { thickness: 50, flush: true }))) },
+        { name: "Graella", style: "Contemporani", materials: "freixe, divisors de 50", colors: "freixe", use: "Moble baix de nínxols amb divisors gruixuts", audience: "salons i entrades", price: 790, make: () => one(box("Nínxols", { w: 1500, h: 600, d: 400, mat: ASH, base: legs(150) }, thickSplit(v(auto(3), [open(), open(), open()]), 50))) },
+      ]),
+    ],
+  },
   {
     id: "salo",
     name: "Saló",
