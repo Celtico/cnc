@@ -270,7 +270,7 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
             </FormRow>}
 
             {/* Parets buides: caixa de dues pells que fa el moble com si fos de fusta gruixuda (al nínxol d'un aparell, no). */}
-            {!rule?.niche && <FormRow optionId="module.carcass.hollow" label="Parets">
+            {!rule?.niche && <FormRow optionId="module.carcass.hollow" label="Gruix" help="Laterals, base i tapa gruixuts, fets com els prestatges i les divisions gruixuts: dues pells, llistons i una tira al davant.">
               <Switch.Root
                 size="sm"
                 pt="6px"
@@ -279,7 +279,7 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
               >
                 <Switch.HiddenInput />
                 <Switch.Control />
-                <Switch.Label fontSize="sm">Buides (gruix aparent)</Switch.Label>
+                <Switch.Label fontSize="sm">Gruixuts (buits)</Switch.Label>
               </Switch.Root>
             </FormRow>}
             {c.hollow && !rule?.niche && (

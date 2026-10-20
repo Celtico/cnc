@@ -159,12 +159,12 @@ export const CARCASS = section("module.carcass", "Caixa", { icon: "carcass", cod
     choices: [{ value: "none", label: "Cap" }, { value: "left", label: "Esquerre" }, { value: "right", label: "Dret" }, { value: "both", label: "Els dos" }],
     note: "A l'inspector, dos interruptors: Esquerre · Dret. Al nínxol d'un electrodomèstic de terra, «Laterals de remat»: una peça sola a l'extrem de la cuina.",
   }),
-  field("module.carcass.hollow", "Parets", {
+  field("module.carcass.hollow", "Gruix", {
     code: UI.carcass,
     control: "switch",
     default: false,
     defaultEditable: true,
-    choices: [{ value: "on", label: "Buides (gruix aparent)", reveals: ["module.carcass.hollowThickness"], note: "Cantonades passa a text «A inglet»" }],
+    choices: [{ value: "on", label: "Gruixuts (buits)", reveals: ["module.carcass.hollowThickness"], note: "Cantonades passa a text «A inglet». El mateix nom que Prestatges › Gruix i Divisió › Gruix (2026-10-20)." }],
     showIf: "No és el nínxol d'un electrodomèstic de terra (rentaplats, rentadora, frigorífic sota taulell)",
     issue: "(menor) Surt també sense laterals, base ni tapa, quan no hi ha cap paret a fer buida.",
   }, [field("module.carcass.hollowThickness", "Gruix aparent", { code: UI.carcass, control: "number", showIf: "Parets buides", defaultText: "El més gran de 60 i 2 × gruix + 20" })]),

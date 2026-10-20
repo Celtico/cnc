@@ -222,9 +222,7 @@ export class BuilderBase {
       for (const side of EDGE_SIDES) {
         if (p.mitres?.includes(side)) continue
         const dir = edgeDirection(p, side)
-        // El suplement dels calaixos interiors: el cantell de dalt es veu en obrir la porta (per decisió de l'usuari,
-        // 2026-10-20: «cantejar la part superior que es veu al 3D»).
-        const wanted = mount === "floor" || dir[2] > 0.9 || (mount === "wall" && dir[1] > 0.9) || (mount === "hung" && dir[1] < -0.9) || (dir[1] > 0.9 && p.id.startsWith("inner-shim-"))
+        const wanted = mount === "floor" || dir[2] > 0.9 || (mount === "wall" && dir[1] > 0.9) || (mount === "hung" && dir[1] < -0.9)
         if (wanted && edgeExposed(p, side, others)) e[side] = true
       }
       this.panels[i] = { ...p, edges: e }

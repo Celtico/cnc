@@ -34,14 +34,13 @@ export function materialIssues(
     thick.add(key)
     // De quina peça i mòdul és (per anar-hi), i què es pot fer.
     const moduleId = build.modules?.find((x) => x.index === p.module)?.id
-    const shim = p.id.includes("inner-shim")
     out.push({
       code: "thickness-not-listed",
       message: `${p.label}: el gruix ${fmtNum(p.thickness)} mm no és dels gruixos de «${m.name}» (${m.thicknesses.map((t) => fmtNum(t)).join(" · ")} mm).`,
       panelId: p.id,
       ...(moduleId ? { moduleId } : {}),
       options: [
-        { text: `Posar-hi un gruix dels que té el material (${m.thicknesses.map((t) => fmtNum(t)).join(" · ")} mm)${shim ? ": el suplement dels calaixos interiors" : ""}.`, where: shim ? "innerDrawers" : "materials" },
+        { text: `Posar-hi un gruix dels que té el material (${m.thicknesses.map((t) => fmtNum(t)).join(" · ")} mm).`, where: "materials" },
         { text: "O afegir aquest gruix al material, si el taller el té (Preferències › Materials)." },
       ],
     })

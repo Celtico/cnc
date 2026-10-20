@@ -138,7 +138,7 @@ export function ZonePanel({
   coveredByDoor?: boolean
   /** El front de la zona de més amunt que el tapa (els costats de les frontisses, per als calaixos interiors). */
   coverFront?: Front
-  /** El gruix del cos del mòdul (el suplement per defecte dels calaixos interiors). */
+  /** El gruix del cos del mòdul (el mínim dels divisors gruixuts). */
   bodyThickness?: number
   /** El retirada dels prestatges del mòdul (Mòdul › Caixa): el que hereten els del compartiment. */
   shelfSetback?: number
@@ -189,7 +189,7 @@ export function ZonePanel({
   // res a fer servir), tampoc; ni tapat per un front fix de tota la zona.
   const behindDoor = coveredBy ? !!coveredByDoor : zone.front?.kind === "door" || zone.front?.kind === "flap"
   const interior = !zone.split && !niche && shelvesBehind && (canHoldShelves(bounds) || canHoldAccessories(bounds))
-    ? { node: <ZoneShelvesSection root={root} zone={zone} onChange={onChange} hardware={hardware} bounds={bounds} system32={system32} behindDoor={behindDoor} kits={kits} hingeSides={hingeSidesOf(coveredBy ? coverFront : zone.front)} {...(bodyThickness ? { bodyThickness } : {})} {...(shelfSetback !== undefined ? { moduleSetback: shelfSetback } : {})} />, badge: shelvesBadge(zone, behindDoor) }
+    ? { node: <ZoneShelvesSection root={root} zone={zone} onChange={onChange} hardware={hardware} bounds={bounds} system32={system32} behindDoor={behindDoor} kits={kits} hingeSides={hingeSidesOf(coveredBy ? coverFront : zone.front)} {...(shelfSetback !== undefined ? { moduleSetback: shelfSetback } : {})} />, badge: shelvesBadge(zone, behindDoor) }
     : undefined
   return (
     <Stack gap={0}>

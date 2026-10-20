@@ -253,7 +253,7 @@ export class Builder extends AppliancesBuilder {
         if (cover.mode === "double") hinges.add("left").add("right")
         else hinges.add(cover.hinge)
         // Les portes d'una zona de més amunt pengen dels costats d'aquella zona: un compartiment de dins que no hi toca
-        // (calaixos entre divisors, l'estructura de l'usuari) no té frontissa al costat i no hi va suplement (per petició
+        // (calaixos entre divisors, l'estructura de l'usuari) no té frontissa al costat i no avisa (per petició
         // de l'usuari, 2026-10-20).
         const coverRect = this.coverRects.get(zone.id)
         if (!front && coverRect) {

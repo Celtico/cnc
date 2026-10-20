@@ -3,7 +3,7 @@ import { isAppliance, isLegacyHardware, type ModuleHardware } from "./hardware"
 import { doorLikeFront, fillsNiche, standsOnFloor, takesFront, type Appliance } from "./appliance"
 import { canHoldFront, canHoldShelves, carcassBounds, childBounds, hasBottom, type ZoneBounds } from "./zoneSupport"
 import { applianceCarcass, applyApplianceCarcass, type ApplianceCarcass } from "./applianceCarcass"
-import { DEFAULT_GRILLE, type Carcass, type InnerDrawers, type InnerShim, type Module, type Zone, type ZoneAppliance } from "./moduleSchema"
+import { DEFAULT_GRILLE, type Carcass, type InnerDrawers, type Module, type Zone, type ZoneAppliance } from "./moduleSchema"
 
 // --- «Res amagat compta» -------------------------------------------------------------
 
@@ -35,11 +35,6 @@ export function perDrawerSlides(front: { n: number; heights: readonly (number | 
 /** L'alçada de cada calaix interior, de baix a dalt (la pròpia o, sense, la comuna `height`). */
 export function innerDrawerHeights(d: Pick<InnerDrawers, "n" | "height" | "heights">): number[] {
   return Array.from({ length: d.n }, (_, i) => d.heights?.[i] ?? d.height)
-}
-
-/** El suplement d'un costat dels calaixos interiors: el triat o, sense, `shim` (el gruix del cos) a les frontisses i cap a l'altre. */
-export function innerShimOf(d: Pick<InnerDrawers, "shim" | "sides">, side: "left" | "right", hinged: boolean, body: number): InnerShim {
-  return d.sides?.[side] ?? { thickness: hinged ? (d.shim ?? body) : 0 }
 }
 
 /** Com `perDrawerSlides`, als calaixos interiors: amb un joc, més d'un calaix i alguna alçada diferent. */
@@ -310,15 +305,6 @@ function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: Zon
       if (!kit) delete d.front
       // Amb el front metàl·lic del fabricant no hi ha front de fusta per fer de vidre.
       if (d.front === "kit" || !d.glass) delete d.glass
-      // Els prestatges de la caixa d'un suplement, només oberta.
-      if (d.sides) {
-        const sides = { ...d.sides }
-        for (const k of ["left", "right"] as const) {
-          const sd = sides[k]
-          if (sd && sd.box !== "shelves" && sd.shelves !== undefined) sides[k] = (({ shelves: _s, ...rest }) => rest)(sd)
-        }
-        d.sides = sides
-      }
       // Alçades a mida: les dels calaixos que hi ha; totes iguals = la comuna.
       const hs = innerDrawerHeights(d)
       if (new Set(hs).size > 1) d.heights = hs

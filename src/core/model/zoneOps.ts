@@ -256,3 +256,20 @@ export function countLeaves(root: Zone): number {
   if (!root.split) return 1
   return root.split.children.reduce((s, c) => s + countLeaves(c), 0)
 }
+
+/**
+ * **Marge** a un costat d'un compartiment (per decisió de l'usuari, 2026-10-20: «he pogut construir els marges dels
+ * calaixos amb divisions»; el que abans era el suplement dels calaixos interiors): divideix el compartiment en vertical
+ * amb una zona oberta de `width` mm a aquell costat; el contingut passa a l'altra zona. Una porta del compartiment es
+ * queda a la zona dividida (tapa les dues), perquè les frontisses continuïn al lateral.
+ */
+export function addSideMargin(root: Zone, id: string, side: "left" | "right", width = 50): Zone {
+  return updateZone(root, id, (z) => {
+    const door = z.front?.kind === "door" ? z.front : undefined
+    const { id: _id, front: _f, ...rest } = z
+    const content: Zone = { ...rest, ...(door || !z.front ? {} : { front: z.front }), id: newId() }
+    const open: Zone = { id: newId() }
+    const split: NonNullable<Zone["split"]> = side === "left" ? { dir: "v", sizes: [width, "auto"], children: [open, content] } : { dir: "v", sizes: ["auto", width], children: [content, open] }
+    return { id: z.id, ...(door ? { front: door } : {}), split }
+  })
+}

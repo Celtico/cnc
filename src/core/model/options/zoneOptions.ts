@@ -233,8 +233,8 @@ const shelves = group("zone.shelves", "Opcions de l'interior", {
     control: "number",
     showIf: "Darrere d'una porta (la del compartiment o la d'una zona de més amunt)",
     default: 0,
-    choices: [{ value: ">0", label: "1 o més", reveals: ["zone.shelves.innerDrawers.heights", "zone.shelves.innerDrawers.slide", "zone.shelves.innerDrawers.setback", "zone.shelves.innerDrawers.shimSide"] }],
-    note: "Per decisió de l'usuari, 2026-10-16: «posar calaixos darrere una porta», a la secció de l'interior. A baix de tot; front interior baix, sense tirador, retirat; suplement al costat de les frontisses (`Zone.innerDrawers`). Per decisió de l'usuari, 2026-10-20: les mateixes opcions que Front › Calaixos (alçada de cada calaix, guia de cada calaix, opcions del joc), amb els mateixos components.",
+    choices: [{ value: ">0", label: "1 o més", reveals: ["zone.shelves.innerDrawers.heights", "zone.shelves.innerDrawers.slide", "zone.shelves.innerDrawers.setback", "zone.shelves.innerDrawers.margin"] }],
+    note: "Per decisió de l'usuari, 2026-10-16: «posar calaixos darrere una porta», a la secció de l'interior. A baix de tot; front interior baix, sense tirador, retirat (`Zone.innerDrawers`). Per decisió de l'usuari, 2026-10-20: les mateixes opcions que Front › Calaixos (alçada de cada calaix, guia de cada calaix, opcions del joc), amb els mateixos components.",
   }, [
     section("zone.shelves.innerDrawers.heights", "Alçada dels calaixos", { icon: "subsection", code: UI.shelves, showIf: "Més d'un calaix (amb un, la fila «Alçada»)" }, [
       field("zone.shelves.innerDrawers.height", "Alçada 1…n", { code: UI.shelves, control: "number", default: 180, note: "Totes iguals = `height`; si no, `heights`." }),
@@ -260,20 +260,7 @@ const shelves = group("zone.shelves", "Opcions de l'interior", {
     ]),
     field("zone.shelves.innerDrawers.glass", "Vidre", { code: UI.shelves, control: "switch", showIf: "Front de fusta", default: false, choices: [{ value: "on", label: "Front de vidre" }] }),
     field("zone.shelves.innerDrawers.setback", "Retirada del front", { code: UI.shelves, control: "number", defaultText: "Preferències › Folgances per defecte (25)" }),
-    section("zone.shelves.innerDrawers.shimSide", "Suplement esquerre · Suplement dret", { icon: "subsection", code: UI.shelves, note: "Cada costat el seu (per decisió de l'usuari, 2026-10-20). Sense triar: el gruix del cos al costat de les frontisses i cap a l'altre." }, [
-      field("zone.shelves.innerDrawers.shim", "Gruix", { code: UI.shelves, control: "number", range: { min: 0, max: 600, step: 1, suffix: "mm" }, defaultText: "El gruix del cos a les frontisses, 0 a l'altre costat", note: "Fins a dos gruixos del cos, una tira massissa; més gruixut, una caixa. Sense límit fix: avís si als calaixos no els queden 150 mm." }),
-      field("zone.shelves.innerDrawers.shimBox", "Caixa", {
-        code: UI.shelves,
-        control: "choice",
-        showIf: "Gruix de dos gruixos del cos o més",
-        default: "closed",
-        choices: [
-          { value: "closed", label: "Tapat", hides: ["zone.shelves.innerDrawers.shimShelves"] },
-          { value: "shelves", label: "Amb prestatges", reveals: ["zone.shelves.innerDrawers.shimShelves"] },
-        ],
-      }),
-      field("zone.shelves.innerDrawers.shimShelves", "Prestatges", { code: UI.shelves, control: "number", showIf: "Caixa amb prestatges", default: 1 }),
-    ]),
+    field("zone.shelves.innerDrawers.margin", "Marge a les frontisses", { code: UI.shelves, control: "buttons", showIf: "Darrere d'una porta amb frontisses", choices: [{ value: "left", label: "A l'esquerra" }, { value: "right", label: "A la dreta" }], note: "Per decisió de l'usuari, 2026-10-20 («0 casos especials»; abans, el suplement): divideix el compartiment amb una zona oberta de 50 mm al costat (`addSideMargin`); la guia va al divisor." }),
   ]),
   ]),
 ])

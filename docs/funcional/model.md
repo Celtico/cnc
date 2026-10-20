@@ -477,24 +477,21 @@
 
 ### Calaixos interiors
 Per decisió de l'usuari, 2026-10-16 («posar calaixos darrere una porta»): `Zone.innerDrawers` (`n`, `height`, `hardware`,
-`kit`, `setback`, `shim`), contingut del compartiment com els prestatges (Opcions de l'interior). Només es fan darrere
+`kit`, `setback`), contingut del compartiment com els prestatges (Opcions de l'interior). Només es fan darrere
 d'una porta o un abatible (el del compartiment o, `coverFront`, el d'una zona de més amunt), en un compartiment sense
 dividir amb una peça a cada costat (`visibleZone`; si no, es conserven). Construcció (`DrawersBuilder.buildInnerDrawers`):
 a baix de tot del compartiment, `n` × `height` + la folgança entre fronts; els prestatges es reparteixen per sobre. Els
 calaixos de sempre (caixa de fusta o joc) amb un **front interior** del cos, de l'amplada i l'alçada de la caixa (amb un
 joc: entre els laterals del joc, 2 mm de joc a cada costat, fins a dalt del joc), **sense tirador**, amb la cara a
-`setback` (25) del davant de la caixa; al costat de les frontisses (els dos amb dues portes), un **suplement** del cos de
-`shim` mm (sense: el gruix del cos; 0 = cap) de l'alçada dels calaixos, des de 60 mm del davant (`SHIM_FROM_FRONT`:
-darrere de la placa de la frontissa, hipòtesi) fins al darrere: els forats de la guia hi van i el calaix és més estret.
-Avís `inner-drawers` (el suplement es cargola al lateral; sense suplement al costat de les frontisses, un avís que el braç i la
+`setback` (25) del davant de la caixa; la guia va al lateral o al divisor del costat. **Sense suplements** (per decisió de
+l'usuari, 2026-10-20: «0 casos especials»): el marge per a les frontisses és una zona estreta oberta al costat, una divisió
+normal (Calaixos interiors › «Marge a les frontisses», `addSideMargin`: 50 mm; una porta del compartiment es queda a la zona
+dividida). Avís `inner-drawers` si els calaixos toquen el lateral de les frontisses (el braç i la
 placa hi topen). Amb un joc, `front: "kit"` (per decisió de l'usuari, «calaixos sense frontal, tot ferratge»): cap front de
 fusta; el front interior metàl·lic del fabricant va a la comanda del joc i es pinta com a ferratge. Test `build/innerDrawers.test.ts`.
 Per decisió de l'usuari, 2026-10-20, les **mateixes opcions que Front › Calaixos**: l'alçada de cada calaix (`heights`, de baix a
 dalt; totes iguals = `height`, `innerDrawerHeights`), la guia de cada calaix amb un joc i alçades diferents (`drawerSlides`,
 `innerPerDrawerSlides`) i les opcions del joc (`kit`: tancament, darrere, color); la UI fa servir els mateixos `DrawerSlides` i
 `KitFields`. Sense tirador (front interior).
-**Suplement de cada costat** (per decisió de l'usuari, 2026-10-20): `sides.left` / `sides.right` (`InnerShim`: `thickness`, `box`,
-`shelves`; sense, `innerShimOf`: `shim` o el gruix del cos a les frontisses i cap a l'altre). Fins a dos gruixos del cos, una tira
-massissa; més gruixut, una **caixa** del cos: la pell (amb els forats de la guia), la tapa de dalt i, tapada, el davant o, `box:
-"shelves"`, prestatges; el lateral fa de fons. Sense límit fix (fins a 600): avís `inner-drawers` si als calaixos no els queden
-150 mm. El cantell de dalt del suplement es canteja sempre (`applyEdgeRules`, peces `inner-shim-`).
+Els suplements d'abans (`shim`, `sides`: tira o caixa) ja no hi són: els fitxers que en portaven es llegeixen sense (per
+decisió de l'usuari, 2026-10-20: «ja refarem els mobles»).

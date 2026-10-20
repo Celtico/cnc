@@ -353,9 +353,9 @@ export interface Zone {
 /**
  * **Calaixos interiors** (per decisió de l'usuari, 2026-10-16: «posar calaixos darrere una porta»): contingut del
  * compartiment, com els prestatges, a baix de tot (els prestatges es reparteixen per sobre). Només es fan darrere d'una
- * porta (la del compartiment o la d'una zona de més amunt). Cada calaix porta un **front interior baix** (encastat entre
- * els suplements, de l'alçada de la caixa) **retirat** `setback` mm del davant de la caixa i, al costat de les
- * frontisses, un **suplement** de `shim` mm al lateral (la guia s'hi cargola: el calaix no topa amb la frontissa).
+ * porta (la del compartiment o la d'una zona de més amunt). Cada calaix porta un **front interior baix** (de l'alçada de
+ * la caixa) **retirat** `setback` mm del davant de la caixa. Sense suplements (per decisió de l'usuari, 2026-10-20: «0
+ * casos especials»): el marge per a les frontisses és una zona estreta oberta al costat (`addSideMargin`).
  */
 export interface InnerDrawers {
   n: number
@@ -373,13 +373,6 @@ export interface InnerDrawers {
   drawerSlides?: (HardwareItem | null)[]
   /** Retirada del front interior des del davant de la caixa (mm; sense: 25, Preferències › Folgances per defecte). */
   setback?: number
-  /** Gruix del suplement al costat de les frontisses (mm; sense: el gruix del cos; 0 = sense suplements). */
-  shim?: number
-  /**
-   * El suplement de cada costat, triat a part (per decisió de l'usuari, 2026-10-20: «poder seleccionar com vols cada
-   * costat»). Sense el d'un costat: `shim` al costat de les frontisses i cap a l'altre (`innerShimOf`).
-   */
-  sides?: { left?: InnerShim; right?: InnerShim }
   /**
    * El front: de fusta (sense: el front interior baix) o, amb un joc de calaix, **metàl·lic del fabricant** (`"kit"`; per
    * decisió de l'usuari, 2026-10-16: «calaixos sense frontal, tot ferratge»): cap peça de fusta al davant; la comanda del
@@ -389,19 +382,6 @@ export interface InnerDrawers {
   /** Fronts interiors de vidre (com `drawers.glass`): marc d'una peça de fusta amb la finestra i el vidre al galze. */
   glass?: boolean
 }
-
-/**
- * El suplement d'un costat dels calaixos interiors: `thickness` mm (0 = cap). De dos gruixos del cos o més és una caixa
- * (per decisió de l'usuari, 2026-10-20): tapada (sense `box`, un davant) o, `"shelves"`, oberta amb `shelves` prestatges
- * (sense: 1).
- */
-export interface InnerShim {
-  thickness: number
-  box?: "shelves"
-  shelves?: number
-}
-
-const InnerShimSchema = z.object({ thickness: mm.min(0).max(600), box: z.literal("shelves").optional(), shelves: z.number().int().min(1).max(10).optional() })
 
 export const ZoneSchema: z.ZodType<Zone> = z.lazy(() =>
   z.object({
@@ -442,8 +422,6 @@ export const ZoneSchema: z.ZodType<Zone> = z.lazy(() =>
         kit: KitOptionsSchema.partial().optional(),
         drawerSlides: z.array(FrontHardwareSchema.nullable()).max(10).optional(),
         setback: mm.min(0).max(100).optional(),
-        shim: mm.min(0).max(600).optional(),
-        sides: z.object({ left: InnerShimSchema.optional(), right: InnerShimSchema.optional() }).optional(),
         front: z.literal("kit").optional(),
         glass: z.boolean().optional(),
       })
