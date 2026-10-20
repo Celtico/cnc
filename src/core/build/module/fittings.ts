@@ -85,18 +85,19 @@ export class FittingsBuilder extends LightsBuilder {
   }
 
   /** Un front (porta, abatible…) de la llum `w` × `h`; `material`: un altre que el dels fronts del mòdul (el front de moble d'un electrodomèstic). */
-  protected frontPanel(id: string, name: string, label: string, role: PanelRole, x0: number, y0: number, w: number, h: number, material = frontMaterialOf(this.m)): Panel {
+  protected frontPanel(id: string, name: string, label: string, role: PanelRole, x0: number, y0: number, w: number, h: number, material = frontMaterialOf(this.m), z = this.d.frontZ): Panel {
     const { d } = this
     return this.add(
-      this.basePanel(id, name, label, role, h, w, d.t, material, "x", edges("left", "right", "bottom", "top"), placement([x0, y0, d.frontZ], Y, X, neg(Z), Z)),
+      this.basePanel(id, name, label, role, h, w, d.t, material, "x", edges("left", "right", "bottom", "top"), placement([x0, y0, z], Y, X, neg(Z), Z)),
     )
   }
 
-  protected buildFrontPanel(zone: Zone, ter: ZoneRect, role: PanelRole, name: string, label: string): Panel {
+  /** `z`: la cara de davant (sense, la dels fronts del mòdul; el front fix retirat, més enrere). */
+  protected buildFrontPanel(zone: Zone, ter: ZoneRect, role: PanelRole, name: string, label: string, z?: number): Panel {
     this.frontCount += 1
     const w = ter.x1 - ter.x0
     const h = ter.y1 - ter.y0
-    const p = this.frontPanel(`${role}-${this.frontCount}`, name, label, role, ter.x0, ter.y0, w, h)
+    const p = this.frontPanel(`${role}-${this.frontCount}`, name, label, role, ter.x0, ter.y0, w, h, undefined, z)
     void zone
     return p
   }

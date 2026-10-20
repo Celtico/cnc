@@ -3,7 +3,7 @@ import { LuArrowDownToLine, LuFootprints, LuPanelBottom, LuSquareDashedBottom } 
 import { FormRow } from "../../components/FormRow"
 import { IconChoice } from "../../components/IconChoice"
 import { NumRow } from "../../components/NumRow"
-import { hasBottom, type Base, type Carcass, type HardwareItem } from "../../core/model"
+import { addBottomPlinth, bottomPlinthZone, hasBottom, removeBottomPlinth, setPlinthZone, type Base, type Carcass, type HardwareItem, type Module } from "../../core/model"
 import { useSettings } from "../settings/SettingsContext"
 import { HardwarePick } from "./HardwarePick"
 
@@ -13,12 +13,19 @@ type BaseChoice = "none" | "plinth" | "legs" | "open"
 /**
  * La **base del mòdul** d'un moble normal, com era abans de les cuines (per decisió de l'usuari, 2026-10-20: «si és moble,
  * la base com estava abans del lio de les cuines»; la cuina té el suport al Moble › Cuina, un per a tots els mòduls de
- * terra): una sola tria, Directe a terra · Sòcol (laterals fins a terra i la base aixecada) · Potes (amb la pota i, si es
- * vol, el sòcol davant de les potes) · Sense base (obert per sota).
+ * terra): una sola tria, Directe a terra · Sòcol · Potes (amb la pota i, si es vol, el sòcol davant de les potes) · Sense
+ * base (obert per sota).
+ *
+ * El **Sòcol** és una drecera (per decisió de l'usuari, 2026-10-20: «0 casos especials»): «Sense base» i una zona a baix
+ * de tot amb un front fix retirat (`addBottomPlinth`); l'Alçada i la Retirada són les d'aquesta zona. El sòcol d'abans
+ * (`Base.plinth`, una peça pròpia) es conserva als mòduls que el porten.
  */
-export function ModuleSupportFields({ carcass: c, base: vb, onChange }: { carcass: Carcass; /** La base tal com es construeix (`visibleModule`). */ base: Base; onChange: (c: Carcass) => void }) {
-  const value: BaseChoice = vb.kind === "legs" || vb.kind === "plinth" ? vb.kind : hasBottom(c) ? "none" : "open"
-  const set = (base: Base) => onChange({ ...c, base })
+export function ModuleSupportFields({ module, base: vb, onChange }: { module: Module; /** La base tal com es construeix (`visibleModule`). */ base: Base; onChange: (m: Module) => void }) {
+  const c = module.carcass
+  const zone = bottomPlinthZone(module)
+  const value: BaseChoice = zone ? "plinth" : vb.kind === "legs" || vb.kind === "plinth" ? vb.kind : hasBottom(c) ? "none" : "open"
+  const setCarcass = (carcass: Carcass) => onChange({ ...module, carcass })
+  const set = (base: Base) => setCarcass({ ...c, base })
   return (
     <>
       <FormRow optionId="module.carcass.support" label="Base">
@@ -28,22 +35,32 @@ export function ModuleSupportFields({ carcass: c, base: vb, onChange }: { carcas
           value={value}
           options={[
             { value: "none", label: "Directe a terra", icon: LuArrowDownToLine, hint: "Directe a terra, sense sòcol ni potes" },
-            { value: "plinth", label: "Sòcol", icon: LuPanelBottom, hint: "Sòcol retranquejat a sota" },
+            { value: "plinth", label: "Sòcol", icon: LuPanelBottom, hint: "Sòcol retirat a sota: una zona amb un front fix" },
             { value: "legs", label: "Potes", icon: LuFootprints, hint: "Potes regulables" },
             { value: "open", label: "Sense base (obert)", icon: LuSquareDashedBottom, hint: "Sense base: obert per sota" },
           ]}
           onChange={(k) => {
-            const { noBottom: _n, ...rest } = c
-            const base: Base = k === "plinth" ? { kind: "plinth", height: 60, setback: 30 } : k === "legs" ? { kind: "legs", height: 100 } : { kind: "none" }
+            if (k === value) return
+            // Treure el sòcol fet amb una zona torna l'interior d'abans.
+            const from = zone ? removeBottomPlinth(module) : module
+            if (k === "plinth") return onChange(addBottomPlinth(from))
+            const { noBottom: _n, ...rest } = from.carcass
+            const base: Base = k === "legs" ? { kind: "legs", height: 100 } : { kind: "none" }
             // «Sense base» és `noBottom` (la forma d'ara del `open` d'abans).
-            onChange(k === "open" ? { ...rest, base, noBottom: true } : { ...rest, base })
+            onChange({ ...from, carcass: k === "open" ? { ...rest, base, noBottom: true } : { ...rest, base } })
           }}
         />
       </FormRow>
-      {c.base.kind === "plinth" && (
+      {zone && (
+        <>
+          <NumRow optionId="module.carcass.plinthHeight" label="Alçada sòcol" value={zone.height} min={20} max={300} step={5} suffix="mm" help="La zona de baix de l'Interior (la pots seleccionar a l'arbre)." onChange={(height) => Number.isFinite(height) && height >= 1 && onChange(setPlinthZone(module, "bottom", { height }))} />
+          <NumRow optionId="module.carcass.plinthSetback" label="Retirada" value={zone.setback} min={0} max={200} step={1} suffix="mm" help="Del davant de la caixa al davant del sòcol (el front fix de la zona)." onChange={(setback) => Number.isFinite(setback) && setback >= 0 && onChange(setPlinthZone(module, "bottom", { setback }))} />
+        </>
+      )}
+      {!zone && c.base.kind === "plinth" && (
         <>
           <NumRow optionId="module.carcass.plinthHeight" label="Alçada sòcol" value={c.base.height} min={20} max={300} step={5} onChange={(height) => c.base.kind === "plinth" && set({ ...c.base, height })} />
-          <NumRow optionId="module.carcass.plinthSetback" label="Retranqueig" value={c.base.setback} min={0} max={100} step={5} onChange={(setback) => c.base.kind === "plinth" && set({ ...c.base, setback })} />
+          <NumRow optionId="module.carcass.plinthSetback" label="Retirada" value={c.base.setback} min={0} max={100} step={5} onChange={(setback) => c.base.kind === "plinth" && set({ ...c.base, setback })} />
         </>
       )}
       {c.base.kind === "legs" && <LegsFields base={c.base} thickness={c.thickness} onChange={set} />}

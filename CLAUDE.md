@@ -45,6 +45,10 @@ divisions, continguts, regles de fusteria); els mobles concrets són dades (comp
 "tipus de moble" nou, pregunta't si es pot fer amb zones i continguts. Normalment sí. El mateix per als valors: mides de
 referència, materials, taulers, ferratges, jocs i màquines són **preferències de l'usuari** (Dexie), no constants al codi;
 el codi només porta els valors inicials.
+**Cap cas especial** (per decisió de l'usuari, 2026-10-20): la construcció només coneix zones, divisions i fronts. Una
+opció nova que es pugui fer amb aquestes peces és una **drecera** que crea zones normals (com el Sòcol, el Sòcol de dalt o
+la Cantonada en L, `plinthZones.ts`, `cornerModule.ts`), no una peça especial. Els mobles desats no cal mantenir-los
+iguals: es refaran amb el constructor nou.
 
 ## Stack (no el canviïs sense preguntar)
 - **Vite + React 19 + TypeScript** (strict). Sense backend: tot al client. Gestor de paquets: **pnpm**.

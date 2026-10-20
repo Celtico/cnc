@@ -303,6 +303,13 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   lliure ni dins d'una finestra o un diàleg ni amb un diàleg modal obert (amb l'editor de perfils obert, ⌘Z desfeia el moble
   del darrere); amb una finestra oberta (no són modals) i el focus a l'editor, sí. Les dreceres del teclat, igual
   (`lib/keyTarget.ts`).
+- **Cap cas especial: dreceres que creen zones** (per decisió de l'usuari, 2026-10-20). La construcció només coneix
+  zones, divisions i fronts; les dreceres creen aquesta estructura i després s'edita com qualsevol zona
+  (`core/model/plinthZones.ts`). **Sòcol** (Caixa › Base, moble normal): «Sense base» i una zona a baix de tot amb un
+  **front fix retirat** (`Front.panel.setback`, Front › Front fix › «Retirada»: dins de la llum, amb la folgança a cada
+  costat); el divisor fa de base. **Sòcol de dalt** (Caixa › Tapa): el mòdul creix, «Sense tapa» i una zona a dalt amb un
+  front fix; el divisor fa de tapa. L'Alçada i la Retirada de la Base i de la Tapa són les d'aquesta zona. El sòcol
+  (`Base.plinth`) i el sòcol de dalt (`Carcass.topFiller`) d'abans es construeixen igual als mòduls que els porten.
 - **Teclat**: Ctrl/⌘ C · X · V · D i Supr per al mòdul, l'objecte, el model, el compartiment, **el grup i la selecció
   múltiple** (`core/model/editOps.ts`, `clipOps.ts`; `features/editor/pasteClip.ts` `clipOf`/`pasteClip`, el mateix camí
   per al «Duplicar» de l'inspector del grup i de la selecció múltiple);
@@ -313,7 +320,11 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   enganxades a un mòdul del grup a la còpia del mòdul i la resta al costat. Duplicar un element d'un grup en fa la còpia
   al mateix grup; **enganxar** va al grup triat o al de l'element triat (mòdul, peça o model), i si no n'hi ha, solt
   (decisió: així ⌘C fora i ⌘V amb un grup triat el posa dins); la selecció múltiple es duplica amb cada element al seu
-  grup. El que el moble no admet (mòduls a un de només peces, models fora dels objectes, objectes de referència als
+  grup. **Copiar i enganxar propietats** (per decisió de l'usuari, 2026-10-20: «enganxar no pregunta, copia l'interior»):
+  ⌘V (o ⋯ › Enganxar de l'inspector del compartiment, també a l'«Interior») posa al compartiment triat tot el que porta
+  el copiat (`pasteZone`); al mòdul, ⋯ › Enganxar propietats de l'arbre o ⌥⌘V (`pasteModuleProps`): es queda on és i amb
+  les seves mides, i agafa la caixa, els fronts, els ferratges i l'interior del copiat (penjat o a terra no es copia).
+  El que el moble no admet (mòduls a un de només peces, models fora dels objectes, objectes de referència als
   objectes) es queda fora i s'avisa. El
   porta-retalls és a localStorage (`mobles:clipboard`, entre mobles), validat amb zod (`parseClip`); una peça enganxada a un
   mòdul d'un altre moble queda solta, una illa es duplica al costat i no s'enganxen mòduls a un moble només de peces (`lliure`) o objecte. Ctrl/⌘ D

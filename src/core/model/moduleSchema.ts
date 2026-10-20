@@ -267,7 +267,12 @@ export const FrontSchema = z.discriminatedUnion("kind", [
     /** L'imant triat (reixeta desmuntable i trapa; còpia d'un item `magnet`); sense, el del mòdul. */
     hardware: FrontHardwareSchema.optional(),
   }),
-  z.object({ kind: z.literal("panel") }),
+  /**
+   * Front fix. `setback` (per decisió de l'usuari, 2026-10-20: «el sòcol és una divisió amb un front fix retirat»): el
+   * front va dins de la llum (amb la folgança front–cos a cada costat), retirat aquests mm del davant de la caixa, com el
+   * sòcol d'un moble. Sense: com els altres fronts (recobrent o encastat, segons el mòdul).
+   */
+  z.object({ kind: z.literal("panel"), setback: mm.min(0).max(300).optional() }),
 ])
 export type Front = z.infer<typeof FrontSchema>
 

@@ -49,6 +49,22 @@ export function pasteZone(root: Zone, targetId: string, src: Zone): Zone {
 }
 
 /**
+ * **Enganxar propietats** d'un mòdul (per decisió de l'usuari, 2026-10-20: «creava algo i aplico propietat, i al pegar en
+ * una altra objecte, es manté, i copia les propietats», com copiar l'estil a un programa de disseny): el mòdul triat es
+ * queda on és i amb les seves mides, i agafa de l'altre la caixa (base, fons, tapa, laterals, materials…), els fronts,
+ * els ferratges i tot l'interior (amb ids nous). Penjat o a terra no es copia (és la Posició): si un dels dos és penjat, es
+ * queda la base del triat. Els passacables (van a una posició del mòdul) i la cantonada en L, tampoc.
+ */
+export function pasteModuleProps(target: Module, src: Module): Module {
+  const t = target.carcass
+  const { corner: _c, ...from } = structuredClone(src.carcass)
+  const keepBase = t.base.kind === "wall" || from.base.kind === "wall"
+  const carcass = { ...from, width: t.width, height: t.height, depth: t.depth, ...(keepBase ? { base: t.base } : {}), ...(t.corner ? { corner: t.corner } : {}) }
+  const { type: _t, ...rest } = target
+  return { ...rest, ...(src.type ? { type: src.type } : {}), carcass, fronts: structuredClone(src.fronts), hardware: structuredClone(src.hardware), root: { ...cloneZone(src.root), id: target.root.id } }
+}
+
+/**
  * Canvia on va un mòdul (Mòdul › Posició › «Fila», i l'assistent IA): **arrambat** a la paret (a terra, a la fila),
  * **penjat** (base `wall` a `floorHeight`, a la fila dels penjats) o **lliure al terra** (surt de la fila i es queda on
  * és: X pròpia `here`, a 0 de la paret). D'un penjat a terra, la base passa a «directe a terra».

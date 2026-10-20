@@ -1,6 +1,6 @@
 import { useEffect } from "react"
 import { toaster } from "../../components/ui/toaster"
-import { deleteZone, duplicateZone, groupItems, groupMulti, moveMultiBy, newGroupName, parentOf, removeGroup, removeModule, removeMulti, ungroupMulti, type Composition, type Module, type MultiItem, type Zone } from "../../core/model"
+import { deleteZone, duplicateZone, pasteModuleProps, groupItems, groupMulti, moveMultiBy, newGroupName, parentOf, removeGroup, removeModule, removeMulti, ungroupMulti, type Composition, type Module, type MultiItem, type Zone } from "../../core/model"
 import type { Selection } from "../composition/StructureTree"
 import { useLatest } from "../../lib/useLatest"
 import { readClip, writeClip, type Clip } from "./clipboard"
@@ -82,10 +82,17 @@ export function useEditorKeys({
       if (key === "x") remove()
       return
     }
-    if (mod && key === "v") {
+    // Amb ⌥ (Mac), `e.key` no és «v»: també pel codi de la tecla.
+    if (mod && (key === "v" || e.code === "KeyV")) {
       const clip = readClip()
       if (!clip) return
       e.preventDefault()
+      // ⌥⌘V amb un mòdul triat: enganxa les propietats del mòdul copiat (es queda on és i amb les seves mides).
+      if (e.altKey && clip.kind === "module" && selection.kind === "module") {
+        const target = comp.modules.find((x) => x.id === selection.id)
+        if (target && target.id !== clip.data.id) setComp({ ...comp, modules: comp.modules.map((x) => (x.id === target.id ? pasteModuleProps(x, clip.data) : x)) })
+        return
+      }
       paste(clip)
       return
     }

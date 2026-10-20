@@ -25,14 +25,14 @@ export const CARCASS = section("module.carcass", "Caixa", { icon: "carcass", cod
     ],
   }, [
     field("module.carcass.plinthHeight", "Alçada sòcol", { code: UI.moduleSupport, control: "number", showIf: "Suport = Sòcol", range: { min: 20, max: 300, step: 5, suffix: "mm" }, default: 60, defaultEditable: true }),
-    field("module.carcass.plinthSetback", "Retranqueig", {
+    field("module.carcass.plinthSetback", "Retirada", {
       code: UI.moduleSupport,
       control: "number",
       showIf: "Suport = Sòcol",
-      range: { min: 0, max: 100, step: 5, suffix: "mm" },
+      range: { min: 0, max: 200, step: 1, suffix: "mm" },
       default: 30,
       defaultEditable: true,
-      issue: "Glossari/etiquetes: el mateix concepte (retirada del sòcol respecte del davant) es diu «Retranqueig» amb Suport Sòcol i «Retirada del sòcol» amb Potes; «Retranqueig» també és el dels prestatges.",
+      note: "Per decisió de l'usuari, 2026-10-20 («0 casos especials»): el Sòcol del moble normal és una drecera; crea «Sense base» i una zona de baix amb un front fix retirat (`addBottomPlinth`). L'Alçada i la Retirada són les d'aquesta zona.",
     }),
     field("module.carcass.legHeight", "Alçada potes", { code: UI.moduleSupport, control: "number", showIf: "Suport = Potes", range: { min: 20, max: 400, step: 5, suffix: "mm" }, default: 100, defaultEditable: true }),
     field("module.carcass.leg", "Pota", { code: UI.moduleSupport, control: "hardware", showIf: "Suport = Potes, i hi ha potes a la biblioteca o el mòdul en porta una", defaultText: "Genèriques" }, [
@@ -140,6 +140,7 @@ export const CARCASS = section("module.carcass", "Caixa", { icon: "carcass", cod
       showIf: "Amb tapa i sense tauler de taula",
       default: false,
       choices: [{ value: "on", label: "Fins al sostre", reveals: ["module.carcass.topFillerHeight", "module.carcass.topFillerSetback"] }],
+      note: "Per decisió de l'usuari, 2026-10-20 («0 casos especials»): una drecera; el mòdul creix, «Sense tapa» i una zona de dalt amb un front fix (`addTopPlinth`).",
     }, [
       field("module.carcass.topFillerHeight", "Alçada", { code: UI.carcass, control: "number", range: { min: 10, max: 600, step: 5, suffix: "mm" }, default: 60 }),
       field("module.carcass.topFillerSetback", "Retirada", { code: UI.carcass, control: "number", range: { min: 0, max: 200, step: 1, suffix: "mm" }, default: 0 }),

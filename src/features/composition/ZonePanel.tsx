@@ -1,5 +1,5 @@
 import { Button, HStack, Menu, Stack, Text } from "@chakra-ui/react"
-import { LuArrowUp, LuCopy, LuColumns2, LuRows2, LuPlus, LuSquareSplitHorizontal, LuSquareSplitVertical, LuTrash2, LuUngroup, LuDoorClosed, LuFlipHorizontal2, LuSquareDashed } from "react-icons/lu"
+import { LuArrowUp, LuClipboardPaste, LuCopy, LuColumns2, LuRows2, LuPlus, LuSquareSplitHorizontal, LuSquareSplitVertical, LuTrash2, LuUngroup, LuDoorClosed, LuFlipHorizontal2, LuSquareDashed } from "react-icons/lu"
 import type { ReactNode } from "react"
 import { FoldItem } from "../../components/Fold"
 import {
@@ -22,6 +22,7 @@ import {
   splitDirsFor,
   findZone,
   nicheAppliance,
+  pasteZone,
   type Front,
   type ModuleHardware,
   type Zone,
@@ -34,11 +35,15 @@ import { CoveredFront, ZoneFrontSection } from "./zone/FrontSection"
 import { ZoneShelvesSection } from "./zone/ShelvesSection"
 import { FrontFields } from "./zone/FrontFields"
 import { ActionsMenu } from "../../components/ActionsMenu"
+import { toaster } from "../../components/ui/toaster"
+import { readClip, writeClip } from "../editor/clipboard"
+import { zoneLabel } from "./zoneLabel"
 
 /**
- * Accions de la zona seleccionada (van a la capçalera de l'inspector, com a icones):
- * pujar al pare, duplicar (al costat o a sobre) i eliminar. L'«Interior» (l'arrel) no es duplica ni s'elimina (com amb
- * ⌘D i Suprimir): no hi ha cap acció.
+ * Accions de la zona seleccionada (van a la capçalera de l'inspector, com a icones): copiar i enganxar (⌘C, ⌘V: enganxar
+ * hi posa tot el que porta el copiat, sense preguntar; per decisió de l'usuari, 2026-10-20), pujar al pare, duplicar (al
+ * costat o a sobre) i eliminar. L'«Interior» (l'arrel) no es duplica ni s'elimina (com amb ⌘D i Suprimir): només copiar i
+ * enganxar.
  */
 export function ZoneActions({ root, zone, onChange, onSelect }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; onSelect: (id: string) => void }) {
   const parent = parentOf(root, zone.id)
@@ -47,23 +52,40 @@ export function ZoneActions({ root, zone, onChange, onSelect }: { root: Zone; zo
     onChange(r.root)
     if (r.copyId) onSelect(r.copyId)
   }
-  if (!parent) return null
+  const copy = () => {
+    const label = zoneLabel(zone, { root: !parent })
+    writeClip({ kind: "zone", data: zone, label })
+    toaster.create({ title: `Copiat: ${label}`, type: "info", duration: 1500 })
+  }
+  const clip = readClip()
+  const paste = clip?.kind === "zone" ? clip.data : undefined
   // Un sol botó ⋯ amb totes les accions: la capçalera queda neta.
   return (
     <ActionsMenu label="Accions del compartiment">
-      <Menu.Item value="parent" onClick={() => onSelect(parent.id)}>
-        <LuArrowUp /> Seleccionar el pare
+      <Menu.Item value="copy" onClick={copy}>
+        <LuCopy /> Copiar
       </Menu.Item>
-      <Menu.Item value="v" onClick={() => duplicate("v")}>
-        <LuCopy /> Duplicar al costat
+      <Menu.Item value="paste" disabled={!paste} onClick={() => paste && onChange(pasteZone(root, zone.id, paste))}>
+        <LuClipboardPaste /> Enganxar{clip?.kind === "zone" ? ` «${clip.label}»` : ""}
       </Menu.Item>
-      <Menu.Item value="h" onClick={() => duplicate("h")}>
-        <LuCopy /> Duplicar a sobre
-      </Menu.Item>
-      <Menu.Separator />
-      <Menu.Item value="del" color="fg.error" onClick={() => onChange(removeZone(root, zone.id))}>
-        <LuTrash2 /> Eliminar
-      </Menu.Item>
+      {parent && (
+        <>
+          <Menu.Separator />
+          <Menu.Item value="parent" onClick={() => onSelect(parent.id)}>
+            <LuArrowUp /> Seleccionar el pare
+          </Menu.Item>
+          <Menu.Item value="v" onClick={() => duplicate("v")}>
+            <LuCopy /> Duplicar al costat
+          </Menu.Item>
+          <Menu.Item value="h" onClick={() => duplicate("h")}>
+            <LuCopy /> Duplicar a sobre
+          </Menu.Item>
+          <Menu.Separator />
+          <Menu.Item value="del" color="fg.error" onClick={() => onChange(removeZone(root, zone.id))}>
+            <LuTrash2 /> Eliminar
+          </Menu.Item>
+        </>
+      )}
     </ActionsMenu>
   )
 }

@@ -310,6 +310,11 @@ export function FrontFields({ front, openRatio, drawerHeights, onChange, hardwar
       )
     }
     case "panel":
-      return null
+      // La retirada (per decisió de l'usuari, 2026-10-20): el sòcol d'un moble és una zona amb un front fix retirat.
+      return (
+        <Stack gap={3}>
+          <NumRow optionId="zone.front.panel.setback" label="Retirada" value={front.setback ?? 0} min={0} max={300} step={1} suffix="mm" onChange={(v) => Number.isFinite(v) && v >= 0 && onChange(v ? { ...front, setback: v } : { kind: "panel" })} help="0: com els altres fronts. Més: dins de la llum, amb la folgança a cada costat, i retirat del davant de la caixa (un sòcol)." />
+        </Stack>
+      )
   }
 }

@@ -1,5 +1,5 @@
 import { Button, HStack, Stack, Switch, Text } from "@chakra-ui/react"
-import { DEFAULT_GRILLE, UI_PATHS, applianceCarcassText, moduleType, carcassBounds, zoneBounds, type FloorSupport, backChoices, hasBottom, moduleApplianceCarcass, visibleModule, boardChoices, hardwareSummary, jointApplies, materialByName, moduleRows, moduleSlotItem, type Base, type Carcass, type Module, type ModuleRows, type Top } from "../../core/model"
+import { DEFAULT_GRILLE, UI_PATHS, addTopPlinth, bottomPlinthZone, removeTopPlinth, setPlinthZone, topPlinthZone, applianceCarcassText, moduleType, carcassBounds, zoneBounds, type FloorSupport, backChoices, hasBottom, moduleApplianceCarcass, visibleModule, boardChoices, hardwareSummary, jointApplies, materialByName, moduleRows, moduleSlotItem, type Base, type Carcass, type Module, type ModuleRows, type Top } from "../../core/model"
 import { NumRow } from "../../components/NumRow"
 import { FoldItem } from "../../components/Fold"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
@@ -44,7 +44,10 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
   // seves opcions; la insígnia diu el que hi ha.
   // Sense `support` (un moble normal, no una cuina), el suport és el del mòdul.
   const supportKind = support ? support.kind : vc.base.kind === "plinth" ? "plinth" : vc.base.kind === "legs" ? "legs" : "floor"
-  const baseBadge = c.base.kind === "wall" ? "Penjat" : supportKind === "plinth" ? "Sòcol" : supportKind === "legs" ? "Potes" : hasBottom(vc) ? (support ? "Sencera" : "Directe a terra") : "Sense base"
+  // Els sòcols fets amb zones (`plinthZones.ts`): la Base i la Tapa els mostren com a «Sòcol».
+  const bottomZone = !support ? bottomPlinthZone(module) : undefined
+  const topZone = topPlinthZone(module)
+  const baseBadge = c.base.kind === "wall" ? "Penjat" : supportKind === "plinth" || bottomZone ? "Sòcol" : supportKind === "legs" ? "Potes" : hasBottom(vc) ? (support ? "Sencera" : "Directe a terra") : "Sense base"
   const sidesBadge = vc.sides.left && vc.sides.right ? "Els dos" : vc.sides.left ? "Esquerre" : vc.sides.right ? "Dret" : "Cap"
 
   if (section === "dims")
@@ -91,7 +94,7 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
                     {vc.sides.left || vc.sides.right ? <HangerFields module={module} base={c.base} onChange={(base) => set({ base })} /> : <FixedRow optionId="module.carcass.hanger" label="Penjadors" text="Cap (sense laterals)" help="Els penjadors van als laterals. Es penja a mà (un travesser o un fons gruixut cargolat a la paret)." />}
                   </>
                 ) : rule?.support === false ? null : !support ? (
-                  <ModuleSupportFields carcass={c} base={vc.base} onChange={(carcass) => onChange({ ...module, carcass })} />
+                  <ModuleSupportFields module={module} base={vc.base} onChange={onChange} />
                 ) : (
                   // Una opció global (la de tots els mòduls de terra) no es repeteix al mòdul (per decisió de l'usuari,
                   // 2026-10-16: «no repetir les opcions ni posar un missatge, sinó un botó que digui modificar opció global»): què
@@ -181,9 +184,9 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
             </FoldItem>
         )}
         {rule?.top === undefined && (
-            <FoldItem optionId="module.carcass.topGroup" id="mod-carcass-top" title="Tapa" icon={LuPanelTop} size="sm" badge={TOP_LABEL[vc.top.kind]}>
+            <FoldItem optionId="module.carcass.topGroup" id="mod-carcass-top" title="Tapa" icon={LuPanelTop} size="sm" badge={topZone ? "Sòcol de dalt" : TOP_LABEL[vc.top.kind]}>
               <Stack gap={4}>
-                {rule?.top !== undefined ? null : <FormRow optionId="module.carcass.top" label="Tapa">
+                {rule?.top !== undefined || topZone ? null : <FormRow optionId="module.carcass.top" label="Tapa">
                   <IconChoice
                     hideLabel
                     label="Tapa"
@@ -206,8 +209,27 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
 
                 {/* Tauler de taula: tapa per sobre dels laterals, amb voladís i forma. */}
                 {vc.top.kind === "full" && c.top.kind === "full" && <TableTopFields module={module} onChange={onChange} />}
-                {/* Sòcol de dalt (per petició de l'usuari, 2026-10-20): el tauler dret sobre la tapa fins al sostre. */}
-                {vc.top.kind !== "none" && !vc.tableTop && (
+                {/* Sòcol de dalt (per petició de l'usuari, 2026-10-20), una drecera («0 casos especials»): una zona a dalt de tot
+                    amb un front fix; el divisor fa de tapa (`addTopPlinth`). El d'abans (`topFiller`, una peça sobre la
+                    tapa) es conserva als mòduls que el porten. */}
+                {!c.topFiller && (topZone || (vc.top.kind !== "none" && !vc.tableTop)) && (
+                  <>
+                    <FormRow optionId="module.carcass.topFiller" label="Sòcol de dalt" help={topZone ? "La zona de dalt de l'Interior, amb un front fix: el divisor de sota fa de tapa." : undefined}>
+                      <Switch.Root size="sm" pt="6px" checked={!!topZone} onCheckedChange={(e) => onChange(e.checked ? addTopPlinth(module) : removeTopPlinth(module))}>
+                        <Switch.HiddenInput />
+                        <Switch.Control />
+                        <Switch.Label fontSize="sm">Fins al sostre</Switch.Label>
+                      </Switch.Root>
+                    </FormRow>
+                    {topZone && (
+                      <>
+                        <NumRow optionId="module.carcass.topFillerHeight" label="Alçada" value={topZone.height} min={10} max={600} step={5} suffix="mm" help={`El moble fa ${c.height} mm d'alt, amb el sòcol. Posa-hi el buit fins al sostre.`} onChange={(height) => Number.isFinite(height) && height >= 10 && onChange(setPlinthZone(module, "top", { height }))} />
+                        <NumRow optionId="module.carcass.topFillerSetback" label="Retirada" value={topZone.setback} min={0} max={200} step={1} suffix="mm" help="0: com els altres fronts. Més: dins de la llum i retirat del davant de la caixa." onChange={(setback) => Number.isFinite(setback) && setback >= 0 && onChange(setPlinthZone(module, "top", { setback }))} />
+                      </>
+                    )}
+                  </>
+                )}
+                {c.topFiller && vc.top.kind !== "none" && !vc.tableTop && (
                   <>
                     <FormRow optionId="module.carcass.topFiller" label="Sòcol de dalt">
                       <Switch.Root size="sm" pt="6px" checked={!!c.topFiller} onCheckedChange={(e) => set({ topFiller: e.checked ? { height: 60, setback: 0 } : undefined })}>

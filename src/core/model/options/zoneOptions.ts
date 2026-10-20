@@ -129,6 +129,10 @@ const grille = group("zone.front.grille", "Reixeta", { code: UI.frontFields, sho
   field("zone.front.grille.magnet", "Imant", { code: UI.frontFields, control: "hardware", showIf: "Muntatge = Imants, o amb Trapa", defaultText: AS_MODULE }),
 ])
 
+const panel = group("zone.front.panel", "Front fix", { code: UI.frontFields, showIf: "Contingut = Front fix" }, [
+  field("zone.front.panel.setback", "Retirada", { code: UI.frontFields, control: "number", range: { min: 0, max: 300, step: 1, suffix: "mm" }, default: 0, note: "Per decisió de l'usuari, 2026-10-20: amb retirada, dins de la llum i retirat del davant (el sòcol fet amb una divisió)." }),
+])
+
 const front = section("zone.front", "Front", {
   icon: "front",
   code: UI.frontSection,
@@ -149,7 +153,7 @@ const front = section("zone.front", "Front", {
       { value: "drawers", label: "Calaixos", reveals: ["zone.front.drawers"], hides: ["zone.shelves", "module.carcass.shelfSetback"], note: "lateral o divisor als dos costats" },
       { value: "flap", label: "Abatible", reveals: ["zone.front.flap"] },
       { value: "grille", label: "Reixeta", reveals: ["zone.front.grille"] },
-      { value: "panel", label: "Front fix", hides: ["zone.shelves", "zone.divide"] },
+      { value: "panel", label: "Front fix", reveals: ["zone.front.panel"], hides: ["zone.shelves", "zone.divide"] },
       { value: "appliance", label: "Electrodomèstic", reveals: ["zone.appliance"], note: "compartiment d'un mòdul dividit (per decisió de l'usuari, 2026-10-20)" },
     ],
     note: "Només els fronts que s'hi poden fixar (el triat surt sempre).",
@@ -158,6 +162,7 @@ const front = section("zone.front", "Front", {
   drawers,
   flap,
   grille,
+  panel,
 ])
 
 const shelves = group("zone.shelves", "Opcions de l'interior", {

@@ -332,9 +332,17 @@ export class Builder extends AppliancesBuilder {
       case "grille":
         this.buildGrille(zone, front, rect, territory, left, right, rowYs)
         break
-      case "panel":
-        this.buildFrontPanel(zone, territory, "panel", "frontal fix", "Front fix")
+      case "panel": {
+        // Retirat (el sòcol fet amb una divisió): dins de la llum, amb la folgança front–cos a cada costat, i la cara de
+        // davant a `setback` del davant de la caixa.
+        const sb = front.setback
+        if (sb) {
+          const og = this.m.fronts.outerGap
+          const inside = { x0: r(rect.x0 + og), x1: r(rect.x1 - og), y0: r(rect.y0 + og), y1: r(rect.y1 - og) }
+          this.buildFrontPanel(zone, inside, "panel", "frontal fix", "Front fix", r(this.d.D - sb))
+        } else this.buildFrontPanel(zone, territory, "panel", "frontal fix", "Front fix")
         break
+      }
     }
   }
 

@@ -1,13 +1,14 @@
 import { Box, Menu, Text } from "@chakra-ui/react"
 import { createElement } from "react"
-import { LuArrowLeft, LuArrowRight, LuChevronDown, LuCornerDownLeft, LuCornerDownRight, LuChevronRight, LuCopy, LuGroup, LuRefrigerator, LuTrash2, LuUngroup } from "react-icons/lu"
-import { APPLIANCE_LABELS, addCorner, groupMulti, nicheAppliance, groupNames, newGroupName, newId, removeModule, rowOf, ungroupMulti, type Module, type Zone } from "../../../core/model"
+import { LuArrowLeft, LuArrowRight, LuChevronDown, LuCornerDownLeft, LuCornerDownRight, LuChevronRight, LuClipboardPaste, LuCopy, LuGroup, LuRefrigerator, LuTrash2, LuUngroup } from "react-icons/lu"
+import { APPLIANCE_LABELS, addCorner, pasteModuleProps, groupMulti, nicheAppliance, groupNames, newGroupName, newId, removeModule, rowOf, ungroupMulti, type Module, type Zone } from "../../../core/model"
 import { toaster } from "../../../components/ui/toaster"
 import { TreeRow, TreeRowMenu } from "../../../components/TreeRow"
 import { zoneIcon } from "../zoneIcons"
 import { zoneLabel } from "../zoneLabel"
 import type { Selection } from "../StructureTree"
 import { GroupRow } from "./GroupRow"
+import { readClip, writeClip } from "../../editor/clipboard"
 import { UngroupDropZone } from "./UngroupDropZone"
 import type { TreeCtx } from "./treeCtx"
 
@@ -105,6 +106,23 @@ export function ModuleRows({ tree, openId, toggle }: { tree: TreeCtx; openId: st
                   <Menu.Item value="dup" onClick={() => duplicate(i)}>
                     <LuCopy /> Duplicar
                   </Menu.Item>
+                  {/* Copiar i enganxar les propietats (per decisió de l'usuari, 2026-10-20): el mòdul es queda on és i amb les
+                      seves mides, i agafa la caixa, els fronts, els ferratges i l'interior del copiat (`pasteModuleProps`). */}
+                  <Menu.Item value="copy" onClick={() => {
+                    writeClip({ kind: "module", data: m, label: m.name })
+                    toaster.create({ title: `Copiat: ${m.name}`, type: "info", duration: 1500 })
+                  }}>
+                    <LuCopy /> Copiar
+                  </Menu.Item>
+                  {(() => {
+                    const clip = readClip()
+                    const src = clip?.kind === "module" && clip.data.id !== m.id ? clip.data : undefined
+                    return (
+                      <Menu.Item value="paste-props" disabled={!src} onClick={() => src && onChange({ ...comp, modules: comp.modules.map((x) => (x.id === m.id ? pasteModuleProps(x, src) : x)) })}>
+                        <LuClipboardPaste /> Enganxar propietats{src ? ` de «${src.name}»` : ""}
+                      </Menu.Item>
+                    )
+                  })()}
                   {!m.rot && !m.turned && m.x === undefined && (
                     <>
                       <Menu.Item value="corner-left" onClick={() => corner(i, "left")}>
