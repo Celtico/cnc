@@ -1,4 +1,4 @@
-import { newId, type Module, type Zone } from "./composition"
+import { compositionKind, newId, type Composition, type Module, type Zone } from "./composition"
 
 /**
  * **Sòcols fets amb zones** (per decisió de l'usuari, 2026-10-20: «0 casos especials»; «el sòcol de moble és com una
@@ -106,4 +106,20 @@ export function setPlinthZone(m: Module, at: "bottom" | "top", patch: { height?:
   const sizes = s.sizes.map((x, k) => (k === i ? height : x))
   const grow = at === "top" ? height - z.height : 0
   return { ...m, carcass: { ...m.carcass, height: Math.min(2800, Math.max(100, m.carcass.height + grow)) }, root: { ...m.root, split: { ...s, children, sizes } } }
+}
+
+/**
+ * Moble nou d'una plantilla (galeries, ambients, assistent): fora de la cuina, els mòduls amb el sòcol de la caixa d'abans
+ * (`base: plinth`) passen al sòcol fet amb una zona (`addBottomPlinth`), el mateix que fa la drecera de Caixa › Base. La
+ * cuina (sòcol de tram, amb potes) no es toca.
+ */
+export function withZonePlinths<T extends Pick<Composition, "modules" | "kind" | "runs" | "support">>(comp: T): T {
+  if (comp.support || compositionKind(comp) === "cuina" || !comp.modules.some((m) => m.carcass.base.kind === "plinth")) return comp
+  return {
+    ...comp,
+    modules: comp.modules.map((m) => {
+      const b = m.carcass.base
+      return b.kind === "plinth" ? addBottomPlinth({ ...m, carcass: { ...m.carcass, base: { kind: "none" } } }, b.height, b.setback) : m
+    }),
+  }
 }

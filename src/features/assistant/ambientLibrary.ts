@@ -2,7 +2,7 @@ import { buildBounds, buildComposition } from "../../core/build/buildComposition
 import { ambientToolSet, type AmbientToolContext, type LibraryEntry } from "../../core/assistant/ambientTools"
 import type { AssistantToolSet } from "../../core/assistant/toolset"
 import { uniqueName } from "../../core/file/mobleFile"
-import { compositionKind, resolveTemplateRef, withInnerClearance, type Ambient, type Settings } from "../../core/model"
+import { compositionKind, resolveTemplateRef, withInnerClearance, withZonePlinths, type Ambient, type Settings } from "../../core/model"
 import { compositionOf } from "../../db/compositionStore"
 import { createProject, db, type Project } from "../../db/db"
 
@@ -37,7 +37,7 @@ async function createFromTemplate(ref: string, settings: Pick<Settings, "gaps">)
   const t = resolveTemplateRef(ref)
   if (!t) throw new Error(`No hi ha cap plantilla «${ref}».`)
   // Com les galeries: els objectes tal qual; els mobles amb la folgança de les peces de dins de Preferències.
-  const comp = t.kind === "objecte" ? { ...t.make(), kind: "objecte" as const } : withInnerClearance({ ...t.make(), kind: t.kind }, settings.gaps.innerClearance, settings.gaps.grooveClearance)
+  const comp = t.kind === "objecte" ? { ...t.make(), kind: "objecte" as const } : withZonePlinths(withInnerClearance({ ...t.make(), kind: t.kind }, settings.gaps.innerClearance, settings.gaps.grooveClearance))
   const existing = (await db.projects.toArray()).map((p) => p.name)
   const id = await createProject(uniqueName(t.name, existing), undefined, { composition: comp })
   const p = await db.projects.get(id)

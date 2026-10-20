@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { addBottomPlinth, addTopPlinth, bottomPlinthZone, defaultModule, pasteModuleProps, removeBottomPlinth, removeTopPlinth, setPlinthZone, topPlinthZone, type Module } from "../model"
+import { addBottomPlinth, addTopPlinth, bottomPlinthZone, defaultModule, pasteModuleProps, removeBottomPlinth, removeTopPlinth, setPlinthZone, topPlinthZone, withZonePlinths, type Module } from "../model"
 import { buildModule } from "./buildModule"
 import { panelBox } from "./geometry"
 
@@ -60,5 +60,16 @@ describe("enganxar propietats d'un mòdul", () => {
     expect(out.carcass.back).toBe("screwed")
     expect(out.root.id).toBe(target.root.id)
     expect(out.root.front?.kind).toBe("drawers")
+  })
+})
+
+describe("mobles nous de plantilla", () => {
+  it("fora de la cuina, el sòcol de la caixa passa a ser una zona; a la cuina no es toca", () => {
+    const m = defaultModule("a", "Armari", { width: 800, height: 2000, depth: 600, base: { kind: "plinth", height: 80, setback: 30 } })
+    const out = withZonePlinths({ kind: "armari" as const, modules: [m] })
+    expect(out.modules[0]!.carcass.base.kind).toBe("none")
+    expect(bottomPlinthZone(out.modules[0]!)).toMatchObject({ height: 80, setback: 30 })
+    const cuina = { kind: "cuina" as const, modules: [m] }
+    expect(withZonePlinths(cuina)).toBe(cuina)
   })
 })

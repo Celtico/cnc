@@ -309,7 +309,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   **front fix retirat** (`Front.panel.setback`, Front › Front fix › «Retirada»: dins de la llum, amb la folgança a cada
   costat); el divisor fa de base. **Sòcol de dalt** (Caixa › Tapa): el mòdul creix, «Sense tapa» i una zona a dalt amb un
   front fix; el divisor fa de tapa. L'Alçada i la Retirada de la Base i de la Tapa són les d'aquesta zona. El sòcol
-  (`Base.plinth`) i el sòcol de dalt (`Carcass.topFiller`) d'abans es construeixen igual als mòduls que els porten.
+  (`Base.plinth`) i el sòcol de dalt (`Carcass.topFiller`) d'abans es construeixen igual als mòduls que els porten. Els mobles nous de plantilla (galeries, ambients, assistent; fora de la
+  cuina) passen el `Base.plinth` de la plantilla al sòcol fet amb una zona (`withZonePlinths`).
 - **Teclat**: Ctrl/⌘ C · X · V · D i Supr per al mòdul, l'objecte, el model, el compartiment, **el grup i la selecció
   múltiple** (`core/model/editOps.ts`, `clipOps.ts`; `features/editor/pasteClip.ts` `clipOf`/`pasteClip`, el mateix camí
   per al «Duplicar» de l'inspector del grup i de la selecció múltiple);

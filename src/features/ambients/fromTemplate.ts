@@ -1,6 +1,6 @@
 import { buildBounds, buildComposition } from "../../core/build/buildComposition"
 import { uniqueName } from "../../core/file/mobleFile"
-import { layoutTemplate, newId, resolveTemplateRef, templateWalls, withInnerClearance, type Ambient, type AmbientItem, type AmbientTemplate } from "../../core/model"
+import { layoutTemplate, newId, resolveTemplateRef, templateWalls, withInnerClearance, withZonePlinths, type Ambient, type AmbientItem, type AmbientTemplate } from "../../core/model"
 import { createAmbient, createProject, db, setAmbientsFolder } from "../../db/db"
 import { currentSettings } from "../../db/settingsStore"
 import { eyePose } from "./planGeom"
@@ -25,7 +25,7 @@ export async function createAmbientFromTemplate(t: AmbientTemplate, client?: str
   for (const ref of [...new Set(t.items.map((i) => i.ref))]) {
     const tpl = resolveTemplateRef(ref)
     if (!tpl) continue
-    const comp = withInnerClearance({ ...tpl.make(), kind: tpl.kind }, gaps.innerClearance, gaps.grooveClearance)
+    const comp = withZonePlinths(withInnerClearance({ ...tpl.make(), kind: tpl.kind }, gaps.innerClearance, gaps.grooveClearance))
     const name = uniqueName(tpl.name, names)
     names.push(name)
     const id = await createProject(name, undefined, { composition: comp, ...(folder ? { folder } : {}) })

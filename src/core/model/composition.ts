@@ -263,7 +263,7 @@ export function cabinetToComposition(p: CabinetParams, name = "Mòdul"): Composi
 
 /** Mòdul nou amb valors per defecte (caixa buida amb prestatges regulables). */
 /** Tipus d'una composició: el triat o, als antics, cuina si té taulell/sòcol corregut. */
-export function compositionKind(c: Composition): CompositionKind {
+export function compositionKind(c: Pick<Composition, "kind" | "runs">): CompositionKind {
   return c.kind ?? (c.runs?.length ? "cuina" : "moble")
 }
 
