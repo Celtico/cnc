@@ -11,7 +11,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Navegació | Mobles (el cub: un moble) · Ambients · Objectes | `LuBox` · `LuHouse` · `LuSofa` |
 | Navegació | Editor · Peces · Nesting / taulers · Exportar | `LuDraftingCompass` · `LuList` · `LuLayoutGrid` · `LuDownload` |
 | Navegació | Tornar (‹ a les barres) · Plegar/desplegar menú · Preferències | `LuChevronLeft` · `LuPanelLeftClose` / `LuPanelLeftOpen` · `LuSettings` |
-| Tipus de moble (targetes; «Nou moble» no en té menú) | Moble · Cuina · Armari · Taula · Peces lliures (`lliure`, d'abans) · Objecte | `LuBox` · `LuCookingPot` · `LuContainer` · `LuTable` · `LuPuzzle` · `LuSofa` |
+| Tipus de moble (targetes; «Nou moble»: Moble normal · Cuina) | Moble · Cuina · Armari · Taula · Peces lliures (`lliure`, d'abans) · Objecte | `LuBox` · `LuCookingPot` · `LuContainer` · `LuTable` · `LuPuzzle` · `LuSofa` |
 | Zones | Dividir en vertical (divisor vertical, zones esquerra/dreta) | `LuSquareSplitHorizontal` |
 | Zones | Dividir en horitzontal (travesser, zones dalt/baix) | `LuSquareSplitVertical` |
 | Zones | Divisió vertical · horitzontal (un compartiment porta la icona del seu contingut, igual a l'arbre, a la capçalera i a «Front»: `composition/zoneIcons.ts`) | `LuColumns2` · `LuRows2` |
@@ -25,11 +25,11 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Front | Una porta · Dues portes · Abatible avall · amunt · Ranures horitzontals · verticals (reixeta) | `LuDoorClosed` · `LuFlipHorizontal2` · `LuArrowDownToLine` · `LuArrowUpToLine` · `LuAlignJustify` · `LuColumns3` |
 | Front | Recobrents (fronts) | `LuSquareStack` |
 | Forma | Rectangle · Arrodonit · Oval (tauler de taula) · Efecte obstacle | `LuRectangleHorizontal` · `LuSquircle` · `LuCircle` · `LuShield` |
-| Inspector | Mides · Caixa (base, fons, tapa, laterals, estil dels fronts i folgances) · Portes (del mòdul; com el Front de la porta) · Materials · Unió (l'espiga del mòdul; la de la categoria Unions) · Ferratges (inspector de la peça lliure, Preferències i visor; no al mòdul) · Front · Pare | `LuMoveDiagonal` · `LuFrame` · `LuDoorClosed` · `LuPalette` · `LuBolt` · `LuWrench` · `LuDoorClosed` · `LuArrowUp` |
+| Inspector | Mides · Caixa (base, fons, tapa, laterals, estil dels fronts i folgances) · Portes (del mòdul; com el Front de la porta) · Materials · Ferratges (inspector de la peça lliure, Preferències i visor; no al mòdul) · Front · Pare | `LuMoveDiagonal` · `LuFrame` · `LuDoorClosed` · `LuPalette` · `LuWrench` · `LuDoorClosed` · `LuArrowUp` |
 | Inspector | Suport: Directe a terra · Sòcol · Potes vistes (la de la categoria Potes, no la Taula) | `LuArrowDownToLine` · `LuPanelBottom` · `LuFootprints` |
 | Inspector | Base: Sencera · Sense base | `LuPanelBottom` · `LuSquareDashedBottom` |
 | Inspector | Fons en ranura · Cargolat darrere · Encastat · Sense fons | `LuLayers2` · `LuDrill` · `LuInspectionPanel` · `LuSquareDashed` |
-| Inspector | Resum del moble · Suport general · Tipus del mòdul · Posició | `LuBox` · `LuPanelBottom` · el del tipus (`LuBox` moble, `LuRefrigerator` electrodomèstic) · `LuMove` |
+| Inspector | Resum del moble · Cuina · Tipus del mòdul · Posició | `LuBox` · `LuPanelBottom` · el del tipus (`LuBox` moble, `LuRefrigerator` electrodomèstic) · `LuMove` |
 | Inspector | Grup (peces lliures) · Enganxada (a un mòdul, al terra / a la paret) · CNC de la peça (la de Màquina CNC) · Triats (selecció múltiple, editor i ambients) | `LuGroup` · `LuLink` · `LuFactory` · `LuListChecks` |
 | Forma | Objecte de referència: Caixa · Cilindre · Perfil · Forma lliure · Relleu d'imatge | `LuBox` · `LuCylinder` · `LuSpline` · `LuShapes` · `LuImage` |
 | Composició | «+» d'Objectes de referència › «Per fresar una peça»: Forma lliure · Relleu d'imatge… · En blanc… | `LuShapes` · `LuImage` · `LuPlus` |

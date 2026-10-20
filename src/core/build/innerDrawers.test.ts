@@ -68,3 +68,54 @@ describe("calaixos interiors: front metàl·lic i avís sense suplement", () => 
     expect(buildModule(col()).warnings.some((w) => w.message.includes("topen"))).toBe(false)
   })
 })
+
+describe("calaixos interiors amb les opcions de Front › Calaixos", () => {
+  it("l'alçada de cada calaix: els suplements fan la suma de les alçades", () => {
+    const shimH = (m: Module) => buildModule(m).panels.find((p) => p.name === "suplement")!
+    const same = panelBox(shimH(col())), own = panelBox(shimH(col({ heights: [150, 300] })))
+    expect(own.max[1] - own.min[1] - (same.max[1] - same.min[1])).toBeCloseTo(50)
+  })
+  it("amb un joc: el tancament i la guia de cada calaix arriben a la comanda", async () => {
+    const { DEFAULT_HARDWARE_LIBRARY } = await import("../model")
+    const kits = DEFAULT_HARDWARE_LIBRARY.filter((h) => h.engine === "drawerKit")
+    const kit = kits[0]!
+    const closing = kit.kit!.options.closing.at(-1)!
+    const b = buildModule(col({ hardware: kit, kit: { closing } }))
+    expect(b.hardwareKits.every((k) => k.options.closing === closing)).toBe(true)
+    const other = kits.find((h) => h.name !== kit.name)
+    if (!other) return
+    const per = buildModule(col({ hardware: kit, heights: [200, 300], drawerSlides: [null, other] }))
+    expect(per.hardwareKits.map((k) => k.item)).toContain(other.name)
+  })
+})
+
+describe("suplement de cada costat: tira o caixa, tapada o amb prestatges", () => {
+  const box = (b: ReturnType<typeof buildModule>) => b.panels.filter((p) => p.assembly?.startsWith("Suplement dels calaixos interiors"))
+  it("fins a dos gruixos, una tira massissa; més, una caixa tapada amb la guia a la pell i el cantell de dalt cantejat", () => {
+    expect(box(buildModule(col({ shim: 19 })))).toHaveLength(0)
+    const b = buildModule(col({ shim: 50 }))
+    const parts = box(b)
+    expect(parts.map((p) => p.name).sort()).toEqual(["davant suplement", "suplement", "tapa suplement"])
+    expect(parts.every((p) => p.thickness === 19)).toBe(true)
+    const skin = parts.find((p) => p.name === "suplement")!
+    expect(skin.holes.length).toBeGreaterThan(0)
+    expect(skin.edges.top).toBe(true)
+    // La pell, a 50 mm del lateral (cara de dins del lateral esquerre + 50).
+    const plain = buildModule(col({ shim: 19 })).panels.find((p) => p.name === "suplement")!
+    expect(panelBox(skin).max[0] - panelBox(plain).min[0]).toBeCloseTo(50)
+    expect(plain.edges.top).toBe(true)
+  })
+  it("cada costat el seu: el dret amb prestatges encara que no hi hagi frontisses, i més de 60 mm", () => {
+    const b = buildModule(col({ sides: { left: { thickness: 19 }, right: { thickness: 120, box: "shelves", shelves: 2 } } }))
+    const parts = box(b)
+    expect(parts.some((p) => p.name === "davant suplement")).toBe(false)
+    expect(parts.filter((p) => p.name === "prestatge suplement")).toHaveLength(2)
+    expect(parts.every((p) => p.label.includes("dret"))).toBe(true)
+    expect(b.panels.filter((p) => p.name === "suplement")).toHaveLength(2)
+    expect(b.warnings.some((w) => w.code === "inner-drawers" && w.message.includes("deixen"))).toBe(false)
+  })
+  it("si als calaixos no els queda lloc, avisa", () => {
+    const b = buildModule(col({ sides: { left: { thickness: 250 }, right: { thickness: 250 } } }))
+    expect(b.warnings.some((w) => w.code === "inner-drawers" && w.message.includes("deixen"))).toBe(true)
+  })
+})

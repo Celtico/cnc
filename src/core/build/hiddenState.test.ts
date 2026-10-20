@@ -5,7 +5,7 @@ import { catalogCorpus, int, MATERIALS, pick, randomComposition, rng, type Rnd }
 
 /**
  * Regla «res amagat compta»: el que la UI amaga perquè la seva opció és apagada no pot canviar les peces ni els avisos.
- * La llista de camps amagats surt dels formularis (`CarcassForm`, `JointForm`, `MaterialsForm`, `ZonePanel`) i es
+ * La llista de camps amagats surt dels formularis (`CarcassForm`, `MaterialsForm`, `ZonePanel`) i es
  * reescriu aquí a part (no amb `visibleModule`), perquè el test no es doni la raó a si mateix.
  */
 
@@ -65,7 +65,7 @@ function scrambleHidden(m: Module, r: Rnd): Module {
     if (g === undefined) delete c.innerClearance
     else c.innerClearance = g
   } else if (!c.innerClearance && r() < 0.5) c.innerClearance = 0
-  // Llocs de ferratge que el mòdul no fa servir (Mòdul › Unió només ensenya l'espiga si `usedHardwareSlots` la té): un item
+  // Llocs de ferratge que el mòdul no fa servir (Caixa › Laterals només ensenya l'espiga si `usedHardwareSlots` la té): un item
   // d'un altre tipus o un joc sense `kit` no canvia res ni avisa.
   const used = usedHardwareSlots(m)
   const hardware = isLegacyHardware(m.hardware) ? m.hardware : { ...(m.hardware as ModuleHardware) }
@@ -134,11 +134,11 @@ const childSides = (sides: Sides, dir: "v" | "h", i: number, n: number): Sides =
 const frontHeld = (sides: Sides): boolean => sides.left && sides.right
 
 /**
- * El front de la zona es fa: aguantat, no tapat i, en una zona dividida, només les portes de l'arrel (Mòdul › Portes; el
- * front fix de tota la zona i els fronts de les divisions de dins no es fan).
+ * El front de la zona es fa: aguantat, no tapat i, en una zona dividida, només les portes (el Front de la zona dividida, a
+ * qualsevol nivell, per decisió de l'usuari, 2026-10-20; el front fix de tota la zona no es fa).
  */
-const frontBuilt = (z: Zone, sides: Sides, covered: boolean, isRoot: boolean): boolean =>
-  !!z.front && frontHeld(sides) && !covered && (!z.split || (isRoot && z.front.kind === "door")) && !inNiche(z, covered)
+const frontBuilt = (z: Zone, sides: Sides, covered: boolean, _isRoot: boolean): boolean =>
+  !!z.front && frontHeld(sides) && !covered && (!z.split || z.front.kind === "door") && !inNiche(z, covered)
 
 /**
  * Electrodomèstic (v46, Electrodomèstic del compartiment): només en un compartiment sense dividir i no tapat. Els que
@@ -196,10 +196,10 @@ function scrambleZone(z: Zone, r: Rnd, noHandles: boolean, covered: boolean, sid
     const any = pick(r, [undefined, ...REMEMBERED])
     if (any) out.front = structuredClone(any)
     else delete out.front
-  } else if ((!held || (z.split && !isRoot)) && !covered) {
+  } else if ((!held || (z.split && f?.kind !== "door")) && !covered) {
     // Sense un lateral o divisor a cada costat el front no es fa (el compartiment és com obert): qualsevol front o cap.
-    // Tampoc el d'una divisió de dins (només les portes de l'arrel tapen tota la zona).
-    const any = pick(r, [undefined, ...REMEMBERED, { kind: "door", mode: "single", hinge: "right", hardware: structuredClone(DEFAULT_MODULE_HARDWARE.dowel) } as Front])
+    // D'una zona dividida només es fan les portes: qualsevol altre front o cap.
+    const any = pick(r, [undefined, ...(held ? REMEMBERED.filter((x) => x.kind !== "door") : [...REMEMBERED, { kind: "door", mode: "single", hinge: "right", hardware: structuredClone(DEFAULT_MODULE_HARDWARE.dowel) } as Front])])
     if (any) out.front = structuredClone(any)
     else delete out.front
   } else if (f) out.front = scrambleFront(f, r, noHandles)
@@ -417,7 +417,7 @@ describe("independència del camí: el mateix estat visible fa el mateix moble",
     const door = rootFront({ kind: "door", mode: "single", hinge: "left" })
     expect(run([shelvesN(3), rail, panel, door])).toBe(run([shelvesN(3), rail, door]))
   })
-  it("front de tota la zona: només les portes de l'arrel es fan; el front fix i els de les divisions de dins es conserven sense fer-se", () => {
+  it("front de tota la zona: només les portes es fan (a qualsevol divisió); el front fix es conserva sense fer-se", () => {
     // L'«Interior» dividit en dos (ids fixos) i els seus compartiments.
     const split = (dir: "v" | "h"): Op => (m) => ({ ...m, root: { id: m.root.id, split: { dir, sizes: ["auto", "auto"], children: [{ id: "a" }, { id: "b" }] } } })
     const at = (id: string, f: (z: Zone) => Zone): Op => (m) => ({ ...m, root: { ...m.root, split: { ...m.root.split!, children: m.root.split!.children.map((c) => (c.id === id ? f(c) : c)) } } })
@@ -435,9 +435,10 @@ describe("independència del camí: el mateix estat visible fa el mateix moble",
     expect(run([split("h"), shelves, rows, acc, door])).not.toBe(run([split("h"), door]))
     // Treure les portes: com sense front.
     expect(run([split("h"), shelves, acc, door, rootFront(null)])).toBe(run([split("h"), shelves, acc]))
-    // Una divisió de dins amb front (portes o fix): no es fa i no tapa els seus compartiments (el seu front es fa).
+    // Una divisió de dins amb portes (per decisió de l'usuari, 2026-10-20) es fa i tapa els seus compartiments; amb un
+    // front fix, no es fa ni tapa res.
     const nested = (front?: Front): Op => (m) => ({ ...m, root: { id: m.root.id, split: { dir: "h", sizes: ["auto", "auto"], children: [{ id: "p", ...(front ? { front } : {}), split: { dir: "v", sizes: ["auto", "auto"], children: [{ id: "a", shelves: { n: 2, adjustable: false } }, { id: "c", front: { kind: "drawers", n: 2, heights: ["auto", "auto"] } }] } }, { id: "b" }] } } })
-    expect(run([nested({ kind: "door", mode: "double", hinge: "left" })])).toBe(run([nested()]))
+    expect(run([nested({ kind: "door", mode: "double", hinge: "left" })])).not.toBe(run([nested()]))
     expect(run([nested({ kind: "panel" })])).toBe(run([nested()]))
     // Amb les portes de l'arrel, tot el de dins queda tapat (també el front de la divisió de dins, que no compta).
     expect(run([nested({ kind: "panel" }), door])).toBe(run([nested(), door]))

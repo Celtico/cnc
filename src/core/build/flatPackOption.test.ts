@@ -155,11 +155,12 @@ describe("Taulell i sòcol a qualsevol moble", () => {
     }
   })
 
-  it("un de nou (off: false) es fa a qualsevol moble; apagat, no", () => {
+  it("un sòcol corregut encès (off: false) d'un moble normal passa a les potes del mòdul; apagat, no es fa", () => {
     const on = buildComposition(withRuns("moble", false))
     const off = buildComposition(withRuns("moble", true))
     expect(on.panels.length).toBe(off.panels.length + 1)
-    expect(on.panels.at(-1)!.module).toBe(2)
+    // El sòcol és el de les potes del mòdul (un moble normal té el suport a cada mòdul).
+    expect(on.panels.filter((p) => p.role === "plinth").map((p) => p.module)).toEqual([1])
     expect(buildComposition(withRuns("armari", false)).panels.length).toBe(on.panels.length)
   })
 

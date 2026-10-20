@@ -145,7 +145,7 @@
   `PickerRow`; el mateix que el `MaterialSelect`): cercador (`hardwareMatches`), categories › sèries (`seriesGroups`, a
   `settings/hardwareGroups.ts`, com Preferències) i `GalleryCard` amb la miniatura (`settings/HardwareThumb.tsx`, mòdul
   d'exemple `useMountBase`: les mateixes miniatures desades). Frontissa, guia, braç, tirador de cada front
-  (`HardwarePick`, a dalt «Com el mòdul»), l'Espiga (Mòdul › Unió), la Pota de la base (a dalt
+  (`HardwarePick`, a dalt «Com el mòdul»), l'Espiga (Mòdul › Caixa › Laterals), la Pota de la base (a dalt
   «Genèriques») i el Ferratge d'un col·locat (només els compatibles amb les peces, `placeableOn`). Les
   còpies que no són a la biblioteca tal qual (`hardwareChoices`, per contingut, no per id) surten a part, «Còpia pròpia»,
   triades: es veu el que es fabrica i s'hi pot tornar; els importats sense confirmar porten «Sense confirmar» i la nota a

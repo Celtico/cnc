@@ -1,6 +1,6 @@
 import type { Composition, CompositionKind } from "../../core/model"
 
-/** Tipus que es poden triar a «Nou moble» (els punts de partida; no hi ha selector de tipus després). */
+/** Tipus d'un moble en blanc (a «Nou moble» es tria Moble normal o Cuina; no hi ha selector de tipus després). */
 type NewMobleKind = Extract<CompositionKind, "moble" | "cuina" | "armari" | "taula">
 
 /** Nom per defecte d'un moble nou de cada tipus. */

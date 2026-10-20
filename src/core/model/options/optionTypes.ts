@@ -84,6 +84,7 @@ export const UI = {
   sections: "features/editor/InspectorSections.tsx",
   carcass: "features/composition/CarcassForm.tsx",
   base: "features/composition/BaseFields.tsx",
+  moduleSupport: "features/composition/ModuleSupportFields.tsx",
   pick: "features/composition/HardwarePick.tsx",
   zonePanel: "features/composition/ZonePanel.tsx",
   frontSection: "features/composition/zone/FrontSection.tsx",

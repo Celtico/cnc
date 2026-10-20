@@ -3,7 +3,7 @@ import { isAppliance, isLegacyHardware, type ModuleHardware } from "./hardware"
 import { doorLikeFront, fillsNiche, standsOnFloor, takesFront, type Appliance } from "./appliance"
 import { canHoldFront, canHoldShelves, carcassBounds, childBounds, hasBottom, type ZoneBounds } from "./zoneSupport"
 import { applianceCarcass, applyApplianceCarcass, type ApplianceCarcass } from "./applianceCarcass"
-import { DEFAULT_GRILLE, type Carcass, type Module, type Zone, type ZoneAppliance } from "./moduleSchema"
+import { DEFAULT_GRILLE, type Carcass, type InnerDrawers, type InnerShim, type Module, type Zone, type ZoneAppliance } from "./moduleSchema"
 
 // --- «Res amagat compta» -------------------------------------------------------------
 
@@ -30,6 +30,21 @@ export function jointApplies(c: Pick<Carcass, "sides" | "hollow" | "top" | "base
  */
 export function perDrawerSlides(front: { n: number; heights: readonly (number | "auto")[] }, slide: { engine: string } | undefined): boolean {
   return !!slide && slide.engine === "drawerKit" && front.n > 1 && front.heights.slice(0, front.n - 1).some((h) => h !== "auto")
+}
+
+/** L'alçada de cada calaix interior, de baix a dalt (la pròpia o, sense, la comuna `height`). */
+export function innerDrawerHeights(d: Pick<InnerDrawers, "n" | "height" | "heights">): number[] {
+  return Array.from({ length: d.n }, (_, i) => d.heights?.[i] ?? d.height)
+}
+
+/** El suplement d'un costat dels calaixos interiors: el triat o, sense, `shim` (el gruix del cos) a les frontisses i cap a l'altre. */
+export function innerShimOf(d: Pick<InnerDrawers, "shim" | "sides">, side: "left" | "right", hinged: boolean, body: number): InnerShim {
+  return d.sides?.[side] ?? { thickness: hinged ? (d.shim ?? body) : 0 }
+}
+
+/** Com `perDrawerSlides`, als calaixos interiors: amb un joc, més d'un calaix i alguna alçada diferent. */
+export function innerPerDrawerSlides(d: Pick<InnerDrawers, "n" | "height" | "heights">, slide: { engine: string } | undefined): boolean {
+  return !!slide && slide.engine === "drawerKit" && d.n > 1 && new Set(innerDrawerHeights(d)).size > 1
 }
 
 export function visibleModule(m: Module): Module {
@@ -62,6 +77,10 @@ export function visibleModule(m: Module): Module {
   if (c.joint !== "mitre" || !jointApplies(carcass)) delete carcass.joint
   // Tauler de taula: només amb la tapa sencera.
   if (c.top.kind !== "full") delete carcass.tableTop
+  // Cantonada en L: només si aquell costat no té lateral.
+  if (c.corner && c.sides[c.corner]) delete carcass.corner
+  // Sòcol de dalt: només amb tapa i sense tauler de taula (dret sobre la tapa).
+  if (c.top.kind === "none" || carcass.tableTop) delete carcass.topFiller
   const root = visibleZone(m.root, kitDefaultOf(m), false, carcassBounds(carcass), false, true)
   // Fons del calaix: només amb calaixos que es fan (la fila de Materials no surt sense).
   if (!hasDrawers(root) || !c.drawerBottomMaterial) delete carcass.drawerBottomMaterial
@@ -219,7 +238,7 @@ function visibleAppliance(a: ZoneAppliance, bounds: ZoneBounds): ZoneAppliance {
  * calaixos sense guia pròpia el fan servir). El «Tirador» de cada front compta sempre (també «Cap (push)»): el del mòdul
  * només és el per defecte.
  */
-function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: ZoneBounds, fixedCover = false, isRoot = false): Zone {
+function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: ZoneBounds, fixedCover = false, _isRoot = false): Zone {
   const out: Zone = { ...z }
   // Els fronts recordats dels altres tipus (`fronts`) són només per tornar-hi: no construeixen res.
   delete out.fronts
@@ -229,10 +248,10 @@ function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: Zon
   // Un front d'un compartiment que no és aguantat pels quatre costats (`canHoldFront`, `zoneSupport.ts`) no es fa: el
   // compartiment és com obert (es conserva i torna amb la peça que hi falta). Tampoc no tapa els de dins.
   if (out.front && !canHoldFront(bounds, out.front.kind)) delete out.front
-  // El front d'una zona dividida només es fa a l'arrel i amb portes (Mòdul › Portes; per decisió de l'usuari: l'armari
-  // amb portes de dalt a baix). El front fix de tota la zona i qualsevol front d'una divisió de dins ja no es poden
-  // triar: no es fan (es conserven) i no tapen els de dins (res amagat compta).
-  if (out.front && z.split && !(isRoot && out.front.kind === "door")) delete out.front
+  // El front d'una zona dividida només es fa amb portes (el Front de la zona dividida, a qualsevol nivell; per decisió de
+  // l'usuari, 2026-10-20: abans només a l'arrel, Mòdul › Portes). El front fix de tota la zona ja no es pot triar: no es
+  // fa (es conserva) i no tapa els de dins (res amagat compta).
+  if (out.front && z.split && out.front.kind !== "door") delete out.front
   // Electrodomèstic (v46): només en un compartiment sense dividir i que no tapa cap front de més amunt (l'inspector no
   // l'ensenya en cap altre). Si ocupa el compartiment (el nínxol), ni Front ni prestatges ni accessoris (es conserven).
   if (out.appliance && (covered || z.split || !isAppliance(out.appliance.hardware))) delete out.appliance
@@ -289,6 +308,28 @@ function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: Zon
       if (!kit || !d.kit || !Object.keys(d.kit).length) delete d.kit
       // El front metàl·lic del fabricant només amb un joc.
       if (!kit) delete d.front
+      // Amb el front metàl·lic del fabricant no hi ha front de fusta per fer de vidre.
+      if (d.front === "kit" || !d.glass) delete d.glass
+      // Els prestatges de la caixa d'un suplement, només oberta.
+      if (d.sides) {
+        const sides = { ...d.sides }
+        for (const k of ["left", "right"] as const) {
+          const sd = sides[k]
+          if (sd && sd.box !== "shelves" && sd.shelves !== undefined) sides[k] = (({ shelves: _s, ...rest }) => rest)(sd)
+        }
+        d.sides = sides
+      }
+      // Alçades a mida: les dels calaixos que hi ha; totes iguals = la comuna.
+      const hs = innerDrawerHeights(d)
+      if (new Set(hs).size > 1) d.heights = hs
+      else {
+        delete d.heights
+        d.height = hs[0] ?? d.height
+      }
+      // La guia de cada calaix: com als calaixos de fora (només amb un joc i alçades diferents).
+      const own = (d.drawerSlides ?? []).slice(0, d.n).map((h, i) => (i > 0 && h && h.engine === "drawerKit" ? h : null))
+      if (!kit || !innerPerDrawerSlides(d, { engine: "drawerKit" }) || !own.some((h) => h)) delete d.drawerSlides
+      else d.drawerSlides = own
       out.innerDrawers = d
     }
   }

@@ -1,7 +1,7 @@
 import { Box, Menu, Text } from "@chakra-ui/react"
 import { createElement } from "react"
-import { LuArrowLeft, LuArrowRight, LuChevronDown, LuChevronRight, LuCopy, LuGroup, LuRefrigerator, LuTrash2, LuUngroup } from "react-icons/lu"
-import { APPLIANCE_LABELS, groupMulti, nicheAppliance, groupNames, newGroupName, newId, removeModule, rowOf, ungroupMulti, type Module, type Zone } from "../../../core/model"
+import { LuArrowLeft, LuArrowRight, LuChevronDown, LuCornerDownLeft, LuCornerDownRight, LuChevronRight, LuCopy, LuGroup, LuRefrigerator, LuTrash2, LuUngroup } from "react-icons/lu"
+import { APPLIANCE_LABELS, addCorner, groupMulti, nicheAppliance, groupNames, newGroupName, newId, removeModule, rowOf, ungroupMulti, type Module, type Zone } from "../../../core/model"
 import { toaster } from "../../../components/ui/toaster"
 import { TreeRow, TreeRowMenu } from "../../../components/TreeRow"
 import { zoneIcon } from "../zoneIcons"
@@ -24,6 +24,14 @@ export function ModuleRows({ tree, openId, toggle }: { tree: TreeCtx; openId: st
     modules.splice(i + 1, 0, copy)
     onChange({ ...comp, modules })
     onSelect({ kind: "module", id: copy.id })
+  }
+  // Cantonada en L (`addCorner`): el mòdul girat de l'altre braç, a un costat d'aquest.
+  const corner = (i: number, side: "left" | "right") => {
+    const res = addCorner(comp, comp.modules[i]!.id, side)
+    if (!res) return
+    onChange(res.comp)
+    onSelect({ kind: "module", id: res.id })
+    toaster.create({ title: "Cantonada en L: el mòdul nou és l'altre braç, girat. Canvia'n l'amplada a Mides; el racó s'obre per la porta d'aquest mòdul.", type: "info" })
   }
   const remove = (i: number) => {
     // Peces enganxades, taulell i sòcol i forats del taulell que en depenen (`removeModule`). Pot quedar sense cap mòdul.
@@ -97,6 +105,16 @@ export function ModuleRows({ tree, openId, toggle }: { tree: TreeCtx; openId: st
                   <Menu.Item value="dup" onClick={() => duplicate(i)}>
                     <LuCopy /> Duplicar
                   </Menu.Item>
+                  {!m.rot && !m.turned && m.x === undefined && (
+                    <>
+                      <Menu.Item value="corner-left" onClick={() => corner(i, "left")}>
+                        <LuCornerDownLeft /> Cantonada a l'esquerra
+                      </Menu.Item>
+                      <Menu.Item value="corner-right" onClick={() => corner(i, "right")}>
+                        <LuCornerDownRight /> Cantonada a la dreta
+                      </Menu.Item>
+                    </>
+                  )}
                   <Menu.Separator />
                   <Menu.Item value="group-new" onClick={() => {
                     const g = newGroupName(comp)

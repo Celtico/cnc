@@ -120,12 +120,16 @@ describe("columna que no arriba a la tapa", () => {
 describe("cantells de les peces retallades", () => {
   it("el costat tallat (contra la columna) no es canteja; els de fora, sí", () => {
     const m0 = mod("screwed")
-    const m = { ...m0, carcass: { ...m0.carcass, backMaterial: m0.carcass.material, backThickness: m0.carcass.thickness } }
+    // Penjat: es cantegen els cantells de davant i els de sota (el fons només té el de sota).
+    const m = { ...m0, carcass: { ...m0.carcass, base: { kind: "wall" as const, height: 1200 }, backMaterial: m0.carcass.material, backThickness: m0.carcass.thickness } }
     const b = buildComposition({ modules: [m], references: [col(400, -60)] })
     const backs = b.panels.filter((p) => p.id === "m:back" || p.id.startsWith("m:back-"))
     expect(backs).toHaveLength(2)
-    // Cada tros: tres costats amb cantell (dalt, baix i el de fora) i el del tall sense.
-    for (const p of backs) expect(Object.values(p.edges).filter(Boolean), p.id).toHaveLength(3)
+    // Cada tros: el de sota amb cantell; el del tall i la resta, sense.
+    for (const p of backs) expect(Object.values(p.edges).filter(Boolean), p.id).toHaveLength(1)
+    // El mateix sense la columna: el de sota d'un sol fons sencer.
+    const whole = buildComposition({ modules: [m], references: [] }).panels.find((p) => p.id === "m:back")!
+    expect(Object.values(whole.edges).filter(Boolean)).toHaveLength(1)
   })
 })
 

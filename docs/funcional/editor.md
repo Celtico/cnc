@@ -93,7 +93,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   compartiment, peça…): surt com a informació («Ho fas a mà») i ja no compta; «Desfer» el torna a comptar. El número de
   la secció compta només els que cal arreglar (ni els informatius ni els acceptats).
 - **Propietats** del que hi ha seleccionat i **només d'això**, en seccions plegables amb **una sola oberta alhora** (per decisió de l'usuari, 2026-10-13, i a tota l'app des del 2026-10-14: `FoldGroup` a l'inspector, recordada a la sessió `mobles:inspector-open`; les subseccions `size="sm"` de dins, una oberta entre elles; vegeu UI):
-  - Moble: Resum (i avisos de fusteria), **Suport general** (si hi ha mòduls de terra; `SupportForm`: el suport de tots
+  - Moble: Resum (i avisos de fusteria), **Cuina** (abans «Suport general»; només a la cuina i si hi ha mòduls de terra; el moble normal el tria a cada mòdul, Caixa › Base; `SupportForm`: el suport de tots
     els mòduls de terra —Directe a terra · Sòcol · Potes vistes—, l'alçada, la pota, la retirada, fusta o alumini, el
     material i, per a cada tram, on porta sòcol; vegeu Model › Suport), Encaixos (si alguna peça en fa),
     Materials de tot el moble (aplica a tots els mòduls), Acabats de l'escena (`Composition.scene`: `floor`, `wall` per a Presentació i miniatura; buit = «Com a
@@ -101,7 +101,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   - Mòdul: **Tipus** (`ModuleTypeSection`; per decisió de l'usuari, 2026-10-16: només **Moble · Electrodomèstic**,
     `setModuleKind`, i l'aparell de l'Electrodomèstic; la placa i la campana també es trien aquí) · **Posició**
     (`ModulePositionSection`, com abans del 2026-10-15: Fila —arrambat a la paret, penjat o lliure al terra—, l'alçada del
-    penjat, separacions, girat, X; Baix o Columna surt de l'alçada) · Mides · **Caixa** · **Portes** (només amb l'Interior dividit) · **Unió** (si la caixa en fa) ·
+    penjat, separacions, girat, X; Baix o Columna surt de l'alçada) · Mides · **Caixa** · **Portes** (només amb l'Interior dividit) ·
     **Materials** (en aquest ordre per decisió de l'usuari, 2026-10-13). **Sense «Acabats»** (per decisió de l'usuari,
     2026-10-08: «això dels acabats no està bé»; abans una secció `mod-joinery`, `LuHammer`): cada fila és a la secció del
     que toca, **un sol lloc per decisió i només el que la construcció llegeix** (`moduleRows` a
@@ -117,11 +117,11 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
       laterals són «Laterals de remat» (una peça sola, sense Parets ni Estil dels fronts: `ApplianceCarcass.niche`).
       **Suport**: és una opció global (la de tots els mòduls de terra), i les globals no es repeteixen al mòdul (per
       decisió de l'usuari, 2026-10-16: «no repetir les opcions ni posar un missatge, sinó un botó que digui modificar
-      opció global»): el text del que hi ha i el botó **Modificar opció global**, que obre el Moble › Suport general (suport,
+      opció global»): el text del que hi ha i el botó **Modificar opció global**, que obre el Moble › Cuina (suport,
       alçada, pota, retirada, sòcol i trams); penjat: «Penjat a la paret, a … mm del terra», es canvia a Posició i, sota, **Base** (Sencera · Sense base;
       amb potes no surt: s'hi cargolen). **Llum a sota**: penjat o amb potes vistes (amb sòcol quedaria amagada: no surt
       i no es fa). La resta, com sempre:
-      penjat, «Penjadors» i «Regleta» amb «Com el mòdul» i «Cap» (`BaseFields.tsx`)—, fons i, just a sota, **Ranura del fons** (en ranura) o **Retirada
+      penjat, «Penjadors» i «Regleta» amb «Com el mòdul» i «Cap» (`BaseFields.tsx`; només amb algun lateral, on van: sense laterals, el text «Cap (sense laterals)»)—, fons i, just a sota, **Ranura del fons** (en ranura) o **Retirada
       del fons** (encastat), tapa, laterals, parets, cantonades i, al final, el que és de tots els fronts del mòdul:
       **Estil dels fronts** (Recobrents / Encastats) i Folgança front–cos si hi ha algun front que es fa (un front fix
       també) · Folgança entre fronts amb dues portes, dos calaixos o un front recobrent al costat d'un divisor ·
@@ -147,9 +147,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     - **Materials** (`mod-materials`, `LuPalette`, `MaterialsForm`): cos, **Fronts** (`frontMaterial`, «Com el cos»;
       només amb algun front que es fa, com l'Estil), fons i, amb calaixos, **«Fons del calaix»**
       (`Carcass.drawerBottomMaterial`).
-    - **Unió** (`mod-joint`, `LuBolt`, `JointForm`; per decisió de l'usuari: «l'espiga fes-ne un acordió que es digui
-      Unió»): l'**Espiga** (`module.hardware.dowel`) només si la caixa en fa (`usedHardwareSlots`, `carcassDowels`);
-      sense, la secció no surt.
+    - **Sense secció «Unió»** (per decisió de l'usuari, 2026-10-20: «unió és una opció dels laterals, no del
+      conjunt»): l'**Espiga** (`module.hardware.dowel`, `DowelRow`, `module.carcass.dowel`) és l'última fila de
+      **Caixa › Laterals**, només si la caixa en fa (`usedHardwareSlots`, `carcassDowels`).
     **Sense «Per defecte dels compartiments»** (per decisió de l'usuari: «això es tria a l'obertura»): el tirador
     (`module.fronts.handles`) i els ferratges del mòdul (`module.hardware`: frontissa, guia o joc, braç, imant, barra,
     llum, marc) no surten a l'inspector del mòdul; **es conserven** i són el que hereten els fronts i accessoris que diuen
@@ -159,7 +159,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     prestatges): surt a l'inspector del compartiment, on diu `system32RowPlace` (`core/model/usedHardware.ts`,
     `system32Row.test.ts`), i edita la del mòdul (`module.hardware.system32`, una per mòdul; `System32Pick`, ajuda «La de
     tot el mòdul: …»): als **Prestatges**, després de «Regulables», dels compartiments amb regulables que es fan; si no n'hi
-    ha cap, al **Front** (després de la «Frontissa»; a la reixeta amb frontisses, després de «Muntatge») dels compartiments
+    ha cap, al **Front** (després de la «Frontissa»; a la reixeta amb frontisses, després de «Muntatge» i «Frontisses: Esquerra · Dreta», com a la porta) dels compartiments
     amb una porta que no és de vidre o una reixeta amb frontisses (placa de la frontissa); les portes de tot el mòdul,
     a **Mòdul › Portes**, després de la «Frontissa». Mai a tots dos llocs; si no és cap d'aquests (p. ex. només el fons encastat, que en llegeix els números per a
     l'avís), enlloc. **Sense «Ferratges»** a l'inspector del mòdul (per decisió de l'usuari,
@@ -189,8 +189,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     surt sempre menys amb un front fix o amb calaixos; insígnia «3 · Barra · LED · 2 calaixos»:
     per grups plegables com les subseccions de la Caixa (per decisió de l'usuari, 2026-10-17: **Prestatges** `zone-shelves-shelves`, **Accessoris** `zone-shelves-accessories` i **Calaixos interiors** `zone-shelves-drawers`, cada un amb el seu resum): primer els prestatges —Prestatges (quants) · Regulables · Filera System 32 si li toca, vegeu Mòdul · A ras · Retirada (sense a ras; la pròpia o «com el mòdul», i amb un pistó d'abatible al lateral, prou retirats per no tocar-lo: avís `shelf-strut`) · Gruixuts—, a sota
     els accessoris —Penjar (Barra de penjar) i Llum (Tira LED), interruptor + `HardwarePick` «Com el mòdul»— i, darrere
-    d'una porta (la seva o la d'una zona de més amunt), els **calaixos interiors** (`InnerDrawerRows`: Quantitat · Alçada
-    de cada calaix · Guia o joc · Retirada del front, 25 per defecte de Preferències › Folgances · Suplement, el gruix del
+    d'una porta (la seva o la d'una zona de més amunt), els **calaixos interiors** (`InnerDrawerRows`, amb les mateixes opcions i components que Front › Calaixos, per decisió de l'usuari, 2026-10-20: Quantitat · «Alçada dels calaixos»
+    (Alçada 1…n) · Guia o joc · Guia del calaix 2…n (`DrawerSlides`) · «Opcions de la guia de calaix» (Front de fusta o metàl·lic + `KitFields`) · Retirada del front, 25 per defecte de Preferències › Folgances · Suplement, el gruix del
     cos; vegeu Model › Calaixos interiors) · Dividir (Prestatges, Accessoris, Dividir i els tipus
     de Contingut, només si el compartiment els pot aguantar: Model del moble › Zones › Què aguanta cada compartiment; Prestatges i Accessoris tampoc amb calaixos o un front fix propi; Dividir tampoc darrere d'un front fix, per decisió de l'usuari). Als **Calaixos**, sota la quantitat, «Alçada 1»… de cada front com les mides de la Divisió (`DrawerHeights`, `setDrawerHeight`: n−1 editables, «Auto» amb els mm reals de `ModuleBuild.drawerHeights`, l'última el que sobra; per decisió de l'usuari, 2026-10-13). **L'alçada del calaix mana sobre el joc** (per decisió de l'usuari, 2026-10-14): si el joc triat no hi cap (el de dalt, sota la tapa; els altres, fins a la guia del de sobre), aquell calaix porta el més alt de la mateixa sèrie que sí que hi cap (`kitFamily` a `drawerKit.ts`: K → M → N del catàleg de l'app, amb la prebroca de l'item); la comanda ho diu per calaix. Si ni el més baix hi cap, només el front i avís `hardware`. **Una guia per a cada calaix** (per decisió de l'usuari, 2026-10-14: «si en canvies un, el següent igual que l'anterior»; `Front.drawerSlides`, de baix a dalt): amb un joc i alguna alçada a mida (`perDrawerSlides`; totes «Auto» = una sola guia), la «Guia de calaix» passa a dir-se «Guia del calaix 1» i a sota surt «Guia del calaix 2»… (`DrawerSlides` a `ZonePanel`, el `HardwareSelect` amb els jocs de la biblioteca), cadascuna «Com el calaix n» (el de sota) o un joc propi, de qualsevol sèrie; l'ajuda diu amb quin joc es fa. Cada calaix fa el seu pla (`planOf`), la seva fusta, els seus components al 3D i la seva comanda; si no hi cap, el més baix de la seva sèrie. Res amagat compta: sense joc, `visibleZone` el treu (`drawerKit.test.ts`, `hiddenState.test.ts`). Als abatibles, «Opcions del tirador» amb només la distància al cantell que obre (`Front.handleInset`; sense, el `inset` del tirador; com a molt, el mig). Als calaixos, després del Tirador (si n'hi ha), **«Posició del tirador»** Centrat · A dalt (cada tria amb les seves opcions en un acordió petit a sota, `LuSettings2`: «Alçada dels calaixos» amb les alçades, «Opcions de la guia de calaix» amb les del joc, `KitFields`, i «Opcions del tirador» amb la posició) (`Front.handleTop`: mm del cantell de dalt a l'eix, 40 en triar-lo, com a molt el mig; per decisió de l'usuari, 2026-10-13; test `build/drawerHandle.test.ts`). Al Front: el ferratge del tipus (frontissa,
     guia o joc, braç; a la reixeta, l'**imant** després de «Muntatge» i «Trapa»; a la vitrina, el **marc**) i el «Tirador» (amb «Cap

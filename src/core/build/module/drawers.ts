@@ -1,14 +1,19 @@
 import {
   NO_EDGES,
+  type EdgeBanding,
   type Front,
   type HardwareItem,
   type HardwareKit,
   type Panel,
   type Vec3,
   type Zone,
+  innerDrawerHeights,
+  innerShimOf,
+  type InnerShim,
   isDrawerKit,
   isPushClosing,
   kitOptionsOf,
+  GLASS_HANDLE_TOP,
 } from "../../model"
 import { kitBottomThickness, kitFamily, kitHeight, kitSolidPanels, planKit, type KitPlan } from "../drawerKit"
 import { X, Y, Z, addFaceHole, dowelJoint, dowelsAlong, neg, placement, r } from "../geometry"
@@ -21,10 +26,15 @@ import { fmtNum } from "../../../lib/format"
 /** On comencen els suplements dels calaixos interiors, des del davant de la caixa (mm): darrere de la placa de la frontissa. */
 const SHIM_FROM_FRONT = 60
 
+/** L'amplada mínima que han de deixar els suplements als calaixos interiors (mm). */
+const MIN_INNER_DRAWER_W = 150
+
 /** Calaixos: fronts, caixes de fusta i jocs paramètrics. */
 export class DrawersBuilder extends FrontsBuilder {
   /** Calaixos interiors en construcció (`buildInnerDrawers`): on és la cara dels seus fronts (Z del mòdul). */
-  private inner: { faceZ: number; metalFront: boolean } | null = null
+  private inner: { faceZ: number; metalFront: boolean; glass?: boolean } | null = null
+  /** Fronts de calaix de vidre (`glass`) per fer-los la finestra quan ja tenen tots els forats (`glassWindows`). */
+  private glassFronts: { panel: Panel; x0: number; yTop: number; zFace: number; zoneId: string; w: number; h: number }[] = []
   private innerShims = 0
 
   /**
@@ -38,44 +48,79 @@ export class DrawersBuilder extends FrontsBuilder {
     const { m, d } = this
     const c = m.carcass
     const bg = m.fronts.betweenGap
-    const want = r(inner.n * inner.height + (inner.n - 1) * bg)
+    const hs = innerDrawerHeights(inner)
+    const want = r(hs.reduce((a, b) => a + b, 0) + (inner.n - 1) * bg)
     if (want > rect.y1 - rect.y0 + 0.5)
       this.warnings.push({ code: "layout", message: `Els ${inner.n} calaixos interiors fan ${fmtNum(want, 1)} mm i el compartiment ${fmtNum(rect.y1 - rect.y0, 1)}: l'últim es fa més baix. Posa'n menys o fes-los més baixos.`, zoneId: zone.id })
     const y1 = r(Math.min(rect.y1, rect.y0 + want))
     const faceZ = r(d.D - (inner.setback ?? 25))
-    const S = inner.shim ?? c.thickness
     // Suplements al costat de les frontisses: la guia s'hi cargola (el calaix és més estret i no topa amb la frontissa).
     // Comencen a `SHIM_FROM_FRONT` del davant de la caixa: davant hi ha la placa de la frontissa (hipòtesi: placa a 37 mm
     // i cargols a ±16, fins a uns 55 mm del cantell).
     const zRear = this.rearAt(rect.x0, rect.x1)
     const shimFront = r(Math.min(faceZ, d.D - SHIM_FROM_FRONT))
-    const shim = (side: "left" | "right", ref: VerticalRef): VerticalRef => {
+    const shim = (side: "left" | "right", ref: VerticalRef, spec: InnerShim): VerticalRef => {
       this.innerShims += 1
-      const x = side === "left" ? ref.xR : ref.xL - S
-      const panel = this.add(
-        this.basePanel(`inner-shim-${this.innerShims}-${side}`, "suplement", `Suplement dels calaixos interiors (${side === "left" ? "esquerre" : "dret"})`, "spacer", r(shimFront - zRear), r(y1 - rect.y0), S, c.material, "x", edges("top"), placement([x, rect.y0, zRear], Z, Y, X, side === "left" ? X : neg(X))),
-      )
-      return { panel, xL: x, xR: r(x + S), yB: rect.y0, yT: y1, zRear, zFront: shimFront, outer: false }
+      const S = spec.thickness
+      const sideName = side === "left" ? "esquerre" : "dret"
+      const depth = r(shimFront - zRear)
+      const H = r(y1 - rect.y0)
+      const t = c.thickness
+      // Fins a dos gruixos del cos, una tira massissa; més gruixut, una caixa (per decisió de l'usuari, 2026-10-20: «el
+      // suplement ha de ser un mecanitzat, una caixa, tapat o amb prestatges»): la pell on es cargola la guia (els seus
+      // forats), la tapa de dalt i, tapada, el davant o, oberta, prestatges; el lateral del moble fa de fons.
+      if (S < 2 * t) {
+        const x = side === "left" ? ref.xR : ref.xL - S
+        const panel = this.add(
+          this.basePanel(`inner-shim-${this.innerShims}-${side}`, "suplement", `Suplement dels calaixos interiors (${sideName})`, "spacer", depth, H, S, c.material, "x", edges("top"), placement([x, rect.y0, zRear], Z, Y, X, side === "left" ? X : neg(X))),
+        )
+        return { panel, xL: x, xR: r(x + S), yB: rect.y0, yT: y1, zRear, zFront: shimFront, outer: false }
+      }
+      const id = `inner-shim-${this.innerShims}-${side}`
+      const assembly = `Suplement dels calaixos interiors (${sideName}, caixa)`
+      const piece = (pid: string, code: string, label: string, L: number, Wd: number, eb: EdgeBanding, pl: Panel["placement"]) =>
+        this.add({ ...this.basePanel(pid, code, `${label} del suplement dels calaixos interiors (${sideName})`, "spacer", L, Wd, t, c.material, "x", eb, pl), assembly })
+      const skinX = side === "left" ? r(ref.xR + S - t) : r(ref.xL - S)
+      // L'espai de dins de la caixa (entre el lateral i la pell).
+      const xi0 = side === "left" ? ref.xR : r(skinX + t)
+      const inW = r(S - t)
+      const skin = piece(id, "suplement", "Pell", depth, H, edges("top"), placement([skinX, rect.y0, zRear], Z, Y, X, side === "left" ? X : neg(X)))
+      piece(`${id}-top`, "tapa suplement", "Tapa", inW, depth, edges("bottom"), placement([xi0, r(y1 - t), shimFront], X, neg(Z), Y, Y))
+      if (spec.box === "shelves") {
+        const n = spec.shelves ?? 1
+        const room = y1 - t - rect.y0
+        for (let k = 1; k <= n; k++)
+          piece(`${id}-shelf-${k}`, "prestatge suplement", `Prestatge ${k}`, inW, depth, edges("bottom"), placement([xi0, r(rect.y0 + (k * room) / (n + 1) - t / 2), shimFront], X, neg(Z), Y, Y))
+      } else piece(`${id}-front`, "davant suplement", "Davant", inW, r(H - t), edges("left", "right"), placement([xi0, rect.y0, r(shimFront - t)], X, Y, Z, Z))
+      return { panel: skin, xL: skinX, xR: r(skinX + t), yB: rect.y0, yT: y1, zRear, zFront: shimFront, outer: false }
     }
-    const L = S > 0 && hinges.has("left") && left ? shim("left", left) : left
-    const R = S > 0 && hinges.has("right") && right ? shim("right", right) : right
+    // Cada costat el seu (per decisió de l'usuari, 2026-10-20); sense triar, el gruix del cos a les frontisses.
+    const specL = innerShimOf(inner, "left", hinges.has("left"), c.thickness)
+    const specR = innerShimOf(inner, "right", hinges.has("right"), c.thickness)
+    const L = specL.thickness > 0 && left ? shim("left", left, specL) : left
+    const R = specR.thickness > 0 && right ? shim("right", right, specR) : right
     // Sense suplement al costat de les frontisses, el braç i la placa de la frontissa topen amb els calaixos.
     for (const side of hinges)
       if ((side === "left" ? L === left : R === right) && (side === "left" ? left : right))
         this.warnings.push({ code: "inner-drawers", message: `Calaixos interiors sense suplement al costat de les frontisses (${side === "left" ? "esquerra" : "dreta"}): el braç i la placa de la frontissa hi topen en obrir. Posa-hi el suplement (el gruix del cos).`, zoneId: zone.id })
     if (L !== left || R !== right)
       if (!this.warnings.some((w) => w.code === "inner-drawers" && w.message.includes("es cargola")))
-        this.warnings.push({ code: "inner-drawers", info: true, message: `Calaixos interiors: el suplement (${fmtNum(S, 1)} mm${inner.shim === undefined ? ", el gruix del cos" : ""}) es cargola al lateral pel costat de dins abans de posar-hi la guia.`, zoneId: zone.id })
+        this.warnings.push({ code: "inner-drawers", info: true, message: `Calaixos interiors: el suplement (${[L !== left ? specL.thickness : 0, R !== right ? specR.thickness : 0].filter((x) => x > 0).map((x) => `${fmtNum(x, 1)} mm`).join(" i ")}) es cargola al lateral pel costat de dins abans de posar-hi la guia; de dos gruixos del cos o més, és una caixa.`, zoneId: zone.id })
     const box: ZoneRect = { ...rect, x0: L !== left ? L!.xR : rect.x0, x1: R !== right ? R!.xL : rect.x1, y1 }
+    // El suplement pot ser tan gruixut com vulguis (per decisió de l'usuari, 2026-10-20: «si l'amplada del moble ho
+    // permet»): si als calaixos no els queda lloc, s'avisa.
+    if (box.x1 - box.x0 < MIN_INNER_DRAWER_W)
+      this.warnings.push({ code: "inner-drawers", message: `Els suplements dels calaixos interiors deixen ${fmtNum(Math.max(0, box.x1 - box.x0), 1)} mm per als calaixos (com a mínim ${MIN_INNER_DRAWER_W}): fes-los més prims.`, zoneId: zone.id })
     const front: Extract<Front, { kind: "drawers" }> = {
       kind: "drawers",
       n: inner.n,
-      heights: [...Array.from({ length: inner.n - 1 }, () => inner.height), "auto"],
+      heights: [...hs.slice(0, inner.n - 1), "auto"],
       ...(inner.hardware ? { hardware: inner.hardware } : {}),
       ...(inner.kit ? { kit: inner.kit } : {}),
+      ...(inner.drawerSlides ? { drawerSlides: inner.drawerSlides } : {}),
     }
     const own = this.drawerHeights[zone.id]
-    this.inner = { faceZ, metalFront: inner.front === "kit" }
+    this.inner = { faceZ, metalFront: inner.front === "kit", ...(inner.glass ? { glass: true } : {}) }
     try {
       this.buildDrawers(zone, front, box, box, L, R)
     } finally {
@@ -88,11 +133,72 @@ export class DrawersBuilder extends FrontsBuilder {
   }
 
   /** El front interior d'un calaix interior: del cos, de l'amplada i l'alçada de la caixa, sense tirador. */
-  private addInnerFront(k: number, x0: number, y0: number, w: number, h: number): Panel {
+  private addInnerFront(k: number, x0: number, y0: number, w: number, h: number, zoneId: string): Panel {
     const { d } = this
-    return this.add(
+    const panel = this.add(
       this.basePanel(`drawer-${k}-front`, "frontal interior", `Front interior calaix ${k}`, "drawerFront", r(w), r(h), d.t, this.m.carcass.material, "x", edges("bottom", "top", "left", "right"), placement([r(x0), r(y0 + h), this.inner!.faceZ], X, neg(Y), neg(Z), Z)),
     )
+    if (this.inner!.glass) this.glassFronts.push({ panel, x0: r(x0), yTop: r(y0 + h), zFace: this.inner!.faceZ, zoneId, w: r(w), h: r(h) })
+    return panel
+  }
+
+  /**
+   * **Fronts de calaix de vidre** (per petició de l'usuari, 2026-10-20: «frontals de vidre», com els calaixos de l'armari
+   * de la foto): el front es fa de marc d'una sola peça de fusta, amb la finestra calada i un galze a la cara de darrere
+   * (cara A) on s'encola el vidre. Els travessers i els muntants cobreixen tots els forats i ranures que ja té el front
+   * (tirador, espigues de la caixa, ranura del fons, suports del joc) amb 15 mm de marge; com a mínim 40 mm (60 a baix).
+   */
+  protected glassWindows(): void {
+    const G = 4
+    for (const { panel, x0, yTop, zFace, zoneId, w, h } of this.glassFronts) {
+      // Coordenades locals: u sobre el costat llarg. Un front més alt que ample té u en vertical (des de dalt) i v en
+      // horitzontal; aquí es treballa en (horitzontal, vertical des de dalt) i es torna a la peça amb `loc`.
+      const rot = Math.abs(panel.length - w) > 0.01
+      const fr = (u: number, v: number): [number, number] => (rot ? [v, u] : [u, v])
+      const loc = (x: number, y: number, ww: number, hh: number) => (rot ? { x: y, y: x, w: hh, h: ww } : { x, y, w: ww, h: hh })
+      let side = 40, top = 40, bottom = 60
+      // Cada forat eixampla el travesser o el muntant que té més a prop.
+      const need = (x: number, y: number) => {
+        const near = Math.min(x, w - x, y, h - y)
+        if (near === y) top = Math.max(top, y + 15)
+        else if (near === h - y) bottom = Math.max(bottom, h - y + 15)
+        else side = Math.max(side, near + 15)
+      }
+      for (const hole of panel.holes) need(...fr(hole.x, hole.y))
+      // Una ranura llarga (la del fons) només compta pel seu cantell més a prop del mig en alçada.
+      for (const g of panel.grooves) {
+        const [, gy] = fr(g.x, g.y)
+        const gh = rot ? g.w : g.h
+        if (gy + gh / 2 < h / 2) top = Math.max(top, gy + gh + 15)
+        else bottom = Math.max(bottom, h - gy + 15)
+      }
+      const ww = r(w - 2 * side)
+      const wh = r(h - top - bottom)
+      if (ww < 40 || wh < 40) {
+        this.warnings.push({ code: "layout", message: `${panel.label}: és massa petit per a un front de vidre (la finestra faria ${fmtNum(Math.max(0, ww), 1)} × ${fmtNum(Math.max(0, wh), 1)} mm). Es fa de fusta.`, zoneId })
+        continue
+      }
+      ;(panel.cutouts ??= []).push({ kind: "rect", ...loc(r(side), r(top), ww, wh), tag: "glass" })
+      panel.grooves.push({ ...loc(r(side - 10), r(top - 10), r(ww + 20), r(wh + 20)), depth: G + 1, face: "A", tag: "glass-rebate" })
+      this.extras.push({
+        id: `${panel.id}-glass`,
+        name: "vidre calaix",
+        label: `${panel.label} (vidre)`,
+        role: "part",
+        length: r(wh + 18),
+        width: r(ww + 18),
+        thickness: G,
+        material: "Vidre",
+        grain: "none",
+        edges: { ...NO_EDGES },
+        holes: [],
+        grooves: [],
+        placement: placement([r(x0 + side - 9), r(yTop - top - wh - 9), r(zFace - this.d.t + G + 0.5)], Y, X, neg(Z), Z),
+      })
+    }
+    if (this.glassFronts.length)
+      this.warnings.push({ code: "layout", info: true, message: `Fronts de calaix de vidre: vidre de ${G} mm encolat al galze de darrere del marc (silicona neutra). El vidre no és de CNC: surt a «Elements sense nesting».` })
+    this.glassFronts = []
   }
 
   /** Alçades i Y de baix de cada front d'una pila de calaixos (l'últim «auto» es queda el que sobra; iguals a mig mm). */
@@ -135,7 +241,10 @@ export class DrawersBuilder extends FrontsBuilder {
     // Tirador centrat (x local = amplada, y local = cap avall).
     // Centrat o a `handleTop` mm del cantell de dalt (y local cap avall), mai per sota del mig.
     const top = zone.front?.kind === "drawers" ? zone.front.handleTop : undefined
-    this.handle(frontPanel, fw / 2, top !== undefined ? Math.min(top, fh / 2) : fh / 2, "x", handleHw, zone.id)
+    // De vidre: el tirador al travesser de dalt (si no se n'ha triat l'alçada).
+    const glass = zone.front?.kind === "drawers" && !!zone.front.glass
+    this.handle(frontPanel, fw / 2, top !== undefined ? Math.min(top, fh / 2) : glass ? Math.min(GLASS_HANDLE_TOP, fh / 2) : fh / 2, "x", handleHw, zone.id)
+    if (glass) this.glassFronts.push({ panel: frontPanel, x0: r(ter.x0), yTop: r(y + fh), zFace: d.frontZ, zoneId: zone.id, w: fw, h: r(fh) })
     return frontPanel
   }
 
@@ -225,7 +334,7 @@ export class DrawersBuilder extends FrontsBuilder {
       if (narrowBox) continue
       const boxY0 = r(y + sb.lo)
       const boxX0 = r(rect.x0 + hw.sideClearance)
-      const frontPanel = outerFront ?? this.addInnerFront(k, boxX0, boxY0, boxW, boxH)
+      const frontPanel = outerFront ?? this.addInnerFront(k, boxX0, boxY0, boxW, boxH, zone.id)
       const fx0 = handleHw ? ter.x0 : boxX0
       const fTop = handleHw ? y + fh : boxY0 + boxH
       const zFront = (this.inner ? this.inner.faceZ : d.frontZ) - d.t // cara posterior del front
@@ -385,7 +494,7 @@ export class DrawersBuilder extends FrontsBuilder {
       const y0 = slideBase(i, kit)
       // Calaix interior: el front interior entre els laterals del joc (2 mm de joc a cada costat), fins a dalt del joc; amb
       // el front metàl·lic del fabricant, cap peça de fusta al davant (ni els seus forats).
-      const frontPanel = outerFront ?? (this.inner?.metalFront ? null : this.addInnerFront(k, rect.x0 + 2, y, LW - 4, y0 - y + kitHeight(kit)))
+      const frontPanel = outerFront ?? (this.inner?.metalFront ? null : this.addInnerFront(k, rect.x0 + 2, y, LW - 4, y0 - y + kitHeight(kit), zone.id))
       const at = { x0: rect.x0, y0, zFront }
       const pilot = kitPlan.pilot
       // Prebroques dels cargols de la guia als dos laterals del moble (el dret, mirall): z des del cantell de davant del

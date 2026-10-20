@@ -33,10 +33,34 @@ describe("cantells de la caixa", () => {
     for (const s of shelves) expect(s.edges).toMatchObject({ top: true, bottom: true })
   })
 
-  it("arrambat a la paret o lliure tocant-la, el darrere no es canteja", () => {
-    expect(byLabel(comp(withBack("groove", null)), "Lateral esquerre").edges.bottom).toBe(false)
-    expect(byLabel(comp(withBack("none", null)), "Lateral esquerre").edges.bottom).toBe(false)
-    expect(byLabel(comp(withBack("none", 0)), "Base").edges.top).toBe(false)
+  it("lliure al terra tocant la paret, també el darrere (al terra, tots els cantells)", () => {
+    expect(byLabel(comp(withBack("none", 0)), "Base").edges.top).toBe(true)
+    expect(byLabel(comp(withBack("groove", 0)), "Lateral esquerre").edges).toEqual({ left: true, right: true, bottom: true, top: true })
+  })
+
+  it("arrambat a la paret (a terra): els cantells de davant i els de dalt", () => {
+    const c = comp(withBack("none", null))
+    // Lateral: local x = alçada, «right» és el cap de dalt.
+    expect(byLabel(c, "Lateral esquerre").edges).toEqual({ left: false, right: true, bottom: false, top: true })
+    expect(byLabel(c, "Lateral dret").edges).toEqual({ left: false, right: true, bottom: true, top: false })
+    expect(byLabel(c, "Base").edges).toEqual({ left: false, right: false, bottom: true, top: false })
+    expect(byLabel(c, "Sostre").edges).toEqual({ left: false, right: false, bottom: false, top: true })
+  })
+
+  it("penjat a la paret: els de davant i els de sota", () => {
+    const m = withBack("groove", null)
+    const c = comp({ ...m, carcass: { ...m.carcass, base: { kind: "wall", height: 1500 } } })
+    // Lateral: local x = alçada, «left» és el cap de baix.
+    expect(byLabel(c, "Lateral esquerre").edges).toEqual({ left: true, right: false, bottom: false, top: true })
+    expect(byLabel(c, "Lateral dret").edges).toEqual({ left: true, right: false, bottom: true, top: false })
+    expect(byLabel(c, "Base").edges).toEqual({ left: false, right: false, bottom: true, top: false })
+    expect(byLabel(c, "Sostre").edges).toEqual({ left: false, right: false, bottom: false, top: true })
+  })
+
+  it("un cantell que toca una altra peça no es canteja (la base entre laterals, el prestatge contra el fons)", () => {
+    const c = comp(withBack("groove"))
+    expect(byLabel(c, "Base").edges).toMatchObject({ left: false, right: false })
+    for (const s of buildComposition(c).panels.filter((p) => p.role === "shelf")) expect(s.edges).toMatchObject({ left: false, right: false })
   })
 
   it("un material massís no es canteja; la resta, igual que sempre", () => {
@@ -47,5 +71,15 @@ describe("cantells de la caixa", () => {
     for (const p of b.panels.filter((x) => x.material === material)) expect(Object.values(p.edges).some(Boolean), p.label).toBe(false)
     setSolidMaterials([{ name: material, solid: false }])
     expect(byLabel(c, "Lateral esquerre").edges.top).toBe(true)
+  })
+})
+
+describe("cantells d'una taula", () => {
+  it("una taula compta com a lliure al terra: el tauler, cantejat pels quatre costats", () => {
+    const m = defaultModule("m1", "M")
+    const c: Composition = { kind: "taula", modules: [m], references: [] }
+    const s = buildComposition(c).panels.find((p) => p.label === "Lateral esquerre")!
+    expect(s.edges).toEqual({ left: true, right: true, bottom: true, top: true })
+    expect(buildComposition({ ...c, kind: "moble" }).panels.find((p) => p.label === "Lateral esquerre")!.edges).toEqual({ left: false, right: true, bottom: false, top: true })
   })
 })

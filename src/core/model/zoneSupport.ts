@@ -19,6 +19,12 @@ export interface ZoneBounds {
   noBase: boolean
   /** A sobre hi ha la tapa que el mòdul no té («Sense tapa»): per als fronts compta com a aguantat. */
   noTop: boolean
+  /**
+   * A l'esquerra / a la dreta hi ha el lateral que el mòdul no té perquè s'obre a una cantonada en L (`Carcass.corner`):
+   * el mòdul girat del costat l'aguanta i, per als fronts, compta com a aguantat (com `noBase`).
+   */
+  noLeft?: boolean
+  noRight?: boolean
 }
 
 /**
@@ -28,10 +34,12 @@ export interface ZoneBounds {
 export const hasBottom = (c: Pick<Carcass, "base" | "noBottom">): boolean => c.base.kind === "legs" || (c.base.kind !== "open" && !c.noBottom)
 
 /** El que envolta l'«Interior» (l'arrel): la caixa del mòdul. */
-export function carcassBounds(c: Pick<Carcass, "sides" | "base" | "top" | "noBottom">): ZoneBounds {
+export function carcassBounds(c: Pick<Carcass, "sides" | "base" | "top" | "noBottom" | "corner">): ZoneBounds {
   const noBase = !hasBottom(c)
   const noTop = c.top.kind === "none"
-  return { left: c.sides.left, right: c.sides.right, bottom: !noBase, top: !noTop, noBase, noTop }
+  const noLeft = !c.sides.left && c.corner === "left"
+  const noRight = !c.sides.right && c.corner === "right"
+  return { left: c.sides.left, right: c.sides.right, bottom: !noBase, top: !noTop, noBase, noTop, ...(noLeft ? { noLeft } : {}), ...(noRight ? { noRight } : {}) }
 }
 
 /**
@@ -60,7 +68,12 @@ export function zoneBoundsMap(m: Pick<Module, "carcass" | "root">): Map<string, 
  * al costat que no és el de fora (i llavors ja no és la base o la tapa que falta).
  */
 export function childBounds(b: ZoneBounds, dir: "v" | "h", first: boolean, last: boolean): ZoneBounds {
-  if (dir === "v") return { ...b, left: b.left || !first, right: b.right || !last }
+  if (dir === "v") {
+    const out: ZoneBounds = { ...b, left: b.left || !first, right: b.right || !last }
+    if (!first) delete out.noLeft
+    if (!last) delete out.noRight
+    return out
+  }
   return { ...b, bottom: b.bottom || !first, top: b.top || !last, noBase: b.noBase && first, noTop: b.noTop && last }
 }
 
@@ -91,7 +104,7 @@ type FrontChoice = Front["kind"] | "none"
  * tapa o no té base, es queda com està»), la tapa o la base que el mòdul no té («Sense tapa», «Sense base») compten com
  * a aguantades: els mòduls de cuina i de bany sense tapa i els cobreradiadors sense base no perden els fronts.
  */
-export const frontHeld = (b: ZoneBounds): boolean => b.left && b.right && (b.bottom || b.noBase) && (b.top || b.noTop)
+export const frontHeld = (b: ZoneBounds): boolean => (b.left || !!b.noLeft) && (b.right || !!b.noRight) && (b.bottom || b.noBase) && (b.top || b.noTop)
 
 /**
  * Continguts que es poden construir al compartiment: obert sempre; els fronts, només aguantats pels quatre costats

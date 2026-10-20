@@ -6,7 +6,7 @@ import { FloatingWindow } from "../../components/FloatingWindow"
 import { SearchBar } from "../../components/SearchBar"
 import { NumberField } from "../../components/NumRow"
 import { toaster } from "../../components/ui/toaster"
-import { MATERIAL_CATEGORIES, materialCategory, materialCoat, materialNameError, materialSheen, newId, pbrSetMaterial, restoredFinish, switchFinish, tidyMaterialName, uniqueMaterialName, withCategory, type Finish, type MaterialCategory, type MaterialPref } from "../../core/model"
+import { MATERIAL_CATEGORIES, MATERIAL_FAMILIES, autoMaterialFamily, familyGroups, materialCategory, materialFamily, materialCoat, materialNameError, materialSheen, newId, pbrSetMaterial, restoredFinish, switchFinish, tidyMaterialName, uniqueMaterialName, withCategory, type Finish, type MaterialCategory, type MaterialPref } from "../../core/model"
 import { GalleryCard } from "../projects/GalleryCard"
 import { GALLERY_COLS, fold } from "../projects/galleryGrid"
 import { FoldGroup, FoldItem } from "../../components/Fold"
@@ -39,6 +39,10 @@ const CATEGORY_HINTS: Record<MaterialCategory, string> = {
 }
 /** Categories obertes (es recorden durant la sessió). */
 const OPEN_KEY = "mobles:md-open:materials"
+/** Subfamílies obertes dins de les categories («board/lacquer»…), durant la sessió. */
+const FAMILY_KEY = "mobles:md-open:material-families"
+/** Clau d'una subfamília a l'acordió (els ids, com «other», es repeteixen entre categories). */
+const famKey = (cat: string, fam: string | null) => `${cat}/${fam}`
 
 const SPECIES: { value: Extract<Finish, { kind: "wood" }>["species"]; label: string }[] = [
   { value: "oak", label: "Roure" },
@@ -68,13 +72,16 @@ export function MaterialsList({ materials, onChange, onRename, onDelete, footer,
   const dirty = useRef(false)
   // Categories obertes, recordades durant la sessió; la primera vegada, els taulers (el que més es toca).
   const [openState, setOpen] = useSessionList(OPEN_KEY, ["board"])
+  const [openFams, setOpenFams] = useSessionList(FAMILY_KEY, [])
   const update = (i: number, patch: Partial<MaterialPref>) => onChange(materials.map((m, k) => (k === i ? { ...m, ...patch } : m)))
   // Noms únics sense majúscules ni espais (com l'esquema, `materialNameKey`).
   const uniqueName = (base: string) => uniqueMaterialName(materials, base)
-  // Obrir un material a l'editor; la seva categoria queda oberta a la graella (en tancar-lo, es veu on és).
+  // Obrir un material a l'editor; la seva categoria i subfamília queden obertes a la graella (en tancar-lo, es veu on és).
   const open = (m: MaterialPref) => {
     const c = materialCategory(m)
     if (!openState.includes(c)) setOpen([...openState, c])
+    const f = famKey(c, materialFamily(m))
+    if (!openFams.includes(f)) setOpenFams([...openFams, f])
     setSel(m.id)
     setEditorOpen(true)
   }
@@ -118,7 +125,10 @@ export function MaterialsList({ materials, onChange, onRename, onDelete, footer,
   const i = materials.findIndex((m) => m.id === sel)
   const m = i >= 0 ? materials[i]! : null
   useCloseWhenGone(sel, i, setSel, setEditorOpen)
-  const groups = MATERIAL_CATEGORIES.map((c) => ({ ...c, items: materials.filter((x) => materialCategory(x) === c.id && (!q || fold(x.name).includes(q))) })).filter((g) => g.items.length)
+  const groups = MATERIAL_CATEGORIES.map((c) => {
+    const items = materials.filter((x) => materialCategory(x) === c.id && (!q || fold(x.name).includes(q)))
+    return { ...c, items, fams: familyGroups(c.id, items) }
+  }).filter((g) => g.items.length)
   // La cerca obre les categories amb resultats.
   const shownM = m
   // En tancar, `sel` es queda: mentre es tanca (l'animació de sortida) es veu el mateix material.
@@ -127,6 +137,31 @@ export function MaterialsList({ materials, onChange, onRename, onDelete, footer,
     setJustAdded(null)
   }
   const defaultOf = (x: MaterialPref) => (x.name === defaults.material ? "Tauler per defecte" : x.name === defaults.backMaterial ? "Fons per defecte" : null)
+  // Les targetes d'una llista: una categoria sense subfamílies (amb el marge de la galeria) o una subfamília.
+  const cards = (list: MaterialPref[], px?: string) => (
+    <SimpleGrid columns={GALLERY_COLS} gap={3} p={px}>
+      {list.map((x) => {
+        const def = defaultOf(x)
+        return (
+          <GalleryCard
+            key={x.id}
+            thumb={<MaterialSwatch m={x} />}
+            title={x.name}
+            description={materialSummary(x)}
+            tags={
+              def ? (
+                <Badge size="xs" variant="subtle" colorPalette="wood" title={`${def} als mòduls nous`}>
+                  <LuStar /> {def}
+                </Badge>
+              ) : undefined
+            }
+            selected={editorOpen && x.id === sel}
+            onClick={() => open(x)}
+          />
+        )
+      })}
+    </SimpleGrid>
+  )
   return (
     <Stack gap={4} minW={0}>
       {head}
@@ -137,28 +172,17 @@ export function MaterialsList({ materials, onChange, onRename, onDelete, footer,
         <FoldGroup variant="gallery" value={openState} onValueChange={setOpen} forceOpen={q ? groups.map((g) => g.id) : null}>
           {groups.map((g) => (
             <FoldItem key={g.id} id={g.id} icon={CATEGORY_ICONS[g.id]} title={g.label} count={g.items.length} description={CATEGORY_HINTS[g.id]}>
-              <SimpleGrid columns={GALLERY_COLS} gap={3} p="var(--gallery-px, 0)">
-                {g.items.map((x) => {
-                  const def = defaultOf(x)
-                  return (
-                    <GalleryCard
-                      key={x.id}
-                      thumb={<MaterialSwatch m={x} />}
-                      title={x.name}
-                      description={materialSummary(x)}
-                      tags={
-                        def ? (
-                          <Badge size="xs" variant="subtle" colorPalette="wood" title={`${def} als mòduls nous`}>
-                            <LuStar /> {def}
-                          </Badge>
-                        ) : undefined
-                      }
-                      selected={editorOpen && x.id === sel}
-                      onClick={() => open(x)}
-                    />
-                  )
-                })}
-              </SimpleGrid>
+              {g.fams.length ? (
+                <FoldGroup variant="nested" value={openFams} onValueChange={setOpenFams} forceOpen={q ? g.fams.map((f) => famKey(g.id, f.id)) : null}>
+                  {g.fams.map((f) => (
+                    <FoldItem key={f.id} id={famKey(g.id, f.id)} title={f.label} count={f.items.length}>
+                      {cards(f.items)}
+                    </FoldItem>
+                  ))}
+                </FoldGroup>
+              ) : (
+                cards(g.items, "var(--gallery-px, 0)")
+              )}
             </FoldItem>
           ))}
         </FoldGroup>
@@ -531,10 +555,20 @@ function MaterialCard({ m, dirty, footer, onChange, onRename, nameError, onDupli
             onChange={(id) => {
               const next = withCategory(m, id)
               // Replaça tot el material: `forBacks` i `cnc` poden desaparèixer.
-              onChange({ ...next, forBacks: next.forBacks, cnc: next.cnc, category: next.category })
+              onChange({ ...next, forBacks: next.forBacks, cnc: next.cnc, category: next.category, family: undefined })
             }}
           />
         </FormRow>
+        {MATERIAL_FAMILIES[category.id].length > 0 && (
+          <FormRow label="Subfamília" help="On surt dins de la categoria, a Preferències i al triar-lo. «Automàtica»: la que diuen el nom i l'acabat.">
+            <ChoiceChips<string>
+              label="Subfamília"
+              options={[{ id: "", label: `Automàtica (${MATERIAL_FAMILIES[category.id].find((f) => f.id === autoMaterialFamily(m))?.label ?? "Altres"})` }, ...MATERIAL_FAMILIES[category.id].map((f) => ({ id: f.id, label: f.label }))]}
+              value={m.family && MATERIAL_FAMILIES[category.id].some((f) => f.id === m.family) ? m.family : ""}
+              onChange={(id) => onChange({ family: id || undefined })}
+            />
+          </FormRow>
+        )}
       </FoldItem>
       {footer && (
         <FoldItem id="material-default" icon={LuStar} title="Per defecte als mòduls nous">

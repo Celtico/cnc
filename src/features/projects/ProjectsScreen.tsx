@@ -1,4 +1,4 @@
-import { Text, VStack } from "@chakra-ui/react"
+import { Menu, Text, VStack } from "@chakra-ui/react"
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import { SaveFileDialog } from "../file/SaveFileDialog"
 import { OpenFileButton } from "../file/OpenFileButton"
@@ -11,6 +11,7 @@ import { useAmbientMembership } from "../ambients/useAmbientMembership"
 import type { Composition } from "../../core/model"
 import { ClearHistory } from "./ClearHistory"
 import { blankMoble, NEW_MOBLE_NAMES } from "./blank"
+import { KINDS } from "../composition/kinds"
 import { FolderedGrid, MoveToFolderDialog } from "./Folders"
 import { createProject, db, deleteProject, isEdited, setProjectsFolder, duplicateProject, type Project } from "../../db/db"
 import { useProjects } from "../useProject"
@@ -18,6 +19,12 @@ import { toaster } from "../../components/ui/toaster"
 import { PageHeader } from "../../components/PageHeader"
 import { ConfirmDialog } from "../../components/ConfirmDialog"
 import { projectSearchText } from "./searchText"
+
+/** Els tipus que es trien a «Nou moble». */
+const NEW_MOBLE_TYPES = [
+  { kind: "moble", label: "Moble normal", hint: "TV, calaixera, prestatgeria… El suport (a terra, sòcol o potes) es tria a cada mòdul." },
+  { kind: "cuina", label: "Cuina", hint: "Baixos a terra i alts penjats. Un sol suport i un sòcol per tram per a tots els mòduls de terra." },
+] as const
 
 /** Acció demanada des del menú de l'esquerra (Obrir fitxer); `n` la fa única. */
 export type ProjectsRequest = { kind: "open"; n: number } | null
@@ -72,8 +79,25 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
       <NewMobleGallery
         onCreate={(c, n) => void handleCreate(c, n)}
         // El botó principal al costat del cercador (com a Ambients i Objectes) i «Obrir fitxer» a la mateixa fila.
-        // «Nou moble» crea directament un moble en blanc (per decisió de l'usuari, sense menú de tipus).
-        add={{ label: "Nou moble", onClick: () => void handleCreate(blankMoble("moble"), NEW_MOBLE_NAMES.moble) }}
+        // «Nou moble» demana el tipus (per decisió de l'usuari, 2026-10-20: «triar si és de cuina o és un moble normal»): el
+        // normal té el suport a cada mòdul; la cuina, un per a tots (Moble › Cuina). Es crea en blanc.
+        add={{
+          label: "Nou moble",
+          menu: NEW_MOBLE_TYPES.map((t) => {
+            const k = KINDS.find((x) => x.value === t.kind)!
+            return (
+              <Menu.Item key={t.kind} value={t.kind} onClick={() => void handleCreate(blankMoble(t.kind), NEW_MOBLE_NAMES[t.kind])}>
+                <k.icon />
+                <VStack align="start" gap={0}>
+                  <Text>{t.label}</Text>
+                  <Text fontSize="xs" color="fg.muted">
+                    {t.hint}
+                  </Text>
+                </VStack>
+              </Menu.Item>
+            )
+          }),
+        }}
         // Un .moble (també les plantilles exportades abans) s'obre sempre com a moble; un objecte o un .ambient, com el que són.
         extra={<OpenFileButton page="moble" inputRef={fileInput} onOpened={(o) => (o.kind === "ambient" ? showAmbient(o.ambientId) : onOpen(o.projectId))} />}
         history={(matches, searching) => {

@@ -1,13 +1,13 @@
-import { applianceNodes } from "./moduleOptions"
+import { applianceNodes, splitFrontNode } from "./moduleOptions"
 import { AS_MODULE, STRUCTURAL, UI, field, group, section } from "./optionTypes"
 
 const S32 = "La de tot el mòdul (`module.hardware.system32`): surt on la fan servir, als Prestatges (regulables) o al Front (després de la Frontissa d'una porta de fusta o d'una reixeta amb frontisses), mai a tots dos."
 
-const door = group("zone.front.door", "Porta", { code: UI.frontFields, showIf: "Contingut = Porta (també Mòdul › Portes = Una o Dues)" }, [
+const door = group("zone.front.door", "Porta", { code: UI.frontFields, showIf: "Contingut = Porta (també el Front d'una zona dividida = Una o Dues)" }, [
   field("zone.front.door.mode", "Portes", {
     code: UI.frontFields,
     control: "choice",
-    showIf: "No a Mòdul › Portes (allà es tria a dalt)",
+    showIf: "No al Front d'una zona dividida (allà es tria a dalt)",
     default: "single",
     defaultEditable: true,
     choices: [
@@ -40,6 +40,7 @@ const drawers = group("zone.front.drawers", "Calaixos", { code: UI.frontFields, 
   section("zone.front.drawers.heights", "Alçada dels calaixos", { icon: "subsection", code: UI.frontFields, showIf: "Més d'un calaix" }, [
     field("zone.front.drawers.height", "Alçada 1…n", { code: UI.drawers, control: "number", defaultText: "Auto (l'última, el que sobra)" }),
   ]),
+  field("zone.front.drawers.glass", "Vidre", { code: UI.frontFields, control: "switch", default: false, choices: [{ value: "on", label: "Front de vidre" }], note: "Per petició de l'usuari, 2026-10-20: marc de fusta d'una peça, finestra calada i vidre al galze." }),
   field("zone.front.drawers.slide", "Guia de calaix", {
     code: UI.frontFields,
     control: "hardware",
@@ -69,9 +70,9 @@ const drawers = group("zone.front.drawers", "Calaixos", { code: UI.frontFields, 
       code: UI.frontFields,
       control: "choice",
       default: "center",
-      choices: [{ value: "center", label: "Centrat", hides: ["zone.front.drawers.handleTop"] }, { value: "top", label: "A dalt", reveals: ["zone.front.drawers.handleTop"] }],
+      choices: [{ value: "center", label: "Centrat", hides: ["zone.front.drawers.handleTop"], note: "no amb vidre (el mig és la finestra)" }, { value: "top", label: "A dalt", reveals: ["zone.front.drawers.handleTop"] }],
     }),
-    field("zone.front.drawers.handleTop", "Des de dalt", { code: UI.frontFields, control: "number", showIf: "Posició = A dalt", default: 40 }),
+    field("zone.front.drawers.handleTop", "Des de dalt", { code: UI.frontFields, control: "number", showIf: "Posició = A dalt (amb vidre, sempre: 30 mm, al travesser de dalt)", default: 40 }),
   ]),
 ])
 
@@ -105,9 +106,16 @@ const grille = group("zone.front.grille", "Reixeta", { code: UI.frontFields, sho
     defaultEditable: true,
     choices: [
       { value: "removable", label: "Imants", reveals: ["zone.front.grille.magnet"] },
-      { value: "hinged", label: "Frontisses", reveals: ["zone.system32"], note: "si hi ha lateral o divisor" },
+      { value: "hinged", label: "Frontisses", reveals: ["zone.front.grille.hingeSide", "zone.system32"], note: "si hi ha lateral o divisor" },
     ],
-    issue: "Amb «Frontisses» la construcció llegeix el costat (`front.hinge`) i la frontissa del mòdul, però la UI no ofereix ni «Frontisses: Esquerra · Dreta» ni la «Frontissa»: queda sempre a l'esquerra i «Com el mòdul», sense poder-ho canviar. «Res del que la construcció llegeix no surt», al revés de la regla.",
+  }),
+  field("zone.front.grille.hingeSide", "Frontisses", {
+    code: UI.frontFields,
+    control: "choice",
+    showIf: "Muntatge = Frontisses; només els costats amb lateral o divisor",
+    default: "left",
+    choices: [{ value: "left", label: "Esquerra" }, { value: "right", label: "Dreta" }],
+    note: "Com a la porta (2026-10-20; abans no es podia triar i quedava a l'esquerra). La frontissa és la del mòdul.",
   }),
   field("zone.front.grille.holes", "Diàmetre forat · Pas", { code: UI.frontFields, control: "number", showIf: "Patró = Forats", defaultText: "10 · 16 mm" }),
   field("zone.front.grille.slots", "Ranura · Separació", { code: UI.frontFields, control: "number", showIf: "Patró = Ranures", defaultText: "8 · 8 mm" }),
@@ -142,6 +150,7 @@ const front = section("zone.front", "Front", {
       { value: "flap", label: "Abatible", reveals: ["zone.front.flap"] },
       { value: "grille", label: "Reixeta", reveals: ["zone.front.grille"] },
       { value: "panel", label: "Front fix", hides: ["zone.shelves", "zone.divide"] },
+      { value: "appliance", label: "Electrodomèstic", reveals: ["zone.appliance"], note: "compartiment d'un mòdul dividit (per decisió de l'usuari, 2026-10-20)" },
     ],
     note: "Només els fronts que s'hi poden fixar (el triat surt sempre).",
   }),
@@ -151,10 +160,11 @@ const front = section("zone.front", "Front", {
   grille,
 ])
 
-const shelves = section("zone.shelves", "Opcions de l'interior", {
+const shelves = group("zone.shelves", "Opcions de l'interior", {
   icon: "shelves",
   code: UI.shelves,
-  showIf: "Compartiment sense dividir, sense aparell que l'ocupi, amb lateral o divisor als dos costats; ni amb Calaixos ni Front fix",
+  showIf: "Dins del Front, a sota del «Contingut» (canvien amb el contingut triat). Compartiment sense dividir, sense aparell que l'ocupi, amb lateral o divisor als dos costats; ni amb Calaixos ni Front fix",
+  note: "Per decisió de l'usuari, 2026-10-20: sense secció pròpia, a sota de la tria del contingut.",
 }, [
   section("zone.shelves.shelvesGroup", "Prestatges", { icon: "subsection", code: UI.shelves, showIf: "Amb lateral o divisor als dos costats" }, [
   field("zone.shelves.count", "Prestatges", {
@@ -218,14 +228,47 @@ const shelves = section("zone.shelves", "Opcions de l'interior", {
     control: "number",
     showIf: "Darrere d'una porta (la del compartiment o la d'una zona de més amunt)",
     default: 0,
-    choices: [{ value: ">0", label: "1 o més", reveals: ["zone.shelves.innerDrawers.height", "zone.shelves.innerDrawers.slide", "zone.shelves.innerDrawers.setback", "zone.shelves.innerDrawers.shim"] }],
-    note: "Per decisió de l'usuari, 2026-10-16: «posar calaixos darrere una porta», a la secció de l'interior. A baix de tot; front interior baix, sense tirador, retirat; suplement al costat de les frontisses (`Zone.innerDrawers`).",
+    choices: [{ value: ">0", label: "1 o més", reveals: ["zone.shelves.innerDrawers.heights", "zone.shelves.innerDrawers.slide", "zone.shelves.innerDrawers.setback", "zone.shelves.innerDrawers.shimSide"] }],
+    note: "Per decisió de l'usuari, 2026-10-16: «posar calaixos darrere una porta», a la secció de l'interior. A baix de tot; front interior baix, sense tirador, retirat; suplement al costat de les frontisses (`Zone.innerDrawers`). Per decisió de l'usuari, 2026-10-20: les mateixes opcions que Front › Calaixos (alçada de cada calaix, guia de cada calaix, opcions del joc), amb els mateixos components.",
   }, [
-    field("zone.shelves.innerDrawers.height", "Alçada de cada calaix", { code: UI.shelves, control: "number", default: 180 }),
-    field("zone.shelves.innerDrawers.slide", "Guia", { code: UI.shelves, control: "hardware", defaultText: AS_MODULE }),
-    field("zone.shelves.innerDrawers.front", "Front", { code: UI.shelves, control: "choice", showIf: "Amb un joc de calaix", default: "wood", choices: [{ value: "wood", label: "De fusta" }, { value: "kit", label: "Metàl·lic (del joc)" }], note: "Per decisió de l'usuari, 2026-10-16: «calaixos sense frontal, tot ferratge»." }),
+    section("zone.shelves.innerDrawers.heights", "Alçada dels calaixos", { icon: "subsection", code: UI.shelves, showIf: "Més d'un calaix (amb un, la fila «Alçada»)" }, [
+      field("zone.shelves.innerDrawers.height", "Alçada 1…n", { code: UI.shelves, control: "number", default: 180, note: "Totes iguals = `height`; si no, `heights`." }),
+    ]),
+    field("zone.shelves.innerDrawers.slide", "Guia", {
+      code: UI.shelves,
+      control: "hardware",
+      defaultText: AS_MODULE,
+      choices: [
+        { value: "slide", label: "Una guia", hides: ["zone.shelves.innerDrawers.kit", "zone.shelves.innerDrawers.slides"] },
+        { value: "kit", label: "Un joc de calaix (doble paret)", reveals: ["zone.shelves.innerDrawers.kit", "zone.shelves.innerDrawers.slides"] },
+      ],
+    }, [
+      field("zone.shelves.innerDrawers.slides", "Guia del calaix 2…n", { code: UI.shelves, control: "hardware", showIf: "Joc de calaix, més d'un calaix i alguna alçada diferent", defaultText: "Com el calaix de sota" }),
+    ]),
+    section("zone.shelves.innerDrawers.kit", "Opcions de la guia de calaix", { icon: "subsection", code: UI.shelves, showIf: "La guia (pròpia o del mòdul) és un joc" }, [
+      field("zone.shelves.innerDrawers.front", "Front", { code: UI.shelves, control: "choice", default: "wood", choices: [{ value: "wood", label: "De fusta" }, { value: "kit", label: "Metàl·lic (del joc)" }], note: "Per decisió de l'usuari, 2026-10-16: «calaixos sense frontal, tot ferratge»." }),
+      field("zone.shelves.innerDrawers.kit.closing", "Tancament", { code: UI.shelves, control: "choice", defaultText: "El primer que ven el joc" }),
+      field("zone.shelves.innerDrawers.kit.back", "Darrere", { code: UI.shelves, control: "choice", defaultText: "Fusta" }),
+      field("zone.shelves.innerDrawers.kit.finish", "Color dels laterals", { code: UI.shelves, control: "choice", showIf: "El joc té més d'un acabat" }),
+      field("zone.shelves.innerDrawers.kit.bottom", "Fons del calaix", { code: UI.shelves, control: "text", note: "Només es llegeix: el gruix el demana el joc." }),
+      field("zone.shelves.innerDrawers.kit.info", "Joc", { code: UI.shelves, control: "text", note: "NL, números d'article i peces de fusta que ha fet la construcció." }),
+    ]),
+    field("zone.shelves.innerDrawers.glass", "Vidre", { code: UI.shelves, control: "switch", showIf: "Front de fusta", default: false, choices: [{ value: "on", label: "Front de vidre" }] }),
     field("zone.shelves.innerDrawers.setback", "Retirada del front", { code: UI.shelves, control: "number", defaultText: "Preferències › Folgances per defecte (25)" }),
-    field("zone.shelves.innerDrawers.shim", "Suplement", { code: UI.shelves, control: "number", defaultText: "El gruix del cos" }),
+    section("zone.shelves.innerDrawers.shimSide", "Suplement esquerre · Suplement dret", { icon: "subsection", code: UI.shelves, note: "Cada costat el seu (per decisió de l'usuari, 2026-10-20). Sense triar: el gruix del cos al costat de les frontisses i cap a l'altre." }, [
+      field("zone.shelves.innerDrawers.shim", "Gruix", { code: UI.shelves, control: "number", range: { min: 0, max: 600, step: 1, suffix: "mm" }, defaultText: "El gruix del cos a les frontisses, 0 a l'altre costat", note: "Fins a dos gruixos del cos, una tira massissa; més gruixut, una caixa. Sense límit fix: avís si als calaixos no els queden 150 mm." }),
+      field("zone.shelves.innerDrawers.shimBox", "Caixa", {
+        code: UI.shelves,
+        control: "choice",
+        showIf: "Gruix de dos gruixos del cos o més",
+        default: "closed",
+        choices: [
+          { value: "closed", label: "Tapat", hides: ["zone.shelves.innerDrawers.shimShelves"] },
+          { value: "shelves", label: "Amb prestatges", reveals: ["zone.shelves.innerDrawers.shimShelves"] },
+        ],
+      }),
+      field("zone.shelves.innerDrawers.shimShelves", "Prestatges", { code: UI.shelves, control: "number", showIf: "Caixa amb prestatges", default: 1 }),
+    ]),
   ]),
   ]),
 ])
@@ -245,8 +288,16 @@ export const ZONE = group("zone", "Compartiment", { icon: "zone", code: UI.secti
     issue: "(dades) Dividir passa al primer fill els prestatges, el front, la barra i l'aparell però no la llum (`led`): dividir un compartiment amb Llum la perd.",
     why: "Amagada, no es pot dividir cap compartiment (els dividits continuen igual).",
   }),
+  splitFrontNode(),
   section("zone.split", "Divisió vertical / horitzontal", { icon: "split", code: UI.zonePanel, showIf: "Compartiment dividit (és l'única secció)", hideable: false, why: STRUCTURAL }, [
     field("zone.split.sizes", "Amplada / Alçada 1…n", { code: UI.split, control: "number", defaultText: "Totes «Auto» (l'última, el que sobra)", hideable: false, why: STRUCTURAL }),
+    field("zone.split.thick", "Gruix", {
+      code: UI.split,
+      control: "switch",
+      default: false,
+      choices: [{ value: "on", label: "Gruixuts (buits)", reveals: ["zone.split.thickness"] }],
+      note: "Per petició de l'usuari, 2026-10-20: «al fer divisions ficar l'opció de gruixuts (buits)». Els divisors (o prestatges fixos) de la divisió, fets com els prestatges gruixuts: dues pells, llistons i una tira al davant (`Zone.split.thickness`).",
+    }, [field("zone.split.thickness", "Gruix aparent", { code: UI.split, control: "number", default: 50 })]),
     field("zone.split.innerClearance", "Peces de dins", { code: UI.carcass, control: "number", showIf: "L'«Interior» dividit", defaultText: "Preferències › Folgances per defecte" }),
   ]),
 ])

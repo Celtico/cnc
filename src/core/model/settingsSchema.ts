@@ -256,6 +256,11 @@ export const MaterialPrefSchema = z.object({
    */
   category: z.enum(["board", "back", "corian", "hard", "sim"]).optional(),
   /**
+   * Subfamília triada dins de la categoria (`MATERIAL_FAMILIES`: Melamines, Lacats, Blancs, Metalls…). Sense, o si
+   * ja no és de la seva categoria, es dedueix del nom i de l'acabat (`materialFamily`). Només agrupa les llistes.
+   */
+  family: z.string().optional(),
+  /**
    * Render: llum que emet (radiància, ~1 paper blanc al sol tènue; pantalla de làmpada ≈ 4,
    * bombeta ≈ 30). Al visor es veu encès. v5.
    */
@@ -325,7 +330,8 @@ export const isCncBoard = (m: Pick<MaterialPref, "category" | "forBacks" | "cnc"
 
 /** Canvia la categoria d'un material mantenint coherents `forBacks` i `cnc`. */
 export function withCategory(m: MaterialPref, category: MaterialCategory): MaterialPref {
-  const { forBacks: _f, cnc: _c, category: _k, ...rest } = m
+  // La subfamília és de la categoria d'abans: es torna a deduir.
+  const { forBacks: _f, cnc: _c, category: _k, family: _s, ...rest } = m
   return { ...rest, category, ...(category === "back" ? { forBacks: true } : {}), ...(category === "sim" ? { cnc: false } : {}) }
 }
 

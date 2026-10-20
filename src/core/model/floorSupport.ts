@@ -1,5 +1,5 @@
-import { activeRuns, compositionKind, freeX, moduleFootprint, modulePlacements, partsOnlyKind, type ModulePlacement } from "./composition"
-import type { Composition, PlinthRun } from "./compositionSchema"
+import { activeRuns, compositionKind, freeX, moduleFootprint, moduleFrontFace, modulePlacements, partsOnlyKind, type ModulePlacement } from "./composition"
+import type { Composition, CompositionKind, PlinthRun } from "./compositionSchema"
 import type { Base, Module } from "./moduleSchema"
 import { isApplianceModule, moduleApplianceCarcass, visibleModule } from "./moduleVisible"
 import { moduleType } from "./moduleType"
@@ -22,11 +22,6 @@ export interface FloorTram {
   modules: number[]
   /** Cap mòdul arrambat a la paret: una illa o un moble solt. */
   free: boolean
-}
-
-/** Cara dels fronts d'un mòdul des del darrere de la caixa: recobrents, per davant (un gruix); encastats, a ras. */
-export function moduleFrontFace(m: Module): number {
-  return m.carcass.depth + (visibleModule(m).fronts.style === "inset" ? 0 : m.carcass.thickness)
 }
 
 /** Es toquen de costat (≤ 1 mm) o d'esquena (≤ 50 mm, el pas de cables d'una illa). */
@@ -187,6 +182,9 @@ function deriveSupport(comp: Composition): FloorSupport | undefined {
 export function withSupport(comp: Composition): Composition {
   const kind = compositionKind(comp)
   if (partsOnlyKind(kind)) return comp
+  // El moble normal (per decisió de l'usuari, 2026-10-20) té el suport a cada mòdul, com abans: el `support` d'abans (o un
+  // sòcol corregut encès) torna als mòduls.
+  if (!globalSupport(kind)) return comp.support || activeRuns(comp).some((r) => r.kind === "plinth") ? toModuleSupports(comp) : comp
   const support = comp.support ?? deriveSupport(comp)
   if (!support) return comp
   const base = supportBase(support)
@@ -218,6 +216,35 @@ export function withSupport(comp: Composition): Composition {
   if (!changed) return comp
   // El tipus d'un moble d'abans es deduïa dels sòcols correguts: es fixa abans de treure'ls.
   return { ...comp, kind, support, modules, ...(runs ? { runs } : {}) }
+}
+
+/**
+ * **Qui té el suport del moble** (per decisió de l'usuari, 2026-10-20: «si és cuina, les opcions d'ara; si és un moble
+ * normal, les d'abans»): la cuina, un sol suport per a tots els mòduls de terra (Moble › Cuina) i un sòcol per tram; els
+ * altres (moble, armari, taula), el de cada mòdul, com abans de les cuines (Caixa › Base: Directe a terra · Sòcol · Potes ·
+ * Sense base).
+ */
+function globalSupport(kind: CompositionKind): boolean {
+  return kind === "cuina"
+}
+
+/**
+ * El suport del moble passat a cada mòdul (un moble normal desat amb `support`, o amb un sòcol corregut encès, que no es
+ * fa: es treu): les potes ja hi són; el sòcol del tram passa a ser el de les potes de cada mòdul, només al davant (com
+ * abans de les cuines).
+ */
+function toModuleSupports(comp: Composition): Composition {
+  const s = comp.support ?? deriveSupport(comp)
+  const active = new Set(activeRuns(comp))
+  const { support: _s, ...rest } = comp.runs?.some((r) => r.kind === "plinth" && active.has(r)) ? { ...comp, runs: comp.runs.filter((r) => r.kind !== "plinth" || !active.has(r)) } : comp
+  if (s?.kind !== "plinth") return rest
+  const modules = comp.modules.map((m) => {
+    const b = m.carcass.base
+    if (b.kind !== "legs" || b.plinth) return m
+    const setback = Math.min(200, Math.max(0, s.plinth.setback - (moduleFrontFace(m) - m.carcass.depth)))
+    return { ...m, carcass: { ...m.carcass, base: { ...b, plinth: { setback } } } }
+  })
+  return { ...rest, modules }
 }
 
 /** Canvia el suport i el porta a tots els mòduls de terra. */

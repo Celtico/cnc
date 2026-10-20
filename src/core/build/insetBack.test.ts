@@ -116,14 +116,18 @@ describe("fons encastat", () => {
   })
 
   it("sense base (oberta) i sense laterals: fins a fora i el cantell que es veu, cantejat", () => {
-    const ps = panelsOf(mod({ base: { kind: "open" }, sides: { left: false, right: true } }))
+    const m = mod({ base: { kind: "open" }, sides: { left: false, right: true } })
+    const ps = panelsOf(m)
     const back = ps.find((p) => p.role === "back")!
     const b = panelBox(back)
     expect(b.min).toEqual([0, 0, 0])
     expect(b.max).toEqual([581, 701, 19])
     // Només espigues al lateral dret i a la tapa.
     expect(dowelPts(back, "edge")).toHaveLength(6)
-    expect(Object.values(back.edges).filter(Boolean)).toHaveLength(2)
+    // Arrambat a la paret, el fons no té cap cantell de davant i el de dalt toca la tapa: cap. Lliure al terra, els dos que es veuen.
+    expect(Object.values(back.edges).filter(Boolean)).toHaveLength(0)
+    const floorBack = panelsOf({ ...m, wallGap: 300 }).find((p) => p.role === "back")!
+    expect(Object.values(floorBack.edges).filter(Boolean)).toHaveLength(2)
   })
 
   it("parets buides: entre les pells de dins, amb espigues a les pells", () => {
@@ -216,7 +220,7 @@ describe("fons encastat", () => {
     expect(warns(25)[0]!.message).toMatch(/només queden 6 mm/)
     expect(warns(15)[0]!.message).toMatch(/queda tapada/)
     expect(warns(60, { backInsetSetback: 35 })).toHaveLength(1)
-    const back = buildModule(mod({ top: { kind: "ventSlot", gap: 60 } })).panels.find((p) => p.role === "back")!
+    const back = buildModule({ ...mod({ top: { kind: "ventSlot", gap: 60 } }), wallGap: 300 }).panels.find((p) => p.role === "back")!
     // Un sol cantell (el de dalt; la peça va girada al costat llarg).
     expect(Object.values(back.edges).filter(Boolean)).toHaveLength(1)
   })

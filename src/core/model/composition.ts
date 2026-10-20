@@ -6,6 +6,7 @@ import { PART_AXES as PART_AXES_C, tidyPart, type FreePart } from "./freePart"
 import { DEFAULT_LEGACY_HARDWARE, isLegacyHardware, kitFromLegacy, migrateModuleHardware, type ModuleHardware } from "./hardware"
 import { hungBack } from "./hungBack"
 import type { Base, Carcass, Front, Module, Zone } from "./moduleSchema"
+import { visibleModule } from "./moduleVisible"
 import type { Composition, CompositionKind, RefObject, Run } from "./compositionSchema"
 
 /**
@@ -61,8 +62,20 @@ export const freeX = (m: Module): boolean => m.x !== undefined && m.carcass.base
 /** Gir d'un mòdul al voltant del vertical, en graus (vist de dalt, antihorari: 90 = fronts a +X). */
 export type ModuleRot = 0 | 90 | 180 | 270
 
-/** El gir del mòdul (`Module.rot`, o `turned` = 180): només amb el mòdul lliure al terra; si no, 0. */
-export const moduleRot = (m: Module): ModuleRot => (m.carcass.base.kind !== "wall" && m.wallGap !== undefined ? (m.rot ?? (m.turned ? 180 : 0)) : 0)
+/**
+ * Cap on miren els fronts del mòdul (`Module.rot`, o `turned` = 180), en qualsevol muntatge (per decisió de l'usuari,
+ * 2026-10-20: «si saps el front saps com va la resta»). Enrere (180°) només lliure al terra: arrambat o penjat, els fronts
+ * mirarien a la paret, i es queda endavant.
+ */
+export const moduleRot = (m: Module): ModuleRot => {
+  const rot = m.rot ?? (m.turned ? 180 : 0)
+  return rot === 180 && mountOf(m) !== "floor" ? 0 : rot
+}
+
+/** Cara dels fronts d'un mòdul des del darrere de la caixa: recobrents, per davant (un gruix); encastats, a ras. */
+export function moduleFrontFace(m: Module): number {
+  return m.carcass.depth + (visibleModule(m).fronts.style === "inset" ? 0 : m.carcass.thickness)
+}
 
 /** Gira el punt (x, z) `rot` graus al voltant de (cx, cz) (vist de dalt, antihorari: +Z → +X amb 90). */
 export function rotXZ(x: number, z: number, rot: ModuleRot, cx = 0, cz = 0): [number, number] {
@@ -112,8 +125,18 @@ export function modulePlacements(comp: Composition): ModulePlacement[] {
     // Al terra amb X pròpia (illa): fora de la fila, no mou el cursor.
     if (freeX(m)) return { x: m.x!, y: moduleElevation(m.carcass), ...(m.wallGap ? { z: m.wallGap } : {}) }
     const x = cursor[row] + m.gapBefore
+    const wallZ = row === "floor" && m.wallGap ? m.wallGap : 0
+    // Fronts a un costat (90° o 270°): a la fila ocupa la fondària (fins a la cara dels fronts) i un lateral toca la paret.
+    // L'origen és el del mòdul sense girar, que gira al voltant del centre de la petjada (`moduleFootprint`).
+    const rot = moduleRot(m)
+    if (rot === 90 || rot === 270) {
+      const w = m.carcass.width, d = moduleFrontFace(m)
+      cursor[row] = x + d
+      const z = wallZ + (w - d) / 2
+      return { x: x + (d - w) / 2, y: moduleElevation(m.carcass), ...(z ? { z } : {}) }
+    }
     cursor[row] = x + m.carcass.width
-    return { x, y: moduleElevation(m.carcass), ...(row === "floor" && m.wallGap ? { z: m.wallGap } : {}) }
+    return { x, y: moduleElevation(m.carcass), ...(wallZ ? { z: wallZ } : {}) }
   })
 }
 
@@ -186,7 +209,7 @@ export function normalizeComposition(raw: Composition): Composition {
 /** Amplada total: fins a la dreta del mòdul que arriba més lluny. */
 export function compositionWidth(comp: Composition): number {
   const ps = modulePlacements(comp)
-  return comp.modules.reduce((w, m, i) => Math.max(w, ps[i]!.x + m.carcass.width), 0)
+  return comp.modules.reduce((w, m, i) => Math.max(w, moduleFootprint(m, ps[i]!, moduleFrontFace(m)).x1), 0)
 }
 
 /** Alçada total: fins a dalt del mòdul més alt (tenint en compte potes, penjats i apilats). */

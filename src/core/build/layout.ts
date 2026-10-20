@@ -20,6 +20,8 @@ export interface DividerSpec {
   to: number
   /** Índex del divisor dins la divisió (0..n−2). */
   index: number
+  /** Gruix que ocupa (el del tauler, o el gruix aparent d'una divisió de divisors gruixuts, `dividerThickness`). */
+  thickness: number
 }
 
 export interface Layout {
@@ -74,6 +76,15 @@ export function mismatchMessage(what: string, given: number, total: number, last
   return `${what}: les mides fixes sumen ${fmtNum(given, 1)} mm però n'hi ha ${fmtNum(total, 1)} mm. L'última s'ajusta a ${fmtNum(last, 1)} mm (posa'n una a «auto» perquè agafi el que sobra).`
 }
 
+/**
+ * Gruix dels divisors d'una divisió: el gruix aparent dels divisors gruixuts (buits) si hi caben dues pells i un llistó
+ * (almenys 2 × tauler + 6, com els prestatges gruixuts); si no, o sense, el del tauler.
+ */
+function dividerThickness(split: Pick<NonNullable<Zone["split"]>, "thickness">, board: number): number {
+  const want = split.thickness
+  return want && want >= 2 * board + 6 ? want : board
+}
+
 /** Calcula els rectangles de totes les zones a partir de la llum interior del mòdul. */
 export function layoutZones(root: Zone, interior: ZoneRect, thickness: number): Layout {
   const rects = new Map<string, ZoneRect>()
@@ -88,9 +99,10 @@ export function layoutZones(root: Zone, interior: ZoneRect, thickness: number): 
       return
     }
     const { dir, children } = zone.split
+    const T = dividerThickness(zone.split, thickness)
     const sizes = padSizes(zone.split.sizes, children.length)
     const total = dir === "v" ? rect.x1 - rect.x0 : rect.y1 - rect.y0
-    const { sizes: resolved, mismatch } = fitSizes(total, sizes, thickness)
+    const { sizes: resolved, mismatch } = fitSizes(total, sizes, T)
     if (mismatch !== null) problems.push(mismatchMessage(`Les ${dir === "v" ? "amplades" : "alçades"} de la divisió de la zona ${zone.id}`, mismatch, roundTo(total, 2), resolved.at(-1)!))
     if (resolved.some((v) => v <= 0)) problems.push(`La zona ${zone.id} no té prou espai per a les seves divisions.`)
 
@@ -111,8 +123,9 @@ export function layoutZones(root: Zone, interior: ZoneRect, thickness: number): 
           from: dir === "v" ? rect.y0 : rect.x0,
           to: dir === "v" ? rect.y1 : rect.x1,
           index: i,
+          thickness: T,
         })
-        cursor += thickness
+        cursor += T
       }
     })
   }

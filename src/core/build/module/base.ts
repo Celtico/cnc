@@ -17,12 +17,42 @@ import {
   hasInnerPieces,
 } from "../../model"
 import type { KitOrderLine } from "../drawerKit"
-import { X, Y, Z, neg, placement, r } from "../geometry"
+import { X, Y, Z, neg, panelBox, placement, r } from "../geometry"
 import { resolveKit, slotSpec, type ResolvedKit, type SlotSpec } from "../hardware"
 import type { LightOrder } from "../lightOrders"
 import type { LinearPiece } from "../linearOrders"
 import { type Derived, derive } from "./derive"
 import type { BuildWarning, KitOrder, Wiring, RearLimit, VerticalRef, HorizontalRef, VentInlet } from "./types"
+
+const EDGE_SIDES: readonly EdgeSide[] = ["left", "right", "bottom", "top"]
+/**
+ * Peces on manen les regles de laminat (`applyEdgeRules`). Les tires del davant de les parets i prestatges buits
+ * (`facing`), no: són el cantell de davant de la peça gruixuda i es cantegen pels quatre costats, com un front.
+ */
+const EDGE_RULE_ROLES = new Set<PanelRole>(["side", "bottom", "top", "back", "shelf", "divider", "fixedShelf", "plinth", "spacer"])
+/** Peces que no tapen el cantell d'una altra: els fronts s'obren (el cantell de davant del lateral es veu igual) i els ferratges no són tauler. */
+const EDGE_RULE_SKIP_OCCLUDER = new Set<PanelRole>(["door", "drawerFront", "flap", "grille", "hatch", "panel", "hardware"])
+/** Fins on es mira, fora del cantell, si hi ha una altra peça (més que la folgança de les peces de dins, 3 mm). */
+const EDGE_PROBE = 4
+
+/** Direcció cap a fora d'un cantell, en coordenades del mòdul (z+ = davant, y− = sota). */
+function edgeDirection(p: Panel, side: EdgeSide): Vec3 {
+  const { xAxis, yAxis } = p.placement
+  return side === "left" ? neg(xAxis) : side === "right" ? xAxis : side === "bottom" ? neg(yAxis) : yAxis
+}
+
+/** El cantell es veu si algun punt just fora (a `EDGE_PROBE`, al llarg del cantell i a mig gruix) no és dins d'una altra peça. */
+function edgeExposed(p: Panel, side: EdgeSide, others: readonly { p: Panel; box: { min: Vec3; max: Vec3 } }[]): boolean {
+  const { origin: o, xAxis: x, yAxis: y, zAxis: z } = p.placement
+  const along = side === "left" || side === "right"
+  return [0.1, 0.3, 0.5, 0.7, 0.9].some((f) => {
+    const u = along ? (side === "left" ? -EDGE_PROBE : p.length + EDGE_PROBE) : f * p.length
+    const v = along ? f * p.width : side === "bottom" ? -EDGE_PROBE : p.width + EDGE_PROBE
+    const w = p.thickness / 2
+    const pt = [0, 1, 2].map((i) => o[i]! + u * x[i]! + v * y[i]! + w * z[i]!)
+    return !others.some(({ p: q, box }) => q !== p && pt.every((c, i) => c > box.min[i]! - 0.01 && c < box.max[i]! + 0.01))
+  })
+}
 
 /** Estat i utilitats comunes del constructor d'un mòdul: les capes (`carcass`, `lights`… `zones`) l'estenen. */
 export class BuilderBase {
@@ -166,6 +196,39 @@ export class BuilderBase {
   protected rearEdge(side: EdgeSide): EdgeSide[] {
     const m = this.m
     return m.carcass.back !== "screwed" && mountOf(m) === "floor" && (m.wallGap ?? 0) > 0 ? [side] : []
+  }
+
+  /**
+   * Regles de laminat (per decisió de l'usuari, 2026-10-20), al final del mòdul i per sobre del que hagi posat cada peça:
+   * segons on va el mòdul (`mountOf`), quins cantells de la caixa (laterals, base, tapa, fons del mateix tauler,
+   * divisors, prestatges, sòcol i llistons) es cantegen:
+   * - arrambat a la paret (a terra): els de davant i els de dalt (correcció de l'usuari, 2026-10-20);
+   * - penjat a la paret: els de davant i els de sota;
+   * - lliure al terra: tots. Les taules (`CompositionKind` «taula») compten com a lliures al terra (`freestanding`):
+   *   el seu mòdul és «arrambat» per defecte, però una taula es veu per tots els costats.
+   * Només els que queden a la vista: un cantell que toca una altra peça del mòdul (la base entre laterals, el lateral
+   * sota la tapa, el darrere contra el fons cargolat) no es canteja. Els fronts (portes, calaixos, trapes), les tires del
+   * davant de les peces buides i les caixes dels calaixos fan com sempre; els cantells a inglet i les peces amb contorn, també. Els materials massissos, cap
+   * (`isSolidMaterial`, a `buildComposition`).
+   */
+  applyEdgeRules(freestanding = false): void {
+    const own = mountOf(this.m)
+    const mount = freestanding && own === "wall" ? "floor" : own
+    const others = this.panels.filter((p) => !EDGE_RULE_SKIP_OCCLUDER.has(p.role)).map((p) => ({ p, box: panelBox(p) }))
+    for (const [i, p] of this.panels.entries()) {
+      if (!EDGE_RULE_ROLES.has(p.role) || p.outline) continue
+      if (p.role === "back" && p.material !== this.m.carcass.material) continue
+      const e: EdgeBanding = { ...NO_EDGES }
+      for (const side of EDGE_SIDES) {
+        if (p.mitres?.includes(side)) continue
+        const dir = edgeDirection(p, side)
+        // El suplement dels calaixos interiors: el cantell de dalt es veu en obrir la porta (per decisió de l'usuari,
+        // 2026-10-20: «cantejar la part superior que es veu al 3D»).
+        const wanted = mount === "floor" || dir[2] > 0.9 || (mount === "wall" && dir[1] > 0.9) || (mount === "hung" && dir[1] < -0.9) || (dir[1] > 0.9 && p.id.startsWith("inner-shim-"))
+        if (wanted && edgeExposed(p, side, others)) e[side] = true
+      }
+      this.panels[i] = { ...p, edges: e }
+    }
   }
 
   /** El mateix per a les peces de dins (divisors i prestatges): amb fons, queden darrere del fons i no es veuen. */

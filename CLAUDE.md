@@ -88,6 +88,11 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   metres.)
 - Coordenades dins la peça: **u sobre el costat llarg, v sobre el curt**, des de la cantonada de la peça (com `taller-cnc-nest`).
 - Cantells numerats **1 = dalt · 2 = dreta · 3 = baix · 4 = esquerra** (com el laminat i els forats de cantell del taller).
+- **Laminat dels cantells segons on va el mòdul** (per decisió de l'usuari, 2026-10-20; `applyEdgeRules` a
+  `build/module/base.ts`): arrambat a la paret (a terra) → els cantells de davant i els de dalt (corregit el mateix dia); penjat → els de davant i els de
+  sota; lliure al terra (i tota «Taula») → tots. Només els que es veuen (un cantell que toca una altra peça del mòdul, no).
+  Val per a la caixa (laterals, base, tapa, fons del mateix tauler, divisors, prestatges, sòcol); els fronts, les tires de
+  les peces buides i les caixes dels calaixos, com abans. Els materials **Massís** no es cantegen mai.
 - Gruixos habituals del taller: **10 · 12 · 16 · 19 · 30**. Per defecte: tauler 19, fons 10 (confirmar amb mi si cal un altre).
 - Sistema de forats: **System 32** (fileres a 37 mm del cantell, pas de 32 mm). Cassoleta de frontissa: Ø35, fondària 13,
   a 22,5 mm del cantell (configurable).
@@ -163,20 +168,20 @@ Les etiquetes i les ajudes de la UI fan servir sempre aquestes paraules (auditor
 |---|---|
 | **Cos** | la caixa del mòdul (laterals, base, tapa, fons) i el seu material («Com el cos») |
 | **Fons** | la peça del darrere del mòdul (el `trassera` del taller); **Fons del calaix**, la del calaix (fila del joc, avís `drawer-bottom`, material propi a Materials; el nom de peça `fons calaix` i l'etiqueta `Fons calaix n` no canvien: són els dels fitxers del taller) |
-| **Tipus** | el del mòdul: Moble · Electrodomèstic (Mòdul › Tipus, el primer; on va —arrambat, penjat, lliure al terra— és a Mòdul › **Posició**); el del moble (Moble · Cuina · Armari · Taula) ve de la plantilla i no canvia; «Nou moble» crea un Moble (sense menú de tipus) |
-| **Suport** / **Base** | Suport: on seu el mòdul, **el mateix per a tots els mòduls de terra** (Moble › Suport general: directe a terra, sòcol sobre potes, potes vistes); el penjat, des de Posició. Base: la peça de baix de la caixa (Sencera · Sense base) |
-| **Tram** | els mòduls de terra que es toquen; el sòcol és una peça per tram, mai una per mòdul |
+| **Tipus** | el del mòdul: Moble · Electrodomèstic (Mòdul › Tipus, el primer; on va —arrambat, penjat, lliure al terra— és a Mòdul › **Posició**); el del moble (Moble · Cuina · Armari · Taula) ve de la plantilla i no canvia; «Nou moble» demana **Moble normal** o **Cuina** (per decisió de l'usuari, 2026-10-20) |
+| **Suport** / **Base** | Suport: on seu el mòdul. **Cuina**: el mateix per a tots els mòduls de terra (Moble › Cuina: directe a terra, sòcol sobre potes, potes vistes). **Moble normal** (moble, armari, taula; per decisió de l'usuari, 2026-10-20): el de cada mòdul, com abans (Caixa › Base: directe a terra, sòcol, potes amb el seu sòcol). El penjat, des de Posició. Base: la peça de baix de la caixa (Sencera · Sense base) |
+| **Tram** | els mòduls de terra que es toquen; a la cuina, el sòcol és una peça per tram, mai una per mòdul |
 | **Fondària** | l'eix Z i la mida en Z (mai «Fons Z») |
 | **Portes** | la secció del mòdul amb les portes de dalt a baix de tot el mòdul (Interior dividit; Cap · Una · Dues, `LuDoorClosed`); al Front d'una porta, la fila Una · Dues |
 | **Front** | porta, front de calaix, abatible, reixeta, front fix; d'un compartiment sense dividir (les zones dividides no en tenen: les portes de tot el mòdul són a Mòdul › **Portes**) (l'estil i les folgances de tots els fronts del mòdul són a Mòdul › **Caixa**; el material, a Mòdul › **Materials**) |
 | **Folgança** | separacions: front–cos, entre fronts, lateral i darrere de la guia, prestatge, fons, encaixos, peces de dins; **Folgances per defecte** a Preferències |
 | **Joc** | només el joc paramètric del fabricant (`HardwareKit`, «joc de calaix», «Ferratges dels jocs») |
 | **Ferratge** | qualsevol `HardwareItem`; **Ferratges**, la secció de l'inspector de la peça lliure (no la del mòdul), la biblioteca de Preferències i l'opció del visor (`LuWrench`) |
-| **Acabats de l'escena** | terra i paret de la presentació (moble); als ambients, «Acabats» = terra, parets i sostre. **No hi ha secció «Acabats» al mòdul** (des del 2026-10-08: el que hi havia és a Caixa, Materials i Unió) |
-| **Unió** | la secció del mòdul amb l'espiga de les unions de la caixa (`LuBolt`) |
+| **Acabats de l'escena** | terra i paret de la presentació (moble); als ambients, «Acabats» = terra, parets i sostre. **No hi ha secció «Acabats» al mòdul** (des del 2026-10-08: el que hi havia és a Caixa i Materials) |
+| **Espiga** | l'espiga de les unions de la caixa: una fila de Caixa › Laterals (no hi ha secció «Unió» al mòdul des del 2026-10-20) |
 | **Com el mòdul** / **Com el cos** / **Com a Preferències** | heretat; **Còpia pròpia**, la còpia d'un ferratge que ja no és a la biblioteca tal qual |
 | **Electrodomèstic** | l'aparell del catàleg del fabricant (ferratge de la categoria «Electrodomèstics», motor `appliance`) que es tria a Mòdul › Electrodomèstic (mòdul sense dividir: si l'ocupa, el mòdul és l'aparell i no hi ha «Interior») o al compartiment d'un mòdul dividit; el seu front és el **Front de moble** (muntat com diu el fabricant), no el Front del compartiment |
-| **Accessoris** | barra de penjar, tira LED (ferratges del compartiment, a la secció «Opcions de l'interior»); el marc de vitrina va amb la porta de vidre |
+| **Accessoris** | barra de penjar, tira LED (ferratges del compartiment, a les «Opcions de l'interior», dins del Front a sota del «Contingut» per decisió de l'usuari, 2026-10-20); el marc de vitrina va amb la porta de vidre |
 | **Cap (push)** | el tirador que no hi és: obertura per pressió |
 
 ## Com treballar

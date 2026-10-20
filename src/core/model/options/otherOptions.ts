@@ -13,7 +13,7 @@ const JOINERY_ISSUE = "Mateixa decisió (joc, fresa, pestanya i dogbones de TOTE
 
 export const MOBLE = group("moble", "Moble", { icon: "moble", code: UI.inspector, showIf: "Res seleccionat (el moble sencer), fora de la pestanya Foto" }, [
   section("moble.summary", "Resum", { icon: "summary", code: UI.inspector, note: "Mòduls i mides, peces, forats, objectes i models 3D." }),
-  section("moble.support", "Suport general", { icon: "support", code: UI.inspector, showIf: "Algun mòdul de terra", note: "Per decisió de l'usuari, 2026-10-15: «és un sòcol per a tots els mòduls i no un per a cada un»; «el sòcol no pot anar per cada mòdul, és una peça global». Un sol suport per a tots els mòduls de terra; el sòcol, una peça per tram (els mòduls de terra que es toquen)." }, [
+  section("moble.support", "Cuina", { icon: "support", code: UI.inspector, showIf: "Cuina amb algun mòdul de terra", note: "Per decisió de l'usuari, 2026-10-20: només la cuina (el moble normal té el suport a cada mòdul, Caixa › Base) i la secció es diu «Cuina» (abans, «Suport general»). Per decisió de l'usuari, 2026-10-15: «és un sòcol per a tots els mòduls i no un per a cada un»; «el sòcol no pot anar per cada mòdul, és una peça global». Un sol suport per a tots els mòduls de terra; el sòcol, una peça per tram (els mòduls de terra que es toquen)." }, [
     field("moble.support.kind", "Suport", {
       code: UI.support,
       control: "choice",

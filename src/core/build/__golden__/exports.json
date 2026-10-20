@@ -86,7 +86,7 @@
   "csv": {
    "rows": 25,
    "unplaced": 0,
-   "hash": "9ca115e2"
+   "hash": "125767da"
   },
   "xcs": {
    "warnings": 20,
@@ -169,7 +169,7 @@
   "csv": {
    "rows": 90,
    "unplaced": 1,
-   "hash": "da99c191"
+   "hash": "b9f2f841"
   },
   "xcs": {
    "warnings": 65,
@@ -239,7 +239,7 @@
   "csv": {
    "rows": 23,
    "unplaced": 0,
-   "hash": "06645cd4"
+   "hash": "7eeafcfc"
   },
   "xcs": {
    "warnings": 16,
@@ -315,24 +315,24 @@
  "store-dormitori-armari-1": {
   "boards": 7,
   "csv": {
-   "rows": 37,
+   "rows": 36,
    "unplaced": 0,
-   "hash": "22afd76c"
+   "hash": "c049b604"
   },
   "xcs": {
    "warnings": 12,
    "sheets": [
-    "T01_Melamina_blanca_19.xcs parts:3 drill:drill=359 outer:contour=3 #26f15a6e",
-    "T02_Melamina_blanca_19.xcs parts:7 drill:drill=97 outer:contour=19 #721bf068",
-    "T03_Melamina_blanca_19.xcs parts:9 drill:drill=25 outer:contour=23 #8abfdab2",
-    "T04_Melamina_blanca_19.xcs parts:4 drill:drill=17 outer:contour=12 #6ee52d40",
-    "T05_DM_fons_10.xcs parts:4 outer:contour=8 #df9bf3da",
-    "T06_DM_fons_10.xcs parts:1 outer:contour=3 #861f7def",
-    "T07_Melamina_blanca_16.xcs parts:9 drill:drill=12 outer:contour=27 #a17e9dad"
+    "T01_Melamina_blanca_19.xcs parts:3 drill:drill=359 outer:contour=3 #ac6884a4",
+    "T02_Melamina_blanca_19.xcs parts:7 drill:drill=97 outer:contour=19 #bb01f48d",
+    "T03_Melamina_blanca_19.xcs parts:7 drill:drill=25 outer:contour=17 #e4cf5eab",
+    "T04_Melamina_blanca_19.xcs parts:5 drill:drill=17 outer:contour=15 #81dfc3f2",
+    "T05_DM_fons_10.xcs parts:4 outer:contour=8 #f80809f5",
+    "T06_DM_fons_10.xcs parts:1 outer:contour=3 #a1a52196",
+    "T07_Melamina_blanca_16.xcs parts:9 drill:drill=12 outer:contour=27 #1bdaf90a"
    ]
   },
   "dxf": [
-   "BLOCK@0=37",
+   "BLOCK@0=36",
    "CIRCLE@CUT_THROUGH=14",
    "CIRCLE@DRILL_B_D4_P7=12",
    "CIRCLE@DRILL_D35_P13=16",
@@ -340,14 +340,14 @@
    "CIRCLE@DRILL_D8_P10=24",
    "CIRCLE@DRILL_D8_P12=36",
    "CIRCLE@DRILL_H_D8_P20=60",
-   "ENDBLK@0=37",
-   "INSERT@0=37",
-   "POLYLINE@CONTOUR=37",
+   "ENDBLK@0=36",
+   "INSERT@0=36",
+   "POLYLINE@CONTOUR=36",
    "POLYLINE@GROOVE_W10_P8=9",
-   "SEQEND@CONTOUR=37",
+   "SEQEND@CONTOUR=36",
    "SEQEND@GROOVE_W10_P8=9",
-   "TEXT@LABEL=37",
-   "VERTEX@CONTOUR=148",
+   "TEXT@LABEL=36",
+   "VERTEX@CONTOUR=144",
    "VERTEX@GROOVE_W10_P8=36"
   ]
  },
@@ -356,7 +356,7 @@
   "csv": {
    "rows": 24,
    "unplaced": 0,
-   "hash": "5c0d419a"
+   "hash": "c234535a"
   },
   "xcs": {
    "warnings": 18,
@@ -396,7 +396,7 @@
   "csv": {
    "rows": 12,
    "unplaced": 0,
-   "hash": "b81f0f53"
+   "hash": "b11b63b3"
   },
   "xcs": {
    "warnings": 1,

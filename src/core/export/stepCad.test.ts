@@ -49,11 +49,11 @@ describe("STEP per a TopSolid", () => {
 
   it("conjunt: moble › mòduls › peces, amb colors", () => {
     const b = buildComposition(template("bookcase-black"))
-    // Els tres mòduls i el sòcol del tram (un «mòdul» més, com les peces corregudes).
-    const groups = [1, 2, 3, 4].map((n) => ({ name: `Mòdul ${n}`, panels: b.panels.filter((p) => p.module === n) }))
+    // Els tres mòduls (un moble normal: el sòcol és el de cada mòdul).
+    const groups = [1, 2, 3].map((n) => ({ name: `Mòdul ${n}`, panels: b.panels.filter((p) => p.module === n) }))
     const step = toStepCad(groups, { name: "Llibreria", color: () => [0.4, 0.3, 0.2] })
     const ents = [...readStepEntities(step.text).values()]
-    expect(ents.filter((e) => e.type === "NEXT_ASSEMBLY_USAGE_OCCURRENCE")).toHaveLength(4 + b.panels.length)
+    expect(ents.filter((e) => e.type === "NEXT_ASSEMBLY_USAGE_OCCURRENCE")).toHaveLength(3 + b.panels.length)
     expect(ents.filter((e) => e.type === "STYLED_ITEM")).toHaveLength(b.panels.length)
     expect(ents.filter((e) => e.type === "COLOUR_RGB")).toHaveLength(1)
     expect(step.text).toContain("PRODUCT('Llibreria'")

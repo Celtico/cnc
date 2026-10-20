@@ -1,14 +1,77 @@
 import type { Hole, Panel, Vec3 } from "../../model"
-import { addFaceHole, r, toLocal, toWorld } from "../geometry"
+import { X, Y, Z, addFaceHole, placement, r, toLocal, toWorld } from "../geometry"
+import { aluPlinth, plinthPieces, woodPlinthPanels, type PlinthFrame } from "../plinth"
 import { CarcassBuilder } from "./carcass"
-import { near} from "./helpers"
+import { edges, near } from "./helpers"
 import { fmtNum } from "../../../lib/format"
 
 /**
- * Com s'aguanta el mòdul penjat: els **penjadors** amb la seva **regleta** de paret (v45). El sòcol no és del mòdul: és el
- * de cada tram del moble (`core/build/tramPlinth.ts`).
+ * Com s'aguanta el mòdul: el **sòcol** de la base «Potes» d'un moble normal (per decisió de l'usuari, 2026-10-20: el moble
+ * normal té el suport a cada mòdul, com abans; la cuina, el del moble i un sòcol per tram, `core/build/tramPlinth.ts`) i
+ * els **penjadors** del mòdul penjat amb la seva **regleta** de paret (v45).
  */
 export class MountingBuilder extends CarcassBuilder {
+  /**
+   * Sòcol de la base «Potes» (`Base.plinth`, només als mobles normals): de terra fins a 5 mm sota la base (la de fusta) o
+   * de l'alçada del perfil (l'alumini). Només al davant i de fusta, la peça de sempre (`plinth`); amb més costats o
+   * d'alumini, `plinthPieces`.
+   */
+  buildLegPlinth(): void {
+    const { m, d } = this
+    const c = m.carcass
+    if (c.base.kind !== "legs" || !c.base.plinth) return
+    const pl = c.base.plinth
+    const H = c.base.height
+    const h = r(H - 5)
+    if (h <= 0) return
+    const sides = { front: true, back: !!pl.back, left: !!pl.left, right: !!pl.right }
+    const ss = pl.sideSetback ?? pl.setback
+    const z0 = d.D - pl.setback - d.t
+    if (!sides.back && !sides.left && !sides.right && !pl.hardware) {
+      this.add(this.basePanel("plinth", "socol", "Sòcol", "plinth", d.W, h, d.t, c.material, "x", edges("top", "bottom"), placement([0, -H, z0], X, Y, Z, Z)))
+    } else {
+      const frame = { x0: sides.left ? ss : 0, x1: sides.right ? d.W - ss : d.W, zBack: sides.back ? ss : 0, zFront: d.D - pl.setback, y0: -H, sides }
+      if (pl.hardware) {
+        let alu: ReturnType<typeof aluPlinth>
+        try {
+          alu = aluPlinth(frame, pl.hardware)
+        } catch (err) {
+          this.hardwareWarning(`Sòcol: ${err instanceof Error ? err.message : String(err)}. No es fa.`)
+          return
+        }
+        this.extras.push(...alu.extras)
+        this.linear.push(...alu.pieces)
+        if (alu.height > H + 0.5) this.hardwareWarning(`«${pl.hardware.name}» fa ${fmtNum(alu.height, 1)} mm d'alçada i les potes ${fmtNum(H, 1)}: no hi cap. Posa les potes a ${fmtNum(alu.height, 1)} mm o més o tria un sòcol més baix.`)
+        else if (H - alu.height > 20) this.hardwareWarning(`«${pl.hardware.name}» fa ${fmtNum(alu.height, 1)} mm d'alçada i les potes ${fmtNum(H, 1)}: queda un forat de ${fmtNum(H - alu.height, 1)} mm sota la base. Baixa les potes o tria un sòcol més alt.`)
+      } else {
+        const frameT: PlinthFrame = { ...frame, h, t: d.t, corners: pl.corners ?? "butt" }
+        for (const p of woodPlinthPanels(frameT, c.material)) this.add(p)
+        if (frameT.corners === "mitre" && plinthPieces(frameT).some((p) => p.mitres.length))
+          this.warnings.push({ code: "mitre", message: "Sòcol a inglet: tall a 45° als extrems dels trams que fan cantonada; encolar-los (o una escaire per dins)." })
+      }
+    }
+    this.checkLegFeet(sides, pl.setback, ss, pl.hardware ? Number(pl.hardware.params.depth ?? d.t) : d.t)
+  }
+
+  /** El peu de les potes (Ø78 de l'AXILO; les genèriques, Ø48) ha de quedar darrere de cada costat del sòcol. */
+  private checkLegFeet(sides: { back: boolean; left: boolean; right: boolean }, setback: number, ss: number, t: number): void {
+    const c = this.m.carcass
+    if (c.base.kind !== "legs") return
+    const hw = c.base.hardware
+    const leg = hw?.engine === "leg" ? hw.params : undefined
+    const inset = (k: string) => leg?.[k] ?? leg?.inset ?? 50
+    const foot = leg ? (leg.foot ?? 48) / 2 : 24
+    const check = (label: string, at: number, insetKey: string, setbackLabel: string) => {
+      const legAt = inset(insetKey)
+      if (at + t > legAt - foot + 0.5)
+        this.warnings.push({ code: "hardware", message: `El sòcol ${label} (a ${fmtNum(at, 1)} mm ${setbackLabel}) toca el peu de les potes (a ${fmtNum(legAt, 1)} mm, Ø${fmtNum(foot * 2, 1)}): retira'l fins a ${fmtNum(Math.max(0, legAt - foot - t), 1)} mm com a molt o posa les potes més endins.` })
+    }
+    check("del davant", setback, "insetFront", "del davant")
+    if (sides.back) check("del darrere", ss, "insetBack", "del darrere")
+    if (sides.left) check("esquerre", ss, "insetLeft", "del lateral")
+    if (sides.right) check("dret", ss, "insetRight", "del lateral")
+  }
+
   /**
    * **Penjadors** del mòdul penjat (`Base.hanger`; per decisió de l'usuari, 2026-10-15: «penjador regulable i regleta»,
    * i el més estàndard possible): un a cada lateral, a la cara de dins de la cantonada de dalt i darrere (els forats del

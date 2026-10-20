@@ -53,7 +53,7 @@ describe("tipus del mòdul", () => {
     expect(dw.carcass.height).toBe(820)
     // Tornar a triar l'aparell (o un altre) no l'aixeca cada vegada.
     expect(setModuleAppliance(dw, applianceById("appliance-bosch-smh6ycx02e"), 0).carcass.height).toBe(820)
-    const b = buildComposition({ modules: [dw], references: [], support: { kind: "plinth", height: 100, plinth: { setback: 24 } } })
+    const b = buildComposition({ kind: "cuina", modules: [dw], references: [], support: { kind: "plinth", height: 100, plinth: { setback: 24 } } })
     expect(b.warnings.filter((w) => w.code === "appliance")).toEqual([])
     // Va directe a terra (no sobre les potes del moble: si no, s'aixecaria).
     expect(b.modules[0]!.y).toBe(0)

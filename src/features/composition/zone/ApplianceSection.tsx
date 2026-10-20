@@ -1,8 +1,6 @@
 import { Stack, Switch, Text } from "@chakra-ui/react"
-import { LuPanelLeft, LuPanelRight, LuRefrigerator } from "react-icons/lu"
-import { FoldItem } from "../../../components/Fold"
+import { LuPanelLeft, LuPanelRight } from "react-icons/lu"
 import {
-  APPLIANCE_LABELS,
   DEFAULT_APPLIANCE_PLINTH,
   boardChoices,
   DOOR_LABELS,
@@ -56,7 +54,7 @@ function dataHelp(a: Appliance): string {
  * el rentaplats o la nevera»): un aparell de Preferències › Ferratges › Electrodomèstics (`HardwarePick`, una còpia) a
  * `zone.appliance`. **Un sol lloc per decisió** (per decisió de l'usuari, 2026-10-15): d'un mòdul sense dividir, a
  * Mòdul › Electrodomèstic (`module`, sobre l'arrel: el mòdul és l'aparell i l'arbre no ensenya l'«Interior»); d'un mòdul
- * dividit, al compartiment, a dalt de tot. Si l'aparell ocupa el nínxol, el Front, els Prestatges i el Dividir del
+ * dividit, al compartiment, com un contingut més del Front (per decisió de l'usuari, 2026-10-20). Si l'aparell ocupa el nínxol, el Front, els Prestatges i el Dividir del
  * compartiment no surten (opcions en cascada). A sota, en cascada: el front de moble (si en porta) i, amb el front, el
  * seu material (v47, «Com els fronts» = el dels fronts del mòdul), el costat on obre, el sòcol (aparells de terra sense
  * peça a sota) i el tirador.
@@ -70,17 +68,6 @@ interface ApplianceProps {
   bounds: ZoneBounds
   /** A l'inspector del mòdul (l'arrel d'un mòdul sense dividir): els textos parlen del mòdul. */
   module?: boolean
-}
-
-/** La secció plegable «Electrodomèstic» d'un compartiment (d'un mòdul dividit: el del mòdul es tria a Tipus). */
-export function ApplianceSection(props: ApplianceProps) {
-  const za = props.zone.appliance
-  const a = za && isAppliance(za.hardware) ? za.hardware.appliance : undefined
-  return (
-    <FoldItem optionId="zone.appliance" id="zone-appliance" title="Electrodomèstic" icon={LuRefrigerator} badge={a ? APPLIANCE_LABELS[a.kind] : undefined} defaultOpen={!!za}>
-      <ApplianceFields {...props} picker />
-    </FoldItem>
-  )
 }
 
 /**

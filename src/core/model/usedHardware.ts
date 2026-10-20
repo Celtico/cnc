@@ -20,7 +20,7 @@ function slotCounter(): { out: SlotUse; add: (slot: HardwareSlot, n: number, wha
 
 /**
  * **Quins ferratges fa servir un mòdul**, segons el que té (res amagat compta: es mira el mòdul tal com es veu). És el
- * que l'inspector ensenya (l'Espiga a Mòdul › Unió, la filera System 32 al compartiment): en una tauleta amb un calaix no hi
+ * que l'inspector ensenya (l'Espiga a Caixa › Laterals, la filera System 32 al compartiment): en una tauleta amb un calaix no hi
  * pinten res la frontissa, el braç d'abatible ni l'imant. Per a cada lloc, quants elements el fan servir (portes,
  * calaixos…), per dir-ho a la fila. **L'única font** (abans n'hi havia una altra que mirava les peces construïdes: amb un
  * joc de calaix que no hi cap no hi ha cap forat de guia i la fila «Guia de calaix» desapareixia justament quan cal
@@ -200,7 +200,7 @@ function frontHasHandle(m: Module, f: Extract<Front, { kind: "door" | "drawers" 
  *   Retranqueig dels prestatges (`frontOptionsUse`);
  * - **Materials**: «Fronts» (`frontMaterial`) amb algun front que es fa i el fa servir (no un front de moble amb el seu
  *   material);
- * - **Unió**: l'Espiga si la caixa en fa (`usedHardwareSlots`, `carcassDowels`); sense, la secció no surt.
+ * - **Laterals › Espiga**: si la caixa en fa (`usedHardwareSlots`, `carcassDowels`); sense, la fila no surt.
  * Els ferratges per defecte del mòdul (`module.hardware`, `module.fronts.handles`) no surten enlloc: cada compartiment
  * tria el seu al Front o a «Opcions de l'interior» i els que diuen «Com el mòdul» els hereten (res amagat compta).
  */
@@ -209,7 +209,7 @@ export interface ModuleRows extends FrontOptionsUse {
   back?: "groove" | "inset"
   /** Materials › «Fronts». */
   frontMaterial: boolean
-  /** Unió › «Espiga». */
+  /** Caixa › Laterals › «Espiga». */
   dowel: boolean
 }
 

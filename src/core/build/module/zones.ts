@@ -8,6 +8,8 @@ import { fmtNum } from "../../../lib/format"
 
 /** Zones: divisors, prestatges, fileres, fronts de cada zona i passacables. Última capa del constructor. */
 export class Builder extends AppliancesBuilder {
+  /** El compartiment de la zona que porta el front que tapa cada zona de `covered` (on pengen les seves frontisses). */
+  private readonly coverRects = new Map<string, ZoneRect>()
   // --- Zones ------------------------------------------------------------------------
 
   buildZones(): Layout {
@@ -16,23 +18,32 @@ export class Builder extends AppliancesBuilder {
     for (const p of layout.problems) this.warnings.push({ code: "layout", message: p })
 
     // Zones que queden darrere del front d'una zona pare (portes d'armari de dalt a baix).
-    const walk = (z: Zone, cover: Front | undefined) => {
+    const walk = (z: Zone, cover: Front | undefined, coverRect: ZoneRect | undefined) => {
       this.zones.set(z.id, z)
       if (cover) {
         this.covered.add(z.id)
         this.coverFront.set(z.id, cover)
+        if (coverRect) this.coverRects.set(z.id, coverRect)
       }
-      if (z.split) for (const c of z.split.children) walk(c, cover ?? z.front)
+      const own = !cover && z.front ? layout.rects.get(z.id) : undefined
+      if (z.split) for (const c of z.split.children) walk(c, cover ?? z.front, coverRect ?? own)
     }
-    walk(m.root, undefined)
+    walk(m.root, undefined, undefined)
 
     // 1) Divisors i prestatges fixos de totes les divisions, amb la folgança de les peces de dins: més curts, centrats.
     layout.dividers.forEach((div, i) => {
       const cut = this.insetCut(div.parentId)
       const gap = this.innerGap()
-      if (div.dir === "v") this.buildDivider(div.at, div.from, div.to, `divider-${i + 1}`, cut, gap)
-      else this.buildFixedShelf(div.at, div.from, div.to, `fixed-${i + 1}`, cut, gap)
+      if (div.dir === "v") this.buildDivider(div.at, div.from, div.to, `divider-${i + 1}`, cut, gap, div.thickness)
+      else this.buildFixedShelf(div.at, div.from, div.to, `fixed-${i + 1}`, cut, gap, div.thickness)
     })
+    for (const z of this.zones.values()) {
+      const want = z.split?.thickness
+      if (!want) continue
+      const what = z.split!.dir === "v" ? "Divisors" : "Prestatges fixos"
+      if (want < 2 * d.t + 6) this.warnings.push({ code: "hollow", message: `${what} de ${want} mm: amb tauler de ${d.t} cal un gruix d'almenys ${2 * d.t + 6} mm. Es fan massissos.`, zoneId: z.id })
+      else this.warnings.push({ code: "hollow", info: true, message: `${what} gruixuts de ${want} mm: cadascun són dues pells, llistons a dins i una tira al davant, encolats abans de muntar el moble.`, zoneId: z.id })
+    }
     // 2) Unions dels divisors amb el que tenen a sota i a sobre, i dels fixos amb els costats.
     for (const v of this.verticals) if (!v.outer) this.joinDivider(v)
     for (const h of this.horizontals) if (!h.outer) this.joinFixedShelf(h)
@@ -45,6 +56,7 @@ export class Builder extends AppliancesBuilder {
       z.split.children.forEach(parents)
     }
     parents(m.root)
+    this.glassWindows()
 
     // 4) Passacables i extres.
     for (const hole of m.extras.cableHoles) this.cableHole(hole)
@@ -64,25 +76,76 @@ export class Builder extends AppliancesBuilder {
   }
 
 
-  protected buildDivider(x: number, yFrom: number, yTo: number, id: string, cut = 0, gap = 0): void {
+  /** Divisor vertical; amb `T` més gran que el tauler, gruixut (buit): cada pell, una referència (`whole`, tot el gruix). */
+  protected buildDivider(x: number, yFrom: number, yTo: number, id: string, cut = 0, gap = 0, T = this.d.t): void {
     const { m, d } = this
     const t = d.t
     const e = gap / 2
-    const panel = this.add(
-      this.basePanel(id, "divisor", "Divisor", "divider", yTo - yFrom - gap, d.availDepth - cut, t, m.carcass.material, "x", edges("top", ...this.innerRearEdge("bottom")), placement([x, yFrom + e, d.backInnerZ], Y, Z, X, Z)),
-    )
-    this.verticals.push({ panel, xL: x, xR: x + t, yB: yFrom, yT: yTo, zRear: d.backInnerZ, zFront: d.D - cut, outer: false, ...(e ? { endGap: e } : {}) })
+    const ref = { yB: yFrom, yT: yTo, zRear: d.backInnerZ, zFront: d.D - cut, outer: false, ...(e ? { endGap: e } : {}) }
+    const H = yTo - yFrom - gap
+    const depth = d.availDepth - cut
+    const y0 = yFrom + e
+    if (T <= t) {
+      const panel = this.add(this.basePanel(id, "divisor", "Divisor", "divider", H, depth, t, m.carcass.material, "x", edges("top", ...this.innerRearEdge("bottom")), placement([x, y0, d.backInnerZ], Y, Z, X, Z)))
+      this.verticals.push({ panel, xL: x, xR: x + t, ...ref })
+      return
+    }
+    // Divisor buit: pell de l'esquerra i de la dreta, tira al davant i llistons (darrere, a baix i a dalt).
+    const nm = "Divisor"
+    const assembly = `${nm} (buit)`
+    const piece = (pid: string, label: string, role: PanelRole, L: number, Wd: number, eb: EdgeBanding, pl: Panel["placement"]) =>
+      this.add({ ...this.basePanel(pid, "divisor", label, role, L, Wd, t, m.carcass.material, "x", eb, pl), assembly })
+    const zRear = d.backInnerZ
+    const zFront = zRear + depth
+    const left = piece(id, `${nm} (pell de l'esquerra)`, "divider", H, depth - t, { ...NO_EDGES }, placement([x, y0, zRear], Y, Z, X, neg(X)))
+    const right = piece(`${id}-right`, `${nm} (pell de la dreta)`, "divider", H, depth - t, { ...NO_EDGES }, placement([x + T - t, y0, zRear], Y, Z, X, X))
+    piece(`${id}-facing`, `${nm} (tira del davant)`, "facing", H, T, edges("bottom", "top", "left", "right"), placement([x + T, y0, zFront - t], Y, neg(X), Z, Z))
+    piece(`${id}-spacer-back`, `${nm} (llistó del darrere)`, "spacer", H, T - 2 * t, { ...NO_EDGES }, placement([x + T - t, y0, zRear], Y, neg(X), Z, neg(Z)))
+    for (const [end, y] of [["bottom", y0 + t], ["top", y0 + H]] as const)
+      piece(`${id}-spacer-${end}`, `${nm} (llistó ${end === "bottom" ? "de baix" : "de dalt"})`, "spacer", depth - 2 * t, T - 2 * t, { ...NO_EDGES }, placement([x + t, y, zFront - t], neg(Z), X, neg(Y), end === "bottom" ? neg(Y) : Y))
+    const whole = { from: x, to: x + T }
+    this.verticals.push({ panel: left, xL: x, xR: x + t, whole, ...ref }, { panel: right, xL: x + T - t, xR: x + T, whole, ...ref })
   }
 
-  protected buildFixedShelf(y: number, xFrom: number, xTo: number, id: string, cut = 0, gap = 0): void {
+  /** Prestatge fix (divisió horitzontal); amb `T` més gran que el tauler, gruixut (buit), com els prestatges gruixuts. */
+  protected buildFixedShelf(y: number, xFrom: number, xTo: number, id: string, cut = 0, gap = 0, T = this.d.t): void {
     const { m, d } = this
     const t = d.t
     const e = gap / 2
     const zFront = d.D - cut
-    const panel = this.add(
-      this.basePanel(id, "estanter fixe", "Prestatge fix", "fixedShelf", xTo - xFrom - gap, d.availDepth - cut, t, m.carcass.material, "x", edges("bottom", ...this.innerRearEdge("top")), placement([xFrom + e, y, zFront], X, neg(Z), Y, Z)),
-    )
-    this.horizontals.push({ panel, yBottom: y, yTop: y + t, xL: xFrom, xR: xTo, outer: false, zRear: d.backInnerZ, zFront, ...(e ? { endGap: e } : {}) })
+    const ref = { xL: xFrom, xR: xTo, outer: false, zRear: d.backInnerZ, zFront, ...(e ? { endGap: e } : {}) }
+    const length = xTo - xFrom - gap
+    const depth = d.availDepth - cut
+    if (T <= t) {
+      const panel = this.add(this.basePanel(id, "estanter fixe", "Prestatge fix", "fixedShelf", length, depth, t, m.carcass.material, "x", edges("bottom", ...this.innerRearEdge("top")), placement([xFrom + e, y, zFront], X, neg(Z), Y, Z)))
+      this.horizontals.push({ panel, yBottom: y, yTop: y + t, ...ref })
+      return
+    }
+    const [bottom, top] = this.hollowShelf(id, "estanter fixe", "Prestatge fix", "fixedShelf", xFrom + e, y, length, depth, zFront, T)
+    const whole = { from: y, to: y + T }
+    this.horizontals.push({ panel: bottom, yBottom: y, yTop: y + t, whole, ...ref }, { panel: top, yBottom: y + T - t, yTop: y + T, whole, ...ref })
+  }
+
+  /**
+   * Prestatge gruixut (buit) de gruix aparent `T`: pell de baix i de dalt, tira al davant i llistons (darrere i extrems),
+   * encolats. Els prestatges gruixuts d'un compartiment i els prestatges fixos d'una divisió gruixuda. Torna les dues pells.
+   */
+  protected hollowShelf(id: string, code: string, nm: string, role: PanelRole, x0: number, y: number, length: number, depth: number, zF: number, T: number): [Panel, Panel] {
+    const { m, d } = this
+    const t = d.t
+    const material = m.carcass.material
+    const assembly = `${nm} (buit)`
+    const piece = (pid: string, label: string, pr: PanelRole, L: number, Wd: number, eb: EdgeBanding, pl: Panel["placement"]) =>
+      this.add({ ...this.basePanel(pid, code, label, pr, L, Wd, t, material, "x", eb, pl), assembly })
+    const skinD = depth - t
+    const bottom = piece(id, `${nm} (pell de baix)`, role, length, skinD, { ...NO_EDGES }, placement([x0, y, zF - t], X, neg(Z), Y, Z))
+    const top = piece(`${id}-top`, `${nm} (pell de dalt)`, role, length, skinD, { ...NO_EDGES }, placement([x0, y + T - t, zF - t], X, neg(Z), Y, Z))
+    piece(`${id}-facing`, `${nm} (tira del davant)`, "facing", length, T, edges("bottom", "top", "left", "right"), placement([x0, y, zF - t], X, Y, Z, Z))
+    const zBack = zF - depth
+    piece(`${id}-spacer-back`, `${nm} (llistó del darrere)`, "spacer", length, T - 2 * t, { ...NO_EDGES }, placement([x0, y + t, zBack], X, Y, Z, neg(Z)))
+    for (const [end, x] of [["left", x0], ["right", x0 + length - t]] as const)
+      piece(`${id}-spacer-${end}`, `${nm} (llistó ${end === "left" ? "esquerre" : "dret"})`, "spacer", depth - 2 * t, T - 2 * t, { ...NO_EDGES }, placement([x, y + t, zF - t], neg(Z), Y, X, end === "left" ? neg(X) : X))
+    return [bottom, top]
   }
 
   protected findBelow(rect: ZoneRect): HorizontalRef | undefined {
@@ -189,6 +252,14 @@ export class Builder extends AppliancesBuilder {
       if (cover?.kind === "door") {
         if (cover.mode === "double") hinges.add("left").add("right")
         else hinges.add(cover.hinge)
+        // Les portes d'una zona de més amunt pengen dels costats d'aquella zona: un compartiment de dins que no hi toca
+        // (calaixos entre divisors, l'estructura de l'usuari) no té frontissa al costat i no hi va suplement (per petició
+        // de l'usuari, 2026-10-20).
+        const coverRect = this.coverRects.get(zone.id)
+        if (!front && coverRect) {
+          if (!near(rect.x0, coverRect.x0)) hinges.delete("left")
+          if (!near(rect.x1, coverRect.x1)) hinges.delete("right")
+        }
       }
       const top = this.buildInnerDrawers(zone, zone.innerDrawers, rect, left, right, hinges)
       shelfRect = { ...rect, y0: Math.min(rect.y1, top) }
@@ -227,14 +298,17 @@ export class Builder extends AppliancesBuilder {
       const ref = side === "left" ? left : right
       if (ref) {
         const xFace = side === "left" ? ref.xR : ref.xL
+        // Un prestatge fix gruixut (dues pells) talla la filera de tot el seu gruix.
         const cuts = this.horizontals
           .filter((h) => !h.outer && near(side === "left" ? h.xL : h.xR, xFace) && h.yBottom > rect.y0 - 0.51 && h.yTop < rect.y1 + 0.51)
-          .sort((a, b) => a.yBottom - b.yBottom)
+          .map((h) => h.whole ?? { from: h.yBottom, to: h.yTop })
+          .filter((c, i, all) => all.findIndex((o) => o.from === c.from) === i)
+          .sort((a, b) => a.from - b.from)
         const got: number[] = []
         let y0 = rect.y0
-        for (const y1 of [...cuts.map((h) => h.yBottom), rect.y1]) {
+        for (const y1 of [...cuts.map((c) => c.from), rect.y1]) {
           if (y1 - y0 > 0.5) got.push(...this.rows(ref, { ...rect, y0, y1 }, side))
-          y0 = cuts.find((h) => h.yBottom === y1)?.yTop ?? y1
+          y0 = cuts.find((c) => c.from === y1)?.to ?? y1
         }
         if (!ys.length) ys = got
       } else this.warnings.push({ code: "no-side", message: `La zona no té panell a la ${side === "left" ? "esquerra" : "dreta"} per a la filera System 32.`, zoneId: zone.id })
@@ -340,17 +414,7 @@ export class Builder extends AppliancesBuilder {
         continue
       }
       // Prestatge buit: pell de baix i de dalt, tira al davant i llistons (darrere i extrems).
-      const assembly = `${nm} (buit)`
-      const piece = (id: string, label: string, role: PanelRole, L: number, Wd: number, eb: EdgeBanding, pl: Panel["placement"]) =>
-        this.add({ ...this.basePanel(id, code, label, role, L, Wd, t, c.material, "x", eb, pl), assembly })
-      const skinD = depth - t
-      piece(`shelf-${idx}`, `${nm} (pell de baix)`, "shelf", length, skinD, { ...NO_EDGES }, placement([x0, y, zF - t], X, neg(Z), Y, Z))
-      piece(`shelf-${idx}-top`, `${nm} (pell de dalt)`, "shelf", length, skinD, { ...NO_EDGES }, placement([x0, y + T - t, zF - t], X, neg(Z), Y, Z))
-      piece(`shelf-${idx}-facing`, `${nm} (tira del davant)`, "facing", length, T, edges("bottom", "top", "left", "right"), placement([x0, y, zF - t], X, Y, Z, Z))
-      const zBack = zF - depth
-      piece(`shelf-${idx}-spacer-back`, `${nm} (llistó del darrere)`, "spacer", length, T - 2 * t, { ...NO_EDGES }, placement([x0, y + t, zBack], X, Y, Z, neg(Z)))
-      for (const [end, x] of [["left", x0], ["right", x0 + length - t]] as const)
-        piece(`shelf-${idx}-spacer-${end}`, `${nm} (llistó ${end === "left" ? "esquerre" : "dret"})`, "spacer", depth - 2 * t, T - 2 * t, { ...NO_EDGES }, placement([x, y + t, zF - t], neg(Z), Y, X, end === "left" ? neg(X) : X))
+      this.hollowShelf(`shelf-${idx}`, code, nm, "shelf", x0, y, length, depth, zF, T)
     }
     return ys
   }
@@ -383,14 +447,16 @@ export class Builder extends AppliancesBuilder {
     // Les parets exteriors poden ser més gruixudes que el tauler (parets buides).
     // Fronts de calaix a inglet: de fora a fora als laterals (el tall a 45° fa el joc).
     const ogL = d.mitreFronts ? 0 : og
-    const x0 = left ? (left.outer ? rect.x0 - (left.xR - left.xL) + ogL : rect.x0 - t / 2 + bg / 2) : rect.x0 + og
-    const x1 = right ? (right.outer ? rect.x1 + (right.xR - right.xL) - ogL : rect.x1 + t / 2 - bg / 2) : rect.x1 - og
+    // Un divisor (o prestatge fix) gruixut el tapen a mitges els dos fronts, com un de prim.
+    const half = (w: { from: number; to: number } | undefined) => (w ? (w.to - w.from) / 2 : t / 2)
+    const x0 = left ? (left.outer ? rect.x0 - (left.xR - left.xL) + ogL : rect.x0 - half(left.whole) + bg / 2) : rect.x0 + og
+    const x1 = right ? (right.outer ? rect.x1 + (right.xR - right.xL) - ogL : rect.x1 + half(right.whole) - bg / 2) : rect.x1 - og
     const ogB = d.mitreFronts && d.mitreBottom ? 0 : og
     const ogT = d.mitreFronts && d.mitreTop ? 0 : og
-    const y0 = below ? (below.outer ? rect.y0 - (below.yTop - below.yBottom) + ogB : rect.y0 - t / 2 + bg / 2) : rect.y0 + og
+    const y0 = below ? (below.outer ? rect.y0 - (below.yTop - below.yBottom) + ogB : rect.y0 - half(below.whole) + bg / 2) : rect.y0 + og
     // Tauler de taula amb voladís: sobresurt per davant dels fronts (que hi toparien); el front s'atura a sota, amb el joc.
     const underTable = !!above && above.outer && above.panel.id === "top" && !!d.tableTop && d.tableTop.overhang > 0
-    const y1 = above ? (underTable ? rect.y1 - og : above.outer ? rect.y1 + (above.yTop - above.yBottom) - ogT : rect.y1 + t / 2 - bg / 2) : rect.y1 - og
+    const y1 = above ? (underTable ? rect.y1 - og : above.outer ? rect.y1 + (above.yTop - above.yBottom) - ogT : rect.y1 + half(above.whole) - bg / 2) : rect.y1 - og
     return { x0: r(x0), x1: r(x1), y0: r(y0), y1: r(y1) }
   }
 

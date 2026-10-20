@@ -47,9 +47,10 @@ describe("mòdul girat 180° (lliure al terra)", () => {
 })
 
 describe("mòdul girat 90° o 270° (l'extrem d'una illa)", () => {
+  // Amb X pròpia (lliure, fora de la fila): gira al voltant del centre de la caixa.
   const rotated = (rot: 90 | 270): Composition => {
     const c = drawers(false)
-    return { ...c, modules: [{ ...c.modules[0]!, rot }] }
+    return { ...c, modules: [{ ...c.modules[0]!, x: 0, rot }] }
   }
   it("les mateixes peces, girades al voltant del centre: l'amplada va en Z i els fronts miren al costat", () => {
     const a = bounds(drawers(false))
@@ -60,7 +61,7 @@ describe("mòdul girat 90° o 270° (l'extrem d'una illa)", () => {
       expect(r((b.lo[0]! + b.hi[0]!) / 2)).toBeCloseTo(r((a.lo[0]! + a.hi[0]!) / 2))
       expect(r(b.hi[0]! - b.lo[0]!)).toBeCloseTo(r(a.hi[2]! - a.lo[2]!))
       expect(r(b.hi[2]! - b.lo[2]!)).toBeCloseTo(r(a.hi[0]! - a.lo[0]!))
-      expect(strip(rotated(rot))).toEqual(strip(drawers(false)))
+      expect(strip(rotated(rot))).toEqual(strip({ ...drawers(false), modules: [{ ...drawers(false).modules[0]!, x: 0 }] }))
       const fronts = buildComposition(rotated(rot)).panels.filter((p) => p.role === "drawerFront")
       expect(fronts.every((p) => (rot === 90 ? p.placement.explodeDir[0] > 0 : p.placement.explodeDir[0] < 0))).toBe(true)
     }
@@ -89,5 +90,41 @@ describe("sòcol d'una illa amb un mòdul girat 90° a l'extrem", () => {
     const plinth = b.panels.filter((p) => /^Sòcol/.test(p.label))
     const maxX = Math.max(...plinth.map((p) => panelBox(p).max[0]!))
     expect(maxX).toBeCloseTo(600 + 579 - 50)
+  })
+})
+
+describe("fronts a un costat a la fila (arrambat, penjat o al terra sense X pròpia)", () => {
+  // Dos mòduls a la fila: el primer girat. Ocupa la seva fondària a la fila, el lateral toca la paret (z = 0) i el
+  // següent comença on acaba la seva petjada.
+  const row = (mount: "wall" | "hung" | "floor", rot: 90 | 270): Composition => {
+    const base = (id: string): Module => {
+      const m = defaultModule(id, id)
+      const hung = mount === "hung" ? { carcass: { ...m.carcass, base: { kind: "wall" as const, height: 1450 } } } : {}
+      return { ...m, ...hung, ...(mount === "floor" ? { wallGap: 0 } : {}), root: { ...m.root, front: { kind: "drawers", n: 2, heights: ["auto", "auto"] } } }
+    }
+    return { kind: "moble", modules: [{ ...base("A"), rot }, base("B")], references: [] }
+  }
+  for (const mount of ["wall", "hung", "floor"] as const)
+    for (const rot of [90, 270] as const)
+      it(`${mount}, ${rot}°`, () => {
+        const b = buildComposition(row(mount, rot))
+        const box = (id: string) => {
+          const ps = b.panels.filter((p) => p.id.startsWith(`${id}:`) && p.role !== "plinth")
+          return { lo: [0, 2].map((k) => Math.min(...ps.map((p) => panelBox(p).min[k]!))), hi: [0, 2].map((k) => Math.max(...ps.map((p) => panelBox(p).max[k]!))) }
+        }
+        const a = box("A"), n = box("B")
+        const A = row(mount, rot).modules[0]!
+        expect(r(a.lo[1]!)).toBeCloseTo(0, 0)
+        expect(r(a.lo[0]!)).toBeCloseTo(0, 0)
+        expect(r(a.hi[1]! - a.lo[1]!)).toBeCloseTo(A.carcass.width, 0)
+        expect(n.lo[0]!).toBeGreaterThanOrEqual(a.hi[0]! - 0.5)
+        expect(n.lo[0]!).toBeLessThan(a.hi[0]! + A.carcass.thickness + 0.5)
+        const fronts = b.panels.filter((p) => p.id.startsWith("A:") && p.role === "drawerFront")
+        expect(fronts.every((p) => (rot === 90 ? p.placement.explodeDir[0] > 0 : p.placement.explodeDir[0] < 0))).toBe(true)
+      })
+  it("arrambat o penjat, enrere no compta (els fronts mirarien a la paret)", () => {
+    const m = defaultModule("A", "A")
+    const c = (rot?: 180): Composition => ({ kind: "moble", modules: [{ ...m, ...(rot ? { rot } : {}) }], references: [] })
+    expect(buildComposition(c(180)).panels).toEqual(buildComposition(c()).panels)
   })
 })

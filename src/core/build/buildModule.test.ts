@@ -18,7 +18,8 @@ import { resolveSizes } from "./layout"
 
 const holeKey = (h: Hole) => [h.face, h.edge ?? "", h.x, h.y, h.diameter, h.depth, h.tag ?? ""].join("|")
 const sortedHoles = (p: Panel) => [...p.holes].sort((a, b) => holeKey(a).localeCompare(holeKey(b)))
-const comparable = (p: Panel) => ({ ...p, holes: sortedHoles(p), cutouts: undefined, module: undefined })
+// Sense els cantells: el constructor antic no coneix les regles de laminat per posició del mòdul (`applyEdgeRules`, 2026-10-20).
+const comparable = (p: Panel) => ({ ...p, holes: sortedHoles(p), cutouts: undefined, module: undefined, edges: undefined })
 
 describe("migració: buildModule(cabinetToModule(p)) == buildCabinet(p)", () => {
   const cases: Partial<typeof DEFAULT_CABINET>[] = [

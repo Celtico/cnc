@@ -1,6 +1,6 @@
 import { Box, Button, HStack, Stack, Switch, Text } from "@chakra-ui/react"
-import { setSplitSize, type Zone } from "../../../core/model"
-import { NumberField } from "../../../components/NumRow"
+import { setSplitSize, setSplitThickness, type Zone } from "../../../core/model"
+import { NumberField, NumRow } from "../../../components/NumRow"
 import { FormRow } from "../../../components/FormRow"
 import { splitRows } from "../zoneLabel"
 import { fmtNum } from "../../../lib/format"
@@ -50,7 +50,7 @@ export function SplitSizes({ root, zone, onChange, onSelect, childSizes }: { roo
                 </Switch.Root>
                 {row.size !== "auto" ? (
                   <Box flex="1" minW={0} maxW="160px">
-                    <NumberField label="" ariaLabel={`${row.label} (${row.name})`} value={row.size} min={50} max={3000} step={10} onChange={(v) => set(i, v)} />
+                    <NumberField label="" ariaLabel={`${row.label} (${row.name})`} value={row.size} min={1} max={3000} step={10} onChange={(v) => set(i, v)} />
                   </Box>
                 ) : real !== undefined ? (
                   <Text fontSize="sm" color="fg.muted">
@@ -63,5 +63,40 @@ export function SplitSizes({ root, zone, onChange, onSelect, childSizes }: { roo
         )
       })}
     </Stack>
+  )
+}
+
+/**
+ * Divisors gruixuts (buits) d'una divisió (per petició de l'usuari, 2026-10-20: «al fer divisions ficar l'opció de
+ * gruixuts (buits)»): com Prestatges › Gruix, l'interruptor i el gruix aparent. Vertical: els divisors; horitzontal: els
+ * prestatges fixos.
+ */
+export function SplitThickness({ root, zone, onChange, bodyThickness }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; bodyThickness?: number }) {
+  if (!zone.split) return null
+  const thickness = zone.split.thickness
+  const what = zone.split.dir === "v" ? "divisors" : "prestatges fixos"
+  const min = bodyThickness ? 2 * bodyThickness + 6 : undefined
+  return (
+    <>
+      <FormRow optionId="zone.split.thick" label="Gruix">
+        <Switch.Root size="sm" pt="6px" checked={!!thickness} onCheckedChange={(e) => onChange(setSplitThickness(root, zone.id, e.checked ? 50 : undefined))}>
+          <Switch.HiddenInput />
+          <Switch.Control />
+          <Switch.Label fontSize="sm">Gruixuts (buits)</Switch.Label>
+        </Switch.Root>
+      </FormRow>
+      {thickness && (
+        <NumRow
+          optionId="zone.split.thickness"
+          label="Gruix aparent"
+          value={thickness}
+          min={20}
+          max={200}
+          step={5}
+          onChange={(v) => Number.isFinite(v) && v >= 20 && onChange(setSplitThickness(root, zone.id, v))}
+          help={`Els ${what} d'aquesta divisió: dues pells, llistons i una tira al davant, com els prestatges gruixuts.${min ? ` Almenys ${fmtNum(min)} mm (2 × tauler + 6); si no, es fan massissos.` : ""}`}
+        />
+      )}
+    </>
   )
 }

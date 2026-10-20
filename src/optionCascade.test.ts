@@ -19,6 +19,7 @@ const INSPECTOR_FILES = [
   "features/composition/SupportForm.tsx",
   "features/composition/CarcassForm.tsx",
   "features/composition/BaseFields.tsx",
+  "features/composition/ModuleSupportFields.tsx",
   "features/composition/HardwarePick.tsx",
   "features/composition/ZonePanel.tsx",
   "features/composition/zone/ApplianceSection.tsx",

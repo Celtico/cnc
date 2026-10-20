@@ -1,10 +1,11 @@
 import { Badge, Box, Button, HStack, Stack, Text } from "@chakra-ui/react"
+import { useEffect } from "react"
 import { LuBox, LuCamera, LuLampFloor, LuMoveDiagonal, LuPalette, LuPanelBottom, LuPuzzle, LuWrench } from "react-icons/lu"
 import { FoldGroup, FoldItem } from "../../components/Fold"
 import type { CompositionBuild } from "../../core/build/buildComposition"
 import type { ModuleBuild } from "../../core/build/buildModule"
 import { activeIslands } from "../../core/build/islands"
-import { groupItems, groupMulti, hasDrawers, mobleBody, moveMultiBy, newGroupName, partJoinery, partsOnlyKind, removeGroup, removeMulti, visibleModule, type Composition, type compositionKind, type Module, type MultiItem, type Settings, type Zone } from "../../core/model"
+import { drawersBehindDoors, groupItems, groupMulti, hasDrawers, hasDrawersBehindDoors, mobleBody, moveMultiBy, newGroupName, partJoinery, partsOnlyKind, removeGroup, removeMulti, visibleModule, type Composition, type compositionKind, type Module, type MultiItem, type Settings, type Zone } from "../../core/model"
 import type { Project } from "../../db/db"
 import { CarcassForm, MaterialsForm } from "../composition/CarcassForm"
 import { HardwarePlacements, PlacementInspector, type PlacementActions } from "../composition/HardwarePlacements"
@@ -84,6 +85,14 @@ export function EditorInspector({
   const totalHoles = panels.reduce((n, p) => n + p.holes.length, 0)
   // El mòdul triat és el de darrere d'una illa (es col·loca sol): la Posició ho diu i no en mostra els camps.
   const islandBack = module ? activeIslands(comp).find((i) => i.back === module.id) : undefined
+  // Calaixos tapats per les portes de tot el mòdul (mòduls d'abans del 2026-10-20, quan desapareixien): passen a calaixos
+  // interiors amb l'alçada del seu compartiment (`drawersBehindDoors`; en posar les portes ho fa Mòdul › Portes).
+  useEffect(() => {
+    if (!module || !moduleBuild || !hasDrawersBehindDoors(module.root)) return
+    const leaf: Record<string, number> = {}
+    for (const [id, r] of moduleBuild.layout.rects) leaf[id] = r.y1 - r.y0
+    updateModule({ ...module, root: drawersBehindDoors(module.root, moduleBuild.drawerHeights, leaf, module.fronts.betweenGap) })
+  }, [module, moduleBuild, updateModule])
   // «Duplicar» d'un grup o de la selecció múltiple: el mateix camí que ⌘D.
   const duplicateSelection = () => {
     const clip = clipOf(comp, selection, zone)
@@ -122,10 +131,11 @@ export function EditorInspector({
               Selecciona un mòdul, un compartiment o un objecte a l'estructura (o clica'l al 3D) per editar-lo.
             </Text>
           </FoldItem>
-          {/* Suport general: un sol suport per a tots els mòduls de terra i un sòcol per tram (per decisió de l'usuari,
+          {/* Cuina (abans «Suport general»; per decisió de l'usuari, 2026-10-20, només a la cuina: el moble normal té el suport a
+              cada mòdul): un sol suport per a tots els mòduls de terra i un sòcol per tram (per decisió de l'usuari,
               2026-10-15: «és un sòcol per a tots els mòduls i no un per a cada un»). */}
           {!partsOnlyKind(kind) && comp.support && (
-            <FoldItem optionId="moble.support" id="moble-support" title="Suport general" icon={LuPanelBottom} badge={comp.support.kind === "plinth" ? `Sòcol ${comp.support.height}` : comp.support.kind === "legs" ? `Potes ${comp.support.height}` : "A terra"}>
+            <FoldItem optionId="moble.support" id="moble-support" title="Cuina" icon={LuPanelBottom} badge={comp.support.kind === "plinth" ? `Sòcol ${comp.support.height}` : comp.support.kind === "legs" ? `Potes ${comp.support.height}` : "A terra"}>
               <SupportForm comp={comp} setComp={setComp} />
             </FoldItem>
           )}
@@ -235,13 +245,16 @@ export function EditorInspector({
         // Ordre (per decisió de l'usuari, 2026-10-13; el Tipus, 2026-10-16): Tipus (moble o electrodomèstic i l'aparell) ·
         // Posició · Mides · Caixa · Portes (dividit) · Unió · Materials.
         <Stack gap={0}>
-          <ModuleTypeSection module={module} moduleX={build?.modules[moduleIndex]?.x} updateModule={updateModule} />
+          {/* El Tipus (moble o electrodomèstic) només a la cuina (per decisió de l'usuari, 2026-10-20: «tipus va a fora» al
+              moble normal, com abans de les cuines). */}
+          {kind === "cuina" && <ModuleTypeSection module={module} moduleX={build?.modules[moduleIndex]?.x} updateModule={updateModule} />}
           <ModulePositionSection comp={comp} module={module} moduleX={build?.modules[moduleIndex]?.x} updateModule={updateModule} islandFront={islandBack ? comp.modules.find((m) => m.id === islandBack.front)?.name : undefined} />
           <FoldItem optionId="module.dims" id="mod-dims" title="Mides" icon={LuMoveDiagonal} badge={`${module.carcass.width} × ${module.carcass.height}`}>
             <CarcassForm module={module} onChange={updateModule} section="dims" />
           </FoldItem>
           <ModuleSections
             module={module}
+            moduleBuild={moduleBuild}
             updateModule={updateModule}
             support={comp.support}
             moble={mobleBody(comp)}

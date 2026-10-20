@@ -58,7 +58,7 @@ describe("illa: mòduls d'esquena i panells de remat", () => {
 
 describe("illa amb sòcol: un sol sòcol, retirat dels fronts de les dues files", () => {
   it("el davant a la retirada del front de davant i el darrere a la del front del de darrere (girat)", () => {
-    const c = { ...comp(island({ left: false, right: false })), support: { kind: "plinth", height: 100, plinth: { setback: 50 } } } as Composition
+    const c = { ...comp(island({ left: false, right: false })), kind: "cuina", support: { kind: "plinth", height: 100, plinth: { setback: 50 } } } as Composition
     const b = buildComposition(c)
     const F = boxOf(b.panels.filter((p) => p.module === 1))
     const B = boxOf(b.panels.filter((p) => p.module === 2))

@@ -20,12 +20,14 @@ describe("fons del mateix material que el cos", () => {
     expect(buildModule(m).warnings.some((w) => w.code === "back-groove")).toBe(false)
   })
 
-  it("cargolat i del mateix tauler que el cos: cantells als quatre costats", () => {
-    const m = defaultModule("m", "x", { width: 800, height: 700, depth: 400, back: "screwed" })
+  it("cargolat i del mateix tauler que el cos: lliure al terra, cantells als quatre costats; arrambat, només el de dalt", () => {
+    const m = { ...defaultModule("m", "x", { width: 800, height: 700, depth: 400, back: "screwed" }), wallGap: 300 }
     const back = () => buildModule(m).panels.find((p) => p.role === "back")!
     expect(Object.values(back().edges).some(Boolean)).toBe(false)
     m.carcass = { ...m.carcass, backMaterial: m.carcass.material, backThickness: m.carcass.thickness }
     expect(back().edges).toEqual({ left: true, right: true, top: true, bottom: true })
+    delete (m as { wallGap?: number }).wallGap
+    expect(Object.values(back().edges).filter(Boolean)).toHaveLength(1)
   })
 })
 

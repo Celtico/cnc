@@ -166,8 +166,9 @@ export function TextureSetRow({ finish, onChange }: { finish: Finish; onChange: 
           void pickedFromDrop(e.dataTransfer).then(load)
         }}
       >
-        <HStack gap={1.5} wrap="wrap">
-          <Button size="xs" variant="outline" colorPalette="wood" loading={busy} onClick={() => void pickFiles({ multiple: true, accept: "image/*,.zip,.exr" }).then(load)}>
+        {/* El text del botó es parteix en dues línies a les pantalles estretes en comptes de fer scroll horitzontal. */}
+        <HStack gap={1.5} wrap="wrap" minW={0}>
+          <Button size="xs" variant="outline" colorPalette="wood" maxW="full" minH={8} h="auto" py={1} whiteSpace="normal" textAlign="start" loading={busy} onClick={() => void pickFiles({ multiple: true, accept: "image/*,.zip,.exr" }).then(load)}>
             <LuFileUp /> Carregar conjunt de textures…
           </Button>
           <Button size="xs" variant="ghost" disabled={busy} onClick={() => void pickFiles({ folder: true }).then(load)}>

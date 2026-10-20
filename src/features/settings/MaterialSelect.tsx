@@ -4,16 +4,20 @@ import { LuCheck } from "react-icons/lu"
 import { PickerButton, PickerDrawer, PickerRow } from "../../components/PickerDrawer"
 import { fold } from "../projects/galleryGrid"
 import { FoldGroup, FoldItem } from "../../components/Fold"
-import { MATERIAL_CATEGORIES, materialCategory, type MaterialPref } from "../../core/model"
+import { MATERIAL_CATEGORIES, familyGroups, materialCategory, materialFamily, type MaterialPref } from "../../core/model"
 import { MaterialThumb } from "./MaterialBits"
 import { useSettings } from "./SettingsContext"
 
 /**
  * Tria d'un material, la mateixa a tota l'app: un botó amb la mostra i el nom que obre un calaix (a la dreta a
- * l'ordinador, de baix al mòbil) amb un acordió per categoria; dins, les mostres de la textura (només es pinten les
- * de la categoria oberta) i en tocar-ne una es tria i es tanca. `emptyLabel`: una primera opció sense material
+ * l'ordinador, de baix al mòbil) amb un acordió per categoria i, dins, per subfamília (`familyGroups`: Lacats, Blancs,
+ * Metalls…); dins, les mostres de la textura (només es pinten les de la subfamília oberta) i en tocar-ne una es tria i es
+ * tanca. `emptyLabel`: una primera opció sense material
  * («Com el cos», «Com a Preferències»…), que dona `""`.
  */
+/** Clau d'una subfamília a l'acordió (els ids, com «other», es repeteixen entre categories). */
+const famKey = (cat: string, fam: string | null) => `${cat}/${fam}`
+
 export function MaterialSelect({ label, materials, value, onChange, emptyLabel, hideLabel }: { label: string; materials: MaterialPref[]; value: string; onChange: (name: string) => void; emptyLabel?: string; hideLabel?: boolean }) {
   const [open, setOpen] = useState(false)
   // La mostra del botó surt de tots els materials (la llista que es passa pot estar filtrada: sense fons, sense els de
@@ -28,8 +32,12 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
   // Cercador (per decisió de l'usuari): pel nom, sense accents; obre les categories amb resultats.
   const [query, setQuery] = useState("")
   const q = fold(query.trim())
-  const cats = MATERIAL_CATEGORIES.map((c) => ({ ...c, list: materials.filter((m) => materialCategory(m) === c.id && (!q || fold(m.name).includes(q))) })).filter((c) => c.list.length)
+  const cats = MATERIAL_CATEGORIES.map((c) => {
+    const list = materials.filter((m) => materialCategory(m) === c.id && (!q || fold(m.name).includes(q)))
+    return { ...c, list, fams: familyGroups(c.id, list) }
+  }).filter((c) => c.list.length)
   const [openCats, setOpenCats] = useState<string[]>([])
+  const [openFams, setOpenFams] = useState<string[]>([])
   const search = (v: string) => {
     setQuery(v)
     const f = fold(v.trim())
@@ -39,6 +47,39 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
     onChange(name)
     setOpen(false)
   }
+  // Les mostres d'una llista: una categoria sense subfamílies o una subfamília.
+  const swatches = (list: MaterialPref[]) => (
+    <>
+      {/* Mostres de la textura: només les de la subfamília oberta (lazyMount). */}
+      {/* Mostres quadrades a tota l'amplada de la columna, alineades a dalt; el nom, sempre dues línies
+          d'alt. La triada: vora del color principal al voltant de la mostra i ✓ a la cantonada. */}
+      {/* 5 px de marge: la vora de la triada (outline a 2 px) no queda tallada pels costats. */}
+      <SimpleGrid columns={3} gap={3} alignItems="start" p="5px">
+        {list.map((m) => {
+          const on = m.name === value
+          return (
+            <Box key={m.id} asChild rounded="md" textAlign="start" role="group" focusRing="outside">
+              <button type="button" onClick={() => pick(m.name)} aria-pressed={on}>
+                <Stack gap={1.5}>
+                  <Box position="relative" rounded="md" outline={on ? "2px solid" : undefined} outlineColor="wood.solid" outlineOffset="2px" _groupHover={on ? undefined : { opacity: 0.85 }}>
+                    <MaterialThumb m={m} size={96} fill />
+                    {on && (
+                      <Box position="absolute" top={1.5} right={1.5} w="22px" h="22px" bg="wood.solid" color="wood.contrast" rounded="full" display="flex" alignItems="center" justifyContent="center" fontSize="xs" shadow="md">
+                        <LuCheck />
+                      </Box>
+                    )}
+                  </Box>
+                  <Text fontSize="xs" lineClamp={2} minH="2lh" color={on ? "wood.fg" : undefined} fontWeight={on ? "semibold" : undefined}>
+                    {m.name}
+                  </Text>
+                </Stack>
+              </button>
+            </Box>
+          )
+        })}
+      </SimpleGrid>
+    </>
+  )
   return (
     <Field.Root flex={hideLabel ? 1 : undefined} minW={0}>
       {!hideLabel && <Field.Label fontSize="sm">{label}</Field.Label>}
@@ -52,6 +93,7 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
           // S'obre per la categoria del material triat (sense, si només n'hi ha una, aquella), sense cerca.
           setQuery("")
           setOpenCats(current ? [materialCategory(current)] : cats.length === 1 ? [cats[0]!.id] : [])
+          setOpenFams(current ? [famKey(materialCategory(current), materialFamily(current))] : [])
           setOpen(true)
         }}
       />
@@ -76,34 +118,17 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
         <FoldGroup variant="nested" value={openCats} onValueChange={setOpenCats}>
           {cats.map((c) => (
             <FoldItem key={c.id} id={c.id} title={c.label} count={c.list.length}>
-              {/* Mostres de la textura: només les de la categoria oberta (lazyMount). */}
-              {/* Mostres quadrades a tota l'amplada de la columna, alineades a dalt; el nom, sempre dues línies
-                  d'alt. La triada: vora del color principal al voltant de la mostra i ✓ a la cantonada. */}
-              {/* 5 px de marge: la vora de la triada (outline a 2 px) no queda tallada pels costats. */}
-              <SimpleGrid columns={3} gap={3} alignItems="start" p="5px">
-                {c.list.map((m) => {
-                  const on = m.name === value
-                  return (
-                    <Box key={m.id} asChild rounded="md" textAlign="start" role="group" focusRing="outside">
-                      <button type="button" onClick={() => pick(m.name)} aria-pressed={on}>
-                        <Stack gap={1.5}>
-                          <Box position="relative" rounded="md" outline={on ? "2px solid" : undefined} outlineColor="wood.solid" outlineOffset="2px" _groupHover={on ? undefined : { opacity: 0.85 }}>
-                            <MaterialThumb m={m} size={96} fill />
-                            {on && (
-                              <Box position="absolute" top={1.5} right={1.5} w="22px" h="22px" bg="wood.solid" color="wood.contrast" rounded="full" display="flex" alignItems="center" justifyContent="center" fontSize="xs" shadow="md">
-                                <LuCheck />
-                              </Box>
-                            )}
-                          </Box>
-                          <Text fontSize="xs" lineClamp={2} minH="2lh" color={on ? "wood.fg" : undefined} fontWeight={on ? "semibold" : undefined}>
-                            {m.name}
-                          </Text>
-                        </Stack>
-                      </button>
-                    </Box>
-                  )
-                })}
-              </SimpleGrid>
+              {c.fams.length ? (
+                <FoldGroup variant="nested" value={openFams} onValueChange={setOpenFams} forceOpen={q ? c.fams.map((f) => famKey(c.id, f.id)) : null}>
+                  {c.fams.map((f) => (
+                    <FoldItem key={f.id} id={famKey(c.id, f.id)} title={f.label} count={f.items.length}>
+                      {swatches(f.items)}
+                    </FoldItem>
+                  ))}
+                </FoldGroup>
+              ) : (
+                swatches(c.list)
+              )}
             </FoldItem>
           ))}
         </FoldGroup>

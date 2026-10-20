@@ -146,7 +146,18 @@ export const CarcassSchema = z.object({
    */
   back: z.enum(["groove", "screwed", "inset", "none"]),
   top: TopSchema,
+  /**
+   * **Sòcol de dalt** (per petició de l'usuari, 2026-10-20: «el sòcol de la tapa», l'armari fins al sostre): un tauler del
+   * gruix del cos, de tota l'amplada, dret sobre la tapa, `height` mm d'alt i retirat `setback` del davant de la caixa.
+   * Tapa el buit fins al sostre. Només amb tapa (sense tauler de taula).
+   */
+  topFiller: z.object({ height: mm.min(10).max(600), setback: mm.min(0).max(200) }).optional(),
   sides: z.object({ left: z.boolean(), right: z.boolean() }),
+  /**
+   * **Cantonada en L** (per petició de l'usuari, 2026-10-20; `addCorner`): el costat sense lateral que s'obre al mòdul
+   * girat de la cantonada. Els fronts del mòdul compten com a aguantats per aquell costat (el mòdul girat fa de lateral).
+   */
+  corner: z.enum(["left", "right"]).optional(),
   /**
    * Unió de la tapa amb els laterals. Normal (per defecte): la tapa entre laterals, amb
    * espigues. Inglet: tapa i laterals tallats a 45° a la cantonada (no es veu cap cantell),
@@ -232,6 +243,8 @@ export const FrontSchema = z.discriminatedUnion("kind", [
      * `hardware` (la «Guia de calaix»); `drawerSlides[i]` (i ≥ 1) és la del calaix i o, `null`, la del de sota.
      */
     drawerSlides: z.array(FrontHardwareSchema.nullable()).max(10).optional(),
+    /** Front de vidre (per petició de l'usuari, 2026-10-20): marc d'una peça de fusta amb la finestra i el vidre al galze. */
+    glass: z.boolean().optional(),
   }),
   z.object({
     kind: z.literal("flap"),
@@ -291,11 +304,18 @@ const ZoneApplianceSchema = repairAtomically(
 )
 
 /** Tipus de front (contingut) d'un compartiment. */
+/** Front de calaix de vidre sense posició del tirador: l'eix, a tants mm del cantell de dalt (al travesser del marc). */
+export const GLASS_HANDLE_TOP = 30
 export const FRONT_KINDS = ["door", "drawers", "flap", "grille", "panel"] as const satisfies readonly Front["kind"][]
 
 export interface Zone {
   id: string
-  split?: { dir: "v" | "h"; sizes: (number | "auto")[]; children: Zone[] }
+  /**
+   * `thickness`: divisors gruixuts (buits; per petició de l'usuari, 2026-10-20: «al fer divisions ficar l'opció de
+   * gruixuts (buits)»): el gruix aparent (mm) dels divisors (o prestatges fixos) d'aquesta divisió, fets com els
+   * prestatges gruixuts: dues pells, llistons i una tira al davant. Sense: del gruix del tauler.
+   */
+  split?: { dir: "v" | "h"; sizes: (number | "auto")[]; children: Zone[]; thickness?: number }
   shelves?: {
     n: number
     adjustable: boolean
@@ -336,20 +356,47 @@ export interface InnerDrawers {
   n: number
   /** Alçada de cada calaix (mm, el lloc que ocupa: la caixa és una mica més baixa, com els calaixos de sempre). */
   height: number
+  /**
+   * Alçada a mida de cada calaix, de baix a dalt (sense, o un que falti: `height`). Per decisió de l'usuari, 2026-10-20:
+   * els calaixos interiors amb les mateixes opcions que els de fora (`innerDrawerHeights`).
+   */
+  heights?: number[]
   /** La guia o el joc (sense: la del mòdul). */
   hardware?: HardwareItem
   kit?: Partial<KitOptions>
+  /** Com `Front.drawerSlides`: amb un joc i alçades diferents, la guia de cada calaix (i ≥ 1; `null`, la del de sota). */
+  drawerSlides?: (HardwareItem | null)[]
   /** Retirada del front interior des del davant de la caixa (mm; sense: 25, Preferències › Folgances per defecte). */
   setback?: number
   /** Gruix del suplement al costat de les frontisses (mm; sense: el gruix del cos; 0 = sense suplements). */
   shim?: number
+  /**
+   * El suplement de cada costat, triat a part (per decisió de l'usuari, 2026-10-20: «poder seleccionar com vols cada
+   * costat»). Sense el d'un costat: `shim` al costat de les frontisses i cap a l'altre (`innerShimOf`).
+   */
+  sides?: { left?: InnerShim; right?: InnerShim }
   /**
    * El front: de fusta (sense: el front interior baix) o, amb un joc de calaix, **metàl·lic del fabricant** (`"kit"`; per
    * decisió de l'usuari, 2026-10-16: «calaixos sense frontal, tot ferratge»): cap peça de fusta al davant; la comanda del
    * joc diu que cal el front interior del fabricant. Amb una caixa de fusta, no compta.
    */
   front?: "kit"
+  /** Fronts interiors de vidre (com `drawers.glass`): marc d'una peça de fusta amb la finestra i el vidre al galze. */
+  glass?: boolean
 }
+
+/**
+ * El suplement d'un costat dels calaixos interiors: `thickness` mm (0 = cap). De dos gruixos del cos o més és una caixa
+ * (per decisió de l'usuari, 2026-10-20): tapada (sense `box`, un davant) o, `"shelves"`, oberta amb `shelves` prestatges
+ * (sense: 1).
+ */
+export interface InnerShim {
+  thickness: number
+  box?: "shelves"
+  shelves?: number
+}
+
+const InnerShimSchema = z.object({ thickness: mm.min(0).max(600), box: z.literal("shelves").optional(), shelves: z.number().int().min(1).max(10).optional() })
 
 export const ZoneSchema: z.ZodType<Zone> = z.lazy(() =>
   z.object({
@@ -359,6 +406,7 @@ export const ZoneSchema: z.ZodType<Zone> = z.lazy(() =>
         dir: z.enum(["v", "h"]),
         sizes: z.array(sizeOrAuto),
         children: z.array(ZoneSchema).min(2),
+        thickness: mm.min(20).max(200).optional(),
       })
       .optional(),
     shelves: z
@@ -384,11 +432,15 @@ export const ZoneSchema: z.ZodType<Zone> = z.lazy(() =>
       .object({
         n: z.number().int().min(1).max(10),
         height: mm.min(60).max(1000),
+        heights: z.array(mm.min(60).max(1000)).max(10).optional(),
         hardware: FrontHardwareSchema.optional(),
         kit: KitOptionsSchema.partial().optional(),
+        drawerSlides: z.array(FrontHardwareSchema.nullable()).max(10).optional(),
         setback: mm.min(0).max(100).optional(),
-        shim: mm.min(0).max(60).optional(),
+        shim: mm.min(0).max(600).optional(),
+        sides: z.object({ left: InnerShimSchema.optional(), right: InnerShimSchema.optional() }).optional(),
         front: z.literal("kit").optional(),
+        glass: z.boolean().optional(),
       })
       .optional(),
   }),
@@ -468,10 +520,11 @@ export const ModuleSchema = z.object({
    */
   turned: z.boolean().optional(),
   /**
-   * Només «Lliure al terra»: el gir al voltant del vertical, en graus (vist de dalt, antihorari: amb 90 els fronts miren a
-   * la dreta, +X; amb 270, a l'esquerra), per posar un mòdul a l'extrem d'una illa (per decisió de l'usuari, 2026-10-16).
-   * Mana sobre `turned` (el 180 d'abans). Com `turned`: es construeix igual i es gira al voltant del centre de la caixa
-   * de les seves peces (`moduleRot`).
+   * Cap on miren els fronts: el gir al voltant del vertical, en graus (vist de dalt, antihorari: amb 90 els fronts miren a
+   * la dreta, +X; amb 270, a l'esquerra), per posar un mòdul a l'extrem d'una illa (per decisió de l'usuari, 2026-10-16) i,
+   * des del 2026-10-20, en qualsevol muntatge (arrambat i penjat, 90 o 270; 180 només lliure al terra). Mana sobre `turned`
+   * (el 180 d'abans). Es construeix igual i es gira: lliure, al voltant del centre de la caixa de les seves peces; a la fila,
+   * al del seu lloc, amb un lateral a la paret (`moduleRot`, `modulePlacements`).
    */
   rot: z.union([z.literal(90), z.literal(180), z.literal(270)]).optional(),
   /**

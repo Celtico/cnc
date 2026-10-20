@@ -1,5 +1,5 @@
 import type { KitOrderLine } from "./drawerKit"
-import { activeRuns, compositionKind, withSupport, isSolidMaterial, moduleRot, rotXZ, unrot, type ModuleRot, modelFootprint, modulePlacements, NO_EDGES, partsOnlyKind, partCutters, type Composition, type ModelObject, type Module, type Panel, type Vec3 } from "../model"
+import { activeRuns, compositionKind, freeX, withSupport, isSolidMaterial, moduleFrontFace, moduleRot, rotXZ, unrot, type ModuleRot, modelFootprint, modulePlacements, NO_EDGES, partsOnlyKind, partCutters, type Composition, type ModelObject, type Module, type Panel, type Vec3 } from "../model"
 import { applyRefCuts, migrateCableHoles, refTouchesBox } from "./refCuts"
 import { columnRearLimits, columnWalls, relayLegs } from "./columnWalls"
 import { clipHangingToRefs } from "./hangingCuts"
@@ -157,10 +157,10 @@ export function buildComposition(input: Composition): CompositionBuild {
   }
   // El sòcol per defecte dels electrodomèstics de terra: l'alçada de les potes del moble (el sòcol del tram passa per davant).
   const appliancePlinth = comp.support && comp.support.kind !== "floor" ? comp.support.height : undefined
-  // Amb sòcol, la llum a sota dels mòduls de terra quedaria amagada darrere del sòcol: no es fa (es guarda, per si es
+  // Amb sòcol (el del moble o el de les potes del mòdul), la llum a sota dels mòduls de terra quedaria amagada: no es fa (es guarda, per si es
   // canvia a potes vistes).
-  const lit = (m: Module): Module => (comp.support?.kind === "plinth" && m.carcass.base.kind === "legs" && m.carcass.underLight ? { ...m, carcass: (({ underLight: _u, ...c }) => c)(m.carcass) } : m)
-  const builds = onlyParts ? [] : comp.modules.map(lit).map((m, i) => buildModule(m, { ...(moduleRot(m) ? {} : { rearLimits: columnRearLimits(m, comp.references, places[i]!) }), keepOut: keepOut(m, i), ...(appliancePlinth !== undefined ? { appliancePlinth } : {}) }))
+  const lit = (m: Module): Module => ((comp.support?.kind === "plinth" || (m.carcass.base.kind === "legs" && m.carcass.base.plinth)) && m.carcass.base.kind === "legs" && m.carcass.underLight ? { ...m, carcass: (({ underLight: _u, ...c }) => c)(m.carcass) } : m)
+  const builds = onlyParts ? [] : comp.modules.map(lit).map((m, i) => buildModule(m, { ...(moduleRot(m) ? {} : { rearLimits: columnRearLimits(m, comp.references, places[i]!) }), keepOut: keepOut(m, i), ...(appliancePlinth !== undefined ? { appliancePlinth } : {}), ...(compositionKind(comp) === "taula" ? { freestanding: true } : {}) }))
   // Illes: el mòdul de darrere es gira 180° i es posa enganxat al darrere del de davant (mateixa X, a `gap` mm), sigui
   // quina sigui la seva posició pròpia.
   const islands = onlyParts ? [] : activeIslands(comp)
@@ -183,7 +183,10 @@ export function buildComposition(input: Composition): CompositionBuild {
     // Girat al voltant del vertical pel centre de la caixa de les peces (`moduleRot`; el de darrere d'una illa, 180°):
     // l'origen i els eixos de cada peça es giren (gir, no mirall: les peces són les mateixes).
     const rot = backOf.has(m.id) ? 180 : moduleRot(m)
-    const turn = rot ? turnFrame(build.panels, rot) : undefined
+    // A la fila (arrambat, penjat o al terra sense X pròpia), al voltant del centre de la petjada (`modulePlacements`): el
+    // lateral toca la paret i el mòdul ocupa la seva fondària a la fila.
+    const inRow = !backOf.has(m.id) && !freeX(m)
+    const turn = !rot ? undefined : inRow ? { rot, cx: m.carcass.width / 2, cz: moduleFrontFace(m) / 2 } : turnFrame(build.panels, rot)
     const place = (pl: Panel["placement"]): Panel["placement"] => {
       const o = pl.origin
       if (!turn) return { ...pl, origin: [o[0] + x, o[1] + y, o[2] + z] }

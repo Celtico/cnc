@@ -28,7 +28,7 @@
 - **Les tres pàgines fan igual**: capçalera `PageHeader` (títol gran i l'explicació), **cercador amb el botó principal al
   costat, a l'esquerra** (per decisió de l'usuari: primer els botons i després el cercador; `components/SearchBar`: «Nou moble» · «Nou objecte» · «Nou ambient» amb la icona + (`LuPlus`), `colorPalette="wood"`, **buits** (per
   decisió de l'usuari: «que no fiqui res»): `projects/blank.ts` (moble sense mòduls, objecte sense peces) i l'ambient
-  sense parets (`EMPTY_AMBIENT`); «Nou moble» crea el moble directament (sense menú); amb text a l'ordinador i només la icona al mòbil, amb `aria-label` i tooltip; **«Obrir
+  sense parets (`EMPTY_AMBIENT`); «Nou moble» obre un menú: Moble normal · Cuina (per decisió de l'usuari, 2026-10-20); amb text a l'ordinador i només la icona al mòbil, amb `aria-label` i tooltip; **«Obrir
   fitxer»** (`LuFolderOpen`, `file/OpenFileButton.tsx`) a les tres, a la mateixa fila, entre el «+» i el cercador (vegeu
   Desar i fitxers › Obrir fitxer); textos «Cercar mobles: nom, tipus, estil, material, color…», «Cercar objectes: nom,
   material…» i «Cercar ambients: nom, grup…»; sense accents; obre les seccions i categories amb resultats) i acordions

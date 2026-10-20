@@ -32,12 +32,12 @@ const position = section("module.position", "Posició", { icon: "position", code
     choices: [
       { value: "wall", label: "Arrambat a la paret", reveals: ["module.position.gap"] },
       { value: "hung", label: "Penjat", reveals: ["module.position.height", "module.carcass.hanger", "module.carcass.underLight"], note: "a 1450 mm del terra, amb el fons retirat per al penjador" },
-      { value: "floor", label: "Lliure al terra", reveals: ["module.position.wallGap", "module.position.turned", "module.position.x"], hides: ["module.position.gap"] },
+      { value: "floor", label: "Lliure al terra", reveals: ["module.position.wallGap", "module.position.x"], hides: ["module.position.gap"] },
     ],
   }),
   field("module.position.height", "Alçada del terra", { code: UI.sections, control: "number", showIf: "Fila = Penjat", range: { min: 0, max: 2800, step: 10, suffix: "mm" }, default: 1450, hideable: false, why: STRUCTURAL }),
   field("module.position.wallGap", "Fondària (Z)", { code: UI.sections, control: "number", showIf: "Fila = Lliure al terra (amb X pròpia; els d'abans, «Separació de la paret»)", range: { min: 0, max: 10000, step: 10, suffix: "mm" }, default: 0 }),
-  field("module.position.turned", "Fronts", { code: UI.sections, control: "choice", showIf: "Fila = Lliure al terra", default: "0", choices: [{ value: "0", label: "Endavant" }, { value: "270", label: "A l'esquerra" }, { value: "90", label: "A la dreta" }, { value: "180", label: "Enrere" }], note: "Per decisió de l'usuari, 2026-10-13 (enrere, illa d'esquena) i 2026-10-16 (a un costat, l'extrem d'una illa): gira al voltant del centre de la caixa (`Module.rot`, `moduleRot`)." }),
+  field("module.position.turned", "Fronts", { code: UI.sections, control: "choice", default: "0", choices: [{ value: "0", label: "Endavant" }, { value: "270", label: "A l'esquerra" }, { value: "90", label: "A la dreta" }, { value: "180", label: "Enrere" }], note: "Per decisió de l'usuari, 2026-10-13 (enrere, illa d'esquena), 2026-10-16 (a un costat, l'extrem d'una illa) i 2026-10-20 (a les tres posicions; Enrere només lliure al terra): lliure, gira al voltant del centre de la caixa; a la fila, ocupa la fondària amb un lateral a la paret (`Module.rot`, `moduleRot`, `modulePlacements`)." }),
   field("module.position.x", "De costat (X)", { code: UI.sections, control: "number", showIf: "Fila = Lliure al terra (X pròpia)", hideable: false, why: STRUCTURAL }),
   field("module.position.gap", "Separació des de l'inici / amb l'anterior", { code: UI.sections, control: "number", showIf: "A la fila (sense X pròpia); l'etiqueta diu si és el primer", range: { min: 0, max: 5000, step: 10, suffix: "mm" }, default: 0 }),
 ])
@@ -85,11 +85,11 @@ export function applianceFrontFields(at: "module" | "zone"): OptionNode[] {
 /** L'electrodomèstic del compartiment (d'un mòdul dividit; el del mòdul es tria a Tipus). */
 export function applianceNodes(): OptionNode {
   const id = (k: string) => `zone.appliance.${k}`
-  return section("zone.appliance", "Electrodomèstic", {
+  return group("zone.appliance", "Electrodomèstic", {
     icon: "appliance",
     code: UI.appliance,
-    showIf: "Compartiment d'un mòdul dividit, sense dividir i no tapat per les portes del mòdul",
-    note: "Si l'aparell ocupa el compartiment (no placa ni campana), no surten Front, Opcions de l'interior ni Dividir.",
+    showIf: "Front › Contingut = Electrodomèstic: compartiment d'un mòdul dividit, sense dividir i no tapat per les portes del mòdul",
+    note: "Per decisió de l'usuari, 2026-10-20: un contingut més del Front, amb les opcions a sota. Si l'aparell ocupa el compartiment (no placa ni campana), no surten Opcions de l'interior ni Dividir; la placa i la campana porten a sota el front del compartiment.",
   }, [
     field(id("hardware"), "Aparell", {
       code: UI.appliance,
@@ -107,23 +107,8 @@ export function applianceNodes(): OptionNode {
 
 const MODULE_POSITION = [type, position, dims]
 
-/** Mòdul › Portes, Unió i Materials. */
+/** Mòdul › Materials (les portes d'una zona dividida, al seu Front: `splitFrontNode`). */
 const MODULE_TAIL: OptionNode[] = [
-  section("module.doors", "Portes", { icon: "doors", code: UI.zonePanel, showIf: "Interior dividit (sense dividir, el Front és el del compartiment)", note: "Les opcions de la porta són les mateixes que Compartiment › Front › Porta (els mateixos ids: amagar-ne una l'amaga als dos llocs)." }, [
-    field("module.doors.mode", "Portes", {
-      code: UI.zonePanel,
-      control: "choice",
-      default: "none",
-      choices: [
-        { value: "none", label: "Cap" },
-        { value: "single", label: "Una", note: "si l'arrel es pot tapar pels quatre costats" },
-        { value: "double", label: "Dues", note: "a més, lateral als dos costats" },
-      ],
-    }),
-  ]),
-  section("module.joint", "Unió", { icon: "joint", code: UI.sections, showIf: "La caixa fa espigues (tapa o base a topar amb els laterals, fons encastat ≥ 15 mm, tapa de reixeta o alguna divisió)" }, [
-    field("module.joint.dowel", "Espiga", { code: UI.carcass, control: "hardware", defaultText: "La de Preferències › Ferratges" }),
-  ]),
   materialsNodes("module"),
 ]
 
@@ -158,4 +143,20 @@ export function materialsNodes(at: "module" | "moble"): OptionNode {
 }
 
 export const MODULE_GROUP = (carcass: OptionNode): OptionNode =>
-  group("module", "Mòdul", { icon: "module", code: UI.inspector, showIf: "Un mòdul seleccionat", note: "Ordre: Tipus · Mides · Caixa · Portes · Unió · Materials." }, [...MODULE_POSITION, carcass, ...MODULE_TAIL])
+  group("module", "Mòdul", { icon: "module", code: UI.inspector, showIf: "Un mòdul seleccionat", note: "Ordre: Tipus · Mides · Caixa · Materials (les portes d'una zona dividida, al seu Front)." }, [...MODULE_POSITION, carcass, ...MODULE_TAIL])
+
+/** El Front d'una zona dividida (portes de dalt a baix de la zona), a sobre de la Divisió. Els ids d'abans (Mòdul › Portes). */
+export function splitFrontNode(): OptionNode {
+  return section("module.doors", "Front (zona dividida)", { icon: "doors", code: UI.zonePanel, showIf: "Zona dividida, a qualsevol nivell (a sobre de la Divisió); tapada per les portes d'una zona de més amunt: «Front · Tapat»", note: "Per decisió de l'usuari, 2026-10-20: totes les divisions tenen el Front, a sobre de la divisió (abans Mòdul › Portes, només a l'arrel). Les opcions de la porta són les mateixes que Compartiment › Front › Porta (els mateixos ids: amagar-ne una l'amaga als dos llocs)." }, [
+    field("module.doors.mode", "Portes", {
+      code: UI.zonePanel,
+      control: "choice",
+      default: "none",
+      choices: [
+        { value: "none", label: "Cap" },
+        { value: "single", label: "Una", note: "si la zona es pot tapar pels quatre costats" },
+        { value: "double", label: "Dues", note: "a més, lateral als dos costats" },
+      ],
+    }),
+  ])
+}

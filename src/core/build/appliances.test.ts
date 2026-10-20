@@ -91,7 +91,7 @@ describe("electrodomèstics (v46)", () => {
 
   it("combi amb el sòcol de fusta del tram: l'entrada d'aire és un retall de ≥ 200 cm² al sòcol, davant del frigorífic", () => {
     const m = fridgeColumn()
-    const b = buildComposition({ modules: [m], references: [], support: { kind: "plinth", height: 100, plinth: { setback: 24 } } })
+    const b = buildComposition({ kind: "cuina", modules: [m], references: [], support: { kind: "plinth", height: 100, plinth: { setback: 24 } } })
     const plinth = b.panels.find((p) => p.role === "plinth")!
     const vent = plinth.cutouts?.find((c) => c.tag === "vent")
     expect(vent && vent.kind === "rect" ? vent.w * vent.h : 0).toBeGreaterThanOrEqual(20000)

@@ -4,9 +4,9 @@
 
 ### Model del moble
 - **Tipus de moble** (`Composition.kind`, `compositionKind`, `features/composition/kinds.ts`; per decisió de l'usuari,
-  **sense selector «Tipus»**): ve de la plantilla i no canvia; «+ Nou moble» crea
-  directament un moble del tipus Moble (`blankMoble("moble")`, **buit**: cap mòdul; per decisió de l'usuari, sense menú de
-  tipus; els noms d'inici, `NEW_MOBLE_NAMES` a `features/projects/blank.ts`, «Moble nou», des de `ProjectsScreen.tsx`). Només decideix l'etiqueta de la targeta i la cerca, i a la
+  **sense selector «Tipus»**): ve de la plantilla i no canvia; «+ Nou moble» demana
+  el tipus (per decisió de l'usuari, 2026-10-20: «triar si és de cuina o és un moble normal»): **Moble normal**
+  (`blankMoble("moble")`) o **Cuina** (`blankMoble("cuina")`), **buit**: cap mòdul; els noms d'inici, `NEW_MOBLE_NAMES` a `features/projects/blank.ts`, «Moble nou», des de `ProjectsScreen.tsx`). Només decideix l'etiqueta de la targeta i la cerca, i a la
   Taula «Afegir mòdul» fa un `tableModule` (tauler + dos laterals de panell, sense base ni fons, cantonades a inglet; el
   Taula nova comença buida com les altres). Els antics: cuina si tenen `runs`, si no moble. Objecte (`objecte`, vegeu Objectes). **`lliure`**
   (el Flat-pack d'abans, «Peces lliures» a la targeta): ja no es crea; els que hi ha (i els llits, capçals i taules de pedra
@@ -37,11 +37,19 @@
   sempre amb `modulePlacements()` / `compositionWidth/Height`, mai a mà. Els `anchor` antics es converteixen en carregar
   (`normalizeComposition`). Tres muntatges (`mountOf`): **Arrambat a la paret**, **Penjat** i **Lliure al terra** (`Module.wallGap`
   = separació de la paret, i **X pròpia** `Module.x`/`freeX`: surt de la fila i no empeny els altres, p. ex. una illa; camp
-  «De costat (X)»). Els antics «Al terra» sense `x` continuen a la fila. **Girat** (`Module.rot` 90 · 180 · 270, o el `turned` d'abans = 180; `moduleRot`; només lliure al terra; Mòdul › Posició «Fronts»: Endavant · A l'esquerra · A la dreta · Enrere; per decisió de l'usuari, 2026-10-13, enrere per fer una illa amb dos mòduls d'esquena, i 2026-10-16, a un costat per a l'extrem d'una illa): el mòdul es construeix igual i `buildComposition` el gira al voltant del centre de la caixa de les seves peces (`CompositionBuild.modules[].turn`; `moduleToWorld`, `moduleFromWorld` i `moduleBoxToWorld` per al clic, el ressaltat dels compartiments, el contorn i la maneta). A la planta, `moduleFootprint` (l'amplada en Z si és de 90° o 270°) fa els trams; el sòcol de cada tram va retirat de la cara dels fronts a cada costat on n'hi miren (`tramPlinth.ts`). Un girat 90° no fa l'entrada d'aire de l'electrodomèstic al sòcol; l'alçat el dibuixa de costat; l'obertura del 3D surt enrere (`opening.ts`, per l'`explodeDir`). Tests `build/turnedModule.test.ts`, `viewer/openingTurned.test.ts`. El taulell corregut no té en compte `wallGap`.
+  «De costat (X)»). Els antics «Al terra» sense `x` continuen a la fila. **Girat** (`Module.rot` 90 · 180 · 270, o el `turned` d'abans = 180; `moduleRot`; a les tres posicions des del 2026-10-20, per decisió de l'usuari: «si saps el front saps com va la resta»; Enrere només lliure al terra, arrambat o penjat es queda endavant; a la fila, `modulePlacements` li dona la fondària fins a la cara dels fronts com a amplada i un lateral toca la paret, i `buildComposition` el gira al voltant del centre d'aquesta petjada; lliure amb X pròpia, al voltant del centre de la caixa; Mòdul › Posició «Fronts»: Endavant · A l'esquerra · A la dreta · Enrere; per decisió de l'usuari, 2026-10-13, enrere per fer una illa amb dos mòduls d'esquena, i 2026-10-16, a un costat per a l'extrem d'una illa): el mòdul es construeix igual i `buildComposition` el gira al voltant del centre de la caixa de les seves peces (`CompositionBuild.modules[].turn`; `moduleToWorld`, `moduleFromWorld` i `moduleBoxToWorld` per al clic, el ressaltat dels compartiments, el contorn i la maneta). A la planta, `moduleFootprint` (l'amplada en Z si és de 90° o 270°) fa els trams; el sòcol de cada tram va retirat de la cara dels fronts a cada costat on n'hi miren (`tramPlinth.ts`). Un girat 90° no fa l'entrada d'aire de l'electrodomèstic al sòcol; l'alçat el dibuixa de costat; l'obertura del 3D surt cap on miren els fronts a 90 · 180 · 270 (`opening.ts`, `frontFrame` per l'`explodeDir`: calaixos en X o Z, portes amb la frontissa al mateix costat del front i el pivot a la cara de dins, abatibles sobre l'eix X o Z). Tests `build/turnedModule.test.ts`, `viewer/openingTurned.test.ts`. El taulell corregut no té en compte `wallGap`.
 - **Carcassa** (inspector del mòdul, secció Caixa):
-  - **Suport: un per a tot el moble** (`Composition.support`, `supportSchema.ts`, `floorSupport.ts`; per decisió de
+  - **Suport del moble normal: el de cada mòdul** (per decisió de l'usuari, 2026-10-20: «si és un moble normal, les
+    opcions d'abans»; «la base com estava abans del lio de les cuines»; `globalSupport(kind)`: tot el que no és cuina):
+    Caixa › Base (`ModuleSupportFields`), una sola fila **Base**: **Directe a terra · Sòcol** (de caixa: laterals fins a
+    terra, la base aixecada; alçada i retranqueig) **· Potes** (alçada, pota i, si es vol, el **sòcol davant de les
+    potes**, de tota l'amplada, amb la seva retirada; `MountingBuilder.buildLegPlinth`, avís si toca el peu de les potes)
+    **· Sense base (obert)** (`noBottom`). Sense secció Tipus al mòdul (moble o electrodomèstic: només a la cuina).
+    Sense `Composition.support`: `withSupport` no hi fa res i un moble normal desat amb `support` el torna als mòduls
+    (`toModuleSupports`: el sòcol del tram passa a les potes de cada mòdul, només al davant).
+  - **Suport de la cuina: un per a tot el moble** (`Composition.support`, `supportSchema.ts`, `floorSupport.ts`; per decisió de
     l'usuari, 2026-10-15: «és un sòcol per a tots els mòduls i no un per a cada un»; «el sòcol no pot anar per cada mòdul,
-    és una peça global»): Moble › **Suport general** (`SupportForm`) tria **Directe a terra · Sòcol · Potes vistes**,
+    és una peça global»): Moble › **Cuina** (`SupportForm`; abans «Suport general») tria **Directe a terra · Sòcol · Potes vistes**,
     l'alçada de les potes, la pota i el sòcol. `withSupport` (en obrir el moble, a cada canvi de l'Editor i a
     `buildComposition`) l'escriu a la base de cada mòdul de terra (`{ kind: "none" }` o `{ kind: "legs", height, hardware }`):
     al mòdul, el Suport és un text. Un mòdul **sense base** no pot anar sobre potes (s'hi cargolen): va directe a terra i
@@ -132,7 +140,7 @@
     avís informatiu), capa DXF `MITRE_45`, «n∠45°» al llistat i al CSV, trapezi al 3D/GLB, 45° al STEP. **Espigues**:
     la tapa i la base a inglet no en porten (s'encolen amb lamel·les o Clamex, avís `mitre`); les de divisors, prestatges
     fixos, fons encastat i una base amb sòcol sí. `carcassDowels` (`core/model/usedHardware.ts`) diu on n'hi ha: un
-    mòdul tot a inglet sense divisions ni fons encastat no ensenya la secció **Unió** (l'Espiga; `frontsInspector.test.ts`).
+    mòdul tot a inglet sense divisions ni fons encastat no ensenya l'**Espiga** a Caixa › Laterals ( `frontsInspector.test.ts`).
   - **Fronts** Recobrents / Encastats (`fronts.style`; s'edita a Mòdul › Caixa, «Estil dels fronts», al final, després de
     les Cantonades; sense cap front no surt ni compta, `visibleModule`): encastats dins de la llum amb la folgança a tot el voltant, a nivell amb
     el davant (`frontZ`), caixa del calaix un gruix més curta i avís si els prestatges no es retiren prou.
@@ -190,6 +198,13 @@
     regla no s'aplica a cap moble. Les **portes** de tot el mòdul, no: darrere hi ha prestatges i penjador (armari).
   - **Prestatges gruixuts** (`zone.shelves.thickness`, «Gruixuts (buits)»): pells, tira i llistons. **A ras del davant**
     (`zone.shelves.flush`); amb fronts encastats, només als compartiments sense front (si no, es retiren i avisa).
+  - **Divisions gruixudes** (`zone.split.thickness`, Interior › Divisió › Gruix «Gruixuts (buits)» i «Gruix aparent»; per
+    petició de l'usuari, 2026-10-20): els divisors (divisió vertical) o els prestatges fixos (horitzontal) d'aquella
+    divisió es fan com els prestatges gruixuts (`Builder.hollowShelf`; el divisor, pell de l'esquerra i de la dreta, tira
+    al davant i llistons del darrere, de baix i de dalt). Ocupen el gruix aparent a la distribució (`layoutZones`,
+    `DividerSpec.thickness`); cada pell és una ref (`whole`, tot el gruix): espigues de cada pell, fileres System 32 a la
+    cara de fora i els fronts en tapen la meitat cadascun. Menys de 2 × tauler + 6: massissos i avís `hollow`. Tests
+    `build/hollowDivider.test.ts`.
   - **Front d'una zona dividida** (`buildParentFront`; portes d'armari de dalt a baix amb penjador i maleter darrere): les
     fulles de sota queden `covered`. Per decisió de l'usuari (2026-10-08: «el Front de tota la zona no té sentit que surti a
     totes les divisions; només si es tria una opció de portes»), **només l'arrel i només portes**: les **portes de tot el
@@ -474,3 +489,12 @@ darrere de la placa de la frontissa, hipòtesi) fins al darrere: els forats de l
 Avís `inner-drawers` (el suplement es cargola al lateral; sense suplement al costat de les frontisses, un avís que el braç i la
 placa hi topen). Amb un joc, `front: "kit"` (per decisió de l'usuari, «calaixos sense frontal, tot ferratge»): cap front de
 fusta; el front interior metàl·lic del fabricant va a la comanda del joc i es pinta com a ferratge. Test `build/innerDrawers.test.ts`.
+Per decisió de l'usuari, 2026-10-20, les **mateixes opcions que Front › Calaixos**: l'alçada de cada calaix (`heights`, de baix a
+dalt; totes iguals = `height`, `innerDrawerHeights`), la guia de cada calaix amb un joc i alçades diferents (`drawerSlides`,
+`innerPerDrawerSlides`) i les opcions del joc (`kit`: tancament, darrere, color); la UI fa servir els mateixos `DrawerSlides` i
+`KitFields`. Sense tirador (front interior).
+**Suplement de cada costat** (per decisió de l'usuari, 2026-10-20): `sides.left` / `sides.right` (`InnerShim`: `thickness`, `box`,
+`shelves`; sense, `innerShimOf`: `shim` o el gruix del cos a les frontisses i cap a l'altre). Fins a dos gruixos del cos, una tira
+massissa; més gruixut, una **caixa** del cos: la pell (amb els forats de la guia), la tapa de dalt i, tapada, el davant o, `box:
+"shelves"`, prestatges; el lateral fa de fons. Sense límit fix (fins a 600): avís `inner-drawers` si als calaixos no els queden
+150 mm. El cantell de dalt del suplement es canteja sempre (`applyEdgeRules`, peces `inner-shim-`).

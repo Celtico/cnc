@@ -13,6 +13,17 @@
   vidre negre del cos dels forns, microones i plaques: un lacat negre brillant, no un vidre, que el de l'app és translúcid) només es veuen: `cnc: false`, no surten als selectors del cos
   ni del taulell. Els que no són de CNC pinten els cantells amb el mateix material. Acabats `metal`, `glass`, `fabric`
   (trama) i `tiles` (rajola amb junta), procedurals (`patternTexture`).
+- **Subfamílies** (`core/model/materialFamilies.ts`, `MATERIAL_FAMILIES`, `materialFamily`, `familyGroups`; per decisió de
+  l'usuari, 2026-10-20: «a material ficar subfamílies, ara surt una llista molt gran»): dins de cada categoria, un segon
+  acordió a Preferències › Materials i al calaix del `MaterialSelect` (com les sèries dels ferratges; la cerca obre les que
+  tenen resultats; en obrir un material, la seva queda oberta). **Taulers**: Melamines · Lacats · Fustes i xapes · Altres.
+  **Corian**, pel to del color mitjà (`colorTone`): Blancs · Crema i beix · Grisos · Marrons · Foscos i negres · Colors.
+  **Simulació**: Metalls · Vidres i miralls · Pedra i marbre · Parquets i rajoles · Parets i revestiments · Teixits, cuir
+  i catifes · Plantes i jardí · Electrodomèstics · Llums · Objectes i ceràmica · Altres. **Fons**: sense (són pocs). Es
+  dedueixen del nom (regles per paraules, abans que l'acabat: «Pedra de paret» és pedra) i de l'acabat; una categoria on
+  tot cau en una sola es mostra plana. Es pot triar a mà a l'editor del material (**Subfamília**: «Automàtica (X)» o una
+  de la llista, `MaterialPref.family`); en canviar de Categoria es torna a deduir (`withCategory` la treu). Un test
+  comprova que cap material inicial cau a «Altres».
 - **Textures procedurals editables** (`settings/TextureEditor.tsx`, «Editar la textura»): mostra gran a escala real amb zoom;
   s'aplica en acceptar. Una finestra (`FloatingWindow`, damunt de la de l'editor del material): el cos es desplaça (el títol
   i els botons a la vista); es queda muntada tancada mentre el material és editable. **Fusta** (`Finish.wood.gen`, `WoodGenSchema`, `WOOD_PRESETS` + `WOOD_EXTRA_PRESETS`), **Teixit**,

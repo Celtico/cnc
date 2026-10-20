@@ -7,8 +7,8 @@ import type { LinearPiece } from "./linearOrders"
  * **Sòcol perimetral** (per decisió de l'usuari, 2026-10-15: «poder ficar sòcol als laterals» de l'illa): els trams del
  * sòcol al voltant d'un rectangle (la base d'un mòdul amb potes o una fila de baixos), un per costat triat, amb les
  * cantonades a tope (el davant i el darrere passen per davant dels laterals) o a inglet (tots de fora a fora, tallats a
- * 45°), de fusta (peces de CNC) o d'alumini (ferratge per metres: `extras` de només veure i la comanda). El fa servir el
- * sòcol de cada tram (`tramPlinth.ts`). Pur.
+ * 45°), de fusta (peces de CNC) o d'alumini (ferratge per metres: `extras` de només veure i la comanda). El fan servir el
+ * sòcol de cada tram de la cuina (`tramPlinth.ts`) i el de la base «Potes» del moble normal (`MountingBuilder.buildLegPlinth`). Pur.
  */
 
 type Side = "front" | "back" | "left" | "right"

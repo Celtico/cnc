@@ -205,9 +205,11 @@
 - **Com s'aguanta el mòdul** (v45, `build/module/mounting.ts`, capa `MountingBuilder` entre la carcassa i els llums):
   **penjadors** dels mòduls penjats (l'estàndard, Libra H2: 4 × Ø10 × 13 en columna a cada lateral, cara de dins, sota la
   tapa i darrere del fons; la ranura de 12 × 54,5 al fons per regular-los; regleta de paret darrere del fons; el fons dels
-  penjats nous, en ranura retirat 20; avís `hanging` si el fons no deixa 15 mm). El **sòcol** no és del mòdul: és una peça
+  penjats nous, en ranura retirat 20; avís `hanging` si el fons no deixa 15 mm). El **sòcol** de la cuina no és del mòdul: és una peça
   per tram del moble (`build/tramPlinth.ts`: al davant i, si es tria, als costats i al darrere, de fusta —a tope o a
   inglet, a trossos de 2400 com a molt amb les juntes entre mòduls— o d'alumini —per metres, un clip a cada pota—).
+  Al moble normal (per decisió de l'usuari, 2026-10-20), el de cada mòdul: el sòcol de caixa o el **sòcol de les potes**
+  (`buildLegPlinth`: de fusta, una peça de terra fins a 5 mm sota la base, o `plinthPieces` amb costats; d'alumini, per metres).
   Detall a [`model.md`](model.md) › Carcassa › Suport, Trams, Penjadors, i › Ferratges per metres.
 - **Electrodomèstics** (v46, `build/module/appliances.ts`, capa `AppliancesBuilder` entre els calaixos i les zones; el model
   a [`model.md`](model.md) › Electrodomèstic del compartiment; les dades, les fonts i les **decisions estàndard** a

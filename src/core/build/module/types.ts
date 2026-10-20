@@ -10,6 +10,7 @@ import type { LightOrder } from "../lightOrders"
 export interface BuildWarning {
   code:
     | "door-too-wide"
+    | "top-filler"
     | "door-too-tall"
     | "shelf-span"
     | "drawer-no-slide"
@@ -132,6 +133,11 @@ export interface VerticalRef {
    * va de `yB + endGap` a `yT − endGap`). Sense (laterals, mòdul sense dividir): 0.
    */
   endGap?: number
+  /**
+   * Divisor gruixut (buit): cada pell és una referència i aquí hi ha les X de les dues cares de fora de tot el divisor
+   * (el que ocupa, per als fronts que el tapen a mitges). Sense: el panell sol.
+   */
+  whole?: { from: number; to: number }
 }
 
 /** Panells horitzontals registrats (base, tapa, prestatges fixos). */
@@ -148,6 +154,8 @@ export interface HorizontalRef {
   zFront: number
   /** Com `VerticalRef.endGap`: la peça va de `xL + endGap` a `xR − endGap`. */
   endGap?: number
+  /** Com `VerticalRef.whole`: les Y de les dues cares de fora d'un prestatge fix gruixut (buit). */
+  whole?: { from: number; to: number }
 }
 
 /** El tirador resolt d'un front (`Builder.frontHandle`): push (cap forat) o els números del tirador, a demanda. */

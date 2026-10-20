@@ -41,7 +41,7 @@ export interface HardwareNoneOption {
 
 /**
  * **Tria d'un ferratge al moble**, la mateixa a tot l'Editor (per decisió de l'usuari, «com la col·locació de materials i
- * objectes als ambients»): frontissa, guia, braç d'abatible i tirador de cada front, l'espiga del mòdul (Mòdul › Unió),
+ * objectes als ambients»): frontissa, guia, braç d'abatible i tirador de cada front, l'espiga del mòdul (Caixa › Laterals),
  * la pota de la base i «Afegir ferratge» (col·locats a mà). Un botó (`PickerButton`: la miniatura 3D de la
  * targeta de Preferències › Ferratges i el nom) que obre el calaix comú (`PickerDrawer`) amb el cercador, les categories
  * › sèries i les targetes (`GalleryCard` amb la miniatura 3D). En triar-ne un, se'n desa una **còpia** (`onPick`), com

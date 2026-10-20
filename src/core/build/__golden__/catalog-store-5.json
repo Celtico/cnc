@@ -112,24 +112,22 @@
    "mitre"
   ],
   "p": [
-   "side|lat d|450x420x30|Roure massís / xapat|x|e0010|h0|g0|c0|o-|@b3bd3ff1|m:right",
-   "side|lat e|450x420x30|Roure massís / xapat|x|e1000|h0|g0|c0|o-|@84a01218|m:right",
-   "top|dalt|1800x420x30|Roure massís / xapat|x|e1000|h0|g0|c0|o-|@948cd610|m:left,right"
+   "side|lat d|450x420x30|Roure massís / xapat|x|e1011|h0|g0|c0|o-|@b3bd3ff1|m:right",
+   "side|lat e|450x420x30|Roure massís / xapat|x|e1011|h0|g0|c0|o-|@84a01218|m:right",
+   "top|dalt|1800x420x30|Roure massís / xapat|x|e1010|h0|g0|c0|o-|@948cd610|m:left,right"
   ]
  },
  "store-exterior-banc-exterior-2": {
-  "panels": 9,
+  "panels": 7,
   "extras": 0,
   "warnings": [],
   "p": [
-   "back|trassera|1400x390x10|DM (fons)|none|e0000|h0|g0|c0|o-|@00f6ae24",
+   "back|trassera|1400x450x10|DM (fons)|none|e0000|h0|g0|c0|o-|@d3864258",
    "bottom|baix|1362x470x19|Roure massís / xapat|x|e0010|h6:57d3b39d|g0|c0|o-|@a575e97d",
    "flap|abatible|1396x386x19|Roure massís / xapat|y|e1111|h2:fd500cfb|g0|c2:b0b28d40|o-|@1c357b54",
-   "plinth|socol|1400x55x19|Roure massís / xapat|x|e1111|h0|g0|c0|o-|@c474303b",
-   "plinth|socol|441x55x19|Roure massís / xapat|x|e1010|h0|g0|c0|o-|@75889bd2",
-   "plinth|socol|441x55x19|Roure massís / xapat|x|e1010|h0|g0|c0|o-|@a3e16376",
-   "side|lat d|470x390x19|Roure massís / xapat|y|e0011|h24:c1bf599a|g0|c0|o-|@cf6d0c21",
-   "side|lat e|470x390x19|Roure massís / xapat|y|e0110|h24:c1bf599a|g0|c0|o-|@440e5a29",
+   "plinth|socol|1362x60x19|Roure massís / xapat|x|e0000|h0|g0|c0|o-|@2b74a8f3",
+   "side|lat d|470x450x19|Roure massís / xapat|y|e0011|h24:c1bf599a|g0|c0|o-|@cf6d0c21",
+   "side|lat e|470x450x19|Roure massís / xapat|y|e0110|h24:c1bf599a|g0|c0|o-|@440e5a29",
    "top|dalt|1362x470x19|Roure massís / xapat|x|e1000|h6:57d3b39d|g0|c0|o-|@1e8db413"
   ]
  },
@@ -144,13 +142,13 @@
   ]
  },
  "store-exterior-moble-auxiliar-exterior-1": {
-  "panels": 26,
+  "panels": 24,
   "extras": 1,
   "warnings": [],
   "p": [
-   "back|trassera|1400x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@97330a66",
+   "back|trassera|1400x880x10|DM (fons)|none|e0000|h0|g0|c0|o-|@d3864258",
    "bottom|baix|1362x590x19|Roure massís / xapat|x|e0010|h9:ec2ba216|g0|c0|o-|@11a485b9",
-   "divider|divisor|781x590x19|Roure massís / xapat|x|e1000|h55:c77c40ca|g0|c0|o-|@d7595f29",
+   "divider|divisor|781x590x19|Roure massís / xapat|x|e1100|h55:c77c40ca|g0|c0|o-|@d7595f29",
    "door|porta d|796x346.8x19|Roure massís / xapat|x|e1111|h2:cbd8bae5|g0|c2:e687efb6|o-|@c31e04b6",
    "door|porta e|796x346.8x19|Roure massís / xapat|x|e1111|h2:d254e0ad|g0|c2:a0d982b8|o-|@96cf7341",
    "drawerBack|darrere calaix|614.5x208x16|Roure massís / xapat|x|e1000|h4:1d27214c|g0|c0|o-|@2df95594",
@@ -168,12 +166,10 @@
    "drawerSide|lateral calaix|550x230x16|Roure massís / xapat|x|e1000|h6:96f60673|g1:43be8519|c0|o-|@78da1a5f",
    "drawerSide|lateral calaix|550x230x16|Roure massís / xapat|x|e1000|h6:96f60673|g1:43be8519|c0|o-|@a1882851",
    "drawerSide|lateral calaix|550x230x16|Roure massís / xapat|x|e1000|h6:96f60673|g1:43be8519|c0|o-|@e4b7b1ad",
-   "plinth|socol|1400x75x19|Roure massís / xapat|x|e1111|h0|g0|c0|o-|@e66e67a9",
-   "plinth|socol|551x75x19|Roure massís / xapat|x|e1010|h0|g0|c0|o-|@a3e16376",
-   "plinth|socol|551x75x19|Roure massís / xapat|x|e1010|h0|g0|c0|o-|@f461b094",
+   "plinth|socol|1362x80x19|Roure massís / xapat|x|e0000|h0|g0|c0|o-|@70994e89",
    "shelf|estanter|670.5x570x19|Roure massís / xapat|x|e0010|h0|g0|c0|o-|@c643af47",
-   "side|lat d|800x590x19|Roure massís / xapat|x|e0110|h9:61dae49a|g0|c0|o-|@332dee19",
-   "side|lat e|800x590x19|Roure massís / xapat|x|e1100|h49:9ffa1d73|g0|c0|o-|@4de0a145"
+   "side|lat d|880x590x19|Roure massís / xapat|x|e0110|h9:b11f6fb8|g0|c0|o-|@1668e609",
+   "side|lat e|880x590x19|Roure massís / xapat|x|e1100|h49:a9bd0aff|g0|c0|o-|@641cff2b"
   ]
  },
  "store-exterior-moble-auxiliar-exterior-2": {
@@ -226,40 +222,36 @@
   ]
  },
  "store-exterior-emmagatzematge-exterior-2": {
-  "panels": 9,
+  "panels": 7,
   "extras": 0,
   "warnings": [],
   "p": [
-   "back|trassera|1200x590x10|DM (fons)|none|e0000|h0|g0|c0|o-|@00f6ae24",
+   "back|trassera|1200x650x10|DM (fons)|none|e0000|h0|g0|c0|o-|@d3864258",
    "bottom|baix|1162x590x19|Roure massís / xapat|x|e0010|h6:42d3b4c1|g0|c0|o-|@4ef2ef7f",
    "flap|abatible|1196x586x19|Roure massís / xapat|y|e1111|h2:ea0cbdd1|g0|c2:bb7320ea|o-|@7fceda9c",
-   "plinth|socol|1200x55x19|Roure massís / xapat|x|e1111|h0|g0|c0|o-|@833e1f08",
-   "plinth|socol|561x55x19|Roure massís / xapat|x|e1010|h0|g0|c0|o-|@50dfa635",
-   "plinth|socol|561x55x19|Roure massís / xapat|x|e1010|h0|g0|c0|o-|@729c1b04",
-   "side|lat d|590x590x19|Roure massís / xapat|x|e0110|h36:fcde4dd5|g0|c0|o-|@4d09b809",
-   "side|lat e|590x590x19|Roure massís / xapat|x|e1100|h36:fcde4dd5|g0|c0|o-|@6ae7bd8f",
+   "plinth|socol|1162x60x19|Roure massís / xapat|x|e0000|h0|g0|c0|o-|@b4cbbc2a",
+   "side|lat d|650x590x19|Roure massís / xapat|x|e0110|h36:2f4a041c|g0|c0|o-|@b367c65f",
+   "side|lat e|650x590x19|Roure massís / xapat|x|e1100|h36:2f4a041c|g0|c0|o-|@641cff2b",
    "top|dalt|1162x590x19|Roure massís / xapat|x|e1000|h6:42d3b4c1|g0|c0|o-|@6386d739"
   ]
  },
  "store-exterior-emmagatzematge-exterior-3": {
-  "panels": 15,
+  "panels": 13,
   "extras": 0,
   "warnings": [],
   "p": [
-   "back|trassera|1720x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@4f020327",
+   "back|trassera|1800x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@c8ee1d05",
    "bottom|baix|762x440x19|Melamina gris|x|e0010|h6:d50f39e6|g0|c0|o-|@6c213794",
    "door|porta d|1716x396.5x19|Melamina gris|x|e1111|h4:19c90095|g0|c2:b95a4527|o-|@6973b452",
    "door|porta e|1716x396.5x19|Melamina gris|x|e1111|h4:be34ddb9|g0|c2:d64df1bd|o-|@6d530982",
-   "plinth|socol|401x75x19|Melamina gris|x|e1010|h0|g0|c0|o-|@b0796ce6",
-   "plinth|socol|401x75x19|Melamina gris|x|e1010|h0|g0|c0|o-|@ca698527",
-   "plinth|socol|800x75x19|Melamina gris|x|e1111|h0|g0|c0|o-|@8beb68a0",
+   "plinth|socol|762x80x19|Melamina gris|x|e0000|h0|g0|c0|o-|@c6102b97",
    "shelf|estanter 1|761x420x19|Melamina gris|x|e0010|h0|g0|c0|o-|@2bc1028a",
    "shelf|estanter 2|761x420x19|Melamina gris|x|e0010|h0|g0|c0|o-|@c1f68919",
    "shelf|estanter 3|761x420x19|Melamina gris|x|e0010|h0|g0|c0|o-|@5480b8d9",
    "shelf|estanter 4|761x420x19|Melamina gris|x|e0010|h0|g0|c0|o-|@9c61f954",
    "shelf|estanter 5|761x420x19|Melamina gris|x|e0010|h0|g0|c0|o-|@38ebef24",
-   "side|lat d|1720x440x19|Melamina gris|x|e0110|h108:00a17fed|g0|c0|o-|@3aaf49d3",
-   "side|lat e|1720x440x19|Melamina gris|x|e1100|h108:00a17fed|g0|c0|o-|@4de0a145",
+   "side|lat d|1800x440x19|Melamina gris|x|e0110|h108:f973796f|g0|c0|o-|@5455a63d",
+   "side|lat e|1800x440x19|Melamina gris|x|e1100|h108:f973796f|g0|c0|o-|@641cff2b",
    "top|dalt|762x440x19|Melamina gris|x|e1000|h6:d50f39e6|g0|c0|o-|@954d3331"
   ]
  }

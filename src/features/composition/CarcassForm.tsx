@@ -13,6 +13,7 @@ import { useSettings } from "../settings/SettingsContext"
 import { MaterialSelect } from "../settings/MaterialSelect"
 import { HardwarePick } from "./HardwarePick"
 import { HangerFields } from "./BaseFields"
+import { ModuleSupportFields } from "./ModuleSupportFields"
 import { GrillePatternFields } from "./GrillePatternFields"
 import { ApplianceFields } from "./zone/ApplianceSection"
 
@@ -28,11 +29,10 @@ const TOP_LABEL: Record<Top["kind"], string> = { full: "Sencera", ventSlot: "Ran
  * decisió de l'usuari, 2026-10-08: «l'Estil també a la Caixa»; abans eren a «Acabats»). Només el que la construcció
  * llegeix (`moduleRows`, `core/model/usedHardware.ts`). Els passacables són a `CableHolesForm`.
  */
-export function CarcassForm({ module, onChange, section, rows = moduleRows(module), support, onOpenSupport }: { module: Module; onChange: (m: Module) => void; section: CarcassSection; rows?: ModuleRows; /** El suport dels mòduls de terra (Moble › Suport general). */ support?: FloorSupport; /** Obre l'opció global: Moble › Suport general. */ onOpenSupport?: () => void }) {
+export function CarcassForm({ module, onChange, section, rows = moduleRows(module), support, onOpenSupport }: { module: Module; onChange: (m: Module) => void; section: CarcassSection; rows?: ModuleRows; /** El suport dels mòduls de terra (Moble › Cuina). */ support?: FloorSupport; /** Obre l'opció global: Moble › Cuina. */ onOpenSupport?: () => void }) {
   const c = module.carcass
   const { gaps } = useSettings().settings
   const set = (patch: Partial<Carcass>) => onChange({ ...module, carcass: { ...c, ...patch } })
-  const setFronts = (patch: Partial<Module["fronts"]>) => onChange({ ...module, fronts: { ...module.fronts, ...patch } })
   // La caixa tal com es construeix (`visibleModule`): el `open` d'abans com a «Sense base» i les parts que fixa
   // l'electrodomèstic que és el mòdul (`moduleApplianceCarcass`). Es mostra aquesta; s'escriu a la de l'usuari.
   const vm = visibleModule(module)
@@ -42,7 +42,9 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
   const ruleHelp = fixed ? applianceCarcassText(fixed.appliance, fixed.rule) : undefined
   // Subgrups de la Caixa (per decisió de l'usuari, 2026-10-16): Base · Fons · Tapa · Laterals · Fronts, cada un amb les
   // seves opcions; la insígnia diu el que hi ha.
-  const baseBadge = c.base.kind === "wall" ? "Penjat" : support?.kind === "plinth" ? "Sòcol" : support?.kind === "legs" ? "Potes" : hasBottom(vc) ? "Sencera" : "Sense base"
+  // Sense `support` (un moble normal, no una cuina), el suport és el del mòdul.
+  const supportKind = support ? support.kind : vc.base.kind === "plinth" ? "plinth" : vc.base.kind === "legs" ? "legs" : "floor"
+  const baseBadge = c.base.kind === "wall" ? "Penjat" : supportKind === "plinth" ? "Sòcol" : supportKind === "legs" ? "Potes" : hasBottom(vc) ? (support ? "Sencera" : "Directe a terra") : "Sense base"
   const sidesBadge = vc.sides.left && vc.sides.right ? "Els dos" : vc.sides.left ? "Esquerre" : vc.sides.right ? "Dret" : "Cap"
 
   if (section === "dims")
@@ -79,18 +81,21 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
         {!(rule?.support === false && rule?.bottom !== undefined) && (
             <FoldItem optionId="module.carcass.baseGroup" id="mod-carcass-base" title="Base" icon={LuPanelBottom} size="sm" badge={baseBadge}>
               <Stack gap={4}>
-                {/* Suport: el penjat, aquí (els penjadors); els de terra, el del moble (Moble › Suport general, per decisió de
-                    l'usuari, 2026-10-15: «és un sòcol per a tots els mòduls i no un per a cada un»). La Base (la peça de baix), a
-                    sota: «la base que es pugui treure». */}
+                {/* Suport: el penjat, aquí (els penjadors); els de terra d'una cuina, el del moble (Moble › Cuina, per decisió de
+                    l'usuari, 2026-10-15: «és un sòcol per a tots els mòduls i no un per a cada un»); els d'un moble normal, el del
+                    mòdul (2026-10-20: «les opcions d'abans»). La Base (la peça de baix), a sota: «la base que es pugui treure». */}
                 {c.base.kind === "wall" ? (
                   <>
                     <FixedRow optionId="module.carcass.support" label="Suport" text={`Penjat a la paret, a ${c.base.height} mm del terra`} help="Es canvia a Posició." />
-                    <HangerFields module={module} base={c.base} onChange={(base) => set({ base })} />
+                    {/* Els penjadors van un a cada lateral: sense laterals no n'hi ha (`usedHardwareSlots`), no surten. */}
+                    {vc.sides.left || vc.sides.right ? <HangerFields module={module} base={c.base} onChange={(base) => set({ base })} /> : <FixedRow optionId="module.carcass.hanger" label="Penjadors" text="Cap (sense laterals)" help="Els penjadors van als laterals. Es penja a mà (un travesser o un fons gruixut cargolat a la paret)." />}
                   </>
-                ) : rule?.support === false ? null : (
+                ) : rule?.support === false ? null : !support ? (
+                  <ModuleSupportFields carcass={c} base={vc.base} onChange={(carcass) => onChange({ ...module, carcass })} />
+                ) : (
                   // Una opció global (la de tots els mòduls de terra) no es repeteix al mòdul (per decisió de l'usuari,
                   // 2026-10-16: «no repetir les opcions ni posar un missatge, sinó un botó que digui modificar opció global»): què
-                  // hi ha i un botó que porta al Moble › Suport general.
+                  // hi ha i un botó que porta al Moble › Cuina.
                   <FormRow optionId="module.carcass.support" label="Suport">
                     <Stack gap={2} pt="7px" align="flex-start">
                       <Text fontSize="sm" color="fg.muted">
@@ -105,8 +110,9 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
                   </FormRow>
                 )}
                 {/* La Base, sota el Suport (en depèn): amb potes hi és sempre (s'hi cargolen). */}
-                {rule?.bottom !== undefined ? null : vc.base.kind === "legs" ? null : (
-                  <FormRow optionId="module.carcass.bottom" label="Base" help={support && support.kind !== "floor" ? "Sense base, el mòdul no pot anar sobre potes: va directe a terra." : undefined}>
+                {/* Al moble normal, «Sense base» és una de les opcions de la Base (com abans de les cuines). */}
+                {rule?.bottom !== undefined || !support ? null : vc.base.kind === "legs" ? null : (
+                  <FormRow optionId="module.carcass.bottom" label="Base" help={support && support.kind !== "floor" ? "Sense base, el mòdul no pot anar sobre potes: va directe a terra." : vc.base.kind === "plinth" ? "Sense base, el mòdul queda obert per sota fins al sòcol." : undefined}>
                     <IconChoice
                       hideLabel
                       label="Base"
@@ -125,7 +131,7 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
                 )}
 
                 {/* Llum a sota del moble: només amb la base a l'aire (penjat o amb potes) i si hi ha base (va a la seva cara de sota). */}
-                {(vc.base.kind === "wall" || (vc.base.kind === "legs" && support?.kind !== "plinth")) && hasBottom(vc) && (
+                {(vc.base.kind === "wall" || (vc.base.kind === "legs" && supportKind !== "plinth" && !vc.base.plinth)) && hasBottom(vc) && (
                   <>
                     <FormRow optionId="module.carcass.underLight" label="Llum a sota" help={vc.base.kind === "wall" ? "A la cara de sota de la base: il·lumina el taulell (com les cuines). Un joc de llum fa el forat o el rebaix de la làmpada i el del cable a la base." : "A la cara de sota de la base, entre les potes: il·lumina el terra. Amb sòcol no n'hi ha (quedaria amagada). Un joc de llum fa el forat o el rebaix de la làmpada i el del cable a la base."}>
                       <Switch.Root size="sm" pt="6px" checked={!!c.underLight} onCheckedChange={(e) => {
@@ -200,6 +206,24 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
 
                 {/* Tauler de taula: tapa per sobre dels laterals, amb voladís i forma. */}
                 {vc.top.kind === "full" && c.top.kind === "full" && <TableTopFields module={module} onChange={onChange} />}
+                {/* Sòcol de dalt (per petició de l'usuari, 2026-10-20): el tauler dret sobre la tapa fins al sostre. */}
+                {vc.top.kind !== "none" && !vc.tableTop && (
+                  <>
+                    <FormRow optionId="module.carcass.topFiller" label="Sòcol de dalt">
+                      <Switch.Root size="sm" pt="6px" checked={!!c.topFiller} onCheckedChange={(e) => set({ topFiller: e.checked ? { height: 60, setback: 0 } : undefined })}>
+                        <Switch.HiddenInput />
+                        <Switch.Control />
+                        <Switch.Label fontSize="sm">Fins al sostre</Switch.Label>
+                      </Switch.Root>
+                    </FormRow>
+                    {c.topFiller && (
+                      <>
+                        <NumRow optionId="module.carcass.topFillerHeight" label="Alçada" value={c.topFiller.height} min={10} max={600} step={5} help={`Dret sobre la tapa: el moble fa ${c.height + c.topFiller.height} mm d'alt. Posa-hi el buit fins al sostre.`} onChange={(height) => Number.isFinite(height) && height >= 10 && set({ topFiller: { ...c.topFiller!, height } })} />
+                        <NumRow optionId="module.carcass.topFillerSetback" label="Retirada" value={c.topFiller.setback} min={0} max={200} step={1} help="Del davant de la caixa al davant del sòcol (0: a ras de la caixa, darrere les portes)." onChange={(setback) => Number.isFinite(setback) && setback >= 0 && set({ topFiller: { ...c.topFiller!, setback } })} />
+                      </>
+                    )}
+                  </>
+                )}
               </Stack>
             </FoldItem>
         )}
@@ -274,46 +298,64 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
                 />
               </FormRow>
             )}
+
+            {/* L'espiga de les unions de la caixa: una opció dels laterals, no de tot el mòdul (per decisió de l'usuari,
+                2026-10-20: «unió és una opció dels laterals, no del conjunt»). Només si la caixa en fa (`moduleRows().dowel`). */}
+            {rows.dowel && <DowelRow module={module} onChange={onChange} />}
           </Stack>
         </FoldItem>
-        {((rows.style && !rule?.niche) || rows.outerGap || rows.betweenGap || rows.shelfSetback) && (
-            <FoldItem optionId="module.carcass.frontsGroup" id="mod-carcass-fronts" title="Fronts" icon={LuSquareStack} size="sm" badge={module.fronts.style === "inset" ? "Encastats" : "Recobrents"}>
-              <Stack gap={4}>
-                {/* Tots els fronts del mòdul, al final de la Caixa (en depenen: el davant de la caixa, la llum). Només si es
-                    llegeixen (`frontOptionsUse`): sense cap front que es fa, ni estil ni folgances. El tirador i els ferratges
-                    de cada front es trien al seu compartiment. */}
-                {rows.style && !rule?.niche && (
-                  <FormRow optionId="module.carcass.frontStyle" label="Estil dels fronts">
-                    <IconChoice
-                      hideLabel
-                      label="Estil dels fronts"
-                      value={module.fronts.style ?? "overlay"}
-                      options={[
-                        { value: "overlay", label: "Recobrents", icon: LuSquareStack, hint: "Recobrents: per davant de la caixa, tapant els cantells" },
-                        { value: "inset", label: "Encastats", icon: LuSquareSquare, hint: "Encastats: dins de la llum, a nivell amb el davant de la caixa" },
-                      ]}
-                      onChange={(style) => setFronts({ style: style === "overlay" ? undefined : style })}
-                    />
-                  </FormRow>
-                )}
-                {rows.outerGap && <>
-                  <NumRow optionId="module.carcass.outerGap" label="Folgança front–cos" value={module.fronts.outerGap} min={0} max={10} step={0.5} onChange={(outerGap) => setFronts({ outerGap })} help={prefHint(module.fronts.outerGap, gaps.outerGap)} />
-                  <PrefReset optionId="module.carcass.outerGap" value={module.fronts.outerGap} pref={gaps.outerGap} onReset={() => setFronts({ outerGap: gaps.outerGap })} />
-                </>}
-                {rows.betweenGap && <>
-                  <NumRow optionId="module.carcass.betweenGap" label="Folgança entre fronts" value={module.fronts.betweenGap} min={0} max={10} step={0.5} onChange={(betweenGap) => setFronts({ betweenGap })} help={prefHint(module.fronts.betweenGap, gaps.betweenGap)} />
-                  <PrefReset optionId="module.carcass.betweenGap" value={module.fronts.betweenGap} pref={gaps.betweenGap} onReset={() => setFronts({ betweenGap: gaps.betweenGap })} />
-                </>}
-                {rows.shelfSetback && <>
-                  <NumRow optionId="module.carcass.shelfSetback" label="Retirada dels prestatges" value={c.shelfSetback} min={0} max={100} step={1} onChange={(shelfSetback) => set({ shelfSetback })} help={`Del davant de la caixa al cantell dels prestatges de tot el mòdul (amb fronts encastats, almenys un gruix). ${prefHint(c.shelfSetback, gaps.shelfSetback)}`} />
-                  <PrefReset optionId="module.carcass.shelfSetback" value={c.shelfSetback} pref={gaps.shelfSetback} onReset={() => set({ shelfSetback: gaps.shelfSetback })} />
-                </>}
-              </Stack>
-            </FoldItem>
-        )}
+        {/* La retirada dels prestatges de tot el mòdul (els compartiments la poden canviar a Front › Prestatges). L'estil i
+            les folgances dels fronts són al Front de cada compartiment (`ModuleFrontsFold`, per decisió de l'usuari,
+            2026-10-20). */}
+        {rows.shelfSetback && <>
+          <NumRow optionId="module.carcass.shelfSetback" label="Retirada dels prestatges" value={c.shelfSetback} min={0} max={100} step={1} onChange={(shelfSetback) => set({ shelfSetback })} help={`Del davant de la caixa al cantell dels prestatges de tot el mòdul (amb fronts encastats, almenys un gruix). ${prefHint(c.shelfSetback, gaps.shelfSetback)}`} />
+          <PrefReset optionId="module.carcass.shelfSetback" value={c.shelfSetback} pref={gaps.shelfSetback} onReset={() => set({ shelfSetback: gaps.shelfSetback })} />
+        </>}
       </Stack>
     )
   return null
+}
+
+/**
+ * **Fronts del mòdul** (per decisió de l'usuari, 2026-10-20: «les opcions de front que estan a caixa, a dins de les opcions
+ * de front»; abans Caixa › Fronts): l'estil i les folgances de tots els fronts del mòdul, una subsecció plegada dins del
+ * Front de cada compartiment o zona dividida que en porta. Canviar-les des de qualsevol Front les canvia a tot el mòdul.
+ * Només si es llegeixen (`moduleRows`): sense cap front que es fa, ni estil ni folgances.
+ */
+export function ModuleFrontsFold({ module, onChange, rows = moduleRows(module) }: { module: Module; onChange: (m: Module) => void; rows?: ModuleRows }) {
+  const { gaps } = useSettings().settings
+  const setFronts = (patch: Partial<Module["fronts"]>) => onChange({ ...module, fronts: { ...module.fronts, ...patch } })
+  const style = rows.style && !moduleApplianceCarcass(module)?.rule.niche
+  if (!style && !rows.outerGap && !rows.betweenGap) return null
+  return (
+    <FoldItem optionId="module.carcass.frontsGroup" id="zone-module-fronts" title="Fronts del mòdul" icon={LuSquareStack} size="sm" badge={module.fronts.style === "inset" ? "Encastats" : "Recobrents"}>
+      <Stack gap={4}>
+        <Text fontSize="xs" color="fg.muted">Per a tots els fronts del mòdul.</Text>
+        {style && (
+          <FormRow optionId="module.carcass.frontStyle" label="Estil dels fronts">
+            <IconChoice
+              hideLabel
+              label="Estil dels fronts"
+              value={module.fronts.style ?? "overlay"}
+              options={[
+                { value: "overlay", label: "Recobrents", icon: LuSquareStack, hint: "Recobrents: per davant de la caixa, tapant els cantells" },
+                { value: "inset", label: "Encastats", icon: LuSquareSquare, hint: "Encastats: dins de la llum, a nivell amb el davant de la caixa" },
+              ]}
+              onChange={(v) => setFronts({ style: v === "overlay" ? undefined : v })}
+            />
+          </FormRow>
+        )}
+        {rows.outerGap && <>
+          <NumRow optionId="module.carcass.outerGap" label="Folgança front–cos" value={module.fronts.outerGap} min={0} max={10} step={0.5} onChange={(outerGap) => setFronts({ outerGap })} help={prefHint(module.fronts.outerGap, gaps.outerGap)} />
+          <PrefReset optionId="module.carcass.outerGap" value={module.fronts.outerGap} pref={gaps.outerGap} onReset={() => setFronts({ outerGap: gaps.outerGap })} />
+        </>}
+        {rows.betweenGap && <>
+          <NumRow optionId="module.carcass.betweenGap" label="Folgança entre fronts" value={module.fronts.betweenGap} min={0} max={10} step={0.5} onChange={(betweenGap) => setFronts({ betweenGap })} help={prefHint(module.fronts.betweenGap, gaps.betweenGap)} />
+          <PrefReset optionId="module.carcass.betweenGap" value={module.fronts.betweenGap} pref={gaps.betweenGap} onReset={() => setFronts({ betweenGap: gaps.betweenGap })} />
+        </>}
+      </Stack>
+    </FoldItem>
+  )
 }
 
 /**
@@ -474,17 +516,13 @@ export function InnerClearanceRow({ module, onChange }: { module: Module; onChan
 }
 
 /**
- * Mòdul › **«Unió»** (per decisió de l'usuari, 2026-10-08: «l'espiga fes-ne un acordió que es digui Unió»): l'**Espiga**
- * de les unions de la caixa (`module.hardware.dowel`), només si la caixa en fa (`moduleRows().dowel`: `carcassDowels`).
- * Sense, la secció no surt.
+ * Caixa › Laterals › **Espiga** de les unions de la caixa (`module.hardware.dowel`), només si la caixa en fa
+ * (`moduleRows().dowel`: `carcassDowels`). Abans era una secció «Unió» del mòdul (2026-10-08); per decisió de l'usuari
+ * (2026-10-20) és una opció dels laterals.
  */
-export function JointForm({ module, onChange }: { module: Module; onChange: (m: Module) => void }) {
+function DowelRow({ module, onChange }: { module: Module; onChange: (m: Module) => void }) {
   const item = moduleSlotItem(module.hardware, "dowel")
-  return (
-    <Stack gap={3}>
-      <HardwarePick optionId="module.joint.dowel" slot="dowel" current={item} help={`${hardwareSummary(item)}. Les unions de la caixa (${UI_PATHS.hardwarePrefs}).`} onPick={(next) => next && onChange({ ...module, hardware: { ...module.hardware, dowel: next } })} />
-    </Stack>
-  )
+  return <HardwarePick optionId="module.carcass.dowel" slot="dowel" current={item} help={`${hardwareSummary(item)}. Les unions de la caixa (${UI_PATHS.hardwarePrefs}).`} onPick={(next) => next && onChange({ ...module, hardware: { ...module.hardware, dowel: next } })} />
 }
 
 /** Tauler de taula: per sobre dels laterals (potes), voladís i forma (rectangle, arrodonit, oval o a mida). */

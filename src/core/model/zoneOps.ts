@@ -100,6 +100,16 @@ export function duplicateZone(root: Zone, id: string, dir: "v" | "h"): { root: Z
   return { root: next, copyId }
 }
 
+/** Divisors gruixuts (buits) d'una divisió: el gruix aparent (mm), o `undefined` per tornar-los del gruix del tauler. */
+export function setSplitThickness(root: Zone, id: string, thickness: number | undefined): Zone {
+  return updateZone(root, id, (z) => {
+    if (!z.split) return z
+    const { thickness: _old, ...split } = z.split
+    void _old
+    return { ...z, split: thickness ? { ...split, thickness } : split }
+  })
+}
+
 /** Afegeix una zona "auto" al final d'una divisió. */
 export function addChild(root: Zone, id: string): Zone {
   return updateZone(root, id, (z) => {

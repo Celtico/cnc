@@ -12,7 +12,8 @@ const box = (id: string, w: number, more: Partial<Module> = {}): Module => {
   const m = defaultModule(id, id, { width: w, height: 770, depth: 560 })
   return { ...m, ...more }
 }
-const comp = (modules: Module[], support: FloorSupport): Composition => ({ modules, references: [], support })
+/** Una cuina (el suport del moble i el sòcol per tram només són de la cuina). */
+const comp = (modules: Module[], support: FloorSupport): Composition => ({ kind: "cuina", modules, references: [], support })
 const plinths = (c: Composition) => buildComposition(c).panels.filter((p) => p.role === "plinth")
 /** Illa de 2000 × 770 × 900, lliure al terra a 1000 de la paret. */
 const island = (): Module => ({ ...defaultModule("i", "Illa", { width: 2000, height: 770, depth: 900 }), wallGap: 1000, x: 0 })
@@ -102,7 +103,7 @@ describe("els mobles d'abans passen al suport del moble", () => {
       const m = box(id, 600)
       return { ...m, carcass: { ...m.carcass, base: { kind: "legs", height: 100, plinth: { setback: 5, ...sides } } } }
     }
-    const c = withSupport({ modules: [leg("a", { left: true }), leg("b", {}), leg("c", { right: true })], references: [] })
+    const c = withSupport({ kind: "cuina", modules: [leg("a", { left: true }), leg("b", {}), leg("c", { right: true })], references: [] })
     expect(c.support).toMatchObject({ kind: "plinth", height: 100, plinth: { setback: 5 + 19 } })
     expect(c.modules.every((m) => m.carcass.base.kind === "legs" && !m.carcass.base.plinth)).toBe(true)
     expect(c.support!.trams).toEqual({ a: { left: true, right: true } })
@@ -111,7 +112,7 @@ describe("els mobles d'abans passen al suport del moble", () => {
 
   it("el sòcol de caixa (laterals fins a terra): potes de la mateixa alçada i el mòdul més baix (a dalt queda on era)", () => {
     const m = box("a", 600, {})
-    const c = withSupport({ modules: [{ ...m, carcass: { ...m.carcass, height: 870, base: { kind: "plinth", height: 100, setback: 30 } } }], references: [] })
+    const c = withSupport({ kind: "cuina", modules: [{ ...m, carcass: { ...m.carcass, height: 870, base: { kind: "plinth", height: 100, setback: 30 } } }], references: [] })
     expect(c.support).toMatchObject({ kind: "plinth", height: 100 })
     expect(c.modules[0]!.carcass.base).toEqual({ kind: "legs", height: 100 })
     expect(c.modules[0]!.carcass.height).toBe(770)

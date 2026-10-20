@@ -6,7 +6,7 @@ import { int, pick, randomComposition, rng } from "./testCorpus"
 
 /**
  * Les files de l'inspector del mòdul que depenen del que té (`moduleRows`): Caixa (fons, estil, folgances, retranqueig),
- * Materials › Fronts i Unió › Espiga. **Un sol lloc per decisió** i només el que la construcció llegeix
+ * Materials › Fronts i Caixa › Laterals › Espiga. **Un sol lloc per decisió** i només el que la construcció llegeix
  * (`frontOptionsUse`, `usedHardwareSlots` a `core/model/usedHardware.ts`). Sense «Acabats» ni per defecte dels compartiments.
  */
 
@@ -39,8 +39,8 @@ describe("ferratges que el mòdul fa servir (`usedHardwareSlots`)", () => {
   })
 })
 
-describe("les files de cada secció (`moduleRows`: Caixa, Materials, Unió) i els compartiments tapats (`coveringZone`)", () => {
-  it("una porta sola a l'Interior: estil i folgança front–cos i retranqueig (prestatge) a la Caixa, Fronts a Materials, Espiga a Unió", () => {
+describe("les files de cada secció (`moduleRows`: Caixa, Materials) i els compartiments tapats (`coveringZone`)", () => {
+  it("una porta sola a l'Interior: estil i folgança front–cos i retranqueig (prestatge) a la Caixa, Fronts a Materials, Espiga a Laterals", () => {
     const m = withRoot(mod(), door)
     expect(moduleRows(m)).toEqual({ style: true, outerGap: true, betweenGap: false, shelfSetback: true, back: m.carcass.back === "groove" || m.carcass.back === "inset" ? m.carcass.back : undefined, frontMaterial: true, dowel: true })
   })
@@ -57,7 +57,7 @@ describe("les files de cada secció (`moduleRows`: Caixa, Materials, Unió) i el
     expect(moduleRows(mod({ back: "none" })).back).toBeUndefined()
     expect(moduleRows(mod({ back: "screwed" })).back).toBeUndefined()
   })
-  it("Unió: l'Espiga només si la caixa en fa (sense, la secció no surt)", () => {
+  it("Laterals: l'Espiga només si la caixa en fa (sense, la fila no surt)", () => {
     const m = withRoot(mod({ back: "none", joint: "mitre" }), null)
     const bare = { ...m, root: { ...m.root, shelves: undefined } }
     expect(carcassDowels(bare)).toEqual([])
@@ -132,7 +132,7 @@ describe("Cantonades a inglet: les espigues s'adapten", () => {
     expect(carcassDowels(plinth)).toEqual(["base"])
     expect(dowelHoles(plinth)).toEqual(["bottom", "side-left", "side-right"])
   })
-  it("tot a inglet, sense divisions ni fons encastat: Unió no ensenya l'espiga", () => {
+  it("tot a inglet, sense divisions ni fons encastat: Laterals no ensenya l'espiga", () => {
     expect(usedHardwareSlots(mod({ base: { kind: "none" }, joint: "mitre" })).has("dowel")).toBe(false)
     // Una divisió, sí (divisors i prestatges fixos amb espigues).
     expect(usedHardwareSlots(divided(null, null, mod({ base: { kind: "none" }, joint: "mitre" }))).get("dowel")?.what).toBe("divisions")
