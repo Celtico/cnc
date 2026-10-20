@@ -2,7 +2,7 @@ import { Button, HStack } from "@chakra-ui/react"
 import { useState, type ReactNode } from "react"
 import { LuPlus, LuRefrigerator } from "react-icons/lu"
 import { FoldItem } from "../../../components/Fold"
-import { APPLIANCE_LABELS, canHoldFront, fillsNiche, findZone, frontLimitsHelp, isAppliance, setFront, switchFront, updateZone, type Front, type ModuleHardware, type Zone, type ZoneBounds } from "../../../core/model"
+import { APPLIANCE_LABELS, fillsNiche, findZone, frontLimitsHelp, isAppliance, setFront, switchFront, updateZone, type Front, type ModuleHardware, type Zone, type ZoneBounds } from "../../../core/model"
 import type { KitOrder } from "../../../core/build/buildModule"
 import { FormRow } from "../../../components/FormRow"
 import { FRONT_ICONS } from "../zoneIcons"
@@ -55,12 +55,12 @@ function coveredHelp(c: CoveredBy, k: Front["kind"] | "none" | "appliance"): str
  * és un contingut més (`appliance`): el tria i les seves opcions surten a sota (`ApplianceFields`); la placa i la campana
  * (no ocupen el nínxol) porten a més el front del compartiment, a sota de l'aparell.
  */
-export function ZoneFrontSection({ root, zone, onChange, openRatio, drawerHeights, hardware, noHandles = false, kits, bounds, afterHinge, interior, appliance = false, moduleFronts, covered, kinds, hides }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; openRatio?: number; drawerHeights?: number[]; hardware: ModuleHardware; noHandles?: boolean; kits?: KitOrder[]; /** Què aguanta el compartiment: els fronts que no s'hi poden fixar no surten (el triat, sí). */ bounds: ZoneBounds; /** Després de la «Frontissa» (la filera System 32 del mòdul). */ afterHinge?: ReactNode; /** Les opcions de l'interior, a sota del contingut (no n'hi ha amb calaixos ni un front fix). */ interior?: FrontInterior; /** Hi pot anar un electrodomèstic (el d'un mòdul sense dividir es tria a Mòdul › Tipus). */ appliance?: boolean; /** «Fronts del mòdul» (estil i folgances de tots els fronts), a sota de les opcions del front si n'hi ha. */ moduleFronts?: ReactNode; /** Tapat pel front d'una zona de més amunt (regla 3 del model únic): el Contingut es tria igual i es fa per dins. */ covered?: CoveredBy; /** Només aquests continguts (una zona dividida: els que la poden tapar, `coversSplit`). */ kinds?: (Front["kind"] | "none")[]; /** Els fronts de dins que aquest tapa i no es fan (regla 6: es diu). */ hides?: string[] }) {
+export function ZoneFrontSection({ root, zone, onChange, openRatio, drawerHeights, hardware, noHandles = false, kits, bounds, afterHinge, interior, appliance = false, moduleFronts, covered, kinds, hides }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; openRatio?: number; drawerHeights?: number[]; hardware: ModuleHardware; noHandles?: boolean; kits?: KitOrder[]; /** Què aguanta el compartiment: l'ajuda diu per què no es fa un front que no s'hi pot fixar. */ bounds: ZoneBounds; /** Després de la «Frontissa» (la filera System 32 del mòdul). */ afterHinge?: ReactNode; /** Les opcions de l'interior, a sota del contingut (no n'hi ha amb calaixos ni un front fix). */ interior?: FrontInterior; /** Hi pot anar un electrodomèstic (qualsevol fulla, també l'Interior). */ appliance?: boolean; /** «Fronts del mòdul» (estil i folgances de tots els fronts), a sota de les opcions del front si n'hi ha. */ moduleFronts?: ReactNode; /** Tapat pel front d'una zona de més amunt (regla 3 del model únic): el Contingut es tria igual i es fa per dins. */ covered?: CoveredBy; /** Només aquests continguts (una zona dividida: els que la poden tapar, `coversSplit`). */ kinds?: (Front["kind"] | "none")[]; /** Els fronts de dins que aquest tapa i no es fan (regla 6: es diu). */ hides?: string[] }) {
   const all = kinds ?? (Object.keys(FRONT_LABELS) as (Front["kind"] | "none")[])
   const current = zone.front?.kind ?? "none"
-  const options = all.filter((k) => k === current || canHoldFront(bounds, k))
-  // Els fronts només es fan amb el compartiment aguantat pels quatre costats (`frontHeld`): els altres no surten, el triat
-  // sí (es conserva) i l'ajuda diu per què no es fa.
+  // Regla 6 del model únic («el que no es pot fer no s'amaga»): surten tots els continguts. Un que aquí no es pot fer
+  // (`canHoldFront`: sense els costats que li calen) es pot triar igual, no es construeix i l'ajuda diu què hi falta.
+  const options = all
   const limits = frontLimitsHelp(bounds, all, current)
   // «Electrodomèstic» triat sense cap aparell encara: el selector de l'aparell (només per a aquest compartiment).
   const [pickingFor, setPickingFor] = useState<string | null>(null)

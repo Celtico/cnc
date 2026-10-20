@@ -39,7 +39,10 @@ describe("zoneLabel de l'«Interior»", () => {
     expect(zoneLabel({ id: "r", split, front: { kind: "door", mode: "double", hinge: "left" } }, { root: true })).toBe("Interior · 2 portes")
     expect(zoneLabel({ id: "r", split, front: { kind: "door", mode: "single", hinge: "left" } }, { root: true })).toBe("Interior · Porta")
   })
-  it("un front fix de tota la zona (dades d'abans) no es fa: no surt", () => {
-    expect(zoneLabel({ id: "r", split, front: { kind: "panel" } }, { root: true })).toBe("Interior · Divisió vertical (2)")
+  it("un front fix de tota la zona es fa i tapa (cas 14 del model únic): es diu pel front", () => {
+    expect(zoneLabel({ id: "r", split, front: { kind: "panel" } }, { root: true })).toBe("Interior · Front fix")
+  })
+  it("a qualsevol nivell, igual que l'Interior (regla 1): «2 portes»", () => {
+    expect(zoneLabel({ id: "z", split, front: { kind: "door", mode: "double", hinge: "left" } })).toBe("2 portes")
   })
 })

@@ -27,6 +27,9 @@ const GLASS_AT = 8
 const MIN_INNER_DRAWER_W = 150
 
 /** Calaixos: fronts, caixes de fusta i jocs paramètrics. */
+/** Quant surt de la cara un tirador (el de barra de l'app, `builtinHandleBox`; un d'importat, el mateix de referència). */
+const HANDLE_OUT = 34
+
 export class DrawersBuilder extends FrontsBuilder {
   /** Algun front de calaix de vidre (l'avís informatiu surt un cop). */
   private glassDrawers = false
@@ -63,13 +66,16 @@ export class DrawersBuilder extends FrontsBuilder {
       ...(inner.drawerSlides ? { drawerSlides: inner.drawerSlides } : {}),
     }
     const own = this.drawerHeights[zone.id]
-    // Darrere d'una porta: el front ha de quedar darrere de la cara de dins de la porta (no es retira sol, per decisió de
-    // l'usuari, 2026-10-20: avís a sota de la Retirada).
-    const need = r(d.frontZ - d.D + 2)
-    if ((front.setback ?? 0) < need)
-      this.warnings.push({ code: "inner-drawers", option: "zone.front.drawers.setback", message: `La porta topa amb els calaixos: posa una Retirada de com a mínim ${fmtNum(need, 1)} mm.`, zoneId: zone.id })
+    const from = this.panels.length
+    const fromExtras = this.extras.length
     try {
       this.buildDrawers(zone, front, box, box, left, right)
+      // Darrere d'una porta: el front, i el tirador si en porta, han de quedar darrere de la cara de dins de la porta (no
+      // es retira sol, per decisió de l'usuari, 2026-10-20: avís a sota de la Retirada).
+      const handle = [...this.panels.slice(from), ...this.extras.slice(fromExtras)].some((p) => (p.fittings ?? []).some((f) => f.kind === "handle") || (p.cutouts ?? []).some((c) => c.tag === "handle"))
+      const need = r(d.frontZ - d.D + 2 + (handle ? HANDLE_OUT : 0))
+      if ((front.setback ?? 0) < need)
+        this.warnings.push({ code: "inner-drawers", option: "zone.front.drawers.setback", message: `La porta topa amb els calaixos${handle ? " i els seus tiradors" : ""}: posa una Retirada de com a mínim ${fmtNum(need, 1)} mm${handle ? ", o treu el tirador (Opcions del tirador)" : ""}.`, zoneId: zone.id })
     } finally {
       // Les alçades «Auto» de l'inspector són les dels calaixos de fora, no les d'aquests (els tapats per portes, sí: són
       // els del Front del compartiment).

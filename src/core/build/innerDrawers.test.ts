@@ -35,7 +35,9 @@ describe("calaixos darrere d'una porta", () => {
       expect(panelBox(f).max[2]).toBeLessThan(panelBox(door).min[2])
       expect(panelBox(f).min[0]).toBeGreaterThanOrEqual(T)
     }
-    expect(b.warnings.some((w) => w.option === "zone.front.drawers.setback")).toBe(false)
+    // Amb el tirador, els 25 mm no basten: el tirador topa amb la porta.
+    expect(b.warnings.find((w) => w.option === "zone.front.drawers.setback")?.message).toMatch(/tiradors/)
+    expect(buildModule(col({ setback: 60 })).warnings.some((w) => w.option === "zone.front.drawers.setback")).toBe(false)
   })
   it("sense Retirada no es retiren sols: avís a sota de la Retirada", () => {
     const b = buildModule(col({ setback: undefined }))
