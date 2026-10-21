@@ -447,8 +447,13 @@
   seguits amb marge (radi + 15 mm). Tot va al grup de la forma, que queda amagada; tornar a tallar refà el grup (les
   opcions surten dels llistons que hi ha, `currentSlices`). Un obstacle no xoca amb les peces lliures del seu mateix grup
   (`buildComposition`). Catàleg › **Llistons** (`model/slicedFurniture.ts`): nou mobles fets així, la forma estirada al
-  llarg de X amb `loftCage` (`meshShape.ts`: seccions unides i tapades, costats `sharp` plans: terra, paret, sobre).
-  Pendent: llistons radials (girats al voltant d'un eix) i formes de relleu d'imatge.
+  llarg de X amb `loftCage` (`meshShape.ts`: seccions unides i tapades, costats `sharp` plans: terra, paret, sobre; amb
+  `inner`, un tub amb un forat de banda a banda; amb `flatEnds`, els extrems tallats rectes). Galeria **Llistons** de la
+  pàgina Mobles (per decisió de l'usuari, 2026-10-21: «fes tots aquests… amb roure massís», a partir de les seves
+  captures; `model/slicedGallery.ts`, eines a `slicedDesign.ts`): sofàs i butaques, cadires i tamborets, bancs, taules,
+  taulells i bufets, murals (rostres, vestíbul, mural amb banc) i prestatges, tots de llistons de roure massís; secció per
+  categories (`CatalogSection` amb títol i icona). Cada disseny és una secció en funció de la posició (punts suavitzats,
+  una cinta per a les cadires en S, un relleu per als murals) i la mateixa drecera. Pendent: llistons radials (girats al voltant d'un eix) i formes de relleu d'imatge.
 - **Peces lliures** (`Composition.parts`, `model/freePart.ts`, `build/freeParts.ts`): taulers solts col·locats
   com els objectes però que són peces de debò (rol `part`, un «mòdul» més per a les refs). Orientació `front` (X·Y) · `side`
   (Z·Y) · `flat` (X·Z, v cap al fons); `w × h` al seu pla, gruix, material, veta, forma amb l'editor de perfils.

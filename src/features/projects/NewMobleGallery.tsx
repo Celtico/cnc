@@ -1,8 +1,8 @@
 import { SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useState, type ReactNode } from "react"
-import { LuFolders, LuHistory } from "react-icons/lu"
+import { LuFolders, LuHistory, LuRows3 } from "react-icons/lu"
 import { SearchBar } from "../../components/SearchBar"
-import { FURNITURE_COLLECTIONS, STORE_CATALOG, withInnerClearance, withZonePlinths, type Composition, type Template } from "../../core/model"
+import { FURNITURE_COLLECTIONS, SLICED_GALLERY, STORE_CATALOG, withInnerClearance, withZonePlinths, type Composition, type Template } from "../../core/model"
 import { useSettings } from "../settings/SettingsContext"
 import { kindLabel } from "./kindLabel"
 import { TemplateCard } from "./TemplateCard"
@@ -46,6 +46,8 @@ export function NewMobleGallery({
       .filter((ty) => ty.items.length > 0),
   })).filter((c) => c.types.length > 0)
   const storeCount = store.reduce((n, c) => n + c.types.reduce((m, ty) => m + ty.items.length, 0), 0)
+  const sliced = SLICED_GALLERY.map((c) => ({ ...c, items: c.items.filter((t) => !q || fold(`Llistons ${c.name} ${t.name} ${t.description}`).includes(q)) }))
+  const slicedCount = sliced.reduce((n, c) => n + c.items.length, 0)
   // Col·leccions de mobles: la cerca també mira la fitxa d'estudi (referència, materials, llenguatge…).
   const collections = FURNITURE_COLLECTIONS.map((c) => ({
     ...c,
@@ -54,9 +56,10 @@ export function NewMobleGallery({
   const collectionsCount = collections.reduce((n, c) => n + c.pieces.length, 0)
   const [openCats, setOpenCats] = useSessionList(`${storageKey}-store`)
   const [openCols, setOpenCols] = useSessionList(`${storageKey}-collections`)
+  const [openSliced, setOpenSliced] = useSessionList(`${storageKey}-sliced`)
   const hist = history(matches, !!q)
   // Amb cerca, s'obren les seccions que tenen resultats.
-  const found = [...(hist.projects?.count ? ["projects"] : []), ...(hist.count ? ["history"] : []), ...(storeCount ? ["store"] : []), ...(collectionsCount ? ["collections"] : [])]
+  const found = [...(hist.projects?.count ? ["projects"] : []), ...(hist.count ? ["history"] : []), ...(storeCount ? ["store"] : []), ...(slicedCount ? ["sliced"] : []), ...(collectionsCount ? ["collections"] : [])]
   // Una plantilla instanciada a partir d'ara pren la folgança de les peces de dins de Preferències (com un mòdul nou).
   const { settings } = useSettings()
   const pick = (t: Template) => onCreate(withZonePlinths(withInnerClearance({ ...t.make(), kind: t.kind }, settings.gaps.innerClearance, settings.gaps.grooveClearance)), t.name)
@@ -97,6 +100,27 @@ export function NewMobleGallery({
             content: (
               <SimpleGrid columns={COLS} gap={3}>
                 {c.types.flatMap((ty) => ty.items.map((t) => <TemplateCard key={t.id} t={t} kicker={ty.name} title={t.name.replace(`${ty.name} `, "")} onPick={pick} />))}
+              </SimpleGrid>
+            ),
+          }))}
+        />
+        <CatalogSection
+          value="sliced"
+          title="Llistons"
+          icon={LuRows3}
+          description="Sofàs, butaques, cadires, bancs, taules i murals de llistons de roure massís, tallats d'una forma lliure amb barres roscades que els uneixen. Mostra la forma per canviar-la i torna-la a tallar."
+          searching={!!q}
+          open={openSliced}
+          onOpenChange={setOpenSliced}
+          categories={sliced.map((c) => ({
+            id: c.id,
+            label: c.name,
+            count: c.items.length,
+            content: (
+              <SimpleGrid columns={COLS} gap={3}>
+                {c.items.map((t) => (
+                  <TemplateCard key={t.id} t={t} onPick={pick} />
+                ))}
               </SimpleGrid>
             ),
           }))}

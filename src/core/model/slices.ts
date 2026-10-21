@@ -53,8 +53,17 @@ interface Mesh {
  * aresta de la malla travessa el pla; dos triangles veïns comparteixen el punt (la mateixa aresta), i així els trossos
  * s'encadenen sense toleràncies.
  */
-function sectionLoops(mesh: Mesh, a: 0 | 1 | 2, c: number): V3[][] {
-  const d = mesh.positions.map((p) => (Math.abs(p[a] - c) < 1e-9 ? 1e-9 : p[a] - c))
+function sectionLoops(mesh: Mesh, a: 0 | 1 | 2, c: number, triangles = mesh.triangles): V3[][] {
+  const d = new Map<number, number>()
+  const dist = (i: number) => {
+    let v = d.get(i)
+    if (v === undefined) {
+      const p = mesh.positions[i]!
+      v = Math.abs(p[a] - c) < 1e-9 ? 1e-9 : p[a] - c
+      d.set(i, v)
+    }
+    return v
+  }
   const key = (i: number, j: number) => (i < j ? `${i}_${j}` : `${j}_${i}`)
   const pts = new Map<string, V3>()
   const adj = new Map<string, string[]>()
@@ -62,14 +71,15 @@ function sectionLoops(mesh: Mesh, a: 0 | 1 | 2, c: number): V3[][] {
     adj.set(x, [...(adj.get(x) ?? []), y])
     adj.set(y, [...(adj.get(y) ?? []), x])
   }
-  for (const t of mesh.triangles) {
+  for (const t of triangles) {
     const cross: string[] = []
     for (let k = 0; k < 3; k++) {
       const i = t[k]!, j = t[(k + 1) % 3]!
-      if (d[i]! > 0 === d[j]! > 0) continue
+      const di = dist(i), dj = dist(j)
+      if (di > 0 === dj > 0) continue
       const kk = key(i, j)
       if (!pts.has(kk)) {
-        const s = d[i]! / (d[i]! - d[j]!)
+        const s = di / (di - dj)
         const p = mesh.positions[i]!, q = mesh.positions[j]!
         pts.set(kk, [p[0] + (q[0] - p[0]) * s, p[1] + (q[1] - p[1]) * s, p[2] + (q[2] - p[2]) * s])
       }
@@ -149,10 +159,18 @@ export function sliceMesh(mesh: Mesh, axis: SliceAxis, thickness: number, gap: n
   const n = Math.floor((hi - lo + Math.max(0, gap)) / pitch)
   if (n < 1) return []
   const start = lo + (hi - lo - (n * thickness + (n - 1) * Math.max(0, gap))) / 2
+  // Cada triangle només pot tocar els plans que hi ha entre el seu punt més baix i el més alt.
+  const near: [number, number, number][][] = Array.from({ length: n }, () => [])
+  for (const t of mesh.triangles) {
+    const vs = t.map((i) => mesh.positions[i]![a])
+    const k0 = Math.max(0, Math.floor((Math.min(...vs) - start - thickness / 2) / pitch))
+    const k1 = Math.min(n - 1, Math.ceil((Math.max(...vs) - start - thickness / 2) / pitch))
+    for (let k = k0; k <= k1; k++) near[k]!.push(t)
+  }
   const out: Slab[][] = []
   for (let k = 0; k < n; k++) {
     const s = start + k * pitch
-    const loops = sectionLoops(mesh, a, s + thickness / 2)
+    const loops = sectionLoops(mesh, a, s + thickness / 2, near[k])
       .map((l) => simplifyLoop(l.map((p): Pt => [p[ax.u], p[ax.v]]), 0.2))
       .filter((l) => {
         const b = bounds(l)
@@ -211,8 +229,19 @@ function slabPart(poly: Pt[], s: number, o: SliceOptions, name: string, group: s
 
 /** El punt (u, v) cau dins del llistó amb marge per al forat de la barra. */
 function holdsRod(slab: Slab, p: Pt, clear: number): boolean {
-  if (!pointInPolygon(p, slab.outer) || distToPolygon(p[0], p[1], slab.outer) < clear) return false
-  return slab.holes.every((h) => !pointInPolygon(p, h) && distToPolygon(p[0], p[1], h) >= clear)
+  if (!pointInPolygon(p, slab.outer) || nearPolygon(p, slab.outer, clear)) return false
+  return slab.holes.every((h) => !pointInPolygon(p, h) && !nearPolygon(p, h, clear))
+}
+
+/** Algun costat del contorn queda a menys de `r` del punt (els costats llunyans es descarten per la seva caixa). */
+function nearPolygon([x, y]: Pt, poly: Pt[], r: number): boolean {
+  for (let i = 0; i < poly.length; i++) {
+    const [ax, ay] = poly[i]!
+    const [bx, by] = poly[(i + 1) % poly.length]!
+    if (x < Math.min(ax, bx) - r || x > Math.max(ax, bx) + r || y < Math.min(ay, by) - r || y > Math.max(ay, by) + r) continue
+    if (distToPolygon(x, y, [poly[i]!, poly[(i + 1) % poly.length]!]) < r) return true
+  }
+  return false
 }
 
 /**

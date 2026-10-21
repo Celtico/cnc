@@ -420,22 +420,41 @@ export function extrudeFaces(cage: MeshCage, ids: readonly number[], dist: numbe
  * Forma estirada al llarg de X (com el «Recobriment» de SolidWorks): una secció (anell de punts `[z, y]`, mm) a cada
  * posició `xs` (mm), unides amb quadrats i tapades als extrems. Totes les seccions amb el mateix nombre de punts. Els
  * costats `sharp` (índex j = del punt j al j + 1 de l'anell) queden plans al llarg de tota la forma (arestes vives): el
- * terra d'un banc, la paret d'un prestatge. Torna la caixa (mm, cantonada a 0) i la caixa de control de 0 a 1. Pur.
+ * terra d'un banc, la paret d'un prestatge. Amb `inner` (un anell per secció, amb tants punts com el de fora i en el
+ * mateix sentit), la forma és un tub: té un forat de banda a banda (una butaca de bucle, una taula amb un buit). Amb
+ * `flatEnds`, les vores de les dues tapes són vives: els extrems queden tallats rectes (sense arrodonir). Torna la caixa
+ * (mm, cantonada a 0) i la caixa de control de 0 a 1. Pur.
  */
-export function loftCage(rings: [number, number][][], xs: number[], sharp: number[] = []): { cage: MeshCage; box: ObjectBox } {
+export function loftCage(
+  rings: [number, number][][],
+  xs: number[],
+  sharp: number[] = [],
+  inner?: [number, number][][],
+  flatEnds = false,
+): { cage: MeshCage; box: ObjectBox } {
   const k = rings[0]!.length
-  const mm: V3[] = rings.flatMap((ring, i) => ring.map(([z, y]): V3 => [xs[i]!, y, z]))
+  const n = rings.length
+  const mm: V3[] = [...rings, ...(inner ?? [])].flatMap((ring, i) => ring.map(([z, y]): V3 => [xs[i % n]!, y, z]))
   const r = (i: number, j: number) => i * k + ((j + k) % k)
-  const last = rings.length - 1
+  const q = (i: number, j: number) => (n + i) * k + ((j + k) % k)
+  const last = n - 1
   const f: number[][] = []
   for (let i = 0; i < last; i++) for (let j = 0; j < k; j++) f.push([r(i, j), r(i, j + 1), r(i + 1, j + 1), r(i + 1, j)])
-  f.push(Array.from({ length: k }, (_, j) => r(0, k - 1 - j)), Array.from({ length: k }, (_, j) => r(last, j)))
+  if (inner) {
+    for (let i = 0; i < last; i++) for (let j = 0; j < k; j++) f.push([q(i + 1, j), q(i + 1, j + 1), q(i, j + 1), q(i, j)])
+    for (let j = 0; j < k; j++) f.push([r(0, j + 1), r(0, j), q(0, j), q(0, j + 1)], [r(last, j), r(last, j + 1), q(last, j + 1), q(last, j)])
+  } else f.push(Array.from({ length: k }, (_, j) => r(0, k - 1 - j)), Array.from({ length: k }, (_, j) => r(last, j)))
   const faces = signedVolume(mm, f) < 0 ? f.map((fc) => [...fc].reverse()) : f
   const crease: [number, number][] = []
   for (const j of sharp) {
     for (let i = 0; i < last; i++) crease.push([r(i, j), r(i + 1, j)], [r(i, j + 1), r(i + 1, j + 1)])
     crease.push([r(0, j), r(0, j + 1)], [r(last, j), r(last, j + 1)])
   }
+  if (flatEnds)
+    for (let j = 0; j < k; j++) {
+      crease.push([r(0, j), r(0, j + 1)], [r(last, j), r(last, j + 1)])
+      if (inner) crease.push([q(0, j), q(0, j + 1)], [q(last, j), q(last, j + 1)])
+    }
   const lo: V3 = [Infinity, Infinity, Infinity], hi: V3 = [-Infinity, -Infinity, -Infinity]
   for (const p of mm) for (let a = 0; a < 3; a++) {
     lo[a] = Math.min(lo[a]!, p[a]!)
