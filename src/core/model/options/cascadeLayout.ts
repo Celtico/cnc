@@ -1,9 +1,9 @@
 import type { CascadeDraft } from "./cascadeDraft"
 
 /**
- * L'arbre de l'esborrany de la cascada (`cascadeDraft.ts`) i on va cada node al dibuix: un arbre ordenat per les fletxes
+ * L'arbre del dibuix de la cascada (`cascadeDraft.ts`) i on va cada node al dibuix: un arbre ordenat per les fletxes
  * «a dins de» (la primera que arriba a cada node; les que farien un cercle no compten), les branques plegades i una
- * disposició automàtica d'esquerra a dreta o de dalt a baix. Pur (el dibuix és de React Flow, a la UI).
+ * disposició automàtica d'esquerra a dreta o de dalt a baix, amb els arbres un sota l'altre (`stackedLayout`). Pur (el dibuix és de React Flow, a la UI).
  */
 
 export interface DraftTree {
@@ -12,10 +12,10 @@ export interface DraftTree {
   parent: Map<string, string>
 }
 
-/** L'arbre (en l'ordre dels nodes de l'esborrany). Un node sense pare, o en un cercle, és una arrel. */
+/** L'arbre (en l'ordre dels nodes). Un node sense pare, o en un cercle, és una arrel. */
 export function draftTree(draft: CascadeDraft): DraftTree {
   const ids = new Set(draft.nodes.map((n) => n.id))
-  // Una fletxa «a dins de» per node, en l'ordre de l'esborrany; la que faria un cercle (pujant des del pare es torna al
+  // Una fletxa «a dins de» per node, en l'ordre dels nodes; la que faria un cercle (pujant des del pare es torna al
   // fill) no compta.
   const parent = new Map<string, string>()
   for (const e of draft.edges) {
@@ -117,35 +117,25 @@ export function layoutDraft(
 }
 
 /**
- * On es dibuixa cada node que es veu: on l'ha deixat l'usuari (`draft.positions`) o, si no, sol, de dalt a baix: la
- * disposició automàtica relativa al seu pare (un node que no s'ha mogut segueix el pare quan aquest es mou). Les arrels
- * sense posició, on les posa la disposició automàtica.
+ * On es dibuixa cada node que es veu: cada arrel (Estructura, Moble, Mòdul…) és un arbre de dalt a baix i els arbres van
+ * **un sota l'altre**, centrats (per decisió de l'usuari, 2026-10-21), en l'ordre del registre.
  */
-export function effectivePositions(
-  draft: CascadeDraft,
+export function stackedLayout(
   tree: DraftTree,
   collapsed: ReadonlySet<string>,
   size: (id: string) => { w: number; h: number },
-  gap?: { level: number; sibling: number; tree: number },
+  gap = { level: 56, sibling: 12, tree: 40 },
 ): Map<string, { x: number; y: number }> {
-  const auto = layoutDraft(tree, collapsed, size, "TB", gap)
-  const stored = draft.positions ?? {}
   const out = new Map<string, { x: number; y: number }>()
-  const place = (id: string): { x: number; y: number } | undefined => {
-    const done = out.get(id)
-    if (done) return done
-    const a = auto.get(id)
-    if (!a) return undefined
-    let p = stored[id]
-    if (!p) {
-      const parent = tree.parent.get(id)
-      const pp = parent === undefined ? undefined : place(parent)
-      const pa = parent === undefined ? undefined : auto.get(parent)
-      p = pp && pa ? { x: pp.x + a.x - pa.x, y: pp.y + a.y - pa.y } : a
-    }
-    out.set(id, p)
-    return p
+  let top = 0
+  for (const root of tree.roots) {
+    const one = layoutDraft({ ...tree, roots: [root] }, collapsed, size, "TB", gap)
+    let bottom = 0
+    for (const [id, p] of one) bottom = Math.max(bottom, p.y + size(id).h)
+    // Centrat: l'arrel de cada arbre a x = 0.
+    const dx = -(one.get(root)!.x + size(root).w / 2)
+    for (const [id, p] of one) out.set(id, { x: p.x + dx, y: p.y + top })
+    top += bottom + gap.tree
   }
-  for (const id of auto.keys()) place(id)
   return out
 }

@@ -1,8 +1,8 @@
 import { type CableHole, NO_EDGES, type EdgeBanding, type Front, type Panel, type PanelRole, type Vec3, type Zone } from "../../model"
 import { X, Y, Z, addFaceHole, dowelJoint, dowelsAlong, neg, placement, r, snap, system32Ys, threeAlong, toLocal } from "../geometry"
-import { layoutZones, type Layout, type ZoneRect } from "../layout"
+import { layoutZones, type DividerSpec, type Layout, type ZoneRect } from "../layout"
 import { AppliancesBuilder } from "./appliances"
-import { edges, near } from "./helpers"
+import { edges, near, wallSpans } from "./helpers"
 import type { VerticalRef, HorizontalRef } from "./types"
 import { fmtNum } from "../../../lib/format"
 
@@ -31,12 +31,22 @@ export class Builder extends AppliancesBuilder {
     walk(m.root, undefined, undefined)
 
     // 1) Divisors i prestatges fixos de totes les divisions, amb la folgança de les peces de dins: més curts, centrats.
-    layout.dividers.forEach((div, i) => {
+    // Dins d'una zona amb el seu fons encastat, fins a aquest fons (`withZoneDepth`). On una zona treu aquella paret
+    // (`Zone.noWalls`), el divisor no hi passa: un tros per cada tram que queda (`wallSpans`).
+    const removed = this.removedWalls(layout)
+    const knot = Math.max(d.t, ...layout.dividers.map((x) => x.thickness)) + 1
+    layout.dividers.forEach((div, i) => this.withZoneDepth(div.parentId, () => {
       const cut = this.insetCut(div.parentId)
       const gap = this.innerGap()
-      if (div.dir === "v") this.buildDivider(div.at, div.from, div.to, `divider-${i + 1}`, cut, gap, div.thickness)
-      else this.buildFixedShelf(div.at, div.from, div.to, `fixed-${i + 1}`, cut, gap, div.thickness)
-    })
+      // Un tros entre dos trams trets, no més llarg que el gruix d'un divisor: el nus d'una creu on les quatre zones treuen
+      // les parets (abecedari, formes); sol, no aguanta res.
+      const spans = wallSpans(div.from, div.to, removed.get(div) ?? []).filter(([a, b]) => !(a > div.from + 0.5 && b < div.to - 0.5 && b - a <= knot))
+      spans.forEach(([from, to], k) => {
+        const id = `${div.dir === "v" ? "divider" : "fixed"}-${i + 1}${k ? `-${k + 1}` : ""}`
+        if (div.dir === "v") this.buildDivider(div.at, from, to, id, cut, gap, div.thickness)
+        else this.buildFixedShelf(div.at, from, to, id, cut, gap, div.thickness)
+      })
+    }))
     for (const z of this.zones.values()) {
       const want = z.split?.thickness
       if (!want) continue
@@ -47,9 +57,12 @@ export class Builder extends AppliancesBuilder {
     // 2) Unions dels divisors amb el que tenen a sota i a sobre, i dels fixos amb els costats.
     for (const v of this.verticals) if (!v.outer) this.joinDivider(v)
     for (const h of this.horizontals) if (!h.outer) this.joinFixedShelf(h)
+    // El fons encastat de les zones que en porten un de seu (`Zone.back`), unit a les peces que les tanquen.
+    this.buildZoneBacks()
+    this.fitGroovedBack()
     // 3) Fulles: fileres, prestatges regulables i fronts. Les que són darrere del front d'una
     // zona dividida no en fan: el front és el del pare.
-    for (const zone of layout.leaves) this.buildLeaf(this.covered.has(zone.id) ? { ...zone, front: undefined } : zone, layout.rects.get(zone.id)!)
+    for (const zone of layout.leaves) this.withZoneDepth(zone.id, () => this.buildLeaf(this.covered.has(zone.id) ? { ...zone, front: undefined } : zone, layout.rects.get(zone.id)!))
     const parents = (z: Zone) => {
       if (!z.split) return
       if (z.front && !this.covered.has(z.id)) this.buildParentFront(z, layout.rects.get(z.id)!)
@@ -63,6 +76,31 @@ export class Builder extends AppliancesBuilder {
     if (d.mitreFronts)
       this.warnings.push({ code: "mitre", message: "Fronts dels calaixos a inglet amb els laterals: els laterals arriben fins a la cara dels fronts i tots dos es tallen a 45°. Cal un joc de 1–2 mm al tall perquè el calaix obri." })
     return layout
+  }
+
+  /**
+   * Els trams de cada divisor (o prestatge fix) que una zona treu (`Zone.noWalls`): els del costat de la zona, al llarg de
+   * la zona (i de totes les de dins). Coordenades al llarg del divisor (y d'un vertical, x d'un travesser).
+   */
+  protected removedWalls(layout: Layout): Map<DividerSpec, [number, number][]> {
+    const out = new Map<DividerSpec, [number, number][]>()
+    for (const z of this.zones.values()) {
+      const R = layout.rects.get(z.id)
+      if (!R || !z.noWalls?.length) continue
+      for (const side of z.noWalls) {
+        const v = side === "left" || side === "right"
+        for (const div of layout.dividers) {
+          if (div.dir !== (v ? "v" : "h")) continue
+          const face = side === "left" ? div.at + div.thickness : side === "right" ? div.at : side === "bottom" ? div.at + div.thickness : div.at
+          const edge = side === "left" ? R.x0 : side === "right" ? R.x1 : side === "bottom" ? R.y0 : R.y1
+          if (!near(face, edge)) continue
+          const a = Math.max(div.from, v ? R.y0 : R.x0)
+          const b = Math.min(div.to, v ? R.y1 : R.x1)
+          if (b - a > 0.5) out.set(div, [...(out.get(div) ?? []), [a, b]])
+        }
+      }
+    }
+    return out
   }
 
   /**
@@ -155,10 +193,18 @@ export class Builder extends AppliancesBuilder {
     return this.horizontals.find((h) => near(h.yBottom, rect.y1) && h.xL <= rect.x0 + 0.51 && h.xR >= rect.x1 - 0.51)
   }
   protected findLeft(rect: ZoneRect): VerticalRef | undefined {
-    return this.verticals.find((v) => near(v.xR, rect.x0) && v.yB <= rect.y0 + 0.51 && v.yT >= rect.y1 - 0.51)
+    return this.verticals.find((v) => near(v.xR, rect.x0) && v.yB <= rect.y0 + 0.51 && v.yT >= rect.y1 - 0.51) ?? this.partialSide(rect, (v) => near(v.xR, rect.x0))
   }
   protected findRight(rect: ZoneRect): VerticalRef | undefined {
-    return this.verticals.find((v) => near(v.xL, rect.x1) && v.yB <= rect.y0 + 0.51 && v.yT >= rect.y1 - 0.51)
+    return this.verticals.find((v) => near(v.xL, rect.x1) && v.yB <= rect.y0 + 0.51 && v.yT >= rect.y1 - 0.51) ?? this.partialSide(rect, (v) => near(v.xL, rect.x1))
+  }
+  /**
+   * El tros de divisor més llarg al costat de la zona quan no n'hi ha cap de sencer: la zona del costat n'ha tret la paret
+   * (`Zone.noWalls`) i el divisor és més curt. Les fileres i les frontisses hi van només al seu tram (`rows`, `plateHoles`).
+   */
+  private partialSide(rect: ZoneRect, at: (v: VerticalRef) => boolean): VerticalRef | undefined {
+    const len = (v: VerticalRef) => Math.min(v.yT, rect.y1) - Math.max(v.yB, rect.y0)
+    return this.verticals.filter((v) => at(v) && len(v) > 1).sort((a, b) => len(b) - len(a))[0]
   }
 
   /**
@@ -200,13 +246,15 @@ export class Builder extends AppliancesBuilder {
   /** Filera System 32 sobre la cara d'un panell vertical, per al tram d'una zona. */
   protected rows(v: VerticalRef, rect: ZoneRect, side: "left" | "right"): number[] {
     const s = this.hw.system32
-    const ys = system32Ys(rect.y0, rect.y1, s.edgeOffset, s.pitch)
+    // Només on hi ha peça (un divisor més curt perquè la zona del costat n'ha tret la paret: el seu tram).
+    const ys = system32Ys(Math.max(rect.y0, v.yB), Math.min(rect.y1, v.yT), s.edgeOffset, s.pitch)
     const xFace = side === "left" ? v.xR : v.xL
     // Fons encastat retirat: la filera de darrere es mesura des del darrere del fons, però mai dins del fons (gruixos de 30
-    // o 40): com a molt a prop, a un Ø de la seva cara de davant.
+    // o 40): com a molt a prop, a un Ø de la seva cara de davant. Dins d'una zona amb el seu fons encastat, des d'aquest
+    // fons (`withZoneDepth`).
     const c = this.m.carcass
     const zFront = v.zFront - s.edgeOffset
-    const zBack = c.back === "inset" ? Math.max(Math.max(v.zRear, c.backInsetSetback ?? 0) + s.edgeOffset, this.d.backInnerZ + s.diameter) : v.zRear + s.edgeOffset
+    const zBack = c.back === "inset" ? Math.max(Math.max(v.zRear, c.backInsetSetback ?? 0) + s.edgeOffset, this.d.backInnerZ + s.diameter) : Math.max(v.zRear, this.zoneRearZ ?? v.zRear) + s.edgeOffset
     // Si la de darrere arribaria a la de davant (mòdul massa poc fondo), només la de davant (la de les frontisses).
     const rear = zBack <= zFront - s.diameter
     for (const y of ys) {
@@ -231,13 +279,16 @@ export class Builder extends AppliancesBuilder {
     let ysRight: number[] = []
     const wantsLeft = (zone.shelves?.adjustable ?? false) || hingeSide === "left" || (woodDoor && front.mode === "double")
     const wantsRight = (zone.shelves?.adjustable ?? false) || hingeSide === "right" || (woodDoor && front.mode === "double")
+    // Regulables sense cap prestatge (0): la filera és per posar-n'hi després; sense la peça, no es fa i no avisa (la zona
+    // del costat n'ha tret el divisor; per petició de l'usuari, 2026-10-21, la lletra E).
+    const onlyFuture = (zone.shelves?.n ?? 0) <= 0 && !hingeSide && !(woodDoor && front.mode === "double")
     if (wantsLeft) {
       if (left) ysLeft = this.rows(left, rect, "left")
-      else this.warnings.push({ code: "no-side", message: `La zona no té panell a l'esquerra per a la filera System 32.`, zoneId: zone.id })
+      else if (!onlyFuture) this.warnings.push({ code: "no-side", message: `La zona no té panell a l'esquerra per a la filera System 32.`, zoneId: zone.id })
     }
     if (wantsRight) {
       if (right) ysRight = this.rows(right, rect, "right")
-      else this.warnings.push({ code: "no-side", message: `La zona no té panell a la dreta per a la filera System 32.`, zoneId: zone.id })
+      else if (!onlyFuture) this.warnings.push({ code: "no-side", message: `La zona no té panell a la dreta per a la filera System 32.`, zoneId: zone.id })
     }
     // Només qui llegeix la filera (portes, reixetes, prestatges regulables) la necessita: als calaixos i als compartiments
     // oberts no es toca el System 32 (res amagat compta: un item dolent al lloc no avisa si no es fa servir).
@@ -266,6 +317,11 @@ export class Builder extends AppliancesBuilder {
     }
     // Prestatges.
     const shelfYs = zone.shelves && zone.shelves.n > 0 ? this.buildShelves(zone, shelfRect, rowYs.filter((y) => y >= shelfRect.y0)) : []
+    // Un divisor més curt (la zona del costat n'ha tret la paret): un prestatge per sobre o per sota del seu tram no s'aguanta.
+    for (const [ref, nm] of [[left, "l'esquerra"], [right, "la dreta"]] as const) {
+      const off = ref ? shelfYs.filter((y) => y < ref.yB - 0.5 || y > ref.yT + 0.5) : []
+      if (off.length) this.warnings.push({ code: "no-side", message: `${off.length === 1 ? "Un prestatge" : `${off.length} prestatges`} a ${off.map((y) => fmtNum(y, 0)).join(", ")} mm: a ${nm} el divisor només arriba de ${fmtNum(ref!.yB, 0)} a ${fmtNum(ref!.yT, 0)} mm (la zona del costat n'ha tret la paret) i no s'hi aguanta. Baixa'l o torna a posar la paret.`, zoneId: zone.id })
+    }
     if (zone.rail) this.buildRail(zone, rect)
     if (zone.led) this.buildLed(zone, rect, shelfYs)
     // Electrodomèstic (v46): el nínxol, l'aparell i el seu front de moble (o, la placa i la campana, el retall).
@@ -506,3 +562,5 @@ export class Builder extends AppliancesBuilder {
     )
   }
 }
+
+export { wallSpans }

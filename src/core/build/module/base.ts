@@ -7,6 +7,7 @@ import {
   type HardwareItem,
   type ModuleHardware,
   type HardwareSlot,
+  type Carcass,
   type Module,
   type Panel,
   type PanelRole,
@@ -32,6 +33,8 @@ const EDGE_SIDES: readonly EdgeSide[] = ["left", "right", "bottom", "top"]
 const EDGE_RULE_ROLES = new Set<PanelRole>(["side", "bottom", "top", "back", "shelf", "divider", "fixedShelf", "plinth", "spacer"])
 /** Peces que no tapen el cantell d'una altra: els fronts s'obren (el cantell de davant del lateral es veu igual) i els ferratges no són tauler. */
 const EDGE_RULE_SKIP_OCCLUDER = new Set<PanelRole>(["door", "drawerFront", "flap", "grille", "hatch", "panel", "hardware"])
+/** Peces de dins: els caps són els cantells que no miren ni endavant ni enrere. */
+const INNER_END_ROLES = new Set<PanelRole>(["divider", "fixedShelf", "shelf"])
 /** Fins on es mira, fora del cantell, si hi ha una altra peça (més que la folgança de les peces de dins, 3 mm). */
 const EDGE_PROBE = 4
 
@@ -57,7 +60,8 @@ function edgeExposed(p: Panel, side: EdgeSide, others: readonly { p: Panel; box:
 /** Estat i utilitats comunes del constructor d'un mòdul: les capes (`carcass`, `lights`… `zones`) l'estenen. */
 export class BuilderBase {
   readonly m: Module
-  readonly d: Derived
+  /** Mides derivades; dins d'una zona amb el seu fons encastat, amb aquest fons (`withZoneDepth`). */
+  d: Derived
   /** Obstacles pel darrere (columnes): els calaixos del seu tram, més curts. */
   rearLimits: RearLimit[] = []
   keepOut: [number, number][] = []
@@ -71,6 +75,8 @@ export class BuilderBase {
   readonly warnings: BuildWarning[] = []
   readonly openRatios: Record<string, number> = {}
   readonly drawerHeights: Record<string, number[]> = {}
+  /** El tipus de cada peça de fons (`ModuleBuild.backKinds`). */
+  readonly backKinds: Record<string, Carcass["back"]> = {}
   readonly extras: Panel[] = []
   readonly hardwareKits: KitOrder[] = []
   readonly lightKits: LightOrder[] = []
@@ -216,13 +222,19 @@ export class BuilderBase {
     const mount = freestanding && own === "wall" ? "floor" : own
     const others = this.panels.filter((p) => !EDGE_RULE_SKIP_OCCLUDER.has(p.role)).map((p) => ({ p, box: panelBox(p) }))
     for (const [i, p] of this.panels.entries()) {
-      if (!EDGE_RULE_ROLES.has(p.role) || p.outline) continue
+      // Amb contorn, només els divisors i prestatges fixos (la llengüeta del darrere on una zona no té fons, `fitGroovedBack`):
+      // cada costat de la caixa de la peça, sencer.
+      if (!EDGE_RULE_ROLES.has(p.role) || (p.outline && p.role !== "divider" && p.role !== "fixedShelf")) continue
       if (p.role === "back" && p.material !== this.m.carcass.material) continue
       const e: EdgeBanding = { ...NO_EDGES }
       for (const side of EDGE_SIDES) {
         if (p.mitres?.includes(side)) continue
         const dir = edgeDirection(p, side)
-        const wanted = mount === "floor" || dir[2] > 0.9 || (mount === "wall" && dir[1] > 0.9) || (mount === "hung" && dir[1] < -0.9)
+        // Els caps de les peces de dins (divisors i prestatges) que no toquen res: queden a la vista dins del moble, també
+        // arrambat o penjat (on una zona treu una paret, `Zone.noWalls`; per decisió de l'usuari, 2026-10-21). El de dalt,
+        // com el dels laterals (sense sostre, hi va un taulell al damunt).
+        const innerEnd = INNER_END_ROLES.has(p.role) && Math.abs(dir[2]) < 0.1 && dir[1] < 0.9
+        const wanted = innerEnd || mount === "floor" || dir[2] > 0.9 || (mount === "wall" && dir[1] > 0.9) || (mount === "hung" && dir[1] < -0.9)
         if (wanted && edgeExposed(p, side, others)) e[side] = true
       }
       this.panels[i] = { ...p, edges: e }

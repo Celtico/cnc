@@ -1,4 +1,4 @@
-import { type Module } from "./composition"
+import { type Composition, type Module } from "./composition"
 import { kitFrom } from "./hardware"
 import { hungBack } from "./hungBack"
 import { defaultMachine, withWorkshopRules, type Machine, type MachineRules } from "./machine"
@@ -65,6 +65,16 @@ export function applySettingsToModule(s: Settings, m: Module): Module {
     fronts: { ...m.fronts, outerGap: s.gaps.outerGap, betweenGap: s.gaps.betweenGap },
     hardware: kitFrom(s.hardwareLibrary, s.hardwareDefaults),
   }
+}
+
+/**
+ * Els materials de Preferències (el tauler i el fons per defecte, amb els seus gruixos) a tots els mòduls d'un moble: les
+ * mostres de Models constructius i de Proves (per decisió de l'usuari, 2026-10-21: «ha d'agafar el color de les
+ * preferències»), com un mòdul nou. Els fronts d'un altre material (`frontMaterial`) es queden com són.
+ */
+export function withDefaultMaterials(s: Settings, c: Composition): Composition {
+  const { material, thickness, backMaterial, backThickness } = s.defaults
+  return { ...c, modules: c.modules.map((m) => ({ ...m, carcass: { ...m.carcass, material, thickness, backMaterial, backThickness } })) }
 }
 
 /** Mida de tauler per a un material (la primera regla que coincideix; buit = totes). */

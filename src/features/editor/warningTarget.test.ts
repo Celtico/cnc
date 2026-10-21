@@ -31,7 +31,7 @@ describe("anar a un avís (per decisió de l'usuari, 2026-10-17)", () => {
     expect(w).toBeDefined()
     const t = warningTarget(w, c, b)
     expect(t.select).toEqual({ kind: "module", id: "m" })
-    expect(t.fix?.folds).toEqual(["mod-structure", "mod-carcass-back"])
+    expect(t.fix?.folds).toEqual(["mod-carcass-back"])
     const pose = framePose(t.box!, { width: 1000, height: 700, depth: 400 })
     expect(pose.position[2]).toBeGreaterThan(pose.target[2])
   })

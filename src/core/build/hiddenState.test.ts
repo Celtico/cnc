@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { DEFAULT_GRILLE, DEFAULT_HARDWARE_KITS, coversSplit, DEFAULT_MODULE_HARDWARE, HARDWARE_SLOTS, defaultModule, isLegacyHardware, setFront, setShelves, usedHardwareSlots, type Carcass, type Composition, type Front, type Module, type ModuleHardware, type Zone } from "../model"
+import { DEFAULT_GRILLE, DEFAULT_HARDWARE_KITS, coversSplit, DEFAULT_MODULE_HARDWARE, HARDWARE_SLOTS, defaultModule, isLegacyHardware, setFront, setShelves, usedHardwareSlots, type Carcass, type Composition, type Front, type Module, type ModuleHardware, type Zone, withNeighbourSides } from "../model"
 import { buildComposition } from "./buildComposition"
 import { catalogCorpus, int, MATERIALS, pick, randomComposition, rng, type Rnd } from "./testCorpus"
 
@@ -20,12 +20,12 @@ function scrambleHidden(m: Module, r: Rnd): Module {
     c.backMaterial = pick(r, MATERIALS)
     c.backThickness = pick(r, [3, 8, 10, 16, 19, 30])
   }
-  // Ranura del fons (Mòdul › Caixa): només en ranura. El joc del fons en ranura no surt mai: només compta en ranura.
+  // Ranura del fons (Mòdul): només en ranura. El joc del fons en ranura no surt mai: només compta en ranura.
   if (c.back !== "groove") {
     c.backSetback = int(r, 0, 60)
     c.backClearance = pick(r, [0, 0.5, 1, 2, 4])
   }
-  // Retirada del fons (Mòdul › Caixa): només encastat.
+  // Retirada del fons (Mòdul): només encastat.
   if (c.back !== "inset") {
     if (r() < 0.5) delete c.backInsetSetback
     else c.backInsetSetback = int(r, 0, 60)
@@ -42,30 +42,30 @@ function scrambleHidden(m: Module, r: Rnd): Module {
     else delete c.joint
   }
   // Fons del calaix (MaterialsForm): només amb calaixos.
-  if (!anyBuiltDrawers(m.root, { left: c.sides.left, right: c.sides.right }) && r() < 0.5) c.drawerBottomMaterial = pick(r, MATERIALS)
+  if (!anyBuiltDrawers(m.root, heldSides(c)) && r() < 0.5) c.drawerBottomMaterial = pick(r, MATERIALS)
   // Tauler de taula: només amb la tapa sencera.
   if (c.top.kind !== "full")
     c.tableTop = r() < 0.5 ? { overhang: int(r, 0, 300) } : { overhang: int(r, 0, 300), shape: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 50 }, { x: 0, y: 50 }] }
   const fronts = { ...m.fronts }
   if (!fronts.style && r() < 0.5) fronts.style = "overlay"
   if (!fronts.handles && r() < 0.5) fronts.handles = "bar"
-  // Mòdul › Caixa: sense cap front que es faci (els tapats no compten) no surten l'estil ni les folgances;
+  // Mòdul: sense cap front que es faci (els tapats no compten) no surten l'estil ni les folgances;
   // sense cap prestatge (ni llum) que es retiri, el retranqueig.
-  if (!anyBuiltFront(m.root, { left: c.sides.left, right: c.sides.right })) {
+  if (!anyBuiltFront(m.root, heldSides(c))) {
     // Materials › Fronts tampoc no surt.
     if (r() < 0.5) c.frontMaterial = pick(r, MATERIALS)
     if (r() < 0.5) fronts.style = pick(r, ["overlay", "inset"] as const)
     fronts.outerGap = pick(r, [0, 1.5, 4, 10])
     fronts.betweenGap = pick(r, [0, 2, 6])
   }
-  if (!anyRetiredShelf(m.root, { left: c.sides.left, right: c.sides.right })) c.shelfSetback = int(r, 0, 100)
+  if (!anyRetiredShelf(m.root, heldSides(c))) c.shelfSetback = int(r, 0, 100)
   // Interior › Divisió › «Peces de dins»: sense dividir l'arrel no surt (i 0 = sense valor).
   if (!anyInnerPiece(m.root)) {
     const g = pick(r, [undefined, 0, 0.5, 1, 3])
     if (g === undefined) delete c.innerClearance
     else c.innerClearance = g
   } else if (!c.innerClearance && r() < 0.5) c.innerClearance = 0
-  // Llocs de ferratge que el mòdul no fa servir (Caixa › Laterals només ensenya l'espiga si `usedHardwareSlots` la té): un item
+  // Llocs de ferratge que el mòdul no fa servir (Mòdul › Laterals només ensenya l'espiga si `usedHardwareSlots` la té): un item
   // d'un altre tipus o un joc sense `kit` no canvia res ni avisa.
   const used = usedHardwareSlots(m)
   const hardware = isLegacyHardware(m.hardware) ? m.hardware : { ...(m.hardware as ModuleHardware) }
@@ -74,7 +74,20 @@ function scrambleHidden(m: Module, r: Rnd): Module {
       if (used.has(slot) || r() < 0.4) continue
       ;(hardware as ModuleHardware)[slot] = r() < 0.5 ? structuredClone(DEFAULT_MODULE_HARDWARE.dowel) : { ...structuredClone(DEFAULT_MODULE_HARDWARE.slide), engine: "drawerKit", name: "Joc sense dades" }
     }
-  return { ...m, carcass: c, fronts, hardware, root: scrambleZone(m.root, r, m.fronts.handles === "none", false, { left: c.sides.left, right: c.sides.right }, false, true) }
+  return { ...m, carcass: c, fronts, hardware, root: scrambleBacks(scrambleZone(m.root, r, m.fronts.handles === "none", false, heldSides(c), false, true), r, c.back) }
+}
+
+/** Fons de la zona (Mòdul › Fons): el mateix que el de més amunt no compta. La retirada només compta encastat. */
+function scrambleBacks(z: Zone, r: Rnd, moduleBack: Carcass["back"], inherited: Carcass["back"] = moduleBack, isRoot = true): Zone {
+  const out: Zone = { ...z }
+  // Una zona amb fons propi (un sòcol de zona: «none») el passa a les de dins.
+  const own = z.back ?? inherited
+  if (r() < 0.3) out.back = own
+  if (moduleBack !== "inset" && own !== "inset" && r() < 0.3) out.backInsetSetback = int(r, 0, 300)
+  if (z.split) out.split = { ...z.split, children: z.split.children.map((c) => scrambleBacks(c, r, moduleBack, own, false)) }
+  // Els costats de l'Interior són tots la caixa del mòdul: treure'ls a la Caixa de la zona surt apagat i no compta.
+  if (isRoot && r() < 0.5) out.noWalls = pick(r, [["left"], ["right", "top"], ["bottom", "left", "right", "top"]] as Zone["noWalls"][])
+  return out
 }
 
 /**
@@ -93,7 +106,7 @@ function anyBuiltDrawers(z: Zone, sides: Sides, covered = false, isRoot = true):
   const built = frontBuilt(z, sides, covered, isRoot)
   if (built && z.front!.kind === "drawers") return true
   // Tapats per portes també es fan (per dins, regla 3), aguantats pels dos costats.
-  if (covered && !z.split && z.front?.kind === "drawers" && frontHeld(sides)) return true
+  if (covered && !z.split && z.front?.kind === "drawers" && frontHeld(sides) && kindHeld("drawers", sides)) return true
   const n = z.split?.children.length ?? 0
   return !!z.split?.children.some((c, i) => anyBuiltDrawers(c, childSides(sides, z.split!.dir, i, n), covered || built, false))
 }
@@ -125,22 +138,34 @@ function randomShelves(r: Rnd): Zone["shelves"] {
  * Sense una peça a cada costat del compartiment (lateral o divisor, escrit a part de `zoneBoundsMap`) no surten
  * Prestatges ni Accessoris: cap prestatge, filera, barra ni llum no compta.
  */
-type Sides = { left: boolean; right: boolean }
+/** `pl` / `pr`: hi ha una peça (lateral o divisor) a aquell costat; `left` / `right`: aguanta els fronts (també el veí). */
+type Sides = { left: boolean; right: boolean; pl?: boolean; pr?: boolean }
+/** Els costats del mòdul que aguanten els fronts: el lateral o, sense, el del veí que hi toca (`Carcass.corner`). */
+const heldSides = (c: Carcass): Sides => ({ left: c.sides.left || c.corner === "left" || c.corner === "both", right: c.sides.right || c.corner === "right" || c.corner === "both", pl: c.sides.left, pr: c.sides.right })
 
-const childSides = (sides: Sides, dir: "v" | "h", i: number, n: number): Sides => (dir === "v" ? { left: sides.left || i > 0, right: sides.right || i < n - 1 } : sides)
+const childSides = (sides: Sides, dir: "v" | "h", i: number, n: number): Sides =>
+  dir === "v" ? { left: sides.left || i > 0, right: sides.right || i < n - 1, pl: (sides.pl ?? sides.left) || i > 0, pr: (sides.pr ?? sides.right) || i < n - 1 } : sides
 
 /**
  * Un front només es fa aguantat pels quatre costats. A sota i a sobre sempre ho és: la base o la tapa del mòdul, la que
  * falta («Sense base», «Sense tapa», per decisió de l'usuari: es queda com està) o un travesser. Queden els costats.
  */
 const frontHeld = (sides: Sides): boolean => sides.left && sides.right
+/**
+ * I a sobre, el de cada tipus (`canHoldFront`): porta i abatible, una peça a un costat (les frontisses no van al veí);
+ * calaixos, a tots dos (una guia a cada costat).
+ */
+const kindHeld = (kind: Front["kind"], sides: Sides): boolean => {
+  const l = sides.pl ?? sides.left, r = sides.pr ?? sides.right
+  return kind === "door" || kind === "flap" ? l || r : kind === "drawers" ? l && r : true
+}
 
 /**
  * El front de la zona es fa: aguantat, no tapat i, en una zona dividida, només les portes (el Front de la zona dividida, a
  * qualsevol nivell, per decisió de l'usuari, 2026-10-20; el front fix de tota la zona no es fa).
  */
 const frontBuilt = (z: Zone, sides: Sides, covered: boolean, _isRoot: boolean): boolean =>
-  !!z.front && frontHeld(sides) && !covered && (!z.split || coversSplit(z.front.kind)) && !inNiche(z, covered)
+  !!z.front && frontHeld(sides) && kindHeld(z.front.kind, sides) && !covered && (!z.split || coversSplit(z.front.kind)) && !inNiche(z, covered)
 
 /**
  * Electrodomèstic (v46, Electrodomèstic del compartiment): només en un compartiment sense dividir i no tapat. Els que
@@ -159,7 +184,7 @@ function scrambleZone(z: Zone, r: Rnd, noHandles: boolean, covered: boolean, sid
     for (const rf of REMEMBERED) if (rf.kind !== f?.kind && r() < 0.5) fronts[rf.kind] = structuredClone(rf)
     if (Object.keys(fronts).length) out.fronts = fronts
   }
-  const held = frontHeld(sides)
+  const held = frontHeld(sides) && (!f || kindHeld(f.kind, sides))
   const built = frontBuilt(z, sides, covered, isRoot)
   if (z.split && built) {
     // Portes de tota la zona: els fronts dels compartiments de dins queden tapats i no es fan (es conserven).
@@ -192,7 +217,8 @@ function scrambleZone(z: Zone, r: Rnd, noHandles: boolean, covered: boolean, sid
     // Un `false` d'abans (fitxers antics): cap barra.
     if (!z.rail && r() < 0.3) (out as { rail?: unknown }).rail = false
   }
-  if (z.appliance) out.appliance = scrambleAppliance(z.appliance, r, covered || !!z.split, held)
+  // El sòcol de l'aparell: amb una peça a cada costat (no el veí).
+  if (z.appliance) out.appliance = scrambleAppliance(z.appliance, r, covered || !!z.split, (sides.pl ?? sides.left) && (sides.pr ?? sides.right))
   if (inNiche(z, covered)) {
     // L'electrodomèstic ocupa el compartiment: el seu Front no surt (qualsevol front o cap).
     const any = pick(r, [undefined, ...REMEMBERED])
@@ -201,7 +227,9 @@ function scrambleZone(z: Zone, r: Rnd, noHandles: boolean, covered: boolean, sid
   } else if ((!held || (z.split && !(f && coversSplit(f.kind)))) && !covered) {
     // Sense un lateral o divisor a cada costat el front no es fa (el compartiment és com obert): qualsevol front o cap.
     // D'una zona dividida només es fan els que la poden tapar (`coversSplit`): qualsevol altre front o cap.
-    const any = pick(r, [undefined, ...(held ? REMEMBERED.filter((x) => !coversSplit(x.kind)) : [...REMEMBERED, { kind: "door", mode: "single", hinge: "right", hardware: structuredClone(DEFAULT_MODULE_HARDWARE.dowel) } as Front])])
+    // Aguantat pel veí però sense la peça que el front demana (`kindHeld`): només els que tampoc no s'hi fan.
+    const unheld = frontHeld(sides) ? REMEMBERED.filter((x) => !kindHeld(x.kind, sides)) : [...REMEMBERED, { kind: "door", mode: "single", hinge: "right", hardware: structuredClone(DEFAULT_MODULE_HARDWARE.dowel) } as Front]
+    const any = pick(r, [undefined, ...(held ? REMEMBERED.filter((x) => !coversSplit(x.kind)) : unheld)])
     if (any) out.front = structuredClone(any)
     else delete out.front
   } else if (f) out.front = scrambleFront(f, r, noHandles || (covered && f.kind === "drawers"))
@@ -291,7 +319,8 @@ const out = (c: Composition) => {
   return JSON.stringify({ panels: b.panels, extras: b.extras, warnings: b.warnings })
 }
 
-const scrambled = (c: Composition, r: Rnd): Composition => ({ ...c, modules: c.modules.map((m) => scrambleHidden(m, r)) })
+// El que es veu és el del mòdul a la composició: amb els costats que aguanta el veí (`withNeighbourSides`).
+const scrambled = (c: Composition, r: Rnd): Composition => ({ ...c, modules: withNeighbourSides(c).modules.map((m) => scrambleHidden(m, r)) })
 
 describe("res amagat compta: els camps de les opcions apagades no canvien res", () => {
   it("plantilles del catàleg", () => {

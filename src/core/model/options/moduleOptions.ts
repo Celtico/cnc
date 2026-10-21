@@ -114,13 +114,13 @@ export function materialsNodes(at: "module" | "moble"): OptionNode {
       code: UI.carcass,
       control: "material",
       defaultText: prefs,
-      showIf: moble ? "Algun mòdul amb fons" : "Caixa › Fons ≠ Sense fons",
-      issue: moble ? undefined : "Es passa la caixa crua: amb un electrodomèstic que fixa «Sense fons» (Caixa › Fons surt com a text «Sense fons») encara surten «Fons» i «Gruix del fons» si l'usuari en tenia; la construcció no en fa.",
+      showIf: moble ? "Algun mòdul amb fons" : "Fons ≠ Sense fons",
+      issue: moble ? undefined : "Es passa la caixa crua: amb un electrodomèstic que fixa «Sense fons» (Mòdul › Fons surt com a text «Sense fons») encara surten «Fons» i «Gruix del fons» si l'usuari en tenia; la construcció no en fa.",
     }, [field(id("backThickness"), "Gruix del fons", { code: UI.carcass, control: "choice", defaultText: prefs })]),
     field(id("drawerBottom"), "Fons del calaix", { code: UI.carcass, control: "material", showIf: "Algun compartiment amb calaixos que es fan", defaultText: "Com el fons (o com el cos, sense fons)" }),
   ])
 }
 
 export const MODULE_GROUP = (carcass: OptionNode): OptionNode =>
-  group("module", "Mòdul", { icon: "module", code: UI.inspector, showIf: "Un mòdul seleccionat", note: "Ordre: Tipus · Mides · Caixa · Materials (les portes d'una zona dividida, al seu Front)." }, [...MODULE_POSITION, carcass, ...MODULE_TAIL])
+  group("module", "Mòdul", { icon: "module", code: UI.inspector, showIf: "Un mòdul seleccionat", note: "Ordre (per decisió de l'usuari, 2026-10-21): Tapa · Laterals · Fons · Base · Front (el de l'Interior), i separat, Posició · Mides · Materials." }, [carcass, ...MODULE_POSITION, ...MODULE_TAIL])
 

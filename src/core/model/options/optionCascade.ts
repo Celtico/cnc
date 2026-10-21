@@ -6,8 +6,8 @@ import { ZONE } from "./zoneOptions"
 
 /**
  * Tota la cascada d'opcions de l'Editor tal com és al codi: l'Estructura i els inspectors del moble, el mòdul, el
- * compartiment, la peça lliure, l'objecte de referència i la selecció múltiple. És la llavor de l'esborrany de
- * Preferències › Opcions en cascada (`cascadeDraft.ts`); no canvia res de l'Editor.
+ * compartiment, la peça lliure, l'objecte de referència i la selecció múltiple. És el que dibuixa Preferències › Opcions
+ * en cascada (`cascadeDraft.ts`), només per mirar.
  */
 export const OPTION_CASCADE: readonly OptionNode[] = [STRUCTURE, MOBLE, MODULE_GROUP(CARCASS), ZONE, PART, REF, MULTI]
 

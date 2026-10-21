@@ -197,14 +197,14 @@ const shelves = group("zone.shelves", "Opcions de l'interior", {
     default: false,
     defaultEditable: true,
     choices: [{ value: "on", label: "A ras del davant (a sang)", hides: ["zone.shelves.setback"] }],
-    issue: "(menor) Surt també quan no compta: amb fronts Encastats (Mòdul › Caixa) i el compartiment amb front o tapat, la construcció retira igualment els prestatges i el «a ras» no fa res (només un avís).",
+    issue: "(menor) Surt també quan no compta: amb fronts Encastats (Mòdul) i el compartiment amb front o tapat, la construcció retira igualment els prestatges i el «a ras» no fa res (només un avís).",
   }),
   field("zone.shelves.setback", "Retirada", {
     code: UI.shelves,
     control: "number",
     showIf: "Prestatges > 0 i no a ras del davant",
     range: { min: 0, max: 300, step: 1, suffix: "mm" },
-    defaultText: "Com el mòdul (Caixa › Retirada dels prestatges)",
+    defaultText: "Com el mòdul (Mòdul › Retirada dels prestatges)",
   }),
   field("zone.shelves.thick", "Gruix", {
     code: UI.shelves,
@@ -235,6 +235,56 @@ const shelves = group("zone.shelves", "Opcions de l'interior", {
 /** Compartiment (l'«Interior» o una zona d'una divisió). */
 export const ZONE = group("zone", "Compartiment", { icon: "zone", code: UI.sections, showIf: "Un compartiment seleccionat (l'«Interior» o una zona)" }, [
   applianceNodes(),
+  section("zone.box.topGroup", "Tapa", { icon: "subsection", code: UI.zoneBox, showIf: "Sempre, abans del Front (també a l'Interior i a una zona dividida)", note: "Per decisió de l'usuari, 2026-10-21 («ja té el seu propi acordió, pots ficar les opcions a fora com el Front»): abans dins de «Caixa»; ara al mateix nivell que el Front, en l'ordre Tapa, Laterals, Fons, Base, Front." }, [
+    field("zone.box.top", "Tapa", {
+      code: UI.zoneBox,
+      control: "choice",
+      default: "full",
+      choices: [{ value: "full", label: "Sencera" }, { value: "ventSlot", label: "Ranura d'aire", note: "apagada: només a la tapa del mòdul" }, { value: "grille", label: "Reixeta", note: "apagada: només a la tapa del mòdul" }, { value: "none", label: "Sense tapa", note: "el prestatge fix de la divisió, o el tram de la tapa del mòdul, no hi passa (`Zone.noWalls`)" }],
+      note: "Només si a sobre hi ha un prestatge fix d'una divisió; si és la tapa del mòdul, apagat (Mòdul › Tapa).",
+    }),
+  ]),
+  section("zone.box.leftGroup", "Esquerra", { icon: "subsection", code: UI.zoneBox, note: "Per decisió de l'usuari, 2026-10-21 («separa els laterals: Esquerra, Dreta»): un acordió per lateral." }, [
+    field("zone.box.left", "Lateral", {
+      code: UI.zoneBox,
+      control: "choice",
+      default: "full",
+      choices: [{ value: "full", label: "Sencer" }, { value: "none", label: "Sense lateral" }],
+      note: "Un divisor d'una divisió (`ZoneBounds.inner`): sense, no hi passa (es fa més curt o en dos trossos) i la zona del costat guanya l'espai. El lateral del mòdul: a l'Interior, el de tot el mòdul; a una altra zona, el seu tram (`setOuterWall`).",
+    }),
+  ]),
+  section("zone.box.rightGroup", "Dreta", { icon: "subsection", code: UI.zoneBox, note: "Per decisió de l'usuari, 2026-10-21 («separa els laterals: Esquerra, Dreta»): un acordió per lateral." }, [
+    field("zone.box.right", "Lateral", {
+      code: UI.zoneBox,
+      control: "choice",
+      default: "full",
+      choices: [{ value: "full", label: "Sencer" }, { value: "none", label: "Sense lateral" }],
+      note: "Un divisor d'una divisió (`ZoneBounds.inner`): sense, no hi passa (es fa més curt o en dos trossos) i la zona del costat guanya l'espai. El lateral del mòdul: a l'Interior, el de tot el mòdul; a una altra zona, el seu tram (`setOuterWall`).",
+    }),
+  ]),
+  section("zone.box.backGroup", "Fons", { icon: "subsection", code: UI.zoneBox }, [
+    field("zone.box.back", "Fons", {
+      code: UI.zoneBox,
+      control: "choice",
+      defaultText: "El de la zona de més amunt (a l'Interior, el del mòdul)",
+      choices: [
+        { value: "groove", label: "En ranura", note: "la ranura va a les peces que tanquen la zona" },
+        { value: "screwed", label: "Cargolat darrere", note: "cargolat a les peces que tanquen la zona; en un mòdul sense fons, la caixa li deixa el lloc com a un de cargolat" },
+        { value: "inset", label: "Encastat", reveals: ["zone.box.backSetback"] },
+        { value: "none", label: "Sense fons", hides: ["zone.box.backSetback"] },
+      ],
+      note: "Per decisió de l'usuari, 2026-10-21: els mateixos 4 valors que el Fons del mòdul; agafa el de més amunt i, si es canvia, aquesta zona i les de dins el fan (`Zone.back`, `zoneBackRegions`). El fons del mòdul es talla on una zona no el fa; encastat, la zona porta el seu, unit amb espigues.",
+    }, [field("zone.box.backSetback", "Retirada del fons", { code: UI.zoneBox, control: "number", showIf: "Fons = Encastat", defaultText: "La de més amunt; mai més enrere que el fons del mòdul" })]),
+  ]),
+  section("zone.box.bottomGroup", "Base", { icon: "subsection", code: UI.zoneBox }, [
+    field("zone.box.bottom", "Base", {
+      code: UI.zoneBox,
+      control: "choice",
+      default: "full",
+      choices: [{ value: "full", label: "Sencera" }, { value: "none", label: "Sense base", note: "el prestatge fix de la divisió, o el tram de la base del mòdul, no hi passa (`Zone.noWalls`)" }],
+      note: "Només si a sota hi ha un prestatge fix d'una divisió; si és la base del mòdul, apagat (Mòdul › Base). El suport és de tot el mòdul.",
+    }),
+  ]),
   front,
   shelves,
   field("zone.system32", "Filera System 32", { code: UI.pick, control: "hardware", showIf: S32, defaultText: "La de Preferències › Ferratges" }),

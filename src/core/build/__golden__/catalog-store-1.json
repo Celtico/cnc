@@ -96,7 +96,7 @@
   "extras": 1,
   "warnings": [],
   "p": [
-   "back|trassera|2350x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@c8ee1d05",
+   "back|trassera|2200x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@c8ee1d05",
    "bottom|baix|762x590x19|Melamina gris|x|e0010|h6:50c80b82|g0|c0|o-|@11a485b9",
    "door|porta d|2107x396.5x19|Melamina gris|x|e1111|h5:cf4b176c|g0|c2:930adf34|o-|@64486fd1",
    "door|porta e|2107x396.5x19|Melamina gris|x|e1111|h5:18828d71|g0|c2:bf628232|o-|@96cf7341",
@@ -161,7 +161,7 @@
   "extras": 0,
   "warnings": [],
   "p": [
-   "back|trassera|1960x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@c8ee1d05",
+   "back|trassera|1900x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@c8ee1d05",
    "bottom|baix|762x340x19|Roure massís / xapat|x|e0010|h6:920f6444|g0|c0|o-|@e0ab02a1",
    "fixedShelf|estanter fixe|762x340x19|Roure massís / xapat|x|e0010|h6:920f6444|g0|c0|o-|@fb175d6d",
    "panel|frontal fix|796x66x19|Roure massís / xapat|y|e1111|h0|g0|c0|o-|@e2c56c1f",

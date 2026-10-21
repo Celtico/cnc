@@ -35,6 +35,8 @@ interface RefCutProblem {
   panel: Panel
   message: string
   options?: BuildWarning["options"]
+  /** El tall se l'ha menjada sencera (la peça es queda com era: qui crida decideix què en fa). */
+  eaten?: boolean
 }
 
 /** Què es pot fer amb un tall que la CNC no fa (un buidat amb forma, un tall de costat). */
@@ -52,6 +54,7 @@ const noCncOptions = (o: RefObject): NonNullable<BuildWarning["options"]> => [
 export function applyRefCuts(panels: Panel[], refs: RefObject[], boxOf: (p: Panel) => Box, isExtra?: (p: Panel) => boolean, added?: Panel[], hits?: Set<string>): RefCutProblem[] {
   const problems: RefCutProblem[] = []
   const r1 = (v: number) => Math.round(v * 10) / 10
+  const firstNew = added?.length ?? 0
   for (const o of refs) {
     if (o.effect !== "cut") continue
     const sec = refSection(o)
@@ -75,7 +78,7 @@ export function applyRefCuts(panels: Panel[], refs: RefObject[], boxOf: (p: Pane
         hits?.add(o.id)
         const isPart = o.id.startsWith("part:")
         const side = sidewaysCut(o, sec, p, b, isExtra?.(p) ?? false, !isPart, added)
-        if (side) problems.push({ refId: o.id, panel: p, message: side, ...(side.includes("pel cantell") ? { options: noCncOptions(o) } : {}) })
+        if (side) problems.push({ refId: o.id, panel: p, message: side, ...(side.includes("pel cantell") ? { options: noCncOptions(o) } : {}), ...(side.includes(EATEN) ? { eaten: true } : {}) })
         continue
       }
       if (!refTouchesBox(o, b)) continue
@@ -137,10 +140,23 @@ export function applyRefCuts(panels: Panel[], refs: RefObject[], boxOf: (p: Pane
             ? flatten(cut.kind === "polygon" ? cut.points : [])
             : [[bb.x0, bb.y0], [bb.x1, bb.y0], [bb.x1, bb.y1], [bb.x0, bb.y1]]
         const msg = notch(p, ring, added)
-        if (msg) problems.push({ refId: o.id, panel: p, message: `«${o.name}» ${msg}` })
+        if (msg) problems.push({ refId: o.id, panel: p, message: `«${o.name}» ${msg}`, eaten: true })
         continue
       }
       p.cutouts = [...(p.cutouts ?? []), cut]
+    }
+  }
+  // Un tros nou amb el nom d'una peça que ja hi era (un llistó que ja s'havia partit en «-2»): el número següent lliure.
+  if (added) {
+    const taken = new Set(panels.map((p) => p.id))
+    for (const q of added.slice(firstNew)) {
+      if (taken.has(q.id)) {
+        const stem = q.id.replace(/-\d+$/, "")
+        let k = 2
+        while (taken.has(`${stem}-${k}`)) k++
+        q.id = `${stem}-${k}`
+      }
+      taken.add(q.id)
     }
   }
   return problems
@@ -476,10 +492,12 @@ function trimTo(p: Panel, bb: { x0: number; y0: number; x1: number; y1: number }
  * Resta un polígon (coordenades locals) del contorn de la peça. Si la parteix (una columna al mig del fons), cada tros
  * és una peça (`extra`, retallada a la seva mida i amb els seus forats i ranures). Retorna un avís si se la menja.
  */
+const EATEN = "es menja tota la peça"
+
 function notch(p: Panel, cutter: [number, number][], extra?: Panel[]): string | undefined {
   const base: [number, number][] = p.outline ? flatten(p.outline) : [[0, 0], [p.length, 0], [p.length, p.width], [0, p.width]]
   const res = pc.difference([base], [cutter])
-  if (!res.length) return `es menja tota la peça ${p.label}.`
+  if (!res.length) return `${EATEN} ${p.label}.`
   const area = (poly: (typeof res)[number]) => polygonArea(poly[0] as [number, number][])
   const sorted = [...res].sort((a, b) => area(b) - area(a))
   const ringOf = (poly: (typeof res)[number]) => {
@@ -491,7 +509,7 @@ function notch(p: Panel, cutter: [number, number][], extra?: Panel[]): string | 
   const rings = sorted.map(ringOf)
   const original: Panel = { ...p, holes: [...p.holes], grooves: [...p.grooves] }
   // Res surt de la peça: els forats que queien a la part que s'ha tret (o hi toquen) fora; les ranures, retallades
-  // (si en queda un rectangle) o fora. Amb trossos, cada forat va amb el tros on cau.
+  // (els trossos que queden rectangles) o fora. Amb trossos, cada forat va amb el tros on cau.
   const gone = (x: number, y: number) => pointInPolygon([x, y], cutter)
   const keepHoles = (holes: Panel["holes"], ring: [number, number][]) =>
     holes.filter((h) => {
@@ -509,13 +527,14 @@ function notch(p: Panel, cutter: [number, number][], extra?: Panel[]): string | 
     grooves.flatMap((g) => {
       const rect: [number, number][] = [[g.x, g.y], [g.x + g.w, g.y], [g.x + g.w, g.y + g.h], [g.x, g.y + g.h]]
       const left = rings.length === 1 ? pc.difference([rect], [cutter]) : pc.intersection([rect], [ring])
-      if (left.length === 1 && left[0]!.length === 1) {
-        const pts = (left[0]![0] as [number, number][]).slice(0, -1)
+      // Cada tros que queda (una ranura llarga que la columna parteix en dos), si és un rectangle.
+      return left.flatMap((poly) => {
+        if (poly.length !== 1) return []
+        const pts = (poly[0] as [number, number][]).slice(0, -1)
         const bb = bounds(pts)
         const a = (bb.x1 - bb.x0) * (bb.y1 - bb.y0)
-        if (pts.length === 4 && Math.abs(a - polygonArea(pts)) < 0.5) return [{ ...g, x: bb.x0, y: bb.y0, w: bb.x1 - bb.x0, h: bb.y1 - bb.y0 }]
-      }
-      return []
+        return pts.length === 4 && Math.abs(a - polygonArea(pts)) < 0.5 ? [{ ...g, x: bb.x0, y: bb.y0, w: bb.x1 - bb.x0, h: bb.y1 - bb.y0 }] : []
+      })
     })
   // Els trams nous (sobre la vora del tall, no sobre el contorn d'abans): sense cantell al 3D.
   const onBase = (a: [number, number], b: [number, number]) => onPolygon(a, base) && onPolygon(b, base) && onPolygon([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], base)
@@ -550,10 +569,13 @@ function notch(p: Panel, cutter: [number, number][], extra?: Panel[]): string | 
     const sh = <T extends { x: number; y: number }>(o: T): T => ({ ...o, x: Math.round((o.x - bb.x0) * 100) / 100, y: Math.round((o.y - bb.y0) * 100) / 100 })
     // Des de la peça d'abans (el tros gran ja s'ha retallat a la seva mida, amb un altre origen).
     const { origin: o, xAxis, yAxis } = original.placement
+    // Un nom que no tingui cap altre tros (una peça partida per dues columnes ja té el seu «-2»).
+    let k = i + 2
+    while (extra.some((x) => x.id === `${p.id}-${k}`)) k++
     const piece: Panel = {
       ...original,
-      id: `${p.id}-${i + 2}`,
-      label: `${p.label} (${i + 2})`,
+      id: `${p.id}-${k}`,
+      label: `${p.label} (${k})`,
       length: Math.round((bb.x1 - bb.x0) * 100) / 100,
       width: Math.round((bb.y1 - bb.y0) * 100) / 100,
       edges: cutEdges(original, bb),

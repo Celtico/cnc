@@ -99,3 +99,10 @@ export function snapAutoHeights(heights: number[], sizes: (number | "auto")[]): 
   if (sizes.filter((x) => x === "auto").length < 2) return heights
   return heights.map((h, i) => (sizes[i] === "auto" ? Math.floor(h * 2 + 1e-6) / 2 : h))
 }
+
+/** El tram [from, to] menys els trossos `cut` (que poden encavalcar-se): el que queda, d'1 mm o més. */
+export function wallSpans(from: number, to: number, cut: [number, number][]): [number, number][] {
+  let spans: [number, number][] = [[from, to]]
+  for (const [a, b] of cut) spans = spans.flatMap(([x, y]): [number, number][] => (b <= x || a >= y ? [[x, y]] : [...(a > x ? [[x, a] as [number, number]] : []), ...(b < y ? [[b, y] as [number, number]] : [])]))
+  return spans.filter(([x, y]) => y - x >= 1)
+}

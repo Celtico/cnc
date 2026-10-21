@@ -4,7 +4,7 @@ import { PresentationRoom } from "./PresentationRoom"
 import { ModuleLegs } from "./Hardware"
 import { SceneAccess, StudioEnvironment, TextureRefresh } from "./SceneHelpers"
 import { Grid } from "@react-three/drei"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { ContactShadow } from "./ContactShadow"
 import { BoxFrame } from "./BoxFrame"
 import { NeutralToneMapping } from "three"
@@ -87,6 +87,19 @@ export function CabinetViewer({
   const downAt = useRef<[number, number] | null>(null)
   const q = QUALITY[quality]
   const { scene, light, bg, gridCell, gridSection } = useViewerLook(sceneFinish)
+  // Parets dels costats (`Composition.scene`): a ras de la peça de més a l'esquerra i de més a la dreta del moble.
+  const leftWall = !!sceneFinish?.leftWall, rightWall = !!sceneFinish?.rightWall
+  const sideWalls = useMemo(() => {
+    if ((!leftWall && !rightWall) || !panels.length) return undefined
+    let x0 = Infinity, x1 = -Infinity
+    for (const p of panels) {
+      const b = panelBox(p)
+      x0 = Math.min(x0, b.min[0])
+      x1 = Math.max(x1, b.max[0])
+    }
+    const at = (x: number) => (x - size.width * 0.5) * S
+    return { ...(leftWall ? { left: at(x0) } : {}), ...(rightWall ? { right: at(x1) } : {}) }
+  }, [leftWall, rightWall, panels, size.width])
   const selected = modules?.find((m) => m.id === selectedModuleId)
   const selectedIndex = selected?.index
   // Vistes Davant · Darrere · Esquerra · Dreta · Dalt (per decisió de l'usuari, 2026-10-14: «sense perspectiva i amb
@@ -148,7 +161,7 @@ export function CabinetViewer({
       <StudioEnvironment intensity={q.guides ? 0.6 : 0.5 * light.env} />
       <TextureRefresh />
       <hemisphereLight intensity={(q.guides ? 0.55 : light.ambient) * 0.45} groundColor="#8a7a60" />
-      {!q.guides && <PresentationRoom backZ={-size.depth * S * 0.5} scene={scene} materials={materials} />}
+      {!q.guides && <PresentationRoom backZ={-size.depth * S * 0.5} scene={scene} materials={materials} sideWalls={sideWalls} />}
       {/* bias i normalBias eviten les ratlles (shadow acne) de les cares que s'ombregen a si mateixes. */}
       <directionalLight
         key={q.shadowMap}

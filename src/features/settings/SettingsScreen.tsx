@@ -91,7 +91,7 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
             <GapsFields gaps={draft.gaps} onChange={(gaps) => set("gaps", gaps)} />
           </Pane>
 
-          <Pane id="options" wide title="Opcions en cascada" icon={LuListTree} desc="Un esborrany de la cascada d'opcions de l'Editor per dibuixar com la vols: no canvia res de l'Editor.">
+          <Pane id="options" wide title="Opcions en cascada" icon={LuListTree} desc="La cascada d'opcions de l'Editor tal com és ara, només per mirar: es fa sola a partir del codi.">
             <Suspense fallback={<Spinner colorPalette="wood" />}>
               <CascadePane />
             </Suspense>

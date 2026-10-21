@@ -1,6 +1,7 @@
 /**
  * Només per als tests (propietat «res amagat compta» i proves d'or): el corpus de mobles —totes les plantilles del
- * catàleg i variacions aleatòries amb llavor— amb ids estables (les plantilles fan ids amb `Date.now()`).
+ * catàleg i variacions aleatòries amb llavor— amb ids estables (les plantilles fan ids amb `Date.now()`). Els aleatoris
+ * (`randomComposition`) també surten a l'app, a la secció Proves de la pàgina Mobles (`features/projects/sampleMobles.ts`).
  */
 import {
   BUILTIN_TEMPLATES,

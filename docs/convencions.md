@@ -75,10 +75,10 @@ src/
   desaparèixer, per defecte, possible incoherència) i en porta l'id: `optionId` a `FormRow`, `NumRow`, `FoldItem`,
   `HardwarePick` i `FixedRow`. **Una opció nova a un inspector s'afegeix al registre**; el test `src/optionCascade.test.ts`
   falla si una fila no porta id, si un id no és al registre o si una opció del registre no és al fitxer del seu `code`.
-- El registre és la **llavor de l'esborrany** de Preferències › Opcions en cascada (`cascadeDraft.ts`, el dibuix amb React
-  Flow): l'usuari hi dibuixa com vol la cascada i n'exporta les diferències. **L'esborrany no s'aplica a l'Editor** (per
-  decisió de l'usuari, 2026-10-15: «no per aplicar a la realitat fins que no ho tinguem clar»): `optionId` només marca la
-  fila, i `hideable`/`defaultEditable`/`why` del registre són informatius. Les diferències es fan al codi, a mà.
+- Preferències › Opcions en cascada **dibuixa el registre, només per mirar** (`cascadeDraft.ts`, React Flow; per decisió
+  de l'usuari, 2026-10-21: «que l'esquema vingui donat per la realitat, que no es pugui editar»): cada inspector és un
+  arbre, un sota l'altre; es pot cercar, plegar i veure el detall d'un node, però no moure, afegir ni treure res. No
+  s'aplica a l'Editor: `optionId` només marca la fila, i `hideable`/`defaultEditable`/`why` del registre són informatius.
 
 ## Fabricació
 - Tot el que surt cap al taller (peces, forats, STEP, CSV, DXF, .xcs) ha de sortir igual si no es vol canviar: proves d'or

@@ -1,14 +1,134 @@
-import { AS_MODULE, STRUCTURAL, UI, field, section } from "./optionTypes"
+import { AS_MODULE, STRUCTURAL, UI, field, group, section } from "./optionTypes"
 import { applianceFrontFields } from "./moduleOptions"
 
 const FROM_PREFS_GAPS = "Preferències › Folgances per defecte"
 const BY_APPLIANCE = "Surt sempre: un electrodomèstic l'ajusta un cop en triar-lo i després es canvia com sempre (cas 12 del model únic)."
 const RAW_BACK = "`moduleRows().back` llegeix el fons de l'usuari sense `visibleModule`. Amb un electrodomèstic que fixa «Sense fons» (rentaplats, rentadora, frigorífic sota taulell; microones penjat), la fila Fons diu «Sense fons» però si el fons de l'usuari era en ranura surten igualment «Ranura del fons» i «Folgança de la ranura» (o «Retirada del fons» si era encastat), que la construcció no fa servir."
 
-/** Mòdul › Caixa, en l'ordre de l'inspector (`CarcassForm`, opcions en cascada). */
-export const CARCASS = section("module.carcass", "Caixa", { icon: "carcass", code: UI.sections, hideable: false, why: STRUCTURAL, note: "Insígnia «Recobrents»/«Encastats» si hi ha fronts. Les parts que fixa l'electrodomèstic que és el mòdul no surten: una nota a dalt ho diu." }, [
+/** La caixa del mòdul (Tapa, Laterals, Fons, Base), en l'ordre de l'inspector (`CarcassForm`, opcions en cascada). */
+export const CARCASS = group("module.carcass", "Caixa", { icon: "carcass", code: UI.sections, why: STRUCTURAL, note: "Per decisió de l'usuari, 2026-10-21 (el disseny de la seva imatge): sense la secció «Caixa», Tapa · Laterals · Fons · Base són seccions del mòdul, com a la divisió i a l'obertura, i després el Front de l'Interior. Insígnia «Recobrents»/«Encastats» si hi ha fronts. Les parts que fixa l'electrodomèstic que és el mòdul no surten: una nota a dalt ho diu." }, [
   // L'electrodomèstic que és el mòdul (Tipus = Electrodomèstic): una nota amb el que fixa i les opcions del front de moble.
   ...applianceFrontFields("module"),
+  section("module.carcass.topGroup", "Tapa", { icon: "subsection", code: UI.carcass }, [
+  field("module.carcass.top", "Tapa", {
+    code: UI.carcass,
+    control: "choice",
+    showIf: BY_APPLIANCE,
+    default: "full",
+    defaultEditable: true,
+    hideable: false,
+    why: STRUCTURAL,
+    choices: [
+      { value: "full", label: "Sencera", reveals: ["module.carcass.tableTop"] },
+      { value: "ventSlot", label: "Ranura d'aire", reveals: ["module.carcass.ventGap"] },
+      { value: "grille", label: "Reixeta", reveals: ["module.carcass.grille.pattern", "module.carcass.grille.holes", "module.carcass.grille.slots", "module.carcass.grille.margin"] },
+      { value: "none", label: "Sense tapa" },
+    ],
+  }, [
+    field("module.carcass.ventGap", "Ranura d'aire", { code: UI.carcass, control: "number", showIf: "Tapa = Ranura d'aire", default: 60 }),
+    field("module.carcass.grille.pattern", "Patró", { code: UI.carcass, control: "choice", showIf: "Tapa = Reixeta", default: "slotsV", choices: [{ value: "slotsV", label: "Ranures verticals", reveals: ["module.carcass.grille.slots"] }, { value: "slotsH", label: "Ranures horitzontals", reveals: ["module.carcass.grille.slots"] }, { value: "holes", label: "Forats al tresbolillo", reveals: ["module.carcass.grille.holes"] }], note: "El mateix component que el front reixeta (`GrillePatternFields`); la tapa va fixa: sense muntatge." }),
+    field("module.carcass.grille.slots", "Ranura · Separació", { code: UI.carcass, control: "number", showIf: "Patró de ranures", default: 8 }),
+    field("module.carcass.grille.holes", "Diàmetre forat · Pas", { code: UI.carcass, control: "number", showIf: "Patró de forats" }),
+    field("module.carcass.grille.margin", "Marge", { code: UI.carcass, control: "number", showIf: "Tapa = Reixeta", default: 60 }),
+    field("module.carcass.tableTop", "Tauler de taula", {
+      code: UI.carcass,
+      control: "switch",
+      showIf: "Tapa = Sencera",
+      default: false,
+      defaultEditable: true,
+      choices: [{ value: "on", label: "Per sobre dels laterals", reveals: ["module.carcass.tableTopOverhang", "module.carcass.tableTopShape"] }],
+      issue: "(plausible) Depèn dels Laterals («per sobre dels laterals», els fa més curts) però surt ABANS de «Laterals» i també sense cap lateral.",
+    }, [
+      field("module.carcass.tableTopOverhang", "Voladís", { code: UI.carcass, control: "number", default: 30 }),
+      field("module.carcass.tableTopShape", "Forma", { code: UI.carcass, control: "choice", default: "rect", choices: [{ value: "rect", label: "Rectangle" }, { value: "round", label: "Arrodonit" }, { value: "ellipse", label: "Oval" }], note: "i «Editar…» (forma a mida)" }),
+    ]),
+    field("module.carcass.topFiller", "Sòcol de dalt", {
+      code: UI.carcass,
+      control: "switch",
+      showIf: "Amb tapa i sense tauler de taula",
+      default: false,
+      choices: [{ value: "on", label: "Fins al sostre", reveals: ["module.carcass.topFillerHeight", "module.carcass.topFillerSetback"] }],
+      note: "Per decisió de l'usuari, 2026-10-20 («0 casos especials»): una drecera; el mòdul creix, «Sense tapa» i una zona de dalt amb un front fix (`addTopPlinth`).",
+    }, [
+      field("module.carcass.topFillerHeight", "Alçada", { code: UI.carcass, control: "number", range: { min: 10, max: 600, step: 5, suffix: "mm" }, default: 60 }),
+      field("module.carcass.topFillerSetback", "Retirada", { code: UI.carcass, control: "number", range: { min: 0, max: 200, step: 1, suffix: "mm" }, default: 0 }),
+    ]),
+  ]),
+  ]),
+  section("module.carcass.leftGroup", "Esquerra", { icon: "subsection", code: UI.carcass, note: "El lateral esquerre, i el Gruix (Parets), les Cantonades i l'Espiga de les unions de la caixa (en depenen), que surten als dos laterals." }, [
+  field("module.carcass.sideLeft", "Lateral", {
+    code: UI.carcass,
+    control: "choice",
+    showIf: `${BY_APPLIANCE} Abans de Parets i Cantonades (en depenen).`,
+    default: "full",
+    defaultEditable: true,
+    hideable: false,
+    why: STRUCTURAL,
+    choices: [{ value: "full", label: "Sencer" }, { value: "none", label: "Sense lateral" }],
+    note: "Al nínxol d'un electrodomèstic de terra, «Laterals de remat»: una peça sola a l'extrem de la cuina.",
+  }),
+  field("module.carcass.hollow", "Gruix", {
+    code: UI.carcass,
+    control: "switch",
+    default: false,
+    defaultEditable: true,
+    choices: [{ value: "on", label: "Gruixuts (buits)", reveals: ["module.carcass.hollowThickness"], note: "Cantonades passa a text «A inglet». El mateix nom que Prestatges › Gruix i Divisió › Gruix (2026-10-20)." }],
+    issue: "(menor) Surt també sense laterals, base ni tapa, quan no hi ha cap paret a fer buida.",
+  }, [field("module.carcass.hollowThickness", "Gruix aparent", { code: UI.carcass, control: "number", showIf: "Parets buides", defaultText: "Cas 9 del model únic: el mateix a les parets, els prestatges i els divisors (`HollowRows`): el més gran de 50 i 2 × tauler + 12; mínim 2 × tauler + 6" })]),
+  field("module.carcass.joint", "Cantonades", {
+    code: UI.carcass,
+    control: "choice",
+    showIf: "Algun lateral i tapa, o base sense sòcol (la condició de la construcció, `jointApplies`); amb parets buides, text «A inglet»",
+    default: "butt",
+    defaultEditable: true,
+    choices: [{ value: "butt", label: "Normals" }, { value: "mitre", label: "A inglet" }],
+  }),
+  field("module.carcass.dowel", "Espiga", {
+    code: UI.carcass,
+    control: "hardware",
+    showIf: "La caixa fa espigues (tapa o base a topar amb els laterals, fons encastat ≥ 15 mm, tapa de reixeta o alguna divisió)",
+    defaultText: "La de Preferències › Ferratges",
+    note: "Per decisió de l'usuari, 2026-10-20: «unió és una opció dels laterals, no del conjunt» (abans, secció Mòdul › Unió).",
+  }),
+    field("module.carcass.shelfSetback", "Retirada dels prestatges", { code: UI.carcass, control: "number", showIf: "Algun compartiment amb tira LED, o prestatges (sense calaixos) que no van a ras o que un front encastat bloqueja", defaultText: FROM_PREFS_GAPS }),
+  ]),
+  section("module.carcass.rightGroup", "Dreta", { icon: "subsection", code: UI.carcass, note: "Per decisió de l'usuari, 2026-10-21 («separa els laterals: Esquerra, Dreta»): un acordió per lateral. El Gruix, les Cantonades, l'Espiga i la Retirada dels prestatges surten també aquí (són dels dos laterals; al registre, a Esquerra)." }, [
+  field("module.carcass.sideRight", "Lateral", {
+    code: UI.carcass,
+    control: "choice",
+    showIf: BY_APPLIANCE,
+    default: "full",
+    defaultEditable: true,
+    hideable: false,
+    why: STRUCTURAL,
+    choices: [{ value: "full", label: "Sencer" }, { value: "none", label: "Sense lateral" }],
+  }),
+  ]),
+  section("module.carcass.backGroup", "Fons", { icon: "subsection", code: UI.carcass }, [
+  field("module.carcass.back", "Fons", {
+    code: UI.carcass,
+    control: "choice",
+    showIf: BY_APPLIANCE,
+    default: "groove",
+    defaultEditable: true,
+    choices: [
+      { value: "groove", label: "En ranura", reveals: ["module.carcass.backSetback", "module.carcass.grooveClearance", "module.materials.back"] },
+      { value: "screwed", label: "Cargolat darrere", reveals: ["module.materials.back"] },
+      { value: "inset", label: "Encastat", reveals: ["module.carcass.backInsetSetback", "module.materials.back"], note: "si el fons fa < 15 mm, passa a «Com el cos»" },
+      { value: "none", label: "Sense fons", hides: ["module.carcass.backSetback", "module.carcass.grooveClearance", "module.carcass.backInsetSetback", "module.materials.back"] },
+    ],
+  }, [
+    field("module.carcass.backSetback", "Ranura del fons", { code: UI.carcass, control: "number", showIf: "Fons = En ranura", defaultText: FROM_PREFS_GAPS, issue: RAW_BACK }),
+    field("module.carcass.grooveClearance", "Folgança de la ranura", {
+      code: UI.carcass,
+      control: "number",
+      showIf: "Fons = En ranura",
+      defaultText: FROM_PREFS_GAPS,
+      issue: `Glossari: «Joc» és només el joc paramètric del fabricant; una separació és una «Folgança» (l'ajuda de Preferències en diu folgança). A més, ${RAW_BACK}`,
+    }),
+    field("module.carcass.backInsetSetback", "Retirada del fons", { code: UI.carcass, control: "number", showIf: "Fons = Encastat", default: 0, issue: RAW_BACK }),
+  ]),
+  ]),
   section("module.carcass.baseGroup", "Base", { icon: "subsection", code: UI.carcass, note: "Per decisió de l'usuari, 2026-10-16: «a la Caixa fer subgrups: la Base amb les seves opcions, després el Fons, després la Tapa, després el Front»." }, [
   field("module.carcass.support", "Suport", {
     code: UI.carcass,
@@ -75,114 +195,6 @@ export const CARCASS = section("module.carcass", "Caixa", { icon: "carcass", cod
     choices: [{ value: "on", label: "Sota la base", reveals: ["module.carcass.underLightHardware"] }],
   }, [field("module.carcass.underLightHardware", "Llum", { code: UI.carcass, control: "hardware", showIf: "Llum a sota", defaultText: AS_MODULE })]),
   ]),
-  section("module.carcass.backGroup", "Fons", { icon: "subsection", code: UI.carcass }, [
-  field("module.carcass.back", "Fons", {
-    code: UI.carcass,
-    control: "choice",
-    showIf: BY_APPLIANCE,
-    default: "groove",
-    defaultEditable: true,
-    choices: [
-      { value: "groove", label: "En ranura", reveals: ["module.carcass.backSetback", "module.carcass.grooveClearance", "module.materials.back"] },
-      { value: "screwed", label: "Cargolat darrere", reveals: ["module.materials.back"] },
-      { value: "inset", label: "Encastat", reveals: ["module.carcass.backInsetSetback", "module.materials.back"], note: "si el fons fa < 15 mm, passa a «Com el cos»" },
-      { value: "none", label: "Sense fons", hides: ["module.carcass.backSetback", "module.carcass.grooveClearance", "module.carcass.backInsetSetback", "module.materials.back"] },
-    ],
-  }, [
-    field("module.carcass.backSetback", "Ranura del fons", { code: UI.carcass, control: "number", showIf: "Fons = En ranura", defaultText: FROM_PREFS_GAPS, issue: RAW_BACK }),
-    field("module.carcass.grooveClearance", "Folgança de la ranura", {
-      code: UI.carcass,
-      control: "number",
-      showIf: "Fons = En ranura",
-      defaultText: FROM_PREFS_GAPS,
-      issue: `Glossari: «Joc» és només el joc paramètric del fabricant; una separació és una «Folgança» (l'ajuda de Preferències en diu folgança). A més, ${RAW_BACK}`,
-    }),
-    field("module.carcass.backInsetSetback", "Retirada del fons", { code: UI.carcass, control: "number", showIf: "Fons = Encastat", default: 0, issue: RAW_BACK }),
-  ]),
-  ]),
-  section("module.carcass.topGroup", "Tapa", { icon: "subsection", code: UI.carcass }, [
-  field("module.carcass.top", "Tapa", {
-    code: UI.carcass,
-    control: "choice",
-    showIf: BY_APPLIANCE,
-    default: "full",
-    defaultEditable: true,
-    hideable: false,
-    why: STRUCTURAL,
-    choices: [
-      { value: "full", label: "Sencera", reveals: ["module.carcass.tableTop"] },
-      { value: "ventSlot", label: "Ranura d'aire", reveals: ["module.carcass.ventGap"] },
-      { value: "grille", label: "Reixeta", reveals: ["module.carcass.grille.pattern", "module.carcass.grille.holes", "module.carcass.grille.slots", "module.carcass.grille.margin"] },
-      { value: "none", label: "Sense tapa" },
-    ],
-  }, [
-    field("module.carcass.ventGap", "Ranura d'aire", { code: UI.carcass, control: "number", showIf: "Tapa = Ranura d'aire", default: 60 }),
-    field("module.carcass.grille.pattern", "Patró", { code: UI.carcass, control: "choice", showIf: "Tapa = Reixeta", default: "slotsV", choices: [{ value: "slotsV", label: "Ranures verticals", reveals: ["module.carcass.grille.slots"] }, { value: "slotsH", label: "Ranures horitzontals", reveals: ["module.carcass.grille.slots"] }, { value: "holes", label: "Forats al tresbolillo", reveals: ["module.carcass.grille.holes"] }], note: "El mateix component que el front reixeta (`GrillePatternFields`); la tapa va fixa: sense muntatge." }),
-    field("module.carcass.grille.slots", "Ranura · Separació", { code: UI.carcass, control: "number", showIf: "Patró de ranures", default: 8 }),
-    field("module.carcass.grille.holes", "Diàmetre forat · Pas", { code: UI.carcass, control: "number", showIf: "Patró de forats" }),
-    field("module.carcass.grille.margin", "Marge", { code: UI.carcass, control: "number", showIf: "Tapa = Reixeta", default: 60 }),
-    field("module.carcass.tableTop", "Tauler de taula", {
-      code: UI.carcass,
-      control: "switch",
-      showIf: "Tapa = Sencera",
-      default: false,
-      defaultEditable: true,
-      choices: [{ value: "on", label: "Per sobre dels laterals", reveals: ["module.carcass.tableTopOverhang", "module.carcass.tableTopShape"] }],
-      issue: "(plausible) Depèn dels Laterals («per sobre dels laterals», els fa més curts) però surt ABANS de «Laterals» i també sense cap lateral.",
-    }, [
-      field("module.carcass.tableTopOverhang", "Voladís", { code: UI.carcass, control: "number", default: 30 }),
-      field("module.carcass.tableTopShape", "Forma", { code: UI.carcass, control: "choice", default: "rect", choices: [{ value: "rect", label: "Rectangle" }, { value: "round", label: "Arrodonit" }, { value: "ellipse", label: "Oval" }], note: "i «Editar…» (forma a mida)" }),
-    ]),
-    field("module.carcass.topFiller", "Sòcol de dalt", {
-      code: UI.carcass,
-      control: "switch",
-      showIf: "Amb tapa i sense tauler de taula",
-      default: false,
-      choices: [{ value: "on", label: "Fins al sostre", reveals: ["module.carcass.topFillerHeight", "module.carcass.topFillerSetback"] }],
-      note: "Per decisió de l'usuari, 2026-10-20 («0 casos especials»): una drecera; el mòdul creix, «Sense tapa» i una zona de dalt amb un front fix (`addTopPlinth`).",
-    }, [
-      field("module.carcass.topFillerHeight", "Alçada", { code: UI.carcass, control: "number", range: { min: 10, max: 600, step: 5, suffix: "mm" }, default: 60 }),
-      field("module.carcass.topFillerSetback", "Retirada", { code: UI.carcass, control: "number", range: { min: 0, max: 200, step: 1, suffix: "mm" }, default: 0 }),
-    ]),
-  ]),
-  ]),
-  section("module.carcass.sidesGroup", "Laterals", { icon: "subsection", code: UI.carcass, note: "Laterals, Parets i Cantonades (en depenen) i l'Espiga de les unions de la caixa." }, [
-  field("module.carcass.sides", "Laterals", {
-    code: UI.carcass,
-    control: "choice",
-    showIf: `${BY_APPLIANCE} Abans de Parets i Cantonades (en depenen).`,
-    default: "both",
-    defaultEditable: true,
-    hideable: false,
-    why: STRUCTURAL,
-    choices: [{ value: "none", label: "Cap" }, { value: "left", label: "Esquerre" }, { value: "right", label: "Dret" }, { value: "both", label: "Els dos" }],
-    note: "A l'inspector, dos interruptors: Esquerre · Dret. Al nínxol d'un electrodomèstic de terra, «Laterals de remat»: una peça sola a l'extrem de la cuina.",
-  }),
-  field("module.carcass.hollow", "Gruix", {
-    code: UI.carcass,
-    control: "switch",
-    default: false,
-    defaultEditable: true,
-    choices: [{ value: "on", label: "Gruixuts (buits)", reveals: ["module.carcass.hollowThickness"], note: "Cantonades passa a text «A inglet». El mateix nom que Prestatges › Gruix i Divisió › Gruix (2026-10-20)." }],
-    issue: "(menor) Surt també sense laterals, base ni tapa, quan no hi ha cap paret a fer buida.",
-  }, [field("module.carcass.hollowThickness", "Gruix aparent", { code: UI.carcass, control: "number", showIf: "Parets buides", defaultText: "Cas 9 del model únic: el mateix a les parets, els prestatges i els divisors (`HollowRows`): el més gran de 50 i 2 × tauler + 12; mínim 2 × tauler + 6" })]),
-  field("module.carcass.joint", "Cantonades", {
-    code: UI.carcass,
-    control: "choice",
-    showIf: "Algun lateral i tapa, o base sense sòcol (la condició de la construcció, `jointApplies`); amb parets buides, text «A inglet»",
-    default: "butt",
-    defaultEditable: true,
-    choices: [{ value: "butt", label: "Normals" }, { value: "mitre", label: "A inglet" }],
-  }),
-  field("module.carcass.dowel", "Espiga", {
-    code: UI.carcass,
-    control: "hardware",
-    showIf: "La caixa fa espigues (tapa o base a topar amb els laterals, fons encastat ≥ 15 mm, tapa de reixeta o alguna divisió)",
-    defaultText: "La de Preferències › Ferratges",
-    note: "Per decisió de l'usuari, 2026-10-20: «unió és una opció dels laterals, no del conjunt» (abans, secció Mòdul › Unió).",
-  }),
-  ]),
-  field("module.carcass.shelfSetback", "Retirada dels prestatges", { code: UI.carcass, control: "number", showIf: "Algun compartiment amb tira LED, o prestatges (sense calaixos) que no van a ras o que un front encastat bloqueja", defaultText: FROM_PREFS_GAPS }),
   section("module.carcass.frontsGroup", "Fronts del mòdul", { icon: "subsection", code: UI.carcass, showIf: "Dins del Front de cada compartiment o zona dividida que porta un front", note: "Per decisió de l'usuari, 2026-10-20: abans Caixa › Fronts; ara una subsecció del Front (els mateixos valors, de tot el mòdul, des de qualsevol Front)." }, [
   field("module.carcass.frontStyle", "Estil dels fronts", {
     code: UI.carcass,

@@ -155,10 +155,11 @@ export const CarcassSchema = z.object({
   topFiller: z.object({ height: mm.min(10).max(600), setback: mm.min(0).max(200) }).optional(),
   sides: z.object({ left: z.boolean(), right: z.boolean() }),
   /**
-   * **Cantonada en L** (per petició de l'usuari, 2026-10-20; `addCorner`): el costat sense lateral que s'obre al mòdul
-   * girat de la cantonada. Els fronts del mòdul compten com a aguantats per aquell costat (el mòdul girat fa de lateral).
+   * El costat (o els dos) sense lateral on toca un altre mòdul, que en fa de lateral: els fronts compten com a aguantats
+   * per aquell costat. No el tria ningú: el recalcula `withNeighbourSides` a partir de la posició dels mòduls (lateral
+   * compartit, 2026-10-21; abans, només la cantonada en L, `addCorner`).
    */
-  corner: z.enum(["left", "right"]).optional(),
+  corner: z.enum(["left", "right", "both"]).optional(),
   /**
    * Unió de la tapa amb els laterals. Normal (per defecte): la tapa entre laterals, amb
    * espigues. Inglet: tapa i laterals tallats a 45° a la cantonada (no es veu cap cantell),
@@ -340,7 +341,7 @@ export interface Zone {
     flush?: boolean
     /**
      * Retranqueig dels prestatges d'aquest compartiment (mm, del davant de la caixa al cantell del prestatge; sense: el del
-     * mòdul, Mòdul › Caixa). Amb un pistó d'abatible al lateral, la construcció els retira encara més si cal perquè no hi
+     * mòdul, Mòdul). Amb un pistó d'abatible al lateral, la construcció els retira encara més si cal perquè no hi
      * topin (per decisió de l'usuari, 2026-10-17).
      */
     setback?: number
@@ -360,7 +361,26 @@ export interface Zone {
   appliance?: ZoneAppliance
   /** Calaixos interiors, darrere de la porta (`InnerDrawers`). */
   innerDrawers?: InnerDrawers
+  /**
+   * Fons de la zona (per decisió de l'usuari, 2026-10-21: «agafa el valor del primer, si es canvia en un, que ho faci»):
+   * els mateixos 4 valors que el Fons del mòdul. Sense: el de la zona de més amunt (i, a l'Interior, el del mòdul). Tots 4
+   * a qualsevol zona: el fons del mòdul s'hi talla i, en ranura, cargolat o encastat, la zona porta el seu, unit a les
+   * peces que la tanquen (`zoneBackRegions`).
+   */
+  back?: Carcass["back"]
+  /** Retirada del fons encastat de la zona (mm des del cantell posterior de la caixa). Sense: la de més amunt. */
+  backInsetSetback?: number
+  /**
+   * Costats de la zona sense paret (per decisió de l'usuari, 2026-10-21: «per defecte surten els laterals, però es
+   * podrien treure per fer formes»): el divisor o el prestatge fix d'una divisió que la tanca per aquell costat no hi
+   * passa (es fa més curt o en dos trossos) i la zona del costat guanya l'espai. Només els que són d'una divisió (la caixa
+   * del mòdul es tria a Mòdul; `ZoneBounds.inner`).
+   */
+  noWalls?: ZoneSide[]
 }
+
+/** Un costat d'una zona: esquerra, dreta, a sota, a sobre. */
+export type ZoneSide = "left" | "right" | "bottom" | "top"
 
 /**
  * **Calaixos interiors** (per decisió de l'usuari, 2026-10-16: «posar calaixos darrere una porta»): contingut del
@@ -445,6 +465,9 @@ export const ZoneSchema: z.ZodType<Zone> = z.lazy(() =>
         glass: z.boolean().optional(),
       })
       .optional(),
+    back: z.enum(["groove", "screwed", "inset", "none"]).optional(),
+    backInsetSetback: mm.min(0).max(600).optional(),
+    noWalls: z.array(z.enum(["left", "right", "bottom", "top"])).max(4).optional(),
   })),
 )
 

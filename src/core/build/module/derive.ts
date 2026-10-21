@@ -1,4 +1,4 @@
-import { hasBottom, type PNode, type Module, type Zone } from "../../model"
+import { hasBottom, zoneBacks, type PNode, type Module, type Zone } from "../../model"
 import type { ZoneRect } from "../layout"
 
 /** Mides derivades de la carcassa. */
@@ -49,10 +49,13 @@ export function derive(m: Module): Derived {
   const t = c.thickness
   const tb = c.backThickness
   const { width: W, height: H, depth: D } = c
-  const sideDepth = c.back === "screwed" ? D - tb : D
+  // Un mòdul sense fons amb alguna zona de fons cargolat (per decisió de l'usuari, 2026-10-21: «si en interior te un
+  // cargolat no miris el principal»): la caixa deixa el lloc del fons al darrere, com un mòdul cargolat.
+  const screwed = c.back === "screwed" || (c.back === "none" && [...zoneBacks(m).values()].some((b) => b.kind === "screwed"))
+  const sideDepth = screwed ? D - tb : D
   const sideZ0 = D - sideDepth
   // Encastat: entre laterals, a `backInsetSetback` del darrere; l'interior comença a la seva cara de davant.
-  const backInnerZ = c.back === "groove" ? c.backSetback + tb : c.back === "screwed" ? tb : c.back === "inset" ? (c.backInsetSetback ?? 0) + tb : 0
+  const backInnerZ = c.back === "groove" ? c.backSetback + tb : screwed ? tb : c.back === "inset" ? (c.backInsetSetback ?? 0) + tb : 0
   // «Sense base» (`noBottom`, o el `open` d'abans): cap peça de baix; amb sòcol, l'interior comença a dalt del sòcol.
   const hasBase = hasBottom(c)
   const hasTop = c.top.kind !== "none"

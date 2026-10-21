@@ -82,9 +82,9 @@
   ],
   "p": [
    "back|trassera|1247.5x555x10|MDF lacat|none|e0000|h0|g0|c0|o-|@100ff9ac",
-   "divider|divisor|1240x260x30|Noguera xapada|x|e1000|h3:262e54ac|g0|c0|o-|@9114993f",
-   "divider|divisor|1240x260x30|Noguera xapada|x|e1000|h77:1cd3ce6b|g0|c0|o-|@f5f2a4ce",
-   "divider|divisor|1240x260x30|Noguera xapada|x|e1000|h77:3ee09605|g0|c0|o-|@40b3419c",
+   "divider|divisor|1240x260x30|Noguera xapada|x|e1001|h3:262e54ac|g0|c0|o-|@9114993f",
+   "divider|divisor|1240x260x30|Noguera xapada|x|e1001|h77:1cd3ce6b|g0|c0|o-|@f5f2a4ce",
+   "divider|divisor|1240x260x30|Noguera xapada|x|e1001|h77:3ee09605|g0|c0|o-|@40b3419c",
    "flap|abatible|1266x296.5x30|Melamina blanca|x|e1111|h2:778b0e72|g0|c2:92277d73|o-|@40572a18",
    "flap|abatible|1266x92x30|Melamina blanca|x|e1111|h2:a4e3407a|g0|c2:63e10986|o-|@7964f345",
    "shelf|estanter 1|240x64x30|Noguera xapada|y|e0001|h0|g0|c0|o-|@59736a97",
@@ -291,8 +291,8 @@
    "grille-open-ratio"
   ],
   "p": [
-   "divider|divisor|1874x560x16|Melamina 19|x|e1000|h11:a71b171a|g0|c0|o-|@8c56e803",
-   "divider|divisor|1874x560x16|Melamina 19|x|e1000|h13:d15e1b7f|g0|c0|o-|@92fef71c",
+   "divider|divisor|1874x560x16|Melamina 19|x|e1001|h11:a71b171a|g0|c0|o-|@8c56e803",
+   "divider|divisor|1874x560x16|Melamina 19|x|e1001|h13:d15e1b7f|g0|c0|o-|@92fef71c",
    "drawerBack|darrere calaix|295x78x16|Melamina 19|x|e1000|h4:724c3410|g0|c0|o-|@854b610f",
    "drawerBack|darrere calaix|384x295x16|Melamina 19|y|e0100|h4:3054f892|g0|c0|o-|@6aaba6b6",
    "drawerBack|darrere calaix|384x295x16|Melamina 19|y|e0100|h4:3054f892|g0|c0|o-|@8d90ced8",
@@ -567,9 +567,9 @@
   ],
   "p": [
    "back|trassera|1368.5x1058.5x19|Noguera xapada|none|e0000|h0|g0|c0|o-|@adfc6153",
-   "divider|divisor|1361x271x19|Noguera xapada|x|e1000|h5:2fbe8ae3|g0|c0|o-|@889d76bb",
-   "divider|divisor|1361x271x19|Noguera xapada|x|e1000|h6:8637a75f|g0|c0|o-|@1fad6939",
-   "divider|divisor|1361x271x19|Noguera xapada|x|e1000|h8:41fd7185|g0|c0|o-|@1311574b",
+   "divider|divisor|1361x271x19|Noguera xapada|x|e1001|h5:2fbe8ae3|g0|c0|o-|@889d76bb",
+   "divider|divisor|1361x271x19|Noguera xapada|x|e1001|h6:8637a75f|g0|c0|o-|@1fad6939",
+   "divider|divisor|1361x271x19|Noguera xapada|x|e1001|h8:41fd7185|g0|c0|o-|@1311574b",
    "drawerBack|darrere calaix|402x102.3x16|Noguera xapada|y|e0100|h4:28170512|g0|c0|o-|@0de79750",
    "drawerBack|darrere calaix|402x102.3x16|Noguera xapada|y|e0100|h4:28170512|g0|c0|o-|@3eb096c0",
    "drawerBack|darrere calaix|402x102.3x16|Noguera xapada|y|e0100|h4:28170512|g0|c0|o-|@81de6fae",
@@ -1082,9 +1082,9 @@
    "drawerFront|frontal calaix|480.7x136.3x19|Roure massís / xapat|y|e1111|h4:ab8a445c|g1:f16747f5|c2:f92f069a|o-|@68a24be5",
    "drawerSide|lateral calaix|450.7x450x16|Roure massís / xapat|y|e0100|h6:479630ef|g1:796980fe|c0|o-|@1ddafb87",
    "drawerSide|lateral calaix|450.7x450x16|Roure massís / xapat|y|e0100|h6:c11e2642|g1:796980fe|c0|o-|@5d997a11",
-   "fixedShelf|estanter fixe|440x331x30|Melamina blanca|x|e0010|h0|g0|c0|o-|@0703be58",
-   "fixedShelf|estanter fixe|440x331x30|Melamina blanca|x|e0010|h0|g0|c0|o-|@4cd53a43",
-   "fixedShelf|estanter fixe|440x331x30|Melamina blanca|x|e0010|h0|g0|c0|o-|@d93b44b7",
+   "fixedShelf|estanter fixe|440x331x30|Melamina blanca|x|e0111|h0|g0|c0|o-|@0703be58",
+   "fixedShelf|estanter fixe|440x331x30|Melamina blanca|x|e0111|h0|g0|c0|o-|@4cd53a43",
+   "fixedShelf|estanter fixe|440x331x30|Melamina blanca|x|e0111|h0|g0|c0|o-|@d93b44b7",
    "fixedShelf|estanter fixe|487x372x19|Roure massís / xapat|y|e0001|h12:3110e44d|g0|c0|o-|@66107f19",
    "fixedShelf|estanter fixe|487x372x19|Roure massís / xapat|y|e0001|h12:4f9239a9|g0|c0|o-|@7991de81",
    "flap|abatible|489.7x406x19|Roure massís / xapat|x|e1111|h2:c146100c|g0|c2:4d9b9b1c|o-|@b80132f7",
@@ -1513,7 +1513,7 @@
   "p": [
    "back|trassera|1812x281x10|Noguera xapada|none|e0000|h0|g0|c0|o-|@73ef7e7c",
    "bottom|baix|330x281x19|Melamina 19|y|e0001|h3:0e55d9b0|g0|c0|o-|@42be0d2f",
-   "fixedShelf|estanter fixe|320x281x19|Melamina 19|y|e0001|h3:10732456|g0|c0|o-|@d0acf41f",
+   "fixedShelf|estanter fixe|320x281x19|Melamina 19|y|e0011|h3:10732456|g0|c0|o-|@d0acf41f",
    "plinth|socol|281x80x19|Melamina 19|x|e0000|h0|g0|c0|o-|@f520a9e1",
    "side|lat e|1930x330x19|Melamina 19|x|e1000|h6:1d7d4dd7|g0|c0|o-|@84a01218|m:right",
    "top|dalt|330x300x19|Melamina 19|y|e0100|h0|g0|c13:7e702f17|o-|@fea53fe0|m:top"

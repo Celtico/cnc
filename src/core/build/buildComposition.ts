@@ -1,7 +1,7 @@
 import type { KitOrderLine } from "./drawerKit"
-import { activeRuns, compositionKind, freeX, withSupport, isSolidMaterial, moduleFrontFace, moduleRot, rotXZ, unrot, type ModuleRot, modelFootprint, modulePlacements, NO_EDGES, partsOnlyKind, partCutters, resolveParts, type Composition, type ModelObject, type Module, type Panel, type Vec3 } from "../model"
+import { activeRuns, compositionKind, freeX, withSupport, withNeighbourSides, isSolidMaterial, moduleFrontFace, moduleRot, rotXZ, unrot, type ModuleRot, modelFootprint, modulePlacements, NO_EDGES, partsOnlyKind, partCutters, resolveParts, type Composition, type ModelObject, type Module, type Panel, type Vec3 } from "../model"
 import { applyRefCuts, migrateCableHoles, refTouchesBox } from "./refCuts"
-import { columnRearLimits, columnWalls, relayLegs } from "./columnWalls"
+import { columnRearLimits, columnWalls, isPillar, relayLegs } from "./columnWalls"
 import { clipHangingToRefs } from "./hangingCuts"
 import { buildModule, type BuildWarning, type KitOrder, type ModuleBuild, type Wiring } from "./buildModule"
 import type { LightOrder } from "./lightOrders"
@@ -14,6 +14,7 @@ import { buildFreeParts, type PartJoint } from "./freeParts"
 import { resolveHoleClashes } from "./holeClash"
 import { applyHardwarePlacements } from "./hardwarePlace"
 import { activeIslands, islandEndPanels } from "./islands"
+import { joinInLinePanels } from "./joinPanels"
 import { fmtNum } from "../../lib/format"
 
 export interface CompositionWarning extends BuildWarning {
@@ -118,7 +119,8 @@ export function moduleBoxToWorld(mb: { x: number; y: number; z: number; turn?: M
 export function buildComposition(input: Composition): CompositionBuild {
   // Passacables de la versió anterior → objectes que tallen. Un sol suport per als mòduls de terra (`withSupport`: els
   // mobles d'abans el prenen dels seus mòduls) i el sòcol de cada tram.
-  const migrated = withSupport(migrateCableHoles(input, panelBox))
+  // Un mòdul sense un lateral on en toca un altre: el lateral del veí l'aguanta (`withNeighbourSides`, lateral compartit).
+  const migrated = withNeighbourSides(withSupport(migrateCableHoles(input, panelBox)))
   // Objecte: les peces només es veuen (mai van al nesting ni fan encaixos).
   const comp = compositionKind(migrated) === "objecte" ? { ...migrated, parts: migrated.parts?.map((p) => ({ ...p, nest: false, joinery: false })) } : migrated
   // Còpia: el mòdul de darrere de cada illa es recol·loca (`islands.ts`).
@@ -145,7 +147,7 @@ export function buildComposition(input: Composition): CompositionBuild {
     const rot = moduleRot(m)
     const out: [number, number][] = []
     for (const o of comp.references ?? []) {
-      if (o.effect !== "cut" || (o.axis ?? "z") !== "y" || o.y > 1) continue
+      if (o.effect !== "cut" || !isPillar(o) || o.y > 1) continue
       // La petjada de la columna al mòdul (desfent el gir al voltant del centre de la caixa).
       const pts = [[o.x, o.z], [o.x + o.w, o.z], [o.x, o.z + o.d], [o.x + o.w, o.z + o.d]].map(([x, z]) => rotXZ(x! - pl.x, z! - mz, unrot(rot), W / 2, D / 2))
       const x0 = Math.min(...pts.map((p) => p[0])), x1 = Math.max(...pts.map((p) => p[0]))
@@ -258,6 +260,12 @@ export function buildComposition(input: Composition): CompositionBuild {
       }
   }
 
+  // Dos mòduls que es toquen sense cap lateral entre ells: la base, la tapa i els prestatges en línia, d'una sola peça.
+  if (!onlyParts) {
+    const joined = joinInLinePanels(panels)
+    if (joined.joined.length) panels.splice(0, panels.length, ...joined.panels)
+  }
+
   // Peces corregudes (el taulell; el sòcol és el de cada tram) i el sòcol de cada tram: numerats com un «mòdul» més per
   // a les refs del taller.
   const runWarnings: RunWarning[] = []
@@ -320,7 +328,15 @@ export function buildComposition(input: Composition): CompositionBuild {
   // Una peça partida per un tall (una columna al mig del fons): els altres trossos, peces noves.
   const pieces: Panel[] = []
   const cutting = new Set<string>()
+  // Un tros de fons (o el llistó del darrere d'una peça gruixuda) que queda tot darrere d'una columna de terra: no hi és
+  // (els fons nous al voltant de la columna el substitueixen, `columnWalls`).
+  const behindPillar = new Set<Panel>()
+  const pillarIds = new Set(comp.references.filter((o) => o.effect === "cut" && isPillar(o) && o.y <= 1).map((o) => o.id))
   for (const pr of applyRefCuts([...panels, ...free.extras], [...comp.references, ...partCutters(comp)], panelBox, (p) => free.extras.includes(p), pieces, cutting)) {
+    if (pr.eaten && pillarIds.has(pr.refId) && (pr.panel.role === "back" || pr.panel.role === "spacer")) {
+      behindPillar.add(pr.panel)
+      continue
+    }
     const moduleId = modules.find((m) => m.index === pr.panel.module)?.id
     const owner = pr.refId.startsWith("part:") ? { partId: pr.refId.slice(5) } : { refId: pr.refId }
     warnings.push({ code: "ref-cut", message: pr.message, panelId: pr.panel.id, ...owner, ...(moduleId ? { moduleId } : {}), ...(pr.options ? { options: pr.options } : {}) })
@@ -344,13 +360,18 @@ export function buildComposition(input: Composition): CompositionBuild {
   if (comp.references.some((o) => o.effect === "cut")) {
     const cw = columnWalls(panels, comp.references, modules.flatMap((m) => {
       const module = comp.modules.find((x) => x.id === m.id)
-      return module ? [{ id: m.id, index: m.index, module }] : []
+      return module ? [{ id: m.id, index: m.index, module, backKinds: m.build.backKinds }] : []
     }), panelBox)
     panels.push(...cw.added)
+    for (const gone of [...behindPillar, ...cw.removed]) {
+      const i = panels.indexOf(gone)
+      if (i >= 0) panels.splice(i, 1)
+    }
     for (const pr of cw.problems) {
       const moduleId = modules.find((m) => m.index === pr.panel.module)?.id
       warnings.push({ code: "ref-cut", message: pr.message, panelId: pr.panel.id, refId: pr.refId, ...(moduleId ? { moduleId } : {}) })
-    }    // Les potes de l'app (AXILO 78) a les cantonades de la base retallada, com les genèriques.
+    }
+    // Les potes de l'app (AXILO 78) a les cantonades de la base retallada, com les genèriques.
     const legModules = modules.flatMap((m) => {
       const module = comp.modules.find((x) => x.id === m.id)
       return module && !moduleRot(module) ? [{ index: m.index, module }] : []

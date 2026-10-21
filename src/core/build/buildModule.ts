@@ -22,5 +22,5 @@ export function buildModule(input: Module, opts: { rearLimits?: RearLimit[]; /**
   if (opts.wiring !== false) b.buildWiring()
   b.applyEdgeRules(opts.freestanding)
   const panels = b.panels.map((p) => normalizePanel(p.cutouts && p.cutouts.length === 0 ? { ...p, cutouts: undefined } : p))
-  return { panels, extras: b.extras, hardwareKits: b.hardwareKits, lightKits: b.lightKits, fittingOrders: b.fittingOrders, ventInlets: b.ventInlets, linear: b.linear, ...(b.wiring ? { wiring: b.wiring } : {}), warnings: b.warnings, layout, openRatios: b.openRatios, drawerHeights: b.drawerHeights }
+  return { panels, extras: b.extras, hardwareKits: b.hardwareKits, lightKits: b.lightKits, fittingOrders: b.fittingOrders, ventInlets: b.ventInlets, linear: b.linear, ...(b.wiring ? { wiring: b.wiring } : {}), warnings: b.warnings, layout, openRatios: b.openRatios, drawerHeights: b.drawerHeights, backKinds: b.backKinds }
 }

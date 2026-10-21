@@ -98,7 +98,7 @@ interface SupportIds { kind: string; height: string; leg: string; legInset: stri
 
 /**
  * Suport, alçada i pota: el mateix per a tots els mòduls de terra de la cuina. Surt al Moble › Cuina i, amb les mateixes
- * opcions i el mateix valor, a la Caixa › Base de cada mòdul de terra (cas 15 del model únic).
+ * opcions i el mateix valor, a Mòdul › Base de cada mòdul de terra (cas 15 del model únic).
  */
 export function SupportBasics({ support: s, onChange: set, first, help, ids }: { support: FloorSupport; onChange: (patch: Partial<FloorSupport>) => void; first?: Module; help: string; ids: SupportIds }) {
   return (

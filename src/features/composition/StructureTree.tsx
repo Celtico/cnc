@@ -1,12 +1,13 @@
 import { Stack } from "@chakra-ui/react"
 import { useRef, useState } from "react"
 import { LuBox } from "react-icons/lu"
-import { compositionKind, partsOnlyKind, newId, newModelObject, type Composition, type MultiItem, type Module } from "../../core/model"
+import { addCompositionModules, compositionKind, partsOnlyKind, newId, newModelObject, type Composition, type MultiItem, type Module } from "../../core/model"
 import { NameDialog } from "../../components/NameDialog"
 import { defaultElementName, freePartFor, refFor, type AddKind } from "./addElements"
 import { useSettings } from "../settings/SettingsContext"
 import { TreeRow, TreeSection } from "../../components/TreeRow"
 import { ModelImportDialog, type ModelImportHandle } from "./ModelImportDialog"
+import { ModulePicker } from "./ModulePicker"
 import type { ModelChoice } from "./useModelAssets"
 import { useModuleAccordion, useOpenGroups } from "./tree/useTreeExpansion"
 import { useTreeDnd } from "./tree/useTreeDnd"
@@ -63,8 +64,11 @@ export function StructureTree({
     onSelect({ kind: "module", id: m.id })
   }
   const [adding, setAdding] = useState<AddKind | null>(null)
+  // «Afegir mòdul»: primer la galeria (un de fet o «Mòdul en blanc», que demana el nom com abans).
+  const [picking, setPicking] = useState(false)
   // Model 3D nou: un .glb, .gltf, .fbx o un zip de Poly Haven (es passa a .glb i s'optimitza en pujar-lo).
   const modelImport = useRef<ModelImportHandle>(null)
+  const blankNext = useRef(false)
   const [uploading, setUploading] = useState(false)
   const { settings } = useSettings()
   const onlyParts = partsOnlyKind(compositionKind(comp))
@@ -129,7 +133,29 @@ export function StructureTree({
       {/* El + de «Models 3D»: l'explicació del format i els selectors (sense llista de models de l'app, per decisió de
           l'usuari; les plantes de l'app són al catàleg d'Objectes). La finestra diu el progrés i el resultat. */}
       <ModelImportDialog handle={modelImport} onBusy={setUploading} onImported={(m) => addModel(m, m.name)} />
-      {!onlyParts && <TreeSection onAdd={() => setAdding("module")} addLabel="Afegir mòdul">Mòduls</TreeSection>}
+      <ModulePicker
+        open={picking}
+        onClose={() => setPicking(false)}
+        mobleName={name}
+        onBlank={() => {
+          // El nom, quan la finestra ja s'ha tancat: obert mentre es tanca, el diàleg es tancava sol i no es feia res.
+          blankNext.current = true
+          setPicking(false)
+        }}
+        onClosed={() => {
+          if (!blankNext.current) return
+          blankNext.current = false
+          setAdding("module")
+        }}
+        onPick={(c, n) => {
+          setPicking(false)
+          const r = addCompositionModules(comp, c, n)
+          onChange(r.comp)
+          const first = r.items[0]
+          if (first) onSelect(r.items.length > 1 ? { kind: "multi", items: r.items } : first.kind === "module" ? { kind: "module", id: first.id } : first.kind === "part" ? { kind: "part", id: first.id } : { kind: "model", id: first.id })
+        }}
+      />
+      {!onlyParts && <TreeSection onAdd={() => setPicking(true)} addLabel="Afegir mòdul">Mòduls</TreeSection>}
       {!onlyParts && <ModuleRows tree={tree} openId={openId} toggle={toggle} />}
 
       {/* Peces lliures (flat-pack): com els objectes, però són peces de debò amb encaixos. */}

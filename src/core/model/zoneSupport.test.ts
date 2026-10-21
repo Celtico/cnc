@@ -41,9 +41,10 @@ describe("què aguanta cada compartiment (opcions en cascada)", () => {
     const root = splitZone(m.root, "r", "h", 2)
     const [low, high] = root.split!.children
     const map = zoneBoundsMap({ ...m, root })
-    expect(map.get(low!.id)).toEqual({ left: true, right: true, bottom: true, top: true, noBase: false, noTop: false })
+    // `inner`: el travesser és de la divisió (la zona el pot treure, Caixa de la zona).
+    expect(map.get(low!.id)).toEqual({ left: true, right: true, bottom: true, top: true, noBase: false, noTop: false, inner: ["top"] })
     // A sobre del de dalt hi ha la tapa que el mòdul no té.
-    expect(map.get(high!.id)).toEqual({ left: true, right: true, bottom: true, top: false, noBase: false, noTop: true })
+    expect(map.get(high!.id)).toEqual({ left: true, right: true, bottom: true, top: false, noBase: false, noTop: true, inner: ["bottom"] })
   })
   it("fronts: només amb el compartiment aguantat pels quatre costats; l'ajuda diu per què", () => {
     const all = { left: true, right: true, bottom: true, top: true, noBase: false, noTop: false }

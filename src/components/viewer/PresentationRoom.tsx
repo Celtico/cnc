@@ -15,7 +15,7 @@ const SK_T = 0.015
  * moble hi va recolzat), sòcol de paret i llum d'estudi amb reflexos suaus. Tot es genera
  * aquí, sense xarxa (funciona a la PWA sense connexió).
  */
-export function PresentationRoom({ backZ, scene, materials = [] }: { backZ: number; scene: PresentationScene; materials?: MaterialPref[] }) {
+export function PresentationRoom({ backZ, scene, materials = [], sideWalls }: { backZ: number; scene: PresentationScene; materials?: MaterialPref[]; sideWalls?: { left?: number; right?: number } }) {
   // Terra i paret de la biblioteca de materials (els mateixos dels ambients), a mida real.
   const floorLib = scene.floorMaterial && materials.some((m) => m.name === scene.floorMaterial) ? scene.floorMaterial : null
   const wallLib = scene.wallMaterial && materials.some((m) => m.name === scene.wallMaterial) ? scene.wallMaterial : null
@@ -64,6 +64,21 @@ export function PresentationRoom({ backZ, scene, materials = [] }: { backZ: numb
         {wallMat ? <primitive key={`lib:${wallLib}`} object={wallMat} attach="material" /> : <meshStandardMaterial key="wall-color" color={scene.wall} roughness={0.95} envMapIntensity={0.4} />}
       </mesh>
 
+      {/* Parets dels costats (per decisió de l'usuari, 2026-10-21): a ras del moble, des de la paret del darrere cap endavant. */}
+      {(["left", "right"] as const).map((side) => {
+        const x = sideWalls?.[side]
+        if (x === undefined) return null
+        const s = side === "left" ? 1 : -1
+        return (
+          <group key={side}>
+            {/* El mateix material que la del darrere, compartit (`material`, no `primitive`: un objecte només pot penjar d'un lloc). */}
+            <mesh position={[x - s * 0.002, 2, backZ + ROOM / 2]} rotation-y={(s * Math.PI) / 2} receiveShadow userData={{ room: "wall" }} {...(wallMat ? { material: wallMat } : {})}>
+              <planeGeometry args={[ROOM, 4]} />
+              {!wallMat && <meshStandardMaterial color={scene.wall} roughness={0.95} envMapIntensity={0.4} />}
+            </mesh>
+          </group>
+        )
+      })}
       {scene.skirting !== "none" && (
         <mesh position={[0, SK_H / 2, backZ + SK_T / 2]} receiveShadow castShadow userData={{ room: "wall" }}>
           <boxGeometry args={[ROOM, SK_H, SK_T]} />

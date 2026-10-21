@@ -1,8 +1,9 @@
 import { DEFAULT_CABINET } from "./cabinet"
 import { isAppliance, isLegacyHardware, type ModuleHardware } from "./hardware"
 import { doorLikeFront, fillsNiche, standsOnFloor, takesFront, type Appliance } from "./appliance"
-import { canHoldFront, canHoldShelves, carcassBounds, childBounds, hasBottom, type ZoneBounds } from "./zoneSupport"
+import { canHoldFront, canHoldShelves, carcassBounds, childBounds, hasBottom, withNoWalls, isOuterWall, type ZoneBounds } from "./zoneSupport"
 import { applianceCarcass, type ApplianceCarcass } from "./applianceCarcass"
+import { childBack, moduleBack, type ZoneBack } from "./zoneBack"
 import { DEFAULT_GRILLE, type Carcass, type Front, type InnerDrawers, type Module, type Zone, type ZoneAppliance } from "./moduleSchema"
 
 // --- «Res amagat compta» -------------------------------------------------------------
@@ -73,11 +74,17 @@ export function visibleModule(m: Module): Module {
   if (c.joint !== "mitre" || !jointApplies(carcass)) delete carcass.joint
   // Tauler de taula: només amb la tapa sencera.
   if (c.top.kind !== "full") delete carcass.tableTop
-  // Cantonada en L: només si aquell costat no té lateral.
-  if (c.corner && c.sides[c.corner]) delete carcass.corner
+  // Costat aguantat pel veí: només els que no tenen lateral.
+  if (c.corner) {
+    const l = c.corner !== "right" && !c.sides.left
+    const r = c.corner !== "left" && !c.sides.right
+    if (l && r) carcass.corner = "both"
+    else if (l || r) carcass.corner = l ? "left" : "right"
+    else delete carcass.corner
+  }
   // Sòcol de dalt d'abans: no es fa (passa a la drecera de zones en obrir el moble, `withZonePlinths`).
   delete carcass.topFiller
-  const root = visibleZone(m.root, kitDefaultOf(m), false, carcassBounds(carcass), false, true)
+  const root = visibleBacks(visibleZone(m.root, kitDefaultOf(m), false, carcassBounds(carcass), false, true), carcass, moduleBack(carcass))
   // Fons del calaix: només amb calaixos que es fan (la fila de Materials no surt sense).
   if (!hasDrawers(root) || !c.drawerBottomMaterial) delete carcass.drawerBottomMaterial
   // Folgança de les peces de dins: només amb l'arrel dividida (la fila no surt sense); 0 és l'absència.
@@ -88,6 +95,18 @@ export function visibleModule(m: Module): Module {
   if (fronts.style === "overlay" || !hasBuiltFronts(root) || rule?.rule.niche) delete fronts.style
   if (fronts.handles === "bar") delete fronts.handles
   return { ...m, carcass, fronts, root }
+}
+
+/** Fons de cada zona (`Zone.back`): només el que canvia respecte a la zona de més amunt. La retirada, només encastat. */
+function visibleBacks(z: Zone, c: Carcass, parent: ZoneBack): Zone {
+  const b = childBack(parent, z)
+  const out: Zone = { ...z }
+  delete out.back
+  delete out.backInsetSetback
+  if (b.kind !== parent.kind) out.back = b.kind
+  if (b.kind === "inset" && (parent.kind !== "inset" || b.setback !== parent.setback)) out.backInsetSetback = b.setback
+  if (z.split) out.split = { ...z.split, children: z.split.children.map((ch) => visibleBacks(ch, c, b)) }
+  return out
 }
 
 /** La guia del mòdul pot ser un joc de calaix (`drawerKit`): els calaixos sense guia pròpia hi llegeixen les opcions. */
@@ -258,8 +277,14 @@ function visibleDrawers(f: Extract<Front, { kind: "drawers" }>, kitDefault: bool
  * calaixos sense guia pròpia el fan servir). El «Tirador» de cada front compta sempre (també «Cap (push)»): el del mòdul
  * només és el per defecte.
  */
-function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: ZoneBounds, fixedCover = false, _isRoot = false): Zone {
+function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, given: ZoneBounds, fixedCover = false, isRoot = false): Zone {
   const out: Zone = { ...z }
+  // Costats sense paret: els d'una divisió i el tram de la tapa o la base del mòdul que hi és (no a l'Interior: la seva és
+  // la del mòdul, Mòdul › Tapa), un cop i en ordre.
+  const walls = (["left", "right", "bottom", "top"] as const).filter((s) => z.noWalls?.includes(s) && (given.inner?.includes(s) || (!isRoot && isOuterWall(given, s))))
+  if (walls.length) out.noWalls = walls
+  else delete out.noWalls
+  const bounds = withNoWalls(given, out, !isRoot)
   // Els fronts recordats dels altres tipus (`fronts`) són només per tornar-hi: no construeixen res.
   delete out.fronts
   // Tapat pel front d'una zona de més amunt (`walkBuiltZones`): el seu front no es fa (es conserva a la composició) i el

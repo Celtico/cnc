@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { carcassDowels, coveringZone, defaultModule, frontOptionsUse, moduleRows, setFront, splitZone, usedHardwareSlots, type Carcass, type Front, type Module, type Zone } from "../model"
+import { carcassDowels, coveringZone, defaultModule, frontOptionsUse, moduleRows, setFront, splitZone, usedHardwareSlots, type Carcass, type Front, type Module, type Zone, withNeighbourSides } from "../model"
 import { buildModule } from "./buildModule"
 import { buildComposition } from "./buildComposition"
 import { int, pick, randomComposition, rng } from "./testCorpus"
@@ -102,7 +102,8 @@ describe("Caixa: estil, folgances i retranqueig (`frontOptionsUse`)", () => {
     }
     const bad: number[] = []
     for (let seed = 1; seed <= 200; seed++) {
-      const c = randomComposition(seed)
+      // Amb els costats que aguanta el veí (`withNeighbourSides`), com els veu l'editor.
+      const c = withNeighbourSides(randomComposition(seed))
       const ref = out(c)
       const scrambled = {
         ...c,

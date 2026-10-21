@@ -20,7 +20,7 @@ function slotCounter(): { out: SlotUse; add: (slot: HardwareSlot, n: number, wha
 
 /**
  * **Quins ferratges fa servir un mòdul**, segons el que té (res amagat compta: es mira el mòdul tal com es veu). És el
- * que l'inspector ensenya (l'Espiga a Caixa › Laterals, la filera System 32 al compartiment): en una tauleta amb un calaix no hi
+ * que l'inspector ensenya (l'Espiga a Mòdul › Laterals, la filera System 32 al compartiment): en una tauleta amb un calaix no hi
  * pinten res la frontissa, el braç d'abatible ni l'imant. Per a cada lloc, quants elements el fan servir (portes,
  * calaixos…), per dir-ho a la fila. **L'única font** (abans n'hi havia una altra que mirava les peces construïdes: amb un
  * joc de calaix que no hi cap no hi ha cap forat de guia i la fila «Guia de calaix» desapareixia justament quan cal
@@ -115,7 +115,7 @@ function frontSlots(m: Module, f: Front, add: (slot: HardwareSlot, n: number, wh
   // Front fix: cap ferratge (ni tirador, ni frontissa).
 }
 
-/** Quines opcions de tots els fronts del mòdul (Mòdul › Caixa) llegeix la construcció. */
+/** Quines opcions de tots els fronts del mòdul (Mòdul) llegeix la construcció. */
 interface FrontOptionsUse {
   /** Recobrents / Encastats i la folgança front–cos: hi ha algun front que es fa (també un front fix o una reixeta). */
   style: boolean
@@ -127,7 +127,7 @@ interface FrontOptionsUse {
 }
 
 /**
- * Les opcions dels fronts (Mòdul › Caixa) que la construcció llegeix per a aquest mòdul (la UI només ensenya aquestes; les
+ * Les opcions dels fronts (Mòdul) que la construcció llegeix per a aquest mòdul (la UI només ensenya aquestes; les
  * altres es conserven i no compten). La mateixa lògica que `frontTerritory`, `buildShelves` i `buildLed` de `buildModule`.
  */
 export function frontOptionsUse(module: Module): FrontOptionsUse {

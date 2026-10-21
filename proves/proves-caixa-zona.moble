@@ -1,0 +1,5661 @@
+{
+  "format": "mobles-cnc",
+  "version": 1,
+  "exportedAt": "2026-10-21T07:24:36.236Z",
+  "project": {
+    "name": "Proves · Caixa de la zona",
+    "composition": {
+      "kind": "moble",
+      "modules": [
+        {
+          "id": "mo13y7edi7v5",
+          "name": "C1 · Armari de la foto: columna que no arriba a dalt",
+          "group": "Caixa de la zona",
+          "type": "base",
+          "carcass": {
+            "width": 1000,
+            "height": 2000,
+            "depth": 580,
+            "material": "Melamina blanca",
+            "thickness": 19,
+            "backMaterial": "DM (fons)",
+            "backThickness": 12,
+            "base": {
+              "kind": "none"
+            },
+            "back": "groove",
+            "top": {
+              "kind": "full"
+            },
+            "sides": {
+              "left": true,
+              "right": true
+            },
+            "backSetback": 10,
+            "grooveDepth": 8,
+            "grooveClearance": 0.8,
+            "backClearance": 1,
+            "shelfSetback": 20,
+            "shelfClearance": 1,
+            "innerClearance": 1
+          },
+          "root": {
+            "id": "zm6icd5w2u8r",
+            "front": {
+              "kind": "door",
+              "mode": "double",
+              "hinge": "left"
+            },
+            "split": {
+              "dir": "h",
+              "sizes": [
+                560,
+                "auto"
+              ],
+              "children": [
+                {
+                  "id": "za8yfta1lg3w",
+                  "split": {
+                    "dir": "v",
+                    "sizes": [
+                      50,
+                      "auto",
+                      "auto",
+                      50
+                    ],
+                    "children": [
+                      {
+                        "id": "z5l9nusub5ww"
+                      },
+                      {
+                        "id": "zez3vkva6flv",
+                        "front": {
+                          "kind": "drawers",
+                          "n": 3,
+                          "heights": [
+                            "auto",
+                            "auto",
+                            "auto"
+                          ],
+                          "glass": true,
+                          "setback": 60
+                        }
+                      },
+                      {
+                        "id": "zb1jizssv2ux",
+                        "front": {
+                          "kind": "drawers",
+                          "n": 3,
+                          "heights": [
+                            "auto",
+                            "auto",
+                            "auto"
+                          ],
+                          "glass": true,
+                          "setback": 60
+                        }
+                      },
+                      {
+                        "id": "zlq00oild8x4"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "id": "zplgkz3jujrf",
+                  "split": {
+                    "dir": "v",
+                    "sizes": [
+                      "auto",
+                      330
+                    ],
+                    "children": [
+                      {
+                        "id": "zeznhwuc5r1z",
+                        "rail": {}
+                      },
+                      {
+                        "id": "zbzpnq30u5eq",
+                        "split": {
+                          "dir": "h",
+                          "sizes": [
+                            900,
+                            "auto"
+                          ],
+                          "children": [
+                            {
+                              "id": "zmiez5gt50bx",
+                              "shelves": {
+                                "n": 2,
+                                "adjustable": true
+                              }
+                            },
+                            {
+                              "id": "znxk632egnlh",
+                              "noWalls": [
+                                "left"
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          "fronts": {
+            "outerGap": 2,
+            "betweenGap": 3
+          },
+          "hardware": {
+            "hinge": {
+              "id": "hinge-cup",
+              "name": "Frontissa de cassoleta Ø35",
+              "category": "hinge",
+              "engine": "cup",
+              "params": {
+                "cupDiameter": 35,
+                "cupDepth": 13,
+                "cupOffset": 22.5,
+                "endOffset": 100,
+                "gap": 10,
+                "margin": 3
+              },
+              "count": {
+                "steps": [
+                  {
+                    "upTo": 900,
+                    "n": 2
+                  },
+                  {
+                    "upTo": 1600,
+                    "n": 3
+                  },
+                  {
+                    "upTo": 2100,
+                    "n": 4
+                  }
+                ],
+                "else": 5
+              },
+              "targets": [
+                {
+                  "key": "door",
+                  "label": "Porta",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": "cupOffset",
+                      "d": "cupDiameter",
+                      "depth": "cupDepth",
+                      "tag": "hinge"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "system32": {
+              "id": "system32",
+              "name": "Filera System 32",
+              "category": "shelf-support",
+              "engine": "system32",
+              "params": {
+                "edgeOffset": 37,
+                "pitch": 32,
+                "diameter": 5,
+                "depth": 12
+              },
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "system32"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "dowel": {
+              "id": "dowel",
+              "name": "Espiga Ø8",
+              "category": "connector",
+              "engine": "dowel",
+              "params": {
+                "diameter": 8,
+                "faceDepth": 12,
+                "edgeDepth": 20,
+                "endOffset": 40
+              },
+              "targets": [
+                {
+                  "key": "butt",
+                  "label": "Peça que hi topa (cantell)",
+                  "ops": [
+                    {
+                      "kind": "edgeDrill",
+                      "along": 0,
+                      "d": "diameter",
+                      "depth": "edgeDepth",
+                      "tag": "dowel"
+                    }
+                  ]
+                },
+                {
+                  "key": "through",
+                  "label": "Peça que continua (cara)",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "faceDepth",
+                      "tag": "dowel"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "slide": {
+              "id": "slide-ball",
+              "name": "Guia de boles",
+              "category": "slide",
+              "engine": "slide",
+              "params": {
+                "sideClearance": 12.5,
+                "boxThickness": 16,
+                "bottomThickness": 10,
+                "boxDrop": 30,
+                "bottomOffset": 12,
+                "backClearance": 10,
+                "frontOffset": 37,
+                "secondOffset": 256,
+                "holeHeight": 20
+              },
+              "lengths": [
+                250,
+                300,
+                350,
+                400,
+                450,
+                500,
+                550
+              ],
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral del moble",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset",
+                      "v": 0,
+                      "d": 5,
+                      "depth": 12,
+                      "tag": "slide"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset+secondOffset",
+                      "v": 0,
+                      "d": 5,
+                      "depth": 12,
+                      "tag": "slide"
+                    }
+                  ]
+                },
+                {
+                  "key": "box",
+                  "label": "Lateral de la caixa",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset",
+                      "v": 0,
+                      "d": 4,
+                      "depth": 10,
+                      "tag": "slide"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset+secondOffset",
+                      "v": 0,
+                      "d": 4,
+                      "depth": 10,
+                      "tag": "slide"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "flap": {
+              "id": "flap-arm",
+              "name": "Braç d'abatible",
+              "category": "lift",
+              "engine": "flapArm",
+              "params": {
+                "offset": 22.5,
+                "diameter": 8,
+                "depth": 12,
+                "endOffset": 100
+              },
+              "targets": [
+                {
+                  "key": "flap",
+                  "label": "Abatible",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "offset",
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "flap"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "magnet": {
+              "id": "magnet",
+              "name": "Imant Ø10",
+              "category": "push",
+              "engine": "magnet",
+              "params": {
+                "diameter": 10,
+                "depth": 5,
+                "cornerOffset": 60
+              },
+              "targets": [
+                {
+                  "key": "front",
+                  "label": "Front (cara)",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "magnet"
+                    }
+                  ]
+                },
+                {
+                  "key": "side",
+                  "label": "Lateral (cantell)",
+                  "ops": [
+                    {
+                      "kind": "edgeDrill",
+                      "along": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "magnet"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "handle": {
+              "id": "handle-bar",
+              "name": "Tirador de barra",
+              "category": "handle",
+              "engine": "barHandle",
+              "params": {
+                "diameter": 5,
+                "margin": 3,
+                "inset": 40
+              },
+              "pitch": {
+                "steps": [
+                  {
+                    "upTo": 200,
+                    "n": 64
+                  },
+                  {
+                    "upTo": 260,
+                    "n": 96
+                  }
+                ],
+                "else": 128,
+                "strict": true
+              },
+              "targets": [
+                {
+                  "key": "front",
+                  "label": "Front",
+                  "ops": [
+                    {
+                      "kind": "through",
+                      "u": "-pitch/2",
+                      "v": 0,
+                      "d": "diameter",
+                      "tag": "handle"
+                    },
+                    {
+                      "kind": "through",
+                      "u": "pitch/2",
+                      "v": 0,
+                      "d": "diameter",
+                      "tag": "handle"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "rail": {
+              "id": "rail-inox-25",
+              "name": "Barra de penjar Ø25 inox",
+              "category": "wall",
+              "engine": "rail",
+              "params": {
+                "diameter": 25,
+                "drop": 50
+              },
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral (suports: mecanitzat pendent del taller)",
+                  "ops": []
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "led": {
+              "id": "light-loox-profile11-cw",
+              "name": "Perfil d'alumini Loox 11 mm per encastar + LED 3015, 4000 K",
+              "category": "light",
+              "engine": "ledProfile",
+              "tags": [
+                "Catàleg Häfele, p. 2.127 (perfil de muntatge d'11 mm) i 2.79 (tira LED 3015)"
+              ],
+              "maker": "Häfele",
+              "ref": "833.76.241",
+              "params": {
+                "width": 18,
+                "height": 11,
+                "setback": 30,
+                "spacing": 0,
+                "depth": 11
+              },
+              "targets": [
+                {
+                  "key": "shelf",
+                  "label": "Prestatge o tapa (cara de sota): ranura de 18 × 11 i forat passant del cable",
+                  "ops": [
+                    {
+                      "kind": "through",
+                      "u": 0,
+                      "v": 0,
+                      "d": 8,
+                      "tag": "cable"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true,
+              "light": {
+                "maker": "Häfele",
+                "series": "Perfil Loox 11 mm + LED 3015",
+                "kind": "bar",
+                "article": "833.76.241",
+                "colour": "Blanc fred 4000 K",
+                "finish": "Color plata",
+                "watts": 37.5,
+                "recess": {
+                  "shape": "groove",
+                  "size": 18,
+                  "depth": 11
+                },
+                "body": {
+                  "size": 18,
+                  "height": 11
+                },
+                "cableHole": 8,
+                "bars": [
+                  {
+                    "length": 2500,
+                    "article": "833.72.846",
+                    "watts": 37.5
+                  }
+                ],
+                "barStep": 50,
+                "cableLength": 2000,
+                "source": "Catàleg Häfele, p. 2.127 (perfil de muntatge d'11 mm) i 2.79 (tira LED 3015)",
+                "hypotheses": [
+                  "Ranura de 18 d'ample (el cos del perfil) × 11 de fondària (la «profunditat» del perfil): l'ala de 23 queda a sobre de la cara.",
+                  "Tira LED 3015 (833.76.241) en rotllo de 5 m: 15 W per metre, tallada al múltiple de 50 dins del perfil.",
+                  "Forat del cable Ø8 a un extrem de la ranura; tapes finals 833.72.854 (amb pas de cables)."
+                ]
+              }
+            },
+            "glassFrame": {
+              "id": "glass-frame-20",
+              "name": "Marc d'alumini negre 20 mm",
+              "category": "profile",
+              "engine": "glassFrame",
+              "params": {
+                "frame": 20,
+                "glass": 5
+              },
+              "targets": [
+                {
+                  "key": "frame",
+                  "label": "Marc (frontisses de perfil: pendent del taller)",
+                  "ops": []
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "hanger": {
+              "id": "hanger-concealed",
+              "name": "Penjador ocult regulable",
+              "category": "wall",
+              "engine": "hanger",
+              "tags": [
+                "Libra H2 · Häfele 290.41.910"
+              ],
+              "params": {
+                "underTop": 1,
+                "fromTop": 37,
+                "behindBack": 5,
+                "pitch": 32,
+                "holeDiameter": 10,
+                "holeDepth": 13,
+                "gap": 15,
+                "railTop": 40,
+                "slotWidth": 12,
+                "slotLength": 54.5,
+                "slotTop": 34,
+                "slotSide": 19.5,
+                "bodyWidth": 39.4,
+                "bodyHeight": 142.2,
+                "bodyDepth": 15
+              },
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral (cara de dins, darrere del fons, sota la tapa)",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "pitch * 1",
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "pitch * 2",
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "pitch * 3",
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    }
+                  ]
+                }
+              ],
+              "version": 2,
+              "builtin": true
+            },
+            "wallRail": {
+              "id": "wall-rail-steel",
+              "name": "Regleta de penjar d'acer",
+              "category": "wall",
+              "engine": "wallRail",
+              "tags": [
+                "Libra B3 F003290"
+              ],
+              "params": {
+                "height": 33.5,
+                "depth": 5.6,
+                "stock": 2000,
+                "clipSpacing": 300,
+                "clipEnd": 50
+              },
+              "targets": [
+                {
+                  "key": "wall",
+                  "label": "Paret (cargols i tacs: a mà)",
+                  "ops": []
+                }
+              ],
+              "material": "Acer inox",
+              "version": 2,
+              "builtin": true,
+              "linear": {
+                "clip": {
+                  "name": "Cargol i tac de paret"
+                }
+              }
+            }
+          },
+          "extras": {
+            "cableHoles": []
+          },
+          "x": 0,
+          "wallGap": 1500,
+          "gapBefore": 0
+        },
+        {
+          "id": "mb8rj2skbwun",
+          "name": "C2 · Sense fons a la zona del mig (radiador)",
+          "group": "Caixa de la zona",
+          "type": "base",
+          "carcass": {
+            "width": 1200,
+            "height": 800,
+            "depth": 450,
+            "material": "Melamina blanca",
+            "thickness": 19,
+            "backMaterial": "DM (fons)",
+            "backThickness": 12,
+            "base": {
+              "kind": "none"
+            },
+            "back": "groove",
+            "top": {
+              "kind": "full"
+            },
+            "sides": {
+              "left": true,
+              "right": true
+            },
+            "backSetback": 10,
+            "grooveDepth": 8,
+            "grooveClearance": 0.8,
+            "backClearance": 1,
+            "shelfSetback": 20,
+            "shelfClearance": 1,
+            "innerClearance": 1
+          },
+          "root": {
+            "id": "z4uya6tksrv2",
+            "split": {
+              "dir": "v",
+              "sizes": [
+                "auto",
+                "auto",
+                "auto"
+              ],
+              "children": [
+                {
+                  "id": "z4si9r8iwtll",
+                  "front": {
+                    "kind": "door",
+                    "mode": "single",
+                    "hinge": "left"
+                  }
+                },
+                {
+                  "id": "zq0hj6j5r2gx",
+                  "back": "none",
+                  "front": {
+                    "kind": "grille",
+                    "pattern": {
+                      "kind": "slotsV",
+                      "slotWidth": 8,
+                      "slotGap": 8,
+                      "margin": 60,
+                      "holeDiameter": 10,
+                      "holePitch": 16
+                    },
+                    "mount": "removable",
+                    "hinge": "left"
+                  }
+                },
+                {
+                  "id": "zgy64rnnx3is",
+                  "front": {
+                    "kind": "door",
+                    "mode": "single",
+                    "hinge": "right"
+                  }
+                }
+              ]
+            }
+          },
+          "fronts": {
+            "outerGap": 2,
+            "betweenGap": 3
+          },
+          "hardware": {
+            "hinge": {
+              "id": "hinge-cup",
+              "name": "Frontissa de cassoleta Ø35",
+              "category": "hinge",
+              "engine": "cup",
+              "params": {
+                "cupDiameter": 35,
+                "cupDepth": 13,
+                "cupOffset": 22.5,
+                "endOffset": 100,
+                "gap": 10,
+                "margin": 3
+              },
+              "count": {
+                "steps": [
+                  {
+                    "upTo": 900,
+                    "n": 2
+                  },
+                  {
+                    "upTo": 1600,
+                    "n": 3
+                  },
+                  {
+                    "upTo": 2100,
+                    "n": 4
+                  }
+                ],
+                "else": 5
+              },
+              "targets": [
+                {
+                  "key": "door",
+                  "label": "Porta",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": "cupOffset",
+                      "d": "cupDiameter",
+                      "depth": "cupDepth",
+                      "tag": "hinge"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "system32": {
+              "id": "system32",
+              "name": "Filera System 32",
+              "category": "shelf-support",
+              "engine": "system32",
+              "params": {
+                "edgeOffset": 37,
+                "pitch": 32,
+                "diameter": 5,
+                "depth": 12
+              },
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "system32"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "dowel": {
+              "id": "dowel",
+              "name": "Espiga Ø8",
+              "category": "connector",
+              "engine": "dowel",
+              "params": {
+                "diameter": 8,
+                "faceDepth": 12,
+                "edgeDepth": 20,
+                "endOffset": 40
+              },
+              "targets": [
+                {
+                  "key": "butt",
+                  "label": "Peça que hi topa (cantell)",
+                  "ops": [
+                    {
+                      "kind": "edgeDrill",
+                      "along": 0,
+                      "d": "diameter",
+                      "depth": "edgeDepth",
+                      "tag": "dowel"
+                    }
+                  ]
+                },
+                {
+                  "key": "through",
+                  "label": "Peça que continua (cara)",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "faceDepth",
+                      "tag": "dowel"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "slide": {
+              "id": "slide-ball",
+              "name": "Guia de boles",
+              "category": "slide",
+              "engine": "slide",
+              "params": {
+                "sideClearance": 12.5,
+                "boxThickness": 16,
+                "bottomThickness": 10,
+                "boxDrop": 30,
+                "bottomOffset": 12,
+                "backClearance": 10,
+                "frontOffset": 37,
+                "secondOffset": 256,
+                "holeHeight": 20
+              },
+              "lengths": [
+                250,
+                300,
+                350,
+                400,
+                450,
+                500,
+                550
+              ],
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral del moble",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset",
+                      "v": 0,
+                      "d": 5,
+                      "depth": 12,
+                      "tag": "slide"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset+secondOffset",
+                      "v": 0,
+                      "d": 5,
+                      "depth": 12,
+                      "tag": "slide"
+                    }
+                  ]
+                },
+                {
+                  "key": "box",
+                  "label": "Lateral de la caixa",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset",
+                      "v": 0,
+                      "d": 4,
+                      "depth": 10,
+                      "tag": "slide"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset+secondOffset",
+                      "v": 0,
+                      "d": 4,
+                      "depth": 10,
+                      "tag": "slide"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "flap": {
+              "id": "flap-arm",
+              "name": "Braç d'abatible",
+              "category": "lift",
+              "engine": "flapArm",
+              "params": {
+                "offset": 22.5,
+                "diameter": 8,
+                "depth": 12,
+                "endOffset": 100
+              },
+              "targets": [
+                {
+                  "key": "flap",
+                  "label": "Abatible",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "offset",
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "flap"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "magnet": {
+              "id": "magnet",
+              "name": "Imant Ø10",
+              "category": "push",
+              "engine": "magnet",
+              "params": {
+                "diameter": 10,
+                "depth": 5,
+                "cornerOffset": 60
+              },
+              "targets": [
+                {
+                  "key": "front",
+                  "label": "Front (cara)",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "magnet"
+                    }
+                  ]
+                },
+                {
+                  "key": "side",
+                  "label": "Lateral (cantell)",
+                  "ops": [
+                    {
+                      "kind": "edgeDrill",
+                      "along": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "magnet"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "handle": {
+              "id": "handle-bar",
+              "name": "Tirador de barra",
+              "category": "handle",
+              "engine": "barHandle",
+              "params": {
+                "diameter": 5,
+                "margin": 3,
+                "inset": 40
+              },
+              "pitch": {
+                "steps": [
+                  {
+                    "upTo": 200,
+                    "n": 64
+                  },
+                  {
+                    "upTo": 260,
+                    "n": 96
+                  }
+                ],
+                "else": 128,
+                "strict": true
+              },
+              "targets": [
+                {
+                  "key": "front",
+                  "label": "Front",
+                  "ops": [
+                    {
+                      "kind": "through",
+                      "u": "-pitch/2",
+                      "v": 0,
+                      "d": "diameter",
+                      "tag": "handle"
+                    },
+                    {
+                      "kind": "through",
+                      "u": "pitch/2",
+                      "v": 0,
+                      "d": "diameter",
+                      "tag": "handle"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "rail": {
+              "id": "rail-inox-25",
+              "name": "Barra de penjar Ø25 inox",
+              "category": "wall",
+              "engine": "rail",
+              "params": {
+                "diameter": 25,
+                "drop": 50
+              },
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral (suports: mecanitzat pendent del taller)",
+                  "ops": []
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "led": {
+              "id": "light-loox-profile11-cw",
+              "name": "Perfil d'alumini Loox 11 mm per encastar + LED 3015, 4000 K",
+              "category": "light",
+              "engine": "ledProfile",
+              "tags": [
+                "Catàleg Häfele, p. 2.127 (perfil de muntatge d'11 mm) i 2.79 (tira LED 3015)"
+              ],
+              "maker": "Häfele",
+              "ref": "833.76.241",
+              "params": {
+                "width": 18,
+                "height": 11,
+                "setback": 30,
+                "spacing": 0,
+                "depth": 11
+              },
+              "targets": [
+                {
+                  "key": "shelf",
+                  "label": "Prestatge o tapa (cara de sota): ranura de 18 × 11 i forat passant del cable",
+                  "ops": [
+                    {
+                      "kind": "through",
+                      "u": 0,
+                      "v": 0,
+                      "d": 8,
+                      "tag": "cable"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true,
+              "light": {
+                "maker": "Häfele",
+                "series": "Perfil Loox 11 mm + LED 3015",
+                "kind": "bar",
+                "article": "833.76.241",
+                "colour": "Blanc fred 4000 K",
+                "finish": "Color plata",
+                "watts": 37.5,
+                "recess": {
+                  "shape": "groove",
+                  "size": 18,
+                  "depth": 11
+                },
+                "body": {
+                  "size": 18,
+                  "height": 11
+                },
+                "cableHole": 8,
+                "bars": [
+                  {
+                    "length": 2500,
+                    "article": "833.72.846",
+                    "watts": 37.5
+                  }
+                ],
+                "barStep": 50,
+                "cableLength": 2000,
+                "source": "Catàleg Häfele, p. 2.127 (perfil de muntatge d'11 mm) i 2.79 (tira LED 3015)",
+                "hypotheses": [
+                  "Ranura de 18 d'ample (el cos del perfil) × 11 de fondària (la «profunditat» del perfil): l'ala de 23 queda a sobre de la cara.",
+                  "Tira LED 3015 (833.76.241) en rotllo de 5 m: 15 W per metre, tallada al múltiple de 50 dins del perfil.",
+                  "Forat del cable Ø8 a un extrem de la ranura; tapes finals 833.72.854 (amb pas de cables)."
+                ]
+              }
+            },
+            "glassFrame": {
+              "id": "glass-frame-20",
+              "name": "Marc d'alumini negre 20 mm",
+              "category": "profile",
+              "engine": "glassFrame",
+              "params": {
+                "frame": 20,
+                "glass": 5
+              },
+              "targets": [
+                {
+                  "key": "frame",
+                  "label": "Marc (frontisses de perfil: pendent del taller)",
+                  "ops": []
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "hanger": {
+              "id": "hanger-concealed",
+              "name": "Penjador ocult regulable",
+              "category": "wall",
+              "engine": "hanger",
+              "tags": [
+                "Libra H2 · Häfele 290.41.910"
+              ],
+              "params": {
+                "underTop": 1,
+                "fromTop": 37,
+                "behindBack": 5,
+                "pitch": 32,
+                "holeDiameter": 10,
+                "holeDepth": 13,
+                "gap": 15,
+                "railTop": 40,
+                "slotWidth": 12,
+                "slotLength": 54.5,
+                "slotTop": 34,
+                "slotSide": 19.5,
+                "bodyWidth": 39.4,
+                "bodyHeight": 142.2,
+                "bodyDepth": 15
+              },
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral (cara de dins, darrere del fons, sota la tapa)",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "pitch * 1",
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "pitch * 2",
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "pitch * 3",
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    }
+                  ]
+                }
+              ],
+              "version": 2,
+              "builtin": true
+            },
+            "wallRail": {
+              "id": "wall-rail-steel",
+              "name": "Regleta de penjar d'acer",
+              "category": "wall",
+              "engine": "wallRail",
+              "tags": [
+                "Libra B3 F003290"
+              ],
+              "params": {
+                "height": 33.5,
+                "depth": 5.6,
+                "stock": 2000,
+                "clipSpacing": 300,
+                "clipEnd": 50
+              },
+              "targets": [
+                {
+                  "key": "wall",
+                  "label": "Paret (cargols i tacs: a mà)",
+                  "ops": []
+                }
+              ],
+              "material": "Acer inox",
+              "version": 2,
+              "builtin": true,
+              "linear": {
+                "clip": {
+                  "name": "Cargol i tac de paret"
+                }
+              }
+            }
+          },
+          "extras": {
+            "cableHoles": []
+          },
+          "x": 1600,
+          "wallGap": 1500,
+          "gapBefore": 0
+        },
+        {
+          "id": "m9jbbkoii57c",
+          "name": "C3 · Nínxol: zona amb el fons encastat a 200",
+          "group": "Caixa de la zona",
+          "type": "base",
+          "carcass": {
+            "width": 1000,
+            "height": 720,
+            "depth": 580,
+            "material": "Melamina blanca",
+            "thickness": 19,
+            "backMaterial": "DM (fons)",
+            "backThickness": 12,
+            "base": {
+              "kind": "none"
+            },
+            "back": "groove",
+            "top": {
+              "kind": "full"
+            },
+            "sides": {
+              "left": true,
+              "right": true
+            },
+            "backSetback": 10,
+            "grooveDepth": 8,
+            "grooveClearance": 0.8,
+            "backClearance": 1,
+            "shelfSetback": 20,
+            "shelfClearance": 1,
+            "innerClearance": 1
+          },
+          "root": {
+            "id": "ztaigptdpnaa",
+            "split": {
+              "dir": "v",
+              "sizes": [
+                "auto",
+                "auto",
+                "auto"
+              ],
+              "children": [
+                {
+                  "id": "z6nukdcvsnjh",
+                  "front": {
+                    "kind": "door",
+                    "mode": "single",
+                    "hinge": "left"
+                  }
+                },
+                {
+                  "id": "zxyunn95ekf2",
+                  "back": "inset",
+                  "backInsetSetback": 200,
+                  "shelves": {
+                    "n": 1,
+                    "adjustable": true
+                  }
+                },
+                {
+                  "id": "zvvkpzfsbenl",
+                  "front": {
+                    "kind": "door",
+                    "mode": "single",
+                    "hinge": "right"
+                  }
+                }
+              ]
+            }
+          },
+          "fronts": {
+            "outerGap": 2,
+            "betweenGap": 3
+          },
+          "hardware": {
+            "hinge": {
+              "id": "hinge-cup",
+              "name": "Frontissa de cassoleta Ø35",
+              "category": "hinge",
+              "engine": "cup",
+              "params": {
+                "cupDiameter": 35,
+                "cupDepth": 13,
+                "cupOffset": 22.5,
+                "endOffset": 100,
+                "gap": 10,
+                "margin": 3
+              },
+              "count": {
+                "steps": [
+                  {
+                    "upTo": 900,
+                    "n": 2
+                  },
+                  {
+                    "upTo": 1600,
+                    "n": 3
+                  },
+                  {
+                    "upTo": 2100,
+                    "n": 4
+                  }
+                ],
+                "else": 5
+              },
+              "targets": [
+                {
+                  "key": "door",
+                  "label": "Porta",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": "cupOffset",
+                      "d": "cupDiameter",
+                      "depth": "cupDepth",
+                      "tag": "hinge"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "system32": {
+              "id": "system32",
+              "name": "Filera System 32",
+              "category": "shelf-support",
+              "engine": "system32",
+              "params": {
+                "edgeOffset": 37,
+                "pitch": 32,
+                "diameter": 5,
+                "depth": 12
+              },
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "system32"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "dowel": {
+              "id": "dowel",
+              "name": "Espiga Ø8",
+              "category": "connector",
+              "engine": "dowel",
+              "params": {
+                "diameter": 8,
+                "faceDepth": 12,
+                "edgeDepth": 20,
+                "endOffset": 40
+              },
+              "targets": [
+                {
+                  "key": "butt",
+                  "label": "Peça que hi topa (cantell)",
+                  "ops": [
+                    {
+                      "kind": "edgeDrill",
+                      "along": 0,
+                      "d": "diameter",
+                      "depth": "edgeDepth",
+                      "tag": "dowel"
+                    }
+                  ]
+                },
+                {
+                  "key": "through",
+                  "label": "Peça que continua (cara)",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "faceDepth",
+                      "tag": "dowel"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "slide": {
+              "id": "slide-ball",
+              "name": "Guia de boles",
+              "category": "slide",
+              "engine": "slide",
+              "params": {
+                "sideClearance": 12.5,
+                "boxThickness": 16,
+                "bottomThickness": 10,
+                "boxDrop": 30,
+                "bottomOffset": 12,
+                "backClearance": 10,
+                "frontOffset": 37,
+                "secondOffset": 256,
+                "holeHeight": 20
+              },
+              "lengths": [
+                250,
+                300,
+                350,
+                400,
+                450,
+                500,
+                550
+              ],
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral del moble",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset",
+                      "v": 0,
+                      "d": 5,
+                      "depth": 12,
+                      "tag": "slide"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset+secondOffset",
+                      "v": 0,
+                      "d": 5,
+                      "depth": 12,
+                      "tag": "slide"
+                    }
+                  ]
+                },
+                {
+                  "key": "box",
+                  "label": "Lateral de la caixa",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset",
+                      "v": 0,
+                      "d": 4,
+                      "depth": 10,
+                      "tag": "slide"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset+secondOffset",
+                      "v": 0,
+                      "d": 4,
+                      "depth": 10,
+                      "tag": "slide"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "flap": {
+              "id": "flap-arm",
+              "name": "Braç d'abatible",
+              "category": "lift",
+              "engine": "flapArm",
+              "params": {
+                "offset": 22.5,
+                "diameter": 8,
+                "depth": 12,
+                "endOffset": 100
+              },
+              "targets": [
+                {
+                  "key": "flap",
+                  "label": "Abatible",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "offset",
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "flap"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "magnet": {
+              "id": "magnet",
+              "name": "Imant Ø10",
+              "category": "push",
+              "engine": "magnet",
+              "params": {
+                "diameter": 10,
+                "depth": 5,
+                "cornerOffset": 60
+              },
+              "targets": [
+                {
+                  "key": "front",
+                  "label": "Front (cara)",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "magnet"
+                    }
+                  ]
+                },
+                {
+                  "key": "side",
+                  "label": "Lateral (cantell)",
+                  "ops": [
+                    {
+                      "kind": "edgeDrill",
+                      "along": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "magnet"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "handle": {
+              "id": "handle-bar",
+              "name": "Tirador de barra",
+              "category": "handle",
+              "engine": "barHandle",
+              "params": {
+                "diameter": 5,
+                "margin": 3,
+                "inset": 40
+              },
+              "pitch": {
+                "steps": [
+                  {
+                    "upTo": 200,
+                    "n": 64
+                  },
+                  {
+                    "upTo": 260,
+                    "n": 96
+                  }
+                ],
+                "else": 128,
+                "strict": true
+              },
+              "targets": [
+                {
+                  "key": "front",
+                  "label": "Front",
+                  "ops": [
+                    {
+                      "kind": "through",
+                      "u": "-pitch/2",
+                      "v": 0,
+                      "d": "diameter",
+                      "tag": "handle"
+                    },
+                    {
+                      "kind": "through",
+                      "u": "pitch/2",
+                      "v": 0,
+                      "d": "diameter",
+                      "tag": "handle"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "rail": {
+              "id": "rail-inox-25",
+              "name": "Barra de penjar Ø25 inox",
+              "category": "wall",
+              "engine": "rail",
+              "params": {
+                "diameter": 25,
+                "drop": 50
+              },
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral (suports: mecanitzat pendent del taller)",
+                  "ops": []
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "led": {
+              "id": "light-loox-profile11-cw",
+              "name": "Perfil d'alumini Loox 11 mm per encastar + LED 3015, 4000 K",
+              "category": "light",
+              "engine": "ledProfile",
+              "tags": [
+                "Catàleg Häfele, p. 2.127 (perfil de muntatge d'11 mm) i 2.79 (tira LED 3015)"
+              ],
+              "maker": "Häfele",
+              "ref": "833.76.241",
+              "params": {
+                "width": 18,
+                "height": 11,
+                "setback": 30,
+                "spacing": 0,
+                "depth": 11
+              },
+              "targets": [
+                {
+                  "key": "shelf",
+                  "label": "Prestatge o tapa (cara de sota): ranura de 18 × 11 i forat passant del cable",
+                  "ops": [
+                    {
+                      "kind": "through",
+                      "u": 0,
+                      "v": 0,
+                      "d": 8,
+                      "tag": "cable"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true,
+              "light": {
+                "maker": "Häfele",
+                "series": "Perfil Loox 11 mm + LED 3015",
+                "kind": "bar",
+                "article": "833.76.241",
+                "colour": "Blanc fred 4000 K",
+                "finish": "Color plata",
+                "watts": 37.5,
+                "recess": {
+                  "shape": "groove",
+                  "size": 18,
+                  "depth": 11
+                },
+                "body": {
+                  "size": 18,
+                  "height": 11
+                },
+                "cableHole": 8,
+                "bars": [
+                  {
+                    "length": 2500,
+                    "article": "833.72.846",
+                    "watts": 37.5
+                  }
+                ],
+                "barStep": 50,
+                "cableLength": 2000,
+                "source": "Catàleg Häfele, p. 2.127 (perfil de muntatge d'11 mm) i 2.79 (tira LED 3015)",
+                "hypotheses": [
+                  "Ranura de 18 d'ample (el cos del perfil) × 11 de fondària (la «profunditat» del perfil): l'ala de 23 queda a sobre de la cara.",
+                  "Tira LED 3015 (833.76.241) en rotllo de 5 m: 15 W per metre, tallada al múltiple de 50 dins del perfil.",
+                  "Forat del cable Ø8 a un extrem de la ranura; tapes finals 833.72.854 (amb pas de cables)."
+                ]
+              }
+            },
+            "glassFrame": {
+              "id": "glass-frame-20",
+              "name": "Marc d'alumini negre 20 mm",
+              "category": "profile",
+              "engine": "glassFrame",
+              "params": {
+                "frame": 20,
+                "glass": 5
+              },
+              "targets": [
+                {
+                  "key": "frame",
+                  "label": "Marc (frontisses de perfil: pendent del taller)",
+                  "ops": []
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "hanger": {
+              "id": "hanger-concealed",
+              "name": "Penjador ocult regulable",
+              "category": "wall",
+              "engine": "hanger",
+              "tags": [
+                "Libra H2 · Häfele 290.41.910"
+              ],
+              "params": {
+                "underTop": 1,
+                "fromTop": 37,
+                "behindBack": 5,
+                "pitch": 32,
+                "holeDiameter": 10,
+                "holeDepth": 13,
+                "gap": 15,
+                "railTop": 40,
+                "slotWidth": 12,
+                "slotLength": 54.5,
+                "slotTop": 34,
+                "slotSide": 19.5,
+                "bodyWidth": 39.4,
+                "bodyHeight": 142.2,
+                "bodyDepth": 15
+              },
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral (cara de dins, darrere del fons, sota la tapa)",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "pitch * 1",
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "pitch * 2",
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "pitch * 3",
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    }
+                  ]
+                }
+              ],
+              "version": 2,
+              "builtin": true
+            },
+            "wallRail": {
+              "id": "wall-rail-steel",
+              "name": "Regleta de penjar d'acer",
+              "category": "wall",
+              "engine": "wallRail",
+              "tags": [
+                "Libra B3 F003290"
+              ],
+              "params": {
+                "height": 33.5,
+                "depth": 5.6,
+                "stock": 2000,
+                "clipSpacing": 300,
+                "clipEnd": 50
+              },
+              "targets": [
+                {
+                  "key": "wall",
+                  "label": "Paret (cargols i tacs: a mà)",
+                  "ops": []
+                }
+              ],
+              "material": "Acer inox",
+              "version": 2,
+              "builtin": true,
+              "linear": {
+                "clip": {
+                  "name": "Cargol i tac de paret"
+                }
+              }
+            }
+          },
+          "extras": {
+            "cableHoles": []
+          },
+          "x": 3400,
+          "wallGap": 1500,
+          "gapBefore": 0
+        },
+        {
+          "id": "mpqw45eyuh5q",
+          "name": "C4 · Sòcol de zona sense fons",
+          "group": "Caixa de la zona",
+          "type": "base",
+          "carcass": {
+            "width": 800,
+            "height": 900,
+            "depth": 560,
+            "material": "Melamina blanca",
+            "thickness": 19,
+            "backMaterial": "DM (fons)",
+            "backThickness": 12,
+            "base": {
+              "kind": "none"
+            },
+            "back": "groove",
+            "top": {
+              "kind": "full"
+            },
+            "sides": {
+              "left": true,
+              "right": true
+            },
+            "backSetback": 10,
+            "grooveDepth": 8,
+            "grooveClearance": 0.8,
+            "backClearance": 1,
+            "shelfSetback": 20,
+            "shelfClearance": 1,
+            "innerClearance": 1
+          },
+          "root": {
+            "id": "zwlwxbve7smr",
+            "split": {
+              "dir": "h",
+              "sizes": [
+                100,
+                "auto"
+              ],
+              "children": [
+                {
+                  "id": "z7m6jagfapbn",
+                  "back": "none",
+                  "front": {
+                    "kind": "panel",
+                    "setback": 40
+                  }
+                },
+                {
+                  "id": "zwiu3q6q9oem",
+                  "front": {
+                    "kind": "drawers",
+                    "n": 3,
+                    "heights": [
+                      "auto",
+                      "auto",
+                      "auto"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          "fronts": {
+            "outerGap": 2,
+            "betweenGap": 3
+          },
+          "hardware": {
+            "hinge": {
+              "id": "hinge-cup",
+              "name": "Frontissa de cassoleta Ø35",
+              "category": "hinge",
+              "engine": "cup",
+              "params": {
+                "cupDiameter": 35,
+                "cupDepth": 13,
+                "cupOffset": 22.5,
+                "endOffset": 100,
+                "gap": 10,
+                "margin": 3
+              },
+              "count": {
+                "steps": [
+                  {
+                    "upTo": 900,
+                    "n": 2
+                  },
+                  {
+                    "upTo": 1600,
+                    "n": 3
+                  },
+                  {
+                    "upTo": 2100,
+                    "n": 4
+                  }
+                ],
+                "else": 5
+              },
+              "targets": [
+                {
+                  "key": "door",
+                  "label": "Porta",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": "cupOffset",
+                      "d": "cupDiameter",
+                      "depth": "cupDepth",
+                      "tag": "hinge"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "system32": {
+              "id": "system32",
+              "name": "Filera System 32",
+              "category": "shelf-support",
+              "engine": "system32",
+              "params": {
+                "edgeOffset": 37,
+                "pitch": 32,
+                "diameter": 5,
+                "depth": 12
+              },
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "system32"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "dowel": {
+              "id": "dowel",
+              "name": "Espiga Ø8",
+              "category": "connector",
+              "engine": "dowel",
+              "params": {
+                "diameter": 8,
+                "faceDepth": 12,
+                "edgeDepth": 20,
+                "endOffset": 40
+              },
+              "targets": [
+                {
+                  "key": "butt",
+                  "label": "Peça que hi topa (cantell)",
+                  "ops": [
+                    {
+                      "kind": "edgeDrill",
+                      "along": 0,
+                      "d": "diameter",
+                      "depth": "edgeDepth",
+                      "tag": "dowel"
+                    }
+                  ]
+                },
+                {
+                  "key": "through",
+                  "label": "Peça que continua (cara)",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "faceDepth",
+                      "tag": "dowel"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "slide": {
+              "id": "slide-ball",
+              "name": "Guia de boles",
+              "category": "slide",
+              "engine": "slide",
+              "params": {
+                "sideClearance": 12.5,
+                "boxThickness": 16,
+                "bottomThickness": 10,
+                "boxDrop": 30,
+                "bottomOffset": 12,
+                "backClearance": 10,
+                "frontOffset": 37,
+                "secondOffset": 256,
+                "holeHeight": 20
+              },
+              "lengths": [
+                250,
+                300,
+                350,
+                400,
+                450,
+                500,
+                550
+              ],
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral del moble",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset",
+                      "v": 0,
+                      "d": 5,
+                      "depth": 12,
+                      "tag": "slide"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset+secondOffset",
+                      "v": 0,
+                      "d": 5,
+                      "depth": 12,
+                      "tag": "slide"
+                    }
+                  ]
+                },
+                {
+                  "key": "box",
+                  "label": "Lateral de la caixa",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset",
+                      "v": 0,
+                      "d": 4,
+                      "depth": 10,
+                      "tag": "slide"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset+secondOffset",
+                      "v": 0,
+                      "d": 4,
+                      "depth": 10,
+                      "tag": "slide"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "flap": {
+              "id": "flap-arm",
+              "name": "Braç d'abatible",
+              "category": "lift",
+              "engine": "flapArm",
+              "params": {
+                "offset": 22.5,
+                "diameter": 8,
+                "depth": 12,
+                "endOffset": 100
+              },
+              "targets": [
+                {
+                  "key": "flap",
+                  "label": "Abatible",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "offset",
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "flap"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "magnet": {
+              "id": "magnet",
+              "name": "Imant Ø10",
+              "category": "push",
+              "engine": "magnet",
+              "params": {
+                "diameter": 10,
+                "depth": 5,
+                "cornerOffset": 60
+              },
+              "targets": [
+                {
+                  "key": "front",
+                  "label": "Front (cara)",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "magnet"
+                    }
+                  ]
+                },
+                {
+                  "key": "side",
+                  "label": "Lateral (cantell)",
+                  "ops": [
+                    {
+                      "kind": "edgeDrill",
+                      "along": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "magnet"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "handle": {
+              "id": "handle-bar",
+              "name": "Tirador de barra",
+              "category": "handle",
+              "engine": "barHandle",
+              "params": {
+                "diameter": 5,
+                "margin": 3,
+                "inset": 40
+              },
+              "pitch": {
+                "steps": [
+                  {
+                    "upTo": 200,
+                    "n": 64
+                  },
+                  {
+                    "upTo": 260,
+                    "n": 96
+                  }
+                ],
+                "else": 128,
+                "strict": true
+              },
+              "targets": [
+                {
+                  "key": "front",
+                  "label": "Front",
+                  "ops": [
+                    {
+                      "kind": "through",
+                      "u": "-pitch/2",
+                      "v": 0,
+                      "d": "diameter",
+                      "tag": "handle"
+                    },
+                    {
+                      "kind": "through",
+                      "u": "pitch/2",
+                      "v": 0,
+                      "d": "diameter",
+                      "tag": "handle"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "rail": {
+              "id": "rail-inox-25",
+              "name": "Barra de penjar Ø25 inox",
+              "category": "wall",
+              "engine": "rail",
+              "params": {
+                "diameter": 25,
+                "drop": 50
+              },
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral (suports: mecanitzat pendent del taller)",
+                  "ops": []
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "led": {
+              "id": "light-loox-profile11-cw",
+              "name": "Perfil d'alumini Loox 11 mm per encastar + LED 3015, 4000 K",
+              "category": "light",
+              "engine": "ledProfile",
+              "tags": [
+                "Catàleg Häfele, p. 2.127 (perfil de muntatge d'11 mm) i 2.79 (tira LED 3015)"
+              ],
+              "maker": "Häfele",
+              "ref": "833.76.241",
+              "params": {
+                "width": 18,
+                "height": 11,
+                "setback": 30,
+                "spacing": 0,
+                "depth": 11
+              },
+              "targets": [
+                {
+                  "key": "shelf",
+                  "label": "Prestatge o tapa (cara de sota): ranura de 18 × 11 i forat passant del cable",
+                  "ops": [
+                    {
+                      "kind": "through",
+                      "u": 0,
+                      "v": 0,
+                      "d": 8,
+                      "tag": "cable"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true,
+              "light": {
+                "maker": "Häfele",
+                "series": "Perfil Loox 11 mm + LED 3015",
+                "kind": "bar",
+                "article": "833.76.241",
+                "colour": "Blanc fred 4000 K",
+                "finish": "Color plata",
+                "watts": 37.5,
+                "recess": {
+                  "shape": "groove",
+                  "size": 18,
+                  "depth": 11
+                },
+                "body": {
+                  "size": 18,
+                  "height": 11
+                },
+                "cableHole": 8,
+                "bars": [
+                  {
+                    "length": 2500,
+                    "article": "833.72.846",
+                    "watts": 37.5
+                  }
+                ],
+                "barStep": 50,
+                "cableLength": 2000,
+                "source": "Catàleg Häfele, p. 2.127 (perfil de muntatge d'11 mm) i 2.79 (tira LED 3015)",
+                "hypotheses": [
+                  "Ranura de 18 d'ample (el cos del perfil) × 11 de fondària (la «profunditat» del perfil): l'ala de 23 queda a sobre de la cara.",
+                  "Tira LED 3015 (833.76.241) en rotllo de 5 m: 15 W per metre, tallada al múltiple de 50 dins del perfil.",
+                  "Forat del cable Ø8 a un extrem de la ranura; tapes finals 833.72.854 (amb pas de cables)."
+                ]
+              }
+            },
+            "glassFrame": {
+              "id": "glass-frame-20",
+              "name": "Marc d'alumini negre 20 mm",
+              "category": "profile",
+              "engine": "glassFrame",
+              "params": {
+                "frame": 20,
+                "glass": 5
+              },
+              "targets": [
+                {
+                  "key": "frame",
+                  "label": "Marc (frontisses de perfil: pendent del taller)",
+                  "ops": []
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "hanger": {
+              "id": "hanger-concealed",
+              "name": "Penjador ocult regulable",
+              "category": "wall",
+              "engine": "hanger",
+              "tags": [
+                "Libra H2 · Häfele 290.41.910"
+              ],
+              "params": {
+                "underTop": 1,
+                "fromTop": 37,
+                "behindBack": 5,
+                "pitch": 32,
+                "holeDiameter": 10,
+                "holeDepth": 13,
+                "gap": 15,
+                "railTop": 40,
+                "slotWidth": 12,
+                "slotLength": 54.5,
+                "slotTop": 34,
+                "slotSide": 19.5,
+                "bodyWidth": 39.4,
+                "bodyHeight": 142.2,
+                "bodyDepth": 15
+              },
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral (cara de dins, darrere del fons, sota la tapa)",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "pitch * 1",
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "pitch * 2",
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "pitch * 3",
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    }
+                  ]
+                }
+              ],
+              "version": 2,
+              "builtin": true
+            },
+            "wallRail": {
+              "id": "wall-rail-steel",
+              "name": "Regleta de penjar d'acer",
+              "category": "wall",
+              "engine": "wallRail",
+              "tags": [
+                "Libra B3 F003290"
+              ],
+              "params": {
+                "height": 33.5,
+                "depth": 5.6,
+                "stock": 2000,
+                "clipSpacing": 300,
+                "clipEnd": 50
+              },
+              "targets": [
+                {
+                  "key": "wall",
+                  "label": "Paret (cargols i tacs: a mà)",
+                  "ops": []
+                }
+              ],
+              "material": "Acer inox",
+              "version": 2,
+              "builtin": true,
+              "linear": {
+                "clip": {
+                  "name": "Cargol i tac de paret"
+                }
+              }
+            }
+          },
+          "extras": {
+            "cableHoles": []
+          },
+          "x": 5000,
+          "wallGap": 1500,
+          "gapBefore": 0
+        },
+        {
+          "id": "m1a6bgnfdnnj",
+          "name": "C5 · Forma en L: la zona de dalt a la dreta treu la base",
+          "group": "Caixa de la zona",
+          "type": "base",
+          "carcass": {
+            "width": 1000,
+            "height": 1200,
+            "depth": 400,
+            "material": "Melamina blanca",
+            "thickness": 19,
+            "backMaterial": "DM (fons)",
+            "backThickness": 12,
+            "base": {
+              "kind": "none"
+            },
+            "back": "groove",
+            "top": {
+              "kind": "full"
+            },
+            "sides": {
+              "left": true,
+              "right": true
+            },
+            "backSetback": 10,
+            "grooveDepth": 8,
+            "grooveClearance": 0.8,
+            "backClearance": 1,
+            "shelfSetback": 20,
+            "shelfClearance": 1,
+            "innerClearance": 1
+          },
+          "root": {
+            "id": "z1gasnp1p0xi",
+            "split": {
+              "dir": "h",
+              "sizes": [
+                "auto",
+                "auto"
+              ],
+              "children": [
+                {
+                  "id": "zxp7t8onh428",
+                  "shelves": {
+                    "n": 1,
+                    "adjustable": true
+                  }
+                },
+                {
+                  "id": "zky525y4pp0f",
+                  "split": {
+                    "dir": "v",
+                    "sizes": [
+                      "auto",
+                      "auto"
+                    ],
+                    "children": [
+                      {
+                        "id": "zrphyfcqtvge",
+                        "shelves": {
+                          "n": 0,
+                          "adjustable": false
+                        }
+                      },
+                      {
+                        "id": "zx231qzmoeh6",
+                        "noWalls": [
+                          "bottom"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          "fronts": {
+            "outerGap": 2,
+            "betweenGap": 3
+          },
+          "hardware": {
+            "hinge": {
+              "id": "hinge-cup",
+              "name": "Frontissa de cassoleta Ø35",
+              "category": "hinge",
+              "engine": "cup",
+              "params": {
+                "cupDiameter": 35,
+                "cupDepth": 13,
+                "cupOffset": 22.5,
+                "endOffset": 100,
+                "gap": 10,
+                "margin": 3
+              },
+              "count": {
+                "steps": [
+                  {
+                    "upTo": 900,
+                    "n": 2
+                  },
+                  {
+                    "upTo": 1600,
+                    "n": 3
+                  },
+                  {
+                    "upTo": 2100,
+                    "n": 4
+                  }
+                ],
+                "else": 5
+              },
+              "targets": [
+                {
+                  "key": "door",
+                  "label": "Porta",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": "cupOffset",
+                      "d": "cupDiameter",
+                      "depth": "cupDepth",
+                      "tag": "hinge"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "system32": {
+              "id": "system32",
+              "name": "Filera System 32",
+              "category": "shelf-support",
+              "engine": "system32",
+              "params": {
+                "edgeOffset": 37,
+                "pitch": 32,
+                "diameter": 5,
+                "depth": 12
+              },
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "system32"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "dowel": {
+              "id": "dowel",
+              "name": "Espiga Ø8",
+              "category": "connector",
+              "engine": "dowel",
+              "params": {
+                "diameter": 8,
+                "faceDepth": 12,
+                "edgeDepth": 20,
+                "endOffset": 40
+              },
+              "targets": [
+                {
+                  "key": "butt",
+                  "label": "Peça que hi topa (cantell)",
+                  "ops": [
+                    {
+                      "kind": "edgeDrill",
+                      "along": 0,
+                      "d": "diameter",
+                      "depth": "edgeDepth",
+                      "tag": "dowel"
+                    }
+                  ]
+                },
+                {
+                  "key": "through",
+                  "label": "Peça que continua (cara)",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "faceDepth",
+                      "tag": "dowel"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "slide": {
+              "id": "slide-ball",
+              "name": "Guia de boles",
+              "category": "slide",
+              "engine": "slide",
+              "params": {
+                "sideClearance": 12.5,
+                "boxThickness": 16,
+                "bottomThickness": 10,
+                "boxDrop": 30,
+                "bottomOffset": 12,
+                "backClearance": 10,
+                "frontOffset": 37,
+                "secondOffset": 256,
+                "holeHeight": 20
+              },
+              "lengths": [
+                250,
+                300,
+                350,
+                400,
+                450,
+                500,
+                550
+              ],
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral del moble",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset",
+                      "v": 0,
+                      "d": 5,
+                      "depth": 12,
+                      "tag": "slide"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset+secondOffset",
+                      "v": 0,
+                      "d": 5,
+                      "depth": 12,
+                      "tag": "slide"
+                    }
+                  ]
+                },
+                {
+                  "key": "box",
+                  "label": "Lateral de la caixa",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset",
+                      "v": 0,
+                      "d": 4,
+                      "depth": 10,
+                      "tag": "slide"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset+secondOffset",
+                      "v": 0,
+                      "d": 4,
+                      "depth": 10,
+                      "tag": "slide"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "flap": {
+              "id": "flap-arm",
+              "name": "Braç d'abatible",
+              "category": "lift",
+              "engine": "flapArm",
+              "params": {
+                "offset": 22.5,
+                "diameter": 8,
+                "depth": 12,
+                "endOffset": 100
+              },
+              "targets": [
+                {
+                  "key": "flap",
+                  "label": "Abatible",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "offset",
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "flap"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "magnet": {
+              "id": "magnet",
+              "name": "Imant Ø10",
+              "category": "push",
+              "engine": "magnet",
+              "params": {
+                "diameter": 10,
+                "depth": 5,
+                "cornerOffset": 60
+              },
+              "targets": [
+                {
+                  "key": "front",
+                  "label": "Front (cara)",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "magnet"
+                    }
+                  ]
+                },
+                {
+                  "key": "side",
+                  "label": "Lateral (cantell)",
+                  "ops": [
+                    {
+                      "kind": "edgeDrill",
+                      "along": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "magnet"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "handle": {
+              "id": "handle-bar",
+              "name": "Tirador de barra",
+              "category": "handle",
+              "engine": "barHandle",
+              "params": {
+                "diameter": 5,
+                "margin": 3,
+                "inset": 40
+              },
+              "pitch": {
+                "steps": [
+                  {
+                    "upTo": 200,
+                    "n": 64
+                  },
+                  {
+                    "upTo": 260,
+                    "n": 96
+                  }
+                ],
+                "else": 128,
+                "strict": true
+              },
+              "targets": [
+                {
+                  "key": "front",
+                  "label": "Front",
+                  "ops": [
+                    {
+                      "kind": "through",
+                      "u": "-pitch/2",
+                      "v": 0,
+                      "d": "diameter",
+                      "tag": "handle"
+                    },
+                    {
+                      "kind": "through",
+                      "u": "pitch/2",
+                      "v": 0,
+                      "d": "diameter",
+                      "tag": "handle"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "rail": {
+              "id": "rail-inox-25",
+              "name": "Barra de penjar Ø25 inox",
+              "category": "wall",
+              "engine": "rail",
+              "params": {
+                "diameter": 25,
+                "drop": 50
+              },
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral (suports: mecanitzat pendent del taller)",
+                  "ops": []
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "led": {
+              "id": "light-loox-profile11-cw",
+              "name": "Perfil d'alumini Loox 11 mm per encastar + LED 3015, 4000 K",
+              "category": "light",
+              "engine": "ledProfile",
+              "tags": [
+                "Catàleg Häfele, p. 2.127 (perfil de muntatge d'11 mm) i 2.79 (tira LED 3015)"
+              ],
+              "maker": "Häfele",
+              "ref": "833.76.241",
+              "params": {
+                "width": 18,
+                "height": 11,
+                "setback": 30,
+                "spacing": 0,
+                "depth": 11
+              },
+              "targets": [
+                {
+                  "key": "shelf",
+                  "label": "Prestatge o tapa (cara de sota): ranura de 18 × 11 i forat passant del cable",
+                  "ops": [
+                    {
+                      "kind": "through",
+                      "u": 0,
+                      "v": 0,
+                      "d": 8,
+                      "tag": "cable"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true,
+              "light": {
+                "maker": "Häfele",
+                "series": "Perfil Loox 11 mm + LED 3015",
+                "kind": "bar",
+                "article": "833.76.241",
+                "colour": "Blanc fred 4000 K",
+                "finish": "Color plata",
+                "watts": 37.5,
+                "recess": {
+                  "shape": "groove",
+                  "size": 18,
+                  "depth": 11
+                },
+                "body": {
+                  "size": 18,
+                  "height": 11
+                },
+                "cableHole": 8,
+                "bars": [
+                  {
+                    "length": 2500,
+                    "article": "833.72.846",
+                    "watts": 37.5
+                  }
+                ],
+                "barStep": 50,
+                "cableLength": 2000,
+                "source": "Catàleg Häfele, p. 2.127 (perfil de muntatge d'11 mm) i 2.79 (tira LED 3015)",
+                "hypotheses": [
+                  "Ranura de 18 d'ample (el cos del perfil) × 11 de fondària (la «profunditat» del perfil): l'ala de 23 queda a sobre de la cara.",
+                  "Tira LED 3015 (833.76.241) en rotllo de 5 m: 15 W per metre, tallada al múltiple de 50 dins del perfil.",
+                  "Forat del cable Ø8 a un extrem de la ranura; tapes finals 833.72.854 (amb pas de cables)."
+                ]
+              }
+            },
+            "glassFrame": {
+              "id": "glass-frame-20",
+              "name": "Marc d'alumini negre 20 mm",
+              "category": "profile",
+              "engine": "glassFrame",
+              "params": {
+                "frame": 20,
+                "glass": 5
+              },
+              "targets": [
+                {
+                  "key": "frame",
+                  "label": "Marc (frontisses de perfil: pendent del taller)",
+                  "ops": []
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "hanger": {
+              "id": "hanger-concealed",
+              "name": "Penjador ocult regulable",
+              "category": "wall",
+              "engine": "hanger",
+              "tags": [
+                "Libra H2 · Häfele 290.41.910"
+              ],
+              "params": {
+                "underTop": 1,
+                "fromTop": 37,
+                "behindBack": 5,
+                "pitch": 32,
+                "holeDiameter": 10,
+                "holeDepth": 13,
+                "gap": 15,
+                "railTop": 40,
+                "slotWidth": 12,
+                "slotLength": 54.5,
+                "slotTop": 34,
+                "slotSide": 19.5,
+                "bodyWidth": 39.4,
+                "bodyHeight": 142.2,
+                "bodyDepth": 15
+              },
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral (cara de dins, darrere del fons, sota la tapa)",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "pitch * 1",
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "pitch * 2",
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "pitch * 3",
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    }
+                  ]
+                }
+              ],
+              "version": 2,
+              "builtin": true
+            },
+            "wallRail": {
+              "id": "wall-rail-steel",
+              "name": "Regleta de penjar d'acer",
+              "category": "wall",
+              "engine": "wallRail",
+              "tags": [
+                "Libra B3 F003290"
+              ],
+              "params": {
+                "height": 33.5,
+                "depth": 5.6,
+                "stock": 2000,
+                "clipSpacing": 300,
+                "clipEnd": 50
+              },
+              "targets": [
+                {
+                  "key": "wall",
+                  "label": "Paret (cargols i tacs: a mà)",
+                  "ops": []
+                }
+              ],
+              "material": "Acer inox",
+              "version": 2,
+              "builtin": true,
+              "linear": {
+                "clip": {
+                  "name": "Cargol i tac de paret"
+                }
+              }
+            }
+          },
+          "extras": {
+            "cableHoles": []
+          },
+          "x": 6400,
+          "wallGap": 1500,
+          "gapBefore": 0
+        },
+        {
+          "id": "mty6hgymt7eu",
+          "name": "C6 · Forat que travessa: la zona del mig treu els dos laterals",
+          "group": "Caixa de la zona",
+          "type": "base",
+          "carcass": {
+            "width": 1500,
+            "height": 900,
+            "depth": 450,
+            "material": "Melamina blanca",
+            "thickness": 19,
+            "backMaterial": "DM (fons)",
+            "backThickness": 12,
+            "base": {
+              "kind": "none"
+            },
+            "back": "groove",
+            "top": {
+              "kind": "full"
+            },
+            "sides": {
+              "left": true,
+              "right": true
+            },
+            "backSetback": 10,
+            "grooveDepth": 8,
+            "grooveClearance": 0.8,
+            "backClearance": 1,
+            "shelfSetback": 20,
+            "shelfClearance": 1,
+            "innerClearance": 1
+          },
+          "root": {
+            "id": "zr8uol745g4b",
+            "split": {
+              "dir": "v",
+              "sizes": [
+                "auto",
+                "auto",
+                "auto"
+              ],
+              "children": [
+                {
+                  "id": "ztq17bn2q9jz"
+                },
+                {
+                  "id": "zfzniomk2pqx",
+                  "split": {
+                    "dir": "h",
+                    "sizes": [
+                      "auto",
+                      300,
+                      "auto"
+                    ],
+                    "children": [
+                      {
+                        "id": "z1ogvmhcpgax",
+                        "front": {
+                          "kind": "drawers",
+                          "n": 1,
+                          "heights": [
+                            "auto"
+                          ]
+                        }
+                      },
+                      {
+                        "id": "z1ia1v9uu2pd",
+                        "noWalls": [
+                          "left",
+                          "right"
+                        ]
+                      },
+                      {
+                        "id": "zdbez7odvy12",
+                        "front": {
+                          "kind": "drawers",
+                          "n": 1,
+                          "heights": [
+                            "auto"
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "id": "zuly8fk55z3j"
+                }
+              ]
+            }
+          },
+          "fronts": {
+            "outerGap": 2,
+            "betweenGap": 3
+          },
+          "hardware": {
+            "hinge": {
+              "id": "hinge-cup",
+              "name": "Frontissa de cassoleta Ø35",
+              "category": "hinge",
+              "engine": "cup",
+              "params": {
+                "cupDiameter": 35,
+                "cupDepth": 13,
+                "cupOffset": 22.5,
+                "endOffset": 100,
+                "gap": 10,
+                "margin": 3
+              },
+              "count": {
+                "steps": [
+                  {
+                    "upTo": 900,
+                    "n": 2
+                  },
+                  {
+                    "upTo": 1600,
+                    "n": 3
+                  },
+                  {
+                    "upTo": 2100,
+                    "n": 4
+                  }
+                ],
+                "else": 5
+              },
+              "targets": [
+                {
+                  "key": "door",
+                  "label": "Porta",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": "cupOffset",
+                      "d": "cupDiameter",
+                      "depth": "cupDepth",
+                      "tag": "hinge"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "system32": {
+              "id": "system32",
+              "name": "Filera System 32",
+              "category": "shelf-support",
+              "engine": "system32",
+              "params": {
+                "edgeOffset": 37,
+                "pitch": 32,
+                "diameter": 5,
+                "depth": 12
+              },
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "system32"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "dowel": {
+              "id": "dowel",
+              "name": "Espiga Ø8",
+              "category": "connector",
+              "engine": "dowel",
+              "params": {
+                "diameter": 8,
+                "faceDepth": 12,
+                "edgeDepth": 20,
+                "endOffset": 40
+              },
+              "targets": [
+                {
+                  "key": "butt",
+                  "label": "Peça que hi topa (cantell)",
+                  "ops": [
+                    {
+                      "kind": "edgeDrill",
+                      "along": 0,
+                      "d": "diameter",
+                      "depth": "edgeDepth",
+                      "tag": "dowel"
+                    }
+                  ]
+                },
+                {
+                  "key": "through",
+                  "label": "Peça que continua (cara)",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "faceDepth",
+                      "tag": "dowel"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "slide": {
+              "id": "slide-ball",
+              "name": "Guia de boles",
+              "category": "slide",
+              "engine": "slide",
+              "params": {
+                "sideClearance": 12.5,
+                "boxThickness": 16,
+                "bottomThickness": 10,
+                "boxDrop": 30,
+                "bottomOffset": 12,
+                "backClearance": 10,
+                "frontOffset": 37,
+                "secondOffset": 256,
+                "holeHeight": 20
+              },
+              "lengths": [
+                250,
+                300,
+                350,
+                400,
+                450,
+                500,
+                550
+              ],
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral del moble",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset",
+                      "v": 0,
+                      "d": 5,
+                      "depth": 12,
+                      "tag": "slide"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset+secondOffset",
+                      "v": 0,
+                      "d": 5,
+                      "depth": 12,
+                      "tag": "slide"
+                    }
+                  ]
+                },
+                {
+                  "key": "box",
+                  "label": "Lateral de la caixa",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset",
+                      "v": 0,
+                      "d": 4,
+                      "depth": 10,
+                      "tag": "slide"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset+secondOffset",
+                      "v": 0,
+                      "d": 4,
+                      "depth": 10,
+                      "tag": "slide"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "flap": {
+              "id": "flap-arm",
+              "name": "Braç d'abatible",
+              "category": "lift",
+              "engine": "flapArm",
+              "params": {
+                "offset": 22.5,
+                "diameter": 8,
+                "depth": 12,
+                "endOffset": 100
+              },
+              "targets": [
+                {
+                  "key": "flap",
+                  "label": "Abatible",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "offset",
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "flap"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "magnet": {
+              "id": "magnet",
+              "name": "Imant Ø10",
+              "category": "push",
+              "engine": "magnet",
+              "params": {
+                "diameter": 10,
+                "depth": 5,
+                "cornerOffset": 60
+              },
+              "targets": [
+                {
+                  "key": "front",
+                  "label": "Front (cara)",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "magnet"
+                    }
+                  ]
+                },
+                {
+                  "key": "side",
+                  "label": "Lateral (cantell)",
+                  "ops": [
+                    {
+                      "kind": "edgeDrill",
+                      "along": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "magnet"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "handle": {
+              "id": "handle-bar",
+              "name": "Tirador de barra",
+              "category": "handle",
+              "engine": "barHandle",
+              "params": {
+                "diameter": 5,
+                "margin": 3,
+                "inset": 40
+              },
+              "pitch": {
+                "steps": [
+                  {
+                    "upTo": 200,
+                    "n": 64
+                  },
+                  {
+                    "upTo": 260,
+                    "n": 96
+                  }
+                ],
+                "else": 128,
+                "strict": true
+              },
+              "targets": [
+                {
+                  "key": "front",
+                  "label": "Front",
+                  "ops": [
+                    {
+                      "kind": "through",
+                      "u": "-pitch/2",
+                      "v": 0,
+                      "d": "diameter",
+                      "tag": "handle"
+                    },
+                    {
+                      "kind": "through",
+                      "u": "pitch/2",
+                      "v": 0,
+                      "d": "diameter",
+                      "tag": "handle"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "rail": {
+              "id": "rail-inox-25",
+              "name": "Barra de penjar Ø25 inox",
+              "category": "wall",
+              "engine": "rail",
+              "params": {
+                "diameter": 25,
+                "drop": 50
+              },
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral (suports: mecanitzat pendent del taller)",
+                  "ops": []
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "led": {
+              "id": "light-loox-profile11-cw",
+              "name": "Perfil d'alumini Loox 11 mm per encastar + LED 3015, 4000 K",
+              "category": "light",
+              "engine": "ledProfile",
+              "tags": [
+                "Catàleg Häfele, p. 2.127 (perfil de muntatge d'11 mm) i 2.79 (tira LED 3015)"
+              ],
+              "maker": "Häfele",
+              "ref": "833.76.241",
+              "params": {
+                "width": 18,
+                "height": 11,
+                "setback": 30,
+                "spacing": 0,
+                "depth": 11
+              },
+              "targets": [
+                {
+                  "key": "shelf",
+                  "label": "Prestatge o tapa (cara de sota): ranura de 18 × 11 i forat passant del cable",
+                  "ops": [
+                    {
+                      "kind": "through",
+                      "u": 0,
+                      "v": 0,
+                      "d": 8,
+                      "tag": "cable"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true,
+              "light": {
+                "maker": "Häfele",
+                "series": "Perfil Loox 11 mm + LED 3015",
+                "kind": "bar",
+                "article": "833.76.241",
+                "colour": "Blanc fred 4000 K",
+                "finish": "Color plata",
+                "watts": 37.5,
+                "recess": {
+                  "shape": "groove",
+                  "size": 18,
+                  "depth": 11
+                },
+                "body": {
+                  "size": 18,
+                  "height": 11
+                },
+                "cableHole": 8,
+                "bars": [
+                  {
+                    "length": 2500,
+                    "article": "833.72.846",
+                    "watts": 37.5
+                  }
+                ],
+                "barStep": 50,
+                "cableLength": 2000,
+                "source": "Catàleg Häfele, p. 2.127 (perfil de muntatge d'11 mm) i 2.79 (tira LED 3015)",
+                "hypotheses": [
+                  "Ranura de 18 d'ample (el cos del perfil) × 11 de fondària (la «profunditat» del perfil): l'ala de 23 queda a sobre de la cara.",
+                  "Tira LED 3015 (833.76.241) en rotllo de 5 m: 15 W per metre, tallada al múltiple de 50 dins del perfil.",
+                  "Forat del cable Ø8 a un extrem de la ranura; tapes finals 833.72.854 (amb pas de cables)."
+                ]
+              }
+            },
+            "glassFrame": {
+              "id": "glass-frame-20",
+              "name": "Marc d'alumini negre 20 mm",
+              "category": "profile",
+              "engine": "glassFrame",
+              "params": {
+                "frame": 20,
+                "glass": 5
+              },
+              "targets": [
+                {
+                  "key": "frame",
+                  "label": "Marc (frontisses de perfil: pendent del taller)",
+                  "ops": []
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "hanger": {
+              "id": "hanger-concealed",
+              "name": "Penjador ocult regulable",
+              "category": "wall",
+              "engine": "hanger",
+              "tags": [
+                "Libra H2 · Häfele 290.41.910"
+              ],
+              "params": {
+                "underTop": 1,
+                "fromTop": 37,
+                "behindBack": 5,
+                "pitch": 32,
+                "holeDiameter": 10,
+                "holeDepth": 13,
+                "gap": 15,
+                "railTop": 40,
+                "slotWidth": 12,
+                "slotLength": 54.5,
+                "slotTop": 34,
+                "slotSide": 19.5,
+                "bodyWidth": 39.4,
+                "bodyHeight": 142.2,
+                "bodyDepth": 15
+              },
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral (cara de dins, darrere del fons, sota la tapa)",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "pitch * 1",
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "pitch * 2",
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "pitch * 3",
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    }
+                  ]
+                }
+              ],
+              "version": 2,
+              "builtin": true
+            },
+            "wallRail": {
+              "id": "wall-rail-steel",
+              "name": "Regleta de penjar d'acer",
+              "category": "wall",
+              "engine": "wallRail",
+              "tags": [
+                "Libra B3 F003290"
+              ],
+              "params": {
+                "height": 33.5,
+                "depth": 5.6,
+                "stock": 2000,
+                "clipSpacing": 300,
+                "clipEnd": 50
+              },
+              "targets": [
+                {
+                  "key": "wall",
+                  "label": "Paret (cargols i tacs: a mà)",
+                  "ops": []
+                }
+              ],
+              "material": "Acer inox",
+              "version": 2,
+              "builtin": true,
+              "linear": {
+                "clip": {
+                  "name": "Cargol i tac de paret"
+                }
+              }
+            }
+          },
+          "extras": {
+            "cableHoles": []
+          },
+          "x": 8000,
+          "wallGap": 1500,
+          "gapBefore": 0
+        },
+        {
+          "id": "mbaepo6amcrg",
+          "name": "C7 · Fons encastat del mòdul, zona de baix sense fons",
+          "group": "Caixa de la zona",
+          "type": "base",
+          "carcass": {
+            "width": 900,
+            "height": 1000,
+            "depth": 450,
+            "material": "Melamina blanca",
+            "thickness": 19,
+            "backMaterial": "Melamina blanca",
+            "backThickness": 19,
+            "base": {
+              "kind": "none"
+            },
+            "back": "inset",
+            "top": {
+              "kind": "full"
+            },
+            "sides": {
+              "left": true,
+              "right": true
+            },
+            "backSetback": 10,
+            "grooveDepth": 8,
+            "grooveClearance": 0.8,
+            "backClearance": 1,
+            "shelfSetback": 20,
+            "shelfClearance": 1,
+            "innerClearance": 1,
+            "backInsetSetback": 0
+          },
+          "root": {
+            "id": "zozo2kn0wo4v",
+            "split": {
+              "dir": "h",
+              "sizes": [
+                300,
+                "auto"
+              ],
+              "children": [
+                {
+                  "id": "ztlpt0zava7s",
+                  "back": "none"
+                },
+                {
+                  "id": "zyak0r58j2xc",
+                  "front": {
+                    "kind": "door",
+                    "mode": "double",
+                    "hinge": "left"
+                  }
+                }
+              ]
+            }
+          },
+          "fronts": {
+            "outerGap": 2,
+            "betweenGap": 3
+          },
+          "hardware": {
+            "hinge": {
+              "id": "hinge-cup",
+              "name": "Frontissa de cassoleta Ø35",
+              "category": "hinge",
+              "engine": "cup",
+              "params": {
+                "cupDiameter": 35,
+                "cupDepth": 13,
+                "cupOffset": 22.5,
+                "endOffset": 100,
+                "gap": 10,
+                "margin": 3
+              },
+              "count": {
+                "steps": [
+                  {
+                    "upTo": 900,
+                    "n": 2
+                  },
+                  {
+                    "upTo": 1600,
+                    "n": 3
+                  },
+                  {
+                    "upTo": 2100,
+                    "n": 4
+                  }
+                ],
+                "else": 5
+              },
+              "targets": [
+                {
+                  "key": "door",
+                  "label": "Porta",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": "cupOffset",
+                      "d": "cupDiameter",
+                      "depth": "cupDepth",
+                      "tag": "hinge"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "system32": {
+              "id": "system32",
+              "name": "Filera System 32",
+              "category": "shelf-support",
+              "engine": "system32",
+              "params": {
+                "edgeOffset": 37,
+                "pitch": 32,
+                "diameter": 5,
+                "depth": 12
+              },
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "system32"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "dowel": {
+              "id": "dowel",
+              "name": "Espiga Ø8",
+              "category": "connector",
+              "engine": "dowel",
+              "params": {
+                "diameter": 8,
+                "faceDepth": 12,
+                "edgeDepth": 20,
+                "endOffset": 40
+              },
+              "targets": [
+                {
+                  "key": "butt",
+                  "label": "Peça que hi topa (cantell)",
+                  "ops": [
+                    {
+                      "kind": "edgeDrill",
+                      "along": 0,
+                      "d": "diameter",
+                      "depth": "edgeDepth",
+                      "tag": "dowel"
+                    }
+                  ]
+                },
+                {
+                  "key": "through",
+                  "label": "Peça que continua (cara)",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "faceDepth",
+                      "tag": "dowel"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "slide": {
+              "id": "slide-ball",
+              "name": "Guia de boles",
+              "category": "slide",
+              "engine": "slide",
+              "params": {
+                "sideClearance": 12.5,
+                "boxThickness": 16,
+                "bottomThickness": 10,
+                "boxDrop": 30,
+                "bottomOffset": 12,
+                "backClearance": 10,
+                "frontOffset": 37,
+                "secondOffset": 256,
+                "holeHeight": 20
+              },
+              "lengths": [
+                250,
+                300,
+                350,
+                400,
+                450,
+                500,
+                550
+              ],
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral del moble",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset",
+                      "v": 0,
+                      "d": 5,
+                      "depth": 12,
+                      "tag": "slide"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset+secondOffset",
+                      "v": 0,
+                      "d": 5,
+                      "depth": 12,
+                      "tag": "slide"
+                    }
+                  ]
+                },
+                {
+                  "key": "box",
+                  "label": "Lateral de la caixa",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset",
+                      "v": 0,
+                      "d": 4,
+                      "depth": 10,
+                      "tag": "slide"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset+secondOffset",
+                      "v": 0,
+                      "d": 4,
+                      "depth": 10,
+                      "tag": "slide"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "flap": {
+              "id": "flap-arm",
+              "name": "Braç d'abatible",
+              "category": "lift",
+              "engine": "flapArm",
+              "params": {
+                "offset": 22.5,
+                "diameter": 8,
+                "depth": 12,
+                "endOffset": 100
+              },
+              "targets": [
+                {
+                  "key": "flap",
+                  "label": "Abatible",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "offset",
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "flap"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "magnet": {
+              "id": "magnet",
+              "name": "Imant Ø10",
+              "category": "push",
+              "engine": "magnet",
+              "params": {
+                "diameter": 10,
+                "depth": 5,
+                "cornerOffset": 60
+              },
+              "targets": [
+                {
+                  "key": "front",
+                  "label": "Front (cara)",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "magnet"
+                    }
+                  ]
+                },
+                {
+                  "key": "side",
+                  "label": "Lateral (cantell)",
+                  "ops": [
+                    {
+                      "kind": "edgeDrill",
+                      "along": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "magnet"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "handle": {
+              "id": "handle-bar",
+              "name": "Tirador de barra",
+              "category": "handle",
+              "engine": "barHandle",
+              "params": {
+                "diameter": 5,
+                "margin": 3,
+                "inset": 40
+              },
+              "pitch": {
+                "steps": [
+                  {
+                    "upTo": 200,
+                    "n": 64
+                  },
+                  {
+                    "upTo": 260,
+                    "n": 96
+                  }
+                ],
+                "else": 128,
+                "strict": true
+              },
+              "targets": [
+                {
+                  "key": "front",
+                  "label": "Front",
+                  "ops": [
+                    {
+                      "kind": "through",
+                      "u": "-pitch/2",
+                      "v": 0,
+                      "d": "diameter",
+                      "tag": "handle"
+                    },
+                    {
+                      "kind": "through",
+                      "u": "pitch/2",
+                      "v": 0,
+                      "d": "diameter",
+                      "tag": "handle"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "rail": {
+              "id": "rail-inox-25",
+              "name": "Barra de penjar Ø25 inox",
+              "category": "wall",
+              "engine": "rail",
+              "params": {
+                "diameter": 25,
+                "drop": 50
+              },
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral (suports: mecanitzat pendent del taller)",
+                  "ops": []
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "led": {
+              "id": "light-loox-profile11-cw",
+              "name": "Perfil d'alumini Loox 11 mm per encastar + LED 3015, 4000 K",
+              "category": "light",
+              "engine": "ledProfile",
+              "tags": [
+                "Catàleg Häfele, p. 2.127 (perfil de muntatge d'11 mm) i 2.79 (tira LED 3015)"
+              ],
+              "maker": "Häfele",
+              "ref": "833.76.241",
+              "params": {
+                "width": 18,
+                "height": 11,
+                "setback": 30,
+                "spacing": 0,
+                "depth": 11
+              },
+              "targets": [
+                {
+                  "key": "shelf",
+                  "label": "Prestatge o tapa (cara de sota): ranura de 18 × 11 i forat passant del cable",
+                  "ops": [
+                    {
+                      "kind": "through",
+                      "u": 0,
+                      "v": 0,
+                      "d": 8,
+                      "tag": "cable"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true,
+              "light": {
+                "maker": "Häfele",
+                "series": "Perfil Loox 11 mm + LED 3015",
+                "kind": "bar",
+                "article": "833.76.241",
+                "colour": "Blanc fred 4000 K",
+                "finish": "Color plata",
+                "watts": 37.5,
+                "recess": {
+                  "shape": "groove",
+                  "size": 18,
+                  "depth": 11
+                },
+                "body": {
+                  "size": 18,
+                  "height": 11
+                },
+                "cableHole": 8,
+                "bars": [
+                  {
+                    "length": 2500,
+                    "article": "833.72.846",
+                    "watts": 37.5
+                  }
+                ],
+                "barStep": 50,
+                "cableLength": 2000,
+                "source": "Catàleg Häfele, p. 2.127 (perfil de muntatge d'11 mm) i 2.79 (tira LED 3015)",
+                "hypotheses": [
+                  "Ranura de 18 d'ample (el cos del perfil) × 11 de fondària (la «profunditat» del perfil): l'ala de 23 queda a sobre de la cara.",
+                  "Tira LED 3015 (833.76.241) en rotllo de 5 m: 15 W per metre, tallada al múltiple de 50 dins del perfil.",
+                  "Forat del cable Ø8 a un extrem de la ranura; tapes finals 833.72.854 (amb pas de cables)."
+                ]
+              }
+            },
+            "glassFrame": {
+              "id": "glass-frame-20",
+              "name": "Marc d'alumini negre 20 mm",
+              "category": "profile",
+              "engine": "glassFrame",
+              "params": {
+                "frame": 20,
+                "glass": 5
+              },
+              "targets": [
+                {
+                  "key": "frame",
+                  "label": "Marc (frontisses de perfil: pendent del taller)",
+                  "ops": []
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "hanger": {
+              "id": "hanger-concealed",
+              "name": "Penjador ocult regulable",
+              "category": "wall",
+              "engine": "hanger",
+              "tags": [
+                "Libra H2 · Häfele 290.41.910"
+              ],
+              "params": {
+                "underTop": 1,
+                "fromTop": 37,
+                "behindBack": 5,
+                "pitch": 32,
+                "holeDiameter": 10,
+                "holeDepth": 13,
+                "gap": 15,
+                "railTop": 40,
+                "slotWidth": 12,
+                "slotLength": 54.5,
+                "slotTop": 34,
+                "slotSide": 19.5,
+                "bodyWidth": 39.4,
+                "bodyHeight": 142.2,
+                "bodyDepth": 15
+              },
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral (cara de dins, darrere del fons, sota la tapa)",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "pitch * 1",
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "pitch * 2",
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "pitch * 3",
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    }
+                  ]
+                }
+              ],
+              "version": 2,
+              "builtin": true
+            },
+            "wallRail": {
+              "id": "wall-rail-steel",
+              "name": "Regleta de penjar d'acer",
+              "category": "wall",
+              "engine": "wallRail",
+              "tags": [
+                "Libra B3 F003290"
+              ],
+              "params": {
+                "height": 33.5,
+                "depth": 5.6,
+                "stock": 2000,
+                "clipSpacing": 300,
+                "clipEnd": 50
+              },
+              "targets": [
+                {
+                  "key": "wall",
+                  "label": "Paret (cargols i tacs: a mà)",
+                  "ops": []
+                }
+              ],
+              "material": "Acer inox",
+              "version": 2,
+              "builtin": true,
+              "linear": {
+                "clip": {
+                  "name": "Cargol i tac de paret"
+                }
+              }
+            }
+          },
+          "extras": {
+            "cableHoles": []
+          },
+          "x": 10100,
+          "wallGap": 1500,
+          "gapBefore": 0
+        },
+        {
+          "id": "m7ualjpidpry",
+          "name": "C8 · Dues zones seguides sense fons",
+          "group": "Caixa de la zona",
+          "type": "base",
+          "carcass": {
+            "width": 1200,
+            "height": 720,
+            "depth": 500,
+            "material": "Melamina blanca",
+            "thickness": 19,
+            "backMaterial": "DM (fons)",
+            "backThickness": 12,
+            "base": {
+              "kind": "none"
+            },
+            "back": "groove",
+            "top": {
+              "kind": "full"
+            },
+            "sides": {
+              "left": true,
+              "right": true
+            },
+            "backSetback": 10,
+            "grooveDepth": 8,
+            "grooveClearance": 0.8,
+            "backClearance": 1,
+            "shelfSetback": 20,
+            "shelfClearance": 1,
+            "innerClearance": 1
+          },
+          "root": {
+            "id": "z9lbuegzknyt",
+            "split": {
+              "dir": "v",
+              "sizes": [
+                "auto",
+                "auto",
+                "auto"
+              ],
+              "children": [
+                {
+                  "id": "zctgh5xpzcox",
+                  "back": "none"
+                },
+                {
+                  "id": "zzd7sgh70tf8",
+                  "back": "none"
+                },
+                {
+                  "id": "zp7lfgb0f0mz",
+                  "front": {
+                    "kind": "door",
+                    "mode": "single",
+                    "hinge": "right"
+                  }
+                }
+              ]
+            }
+          },
+          "fronts": {
+            "outerGap": 2,
+            "betweenGap": 3
+          },
+          "hardware": {
+            "hinge": {
+              "id": "hinge-cup",
+              "name": "Frontissa de cassoleta Ø35",
+              "category": "hinge",
+              "engine": "cup",
+              "params": {
+                "cupDiameter": 35,
+                "cupDepth": 13,
+                "cupOffset": 22.5,
+                "endOffset": 100,
+                "gap": 10,
+                "margin": 3
+              },
+              "count": {
+                "steps": [
+                  {
+                    "upTo": 900,
+                    "n": 2
+                  },
+                  {
+                    "upTo": 1600,
+                    "n": 3
+                  },
+                  {
+                    "upTo": 2100,
+                    "n": 4
+                  }
+                ],
+                "else": 5
+              },
+              "targets": [
+                {
+                  "key": "door",
+                  "label": "Porta",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": "cupOffset",
+                      "d": "cupDiameter",
+                      "depth": "cupDepth",
+                      "tag": "hinge"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "system32": {
+              "id": "system32",
+              "name": "Filera System 32",
+              "category": "shelf-support",
+              "engine": "system32",
+              "params": {
+                "edgeOffset": 37,
+                "pitch": 32,
+                "diameter": 5,
+                "depth": 12
+              },
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "system32"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "dowel": {
+              "id": "dowel",
+              "name": "Espiga Ø8",
+              "category": "connector",
+              "engine": "dowel",
+              "params": {
+                "diameter": 8,
+                "faceDepth": 12,
+                "edgeDepth": 20,
+                "endOffset": 40
+              },
+              "targets": [
+                {
+                  "key": "butt",
+                  "label": "Peça que hi topa (cantell)",
+                  "ops": [
+                    {
+                      "kind": "edgeDrill",
+                      "along": 0,
+                      "d": "diameter",
+                      "depth": "edgeDepth",
+                      "tag": "dowel"
+                    }
+                  ]
+                },
+                {
+                  "key": "through",
+                  "label": "Peça que continua (cara)",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "faceDepth",
+                      "tag": "dowel"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "slide": {
+              "id": "slide-ball",
+              "name": "Guia de boles",
+              "category": "slide",
+              "engine": "slide",
+              "params": {
+                "sideClearance": 12.5,
+                "boxThickness": 16,
+                "bottomThickness": 10,
+                "boxDrop": 30,
+                "bottomOffset": 12,
+                "backClearance": 10,
+                "frontOffset": 37,
+                "secondOffset": 256,
+                "holeHeight": 20
+              },
+              "lengths": [
+                250,
+                300,
+                350,
+                400,
+                450,
+                500,
+                550
+              ],
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral del moble",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset",
+                      "v": 0,
+                      "d": 5,
+                      "depth": 12,
+                      "tag": "slide"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset+secondOffset",
+                      "v": 0,
+                      "d": 5,
+                      "depth": 12,
+                      "tag": "slide"
+                    }
+                  ]
+                },
+                {
+                  "key": "box",
+                  "label": "Lateral de la caixa",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset",
+                      "v": 0,
+                      "d": 4,
+                      "depth": 10,
+                      "tag": "slide"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset+secondOffset",
+                      "v": 0,
+                      "d": 4,
+                      "depth": 10,
+                      "tag": "slide"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "flap": {
+              "id": "flap-arm",
+              "name": "Braç d'abatible",
+              "category": "lift",
+              "engine": "flapArm",
+              "params": {
+                "offset": 22.5,
+                "diameter": 8,
+                "depth": 12,
+                "endOffset": 100
+              },
+              "targets": [
+                {
+                  "key": "flap",
+                  "label": "Abatible",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "offset",
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "flap"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "magnet": {
+              "id": "magnet",
+              "name": "Imant Ø10",
+              "category": "push",
+              "engine": "magnet",
+              "params": {
+                "diameter": 10,
+                "depth": 5,
+                "cornerOffset": 60
+              },
+              "targets": [
+                {
+                  "key": "front",
+                  "label": "Front (cara)",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "magnet"
+                    }
+                  ]
+                },
+                {
+                  "key": "side",
+                  "label": "Lateral (cantell)",
+                  "ops": [
+                    {
+                      "kind": "edgeDrill",
+                      "along": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "magnet"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "handle": {
+              "id": "handle-bar",
+              "name": "Tirador de barra",
+              "category": "handle",
+              "engine": "barHandle",
+              "params": {
+                "diameter": 5,
+                "margin": 3,
+                "inset": 40
+              },
+              "pitch": {
+                "steps": [
+                  {
+                    "upTo": 200,
+                    "n": 64
+                  },
+                  {
+                    "upTo": 260,
+                    "n": 96
+                  }
+                ],
+                "else": 128,
+                "strict": true
+              },
+              "targets": [
+                {
+                  "key": "front",
+                  "label": "Front",
+                  "ops": [
+                    {
+                      "kind": "through",
+                      "u": "-pitch/2",
+                      "v": 0,
+                      "d": "diameter",
+                      "tag": "handle"
+                    },
+                    {
+                      "kind": "through",
+                      "u": "pitch/2",
+                      "v": 0,
+                      "d": "diameter",
+                      "tag": "handle"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "rail": {
+              "id": "rail-inox-25",
+              "name": "Barra de penjar Ø25 inox",
+              "category": "wall",
+              "engine": "rail",
+              "params": {
+                "diameter": 25,
+                "drop": 50
+              },
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral (suports: mecanitzat pendent del taller)",
+                  "ops": []
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "led": {
+              "id": "light-loox-profile11-cw",
+              "name": "Perfil d'alumini Loox 11 mm per encastar + LED 3015, 4000 K",
+              "category": "light",
+              "engine": "ledProfile",
+              "tags": [
+                "Catàleg Häfele, p. 2.127 (perfil de muntatge d'11 mm) i 2.79 (tira LED 3015)"
+              ],
+              "maker": "Häfele",
+              "ref": "833.76.241",
+              "params": {
+                "width": 18,
+                "height": 11,
+                "setback": 30,
+                "spacing": 0,
+                "depth": 11
+              },
+              "targets": [
+                {
+                  "key": "shelf",
+                  "label": "Prestatge o tapa (cara de sota): ranura de 18 × 11 i forat passant del cable",
+                  "ops": [
+                    {
+                      "kind": "through",
+                      "u": 0,
+                      "v": 0,
+                      "d": 8,
+                      "tag": "cable"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true,
+              "light": {
+                "maker": "Häfele",
+                "series": "Perfil Loox 11 mm + LED 3015",
+                "kind": "bar",
+                "article": "833.76.241",
+                "colour": "Blanc fred 4000 K",
+                "finish": "Color plata",
+                "watts": 37.5,
+                "recess": {
+                  "shape": "groove",
+                  "size": 18,
+                  "depth": 11
+                },
+                "body": {
+                  "size": 18,
+                  "height": 11
+                },
+                "cableHole": 8,
+                "bars": [
+                  {
+                    "length": 2500,
+                    "article": "833.72.846",
+                    "watts": 37.5
+                  }
+                ],
+                "barStep": 50,
+                "cableLength": 2000,
+                "source": "Catàleg Häfele, p. 2.127 (perfil de muntatge d'11 mm) i 2.79 (tira LED 3015)",
+                "hypotheses": [
+                  "Ranura de 18 d'ample (el cos del perfil) × 11 de fondària (la «profunditat» del perfil): l'ala de 23 queda a sobre de la cara.",
+                  "Tira LED 3015 (833.76.241) en rotllo de 5 m: 15 W per metre, tallada al múltiple de 50 dins del perfil.",
+                  "Forat del cable Ø8 a un extrem de la ranura; tapes finals 833.72.854 (amb pas de cables)."
+                ]
+              }
+            },
+            "glassFrame": {
+              "id": "glass-frame-20",
+              "name": "Marc d'alumini negre 20 mm",
+              "category": "profile",
+              "engine": "glassFrame",
+              "params": {
+                "frame": 20,
+                "glass": 5
+              },
+              "targets": [
+                {
+                  "key": "frame",
+                  "label": "Marc (frontisses de perfil: pendent del taller)",
+                  "ops": []
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "hanger": {
+              "id": "hanger-concealed",
+              "name": "Penjador ocult regulable",
+              "category": "wall",
+              "engine": "hanger",
+              "tags": [
+                "Libra H2 · Häfele 290.41.910"
+              ],
+              "params": {
+                "underTop": 1,
+                "fromTop": 37,
+                "behindBack": 5,
+                "pitch": 32,
+                "holeDiameter": 10,
+                "holeDepth": 13,
+                "gap": 15,
+                "railTop": 40,
+                "slotWidth": 12,
+                "slotLength": 54.5,
+                "slotTop": 34,
+                "slotSide": 19.5,
+                "bodyWidth": 39.4,
+                "bodyHeight": 142.2,
+                "bodyDepth": 15
+              },
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral (cara de dins, darrere del fons, sota la tapa)",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "pitch * 1",
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "pitch * 2",
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "pitch * 3",
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    }
+                  ]
+                }
+              ],
+              "version": 2,
+              "builtin": true
+            },
+            "wallRail": {
+              "id": "wall-rail-steel",
+              "name": "Regleta de penjar d'acer",
+              "category": "wall",
+              "engine": "wallRail",
+              "tags": [
+                "Libra B3 F003290"
+              ],
+              "params": {
+                "height": 33.5,
+                "depth": 5.6,
+                "stock": 2000,
+                "clipSpacing": 300,
+                "clipEnd": 50
+              },
+              "targets": [
+                {
+                  "key": "wall",
+                  "label": "Paret (cargols i tacs: a mà)",
+                  "ops": []
+                }
+              ],
+              "material": "Acer inox",
+              "version": 2,
+              "builtin": true,
+              "linear": {
+                "clip": {
+                  "name": "Cargol i tac de paret"
+                }
+              }
+            }
+          },
+          "extras": {
+            "cableHoles": []
+          },
+          "x": 11600,
+          "wallGap": 1500,
+          "gapBefore": 0
+        },
+        {
+          "id": "m1ylrsdpuwen",
+          "name": "C9 · Fons cargolat: zona encastada a 100",
+          "group": "Caixa de la zona",
+          "type": "base",
+          "carcass": {
+            "width": 1000,
+            "height": 800,
+            "depth": 500,
+            "material": "Melamina blanca",
+            "thickness": 19,
+            "backMaterial": "DM (fons)",
+            "backThickness": 12,
+            "base": {
+              "kind": "none"
+            },
+            "back": "screwed",
+            "top": {
+              "kind": "full"
+            },
+            "sides": {
+              "left": true,
+              "right": true
+            },
+            "backSetback": 10,
+            "grooveDepth": 8,
+            "grooveClearance": 0.8,
+            "backClearance": 1,
+            "shelfSetback": 20,
+            "shelfClearance": 1,
+            "innerClearance": 1
+          },
+          "root": {
+            "id": "zj1esjg92666",
+            "split": {
+              "dir": "v",
+              "sizes": [
+                "auto",
+                "auto"
+              ],
+              "children": [
+                {
+                  "id": "z58c14oalssw",
+                  "back": "inset",
+                  "backInsetSetback": 100,
+                  "shelves": {
+                    "n": 1,
+                    "adjustable": true
+                  }
+                },
+                {
+                  "id": "z84p3t4dwadp",
+                  "front": {
+                    "kind": "door",
+                    "mode": "single",
+                    "hinge": "right"
+                  }
+                }
+              ]
+            }
+          },
+          "fronts": {
+            "outerGap": 2,
+            "betweenGap": 3
+          },
+          "hardware": {
+            "hinge": {
+              "id": "hinge-cup",
+              "name": "Frontissa de cassoleta Ø35",
+              "category": "hinge",
+              "engine": "cup",
+              "params": {
+                "cupDiameter": 35,
+                "cupDepth": 13,
+                "cupOffset": 22.5,
+                "endOffset": 100,
+                "gap": 10,
+                "margin": 3
+              },
+              "count": {
+                "steps": [
+                  {
+                    "upTo": 900,
+                    "n": 2
+                  },
+                  {
+                    "upTo": 1600,
+                    "n": 3
+                  },
+                  {
+                    "upTo": 2100,
+                    "n": 4
+                  }
+                ],
+                "else": 5
+              },
+              "targets": [
+                {
+                  "key": "door",
+                  "label": "Porta",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": "cupOffset",
+                      "d": "cupDiameter",
+                      "depth": "cupDepth",
+                      "tag": "hinge"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "system32": {
+              "id": "system32",
+              "name": "Filera System 32",
+              "category": "shelf-support",
+              "engine": "system32",
+              "params": {
+                "edgeOffset": 37,
+                "pitch": 32,
+                "diameter": 5,
+                "depth": 12
+              },
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "system32"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "dowel": {
+              "id": "dowel",
+              "name": "Espiga Ø8",
+              "category": "connector",
+              "engine": "dowel",
+              "params": {
+                "diameter": 8,
+                "faceDepth": 12,
+                "edgeDepth": 20,
+                "endOffset": 40
+              },
+              "targets": [
+                {
+                  "key": "butt",
+                  "label": "Peça que hi topa (cantell)",
+                  "ops": [
+                    {
+                      "kind": "edgeDrill",
+                      "along": 0,
+                      "d": "diameter",
+                      "depth": "edgeDepth",
+                      "tag": "dowel"
+                    }
+                  ]
+                },
+                {
+                  "key": "through",
+                  "label": "Peça que continua (cara)",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "faceDepth",
+                      "tag": "dowel"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "slide": {
+              "id": "slide-ball",
+              "name": "Guia de boles",
+              "category": "slide",
+              "engine": "slide",
+              "params": {
+                "sideClearance": 12.5,
+                "boxThickness": 16,
+                "bottomThickness": 10,
+                "boxDrop": 30,
+                "bottomOffset": 12,
+                "backClearance": 10,
+                "frontOffset": 37,
+                "secondOffset": 256,
+                "holeHeight": 20
+              },
+              "lengths": [
+                250,
+                300,
+                350,
+                400,
+                450,
+                500,
+                550
+              ],
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral del moble",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset",
+                      "v": 0,
+                      "d": 5,
+                      "depth": 12,
+                      "tag": "slide"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset+secondOffset",
+                      "v": 0,
+                      "d": 5,
+                      "depth": 12,
+                      "tag": "slide"
+                    }
+                  ]
+                },
+                {
+                  "key": "box",
+                  "label": "Lateral de la caixa",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset",
+                      "v": 0,
+                      "d": 4,
+                      "depth": 10,
+                      "tag": "slide"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "frontOffset+secondOffset",
+                      "v": 0,
+                      "d": 4,
+                      "depth": 10,
+                      "tag": "slide"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "flap": {
+              "id": "flap-arm",
+              "name": "Braç d'abatible",
+              "category": "lift",
+              "engine": "flapArm",
+              "params": {
+                "offset": 22.5,
+                "diameter": 8,
+                "depth": 12,
+                "endOffset": 100
+              },
+              "targets": [
+                {
+                  "key": "flap",
+                  "label": "Abatible",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "offset",
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "flap"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "magnet": {
+              "id": "magnet",
+              "name": "Imant Ø10",
+              "category": "push",
+              "engine": "magnet",
+              "params": {
+                "diameter": 10,
+                "depth": 5,
+                "cornerOffset": 60
+              },
+              "targets": [
+                {
+                  "key": "front",
+                  "label": "Front (cara)",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "magnet"
+                    }
+                  ]
+                },
+                {
+                  "key": "side",
+                  "label": "Lateral (cantell)",
+                  "ops": [
+                    {
+                      "kind": "edgeDrill",
+                      "along": 0,
+                      "d": "diameter",
+                      "depth": "depth",
+                      "tag": "magnet"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "handle": {
+              "id": "handle-bar",
+              "name": "Tirador de barra",
+              "category": "handle",
+              "engine": "barHandle",
+              "params": {
+                "diameter": 5,
+                "margin": 3,
+                "inset": 40
+              },
+              "pitch": {
+                "steps": [
+                  {
+                    "upTo": 200,
+                    "n": 64
+                  },
+                  {
+                    "upTo": 260,
+                    "n": 96
+                  }
+                ],
+                "else": 128,
+                "strict": true
+              },
+              "targets": [
+                {
+                  "key": "front",
+                  "label": "Front",
+                  "ops": [
+                    {
+                      "kind": "through",
+                      "u": "-pitch/2",
+                      "v": 0,
+                      "d": "diameter",
+                      "tag": "handle"
+                    },
+                    {
+                      "kind": "through",
+                      "u": "pitch/2",
+                      "v": 0,
+                      "d": "diameter",
+                      "tag": "handle"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "rail": {
+              "id": "rail-inox-25",
+              "name": "Barra de penjar Ø25 inox",
+              "category": "wall",
+              "engine": "rail",
+              "params": {
+                "diameter": 25,
+                "drop": 50
+              },
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral (suports: mecanitzat pendent del taller)",
+                  "ops": []
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "led": {
+              "id": "light-loox-profile11-cw",
+              "name": "Perfil d'alumini Loox 11 mm per encastar + LED 3015, 4000 K",
+              "category": "light",
+              "engine": "ledProfile",
+              "tags": [
+                "Catàleg Häfele, p. 2.127 (perfil de muntatge d'11 mm) i 2.79 (tira LED 3015)"
+              ],
+              "maker": "Häfele",
+              "ref": "833.76.241",
+              "params": {
+                "width": 18,
+                "height": 11,
+                "setback": 30,
+                "spacing": 0,
+                "depth": 11
+              },
+              "targets": [
+                {
+                  "key": "shelf",
+                  "label": "Prestatge o tapa (cara de sota): ranura de 18 × 11 i forat passant del cable",
+                  "ops": [
+                    {
+                      "kind": "through",
+                      "u": 0,
+                      "v": 0,
+                      "d": 8,
+                      "tag": "cable"
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "builtin": true,
+              "light": {
+                "maker": "Häfele",
+                "series": "Perfil Loox 11 mm + LED 3015",
+                "kind": "bar",
+                "article": "833.76.241",
+                "colour": "Blanc fred 4000 K",
+                "finish": "Color plata",
+                "watts": 37.5,
+                "recess": {
+                  "shape": "groove",
+                  "size": 18,
+                  "depth": 11
+                },
+                "body": {
+                  "size": 18,
+                  "height": 11
+                },
+                "cableHole": 8,
+                "bars": [
+                  {
+                    "length": 2500,
+                    "article": "833.72.846",
+                    "watts": 37.5
+                  }
+                ],
+                "barStep": 50,
+                "cableLength": 2000,
+                "source": "Catàleg Häfele, p. 2.127 (perfil de muntatge d'11 mm) i 2.79 (tira LED 3015)",
+                "hypotheses": [
+                  "Ranura de 18 d'ample (el cos del perfil) × 11 de fondària (la «profunditat» del perfil): l'ala de 23 queda a sobre de la cara.",
+                  "Tira LED 3015 (833.76.241) en rotllo de 5 m: 15 W per metre, tallada al múltiple de 50 dins del perfil.",
+                  "Forat del cable Ø8 a un extrem de la ranura; tapes finals 833.72.854 (amb pas de cables)."
+                ]
+              }
+            },
+            "glassFrame": {
+              "id": "glass-frame-20",
+              "name": "Marc d'alumini negre 20 mm",
+              "category": "profile",
+              "engine": "glassFrame",
+              "params": {
+                "frame": 20,
+                "glass": 5
+              },
+              "targets": [
+                {
+                  "key": "frame",
+                  "label": "Marc (frontisses de perfil: pendent del taller)",
+                  "ops": []
+                }
+              ],
+              "version": 1,
+              "builtin": true
+            },
+            "hanger": {
+              "id": "hanger-concealed",
+              "name": "Penjador ocult regulable",
+              "category": "wall",
+              "engine": "hanger",
+              "tags": [
+                "Libra H2 · Häfele 290.41.910"
+              ],
+              "params": {
+                "underTop": 1,
+                "fromTop": 37,
+                "behindBack": 5,
+                "pitch": 32,
+                "holeDiameter": 10,
+                "holeDepth": 13,
+                "gap": 15,
+                "railTop": 40,
+                "slotWidth": 12,
+                "slotLength": 54.5,
+                "slotTop": 34,
+                "slotSide": 19.5,
+                "bodyWidth": 39.4,
+                "bodyHeight": 142.2,
+                "bodyDepth": 15
+              },
+              "targets": [
+                {
+                  "key": "side",
+                  "label": "Lateral (cara de dins, darrere del fons, sota la tapa)",
+                  "ops": [
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": 0,
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "pitch * 1",
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "pitch * 2",
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    },
+                    {
+                      "kind": "drill",
+                      "face": "A",
+                      "u": "pitch * 3",
+                      "v": 0,
+                      "d": "holeDiameter",
+                      "depth": "holeDepth",
+                      "tag": "hanger"
+                    }
+                  ]
+                }
+              ],
+              "version": 2,
+              "builtin": true
+            },
+            "wallRail": {
+              "id": "wall-rail-steel",
+              "name": "Regleta de penjar d'acer",
+              "category": "wall",
+              "engine": "wallRail",
+              "tags": [
+                "Libra B3 F003290"
+              ],
+              "params": {
+                "height": 33.5,
+                "depth": 5.6,
+                "stock": 2000,
+                "clipSpacing": 300,
+                "clipEnd": 50
+              },
+              "targets": [
+                {
+                  "key": "wall",
+                  "label": "Paret (cargols i tacs: a mà)",
+                  "ops": []
+                }
+              ],
+              "material": "Acer inox",
+              "version": 2,
+              "builtin": true,
+              "linear": {
+                "clip": {
+                  "name": "Cargol i tac de paret"
+                }
+              }
+            }
+          },
+          "extras": {
+            "cableHoles": []
+          },
+          "x": 13400,
+          "wallGap": 1500,
+          "gapBefore": 0
+        }
+      ],
+      "references": [],
+      "parts": []
+    },
+    "nesting": {
+      "sheet": {
+        "w": 2800,
+        "h": 2070
+      },
+      "kerf": 6,
+      "margin": 10
+    }
+  },
+  "references": []
+}

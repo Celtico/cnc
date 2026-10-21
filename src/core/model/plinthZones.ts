@@ -6,7 +6,28 @@ import { compositionKind, newId, type Composition, type Module, type Zone } from
  * de baix és la primera zona d'una divisió horitzontal de l'«Interior» d'un mòdul «Sense base», amb un front fix retirat
  * (el divisor fa de base); el de dalt, l'última zona d'un mòdul «Sense tapa», amb un front fix (el divisor fa de tapa).
  * Aquestes funcions són les dreceres: creen o treuen aquesta estructura; la construcció només hi veu zones i fronts.
+ * La zona del sòcol no porta fons (`back: "none"`, el Fons per zona): darrere del sòcol no hi ha res a tancar.
  */
+
+/** Una zona buida: sense front (o un front fix) i res a dins. */
+const isEmptyLeaf = (z: Zone): boolean =>
+  !z.split && (!z.front || z.front.kind === "panel") && !z.shelves?.n && !z.rail && !z.led && !z.appliance && !z.innerDrawers
+
+/**
+ * Sense fons als sòcols i suplements fets amb zones que no en diuen cap de propi: les zones que només són un front fix i,
+ * en un mòdul «Sense base» o «Sense tapa», la zona buida de baix de tot o de dalt de tot (el sòcol sense el front posat).
+ * Els mobles fets abans del Fons per zona (2026-10-21) hi duien el fons del mòdul de dalt a baix.
+ */
+export function withoutPlinthBacks(m: Module): Module {
+  const noBack = (z: Zone): Zone => (z.back === undefined ? { ...z, back: "none" } : z)
+  const walk = (z: Zone): Zone => (isPanelLeaf(z) ? noBack(z) : z.split ? { ...z, split: { ...z.split, children: z.split.children.map(walk) } } : z)
+  const root = walk(m.root)
+  const s = root.split
+  if (s?.dir !== "h" || s.children.length < 2) return { ...m, root }
+  const last = s.children.length - 1
+  const ends = (c: Zone, k: number) => ((k === 0 && m.carcass.noBottom) || (k === last && m.carcass.top.kind === "none")) && isEmptyLeaf(c) ? noBack(c) : c
+  return { ...m, root: { ...root, split: { ...s, children: s.children.map(ends) } } }
+}
 
 /** Una zona sola amb un front fix i res més (ni divisió, ni prestatges, ni accessoris, ni aparell). */
 const isPanelLeaf = (z: Zone | undefined): z is Zone & { front: { kind: "panel" } } =>
@@ -75,7 +96,7 @@ function unwrap(root: Zone, at: "bottom" | "top"): Zone {
  */
 export function addBottomPlinth(m: Module, height = 60, setback = 30): Module {
   if (bottomPlinthZone(m)) return m
-  const plinth: Zone = { id: newId(), front: { kind: "panel", setback } }
+  const plinth: Zone = { id: newId(), back: "none", front: { kind: "panel", setback } }
   return { ...m, carcass: { ...m.carcass, base: { kind: "none" }, noBottom: true }, root: wrap(m.root, plinth, height, "bottom", !!topPlinthZone(m)) }
 }
 
@@ -92,7 +113,7 @@ export function removeBottomPlinth(m: Module): Module {
  */
 export function addTopPlinth(m: Module, height = 60, setback = 0): Module {
   if (topPlinthZone(m) || m.carcass.top.kind === "none") return m
-  const plinth: Zone = { id: newId(), front: setback ? { kind: "panel", setback } : { kind: "panel" } }
+  const plinth: Zone = { id: newId(), back: "none", front: setback ? { kind: "panel", setback } : { kind: "panel" } }
   const { topFiller: _f, tableTop: _t, ...carcass } = m.carcass
   return { ...m, carcass: { ...carcass, height: Math.min(2800, carcass.height + height), top: { kind: "none" } }, root: wrap(m.root, plinth, height, "top", !!bottomPlinthZone(m)) }
 }

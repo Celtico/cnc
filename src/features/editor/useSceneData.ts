@@ -61,7 +61,11 @@ export function useSceneData({
         const quarter = m.turn?.rot === 90 || m.turn?.rot === 270
         const w = quarter ? moduleBoxToWorld(m, { x0: 0, x1: c.width, y0: 0, y1: c.height, z0: 0, z1: c.depth + c.thickness }) : undefined
         const place = w ? { x: w.x0, z: w.z0, width: w.x1 - w.x0, depth: w.z1 - w.z0 } : { x: m.x, z: m.z, width: c.width, depth: c.depth + c.thickness }
-        const legs = c.base.kind === "legs" ? legsView(c.base, w ? place.depth : c.depth, m.build.panels, build?.panels.find((p) => p.id === `${m.id}:bottom`)) : undefined
+        // La base unida amb la del veí (`joinInLinePanels`) no és la d'aquest mòdul: les potes, a les seves cantonades.
+        const bottom = build?.panels.find((p) => p.id === `${m.id}:bottom`)
+        const own = m.build.panels.find((p) => p.id === "bottom")
+        const sameBottom = bottom && own && Math.abs(bottom.length * bottom.width - own.length * own.width) < 1
+        const legs = c.base.kind === "legs" ? legsView(c.base, w ? place.depth : c.depth, m.build.panels, sameBottom ? bottom : undefined) : undefined
         return { id: m.id, index: m.index, ...place, y: m.y, height: c.height, wall: c.base.kind === "wall", free: mountOf(mod) === "floor", ...(legs ? { legs } : {}) }
       }),
     [build, comp],

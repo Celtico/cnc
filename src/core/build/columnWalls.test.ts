@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
-import { defaultModule, type Composition, type RefObject } from "../model"
+import { defaultModule, flatten, pointInPolygon, type Composition, type Module, type Panel, type RefObject, type Vec3 } from "../model"
 import { buildComposition } from "./buildComposition"
-import { panelBox } from "./geometry"
+import { panelBox, toLocal } from "./geometry"
 import { legPoints } from "./columnWalls"
 
 const mod = (back: "groove" | "screwed" = "groove") => ({ ...defaultModule("m", "x", { width: 1000, height: 800, depth: 500, back }), gapBefore: 0 })
@@ -272,5 +272,122 @@ describe("potes AXILO que no hi caben just a la seva distància (per decisió de
     expect(base.outline).toBeDefined()
     expect(base.fittings!.filter((f) => f.kind === "leg").length).toBeGreaterThanOrEqual(4)
     expect(b.warnings.some((w) => /no hi cap sencera/.test(w.message))).toBe(false)
+  })
+})
+
+// Per decisió de l'usuari, 2026-10-21 («la trasera no s'adapta a les columnes?»): els fons nous segueixen el fons de cada
+// zona, sense base també, i una caixa llisa és un pilar tingui la direcció que tingui.
+describe("columna amb fons per zona", () => {
+  /** Un punt dins del material de la peça (contorn, sense els retalls ni les ranures). */
+  const inside = (p: Panel, w: Vec3) => {
+    const l = toLocal(p, w)
+    if (l[2] < 0.3 || l[2] > p.thickness - 0.3) return false
+    const ring = p.outline ? flatten(p.outline) : ([[0, 0], [p.length, 0], [p.length, p.width], [0, p.width]] as [number, number][])
+    if (!pointInPolygon([l[0], l[1]], ring)) return false
+    for (const g of p.grooves) if (l[0] > g.x - 0.2 && l[0] < g.x + g.w + 0.2 && l[1] > g.y - 0.2 && l[1] < g.y + g.h + 0.2 && (g.face === "A" ? l[2] > p.thickness - g.depth - 0.3 : l[2] < g.depth + 0.3)) return false
+    return true
+  }
+  /** Les peces on un fons nou es fica (punts d'una graella al volum comú). */
+  const clashes = (ps: Panel[]) => {
+    const out: string[] = []
+    for (const w of ps.filter((p) => p.id.includes("colback"))) {
+      const W = panelBox(w)
+      for (const p of ps) {
+        if (p === w) continue
+        const P = panelBox(p)
+        const lo = [0, 1, 2].map((i) => Math.max(W.min[i]!, P.min[i]!)), hi = [0, 1, 2].map((i) => Math.min(W.max[i]!, P.max[i]!))
+        if (![0, 1, 2].every((i) => hi[i]! - lo[i]! > 0.6)) continue
+        const at = (t: number, i: number) => lo[i]! + (hi[i]! - lo[i]!) * t
+        const ts = [0.1, 0.3, 0.5, 0.7, 0.9]
+        if (ts.some((a) => ts.some((c) => ts.some((d) => { const q: Vec3 = [at(a, 0), at(c, 1), at(d, 2)]; return inside(p, q) && inside(w, q) })))) out.push(`${w.id} × ${p.id}`)
+      }
+    }
+    return out
+  }
+  const zoned = (): Module => ({
+    ...defaultModule("m", "x", { width: 1000, height: 800, depth: 500, back: "groove", base: { kind: "none" } }),
+    gapBefore: 0,
+    root: { id: "r", split: { dir: "h", sizes: [400, "auto"], children: [{ id: "baix", shelves: { n: 1, adjustable: true } }, { id: "dalt", back: "none" }] } },
+  })
+
+  it("una caixa sense direcció (la de per defecte) també és un pilar", () => {
+    const { axis: _axis, ...o } = col(400, -60)
+    const b = buildComposition(comp(o))
+    expect(b.panels.filter((p) => p.id.includes("colback"))).toHaveLength(3)
+  })
+
+  it("dues columnes que es trepitgen: un sol tancament al voltant de totes dues", () => {
+    const b = buildComposition({ modules: [mod()], references: [col(300, -60), { ...col(450, -60), id: "c2" }] })
+    const walls = b.panels.filter((p) => p.id.includes("colback"))
+    expect(walls).toHaveLength(3)
+    const front = walls.find((w) => Math.abs(w.placement.zAxis[2]) === 1)!
+    expect(panelBox(front).min[0]).toBeLessThan(300)
+    expect(panelBox(front).max[0]).toBeGreaterThan(700)
+  })
+
+  it("sense base, la zona de dalt sense fons: només es tanca la de baix, i el prestatge s'atura davant", () => {
+    const b = buildComposition({ modules: [zoned()], references: [col(400, -60)] })
+    const walls = b.panels.filter((p) => p.id.includes("colback"))
+    expect(walls).toHaveLength(3)
+    const fixed = b.panels.find((p) => p.role === "fixedShelf")!
+    for (const w of walls) expect(panelBox(w).max[1]).toBeLessThanOrEqual(panelBox(fixed).max[1])
+    expect(clashes(b.panels)).toEqual([])
+    // Cap tros de fons amagat darrere la columna.
+    for (const p of b.panels.filter((q) => q.role === "back" && !q.id.includes("colback"))) {
+      const q = panelBox(p)
+      expect(q.min[0] >= 400 - 1 && q.max[0] <= 650 + 1, p.id).toBe(false)
+    }
+  })
+
+  it("fons de zona encastat o cargolat al costat de la columna: fons nous del mateix tipus, sense trepitjar res", () => {
+    for (const back of ["inset", "screwed"] as const) {
+      const m = zoned()
+      const root = { ...m.root!, split: { ...m.root!.split!, children: [{ id: "baix", back, shelves: { n: 1, adjustable: true } }, { id: "dalt", back: "none" as const }] } }
+      const b = buildComposition({ modules: [{ ...m, root }], references: [col(400, -60)] })
+      const walls = b.panels.filter((p) => p.id.includes("colback"))
+      expect(walls.length, back).toBeGreaterThanOrEqual(2)
+      expect(clashes(b.panels), back).toEqual([])
+    }
+  })
+
+  it("mòdul girat a un costat (90° i 270°): els mateixos fons nous que endavant, sense trepitjar res", () => {
+    const straight = buildComposition(comp(col(400, -60))).panels.filter((p) => p.id.includes("colback")).length
+    for (const rot of [90, 270] as const) {
+      const m = { ...mod(), rot }
+      const empty = buildComposition({ modules: [m], references: [] })
+      // La columna, al mig del fons del mòdul girat (el fons va al llarg de z), entrant 250 des de la paret.
+      const q = panelBox(empty.panels.find((p) => p.id === "m:back")!)
+      const zc = (q.min[2] + q.max[2]) / 2
+      const behind = q.min[0] < (panelBox(empty.panels.find((p) => p.id === "m:bottom")!).min[0] + 50)
+      const x = behind ? q.min[0] - 60 : q.max[0] + 60 - 250
+      const b = buildComposition({ modules: [m], references: [col(x, zc - 125)] })
+      expect(b.panels.filter((p) => p.id.includes("colback")).length, `${rot}`).toBe(straight)
+      expect(clashes(b.panels), `${rot}`).toEqual([])
+      expect(b.warnings.filter((w) => w.code === "ref-cut"), `${rot}`).toEqual([])
+    }
+  })
+
+  it("mòdul penjat entre dues columnes que es mengen el darrere dels dos laterals: també es tanca", () => {
+    const m = { ...mod(), carcass: { ...mod().carcass, base: { kind: "wall" as const, height: 1450 } } }
+    const b = buildComposition({ modules: [m], references: [{ ...col(-100, 0, 200, 100), id: "a" }, { ...col(900, 0, 200, 100), id: "b" }] })
+    expect(b.panels.filter((p) => p.id.includes("colback")).length).toBeGreaterThan(0)
+    expect(clashes(b.panels)).toEqual([])
+    expect(b.warnings.filter((w) => w.code === "ref-cut")).toEqual([])
+  })
+})
+
+
+// Per decisió de l'usuari, 2026-10-21 («si en interior te una cagolat no miris el prinsipal»): un mòdul sense fons amb la
+// zona de fons cargolat es fa com un de cargolat (la caixa deixa el lloc del fons), i el pilar s'hi tanca a la seva cara.
+describe("columna amb el fons cargolat a la zona", () => {
+  it("mòdul sense fons, interior cargolat: el fons dins la caixa, els fons nous a la cara de la columna, res es trepitja", () => {
+    const m = { ...defaultModule("m", "x", { width: 1000, height: 800, depth: 500, back: "none" }), gapBefore: 0 }
+    const b = buildComposition({ modules: [{ ...m, root: { ...m.root!, back: "screwed" } }], references: [col(400, -60)] })
+    const backs = b.panels.filter((p) => p.role === "back" && !p.id.includes("colback"))
+    expect(backs.length).toBeGreaterThan(0)
+    for (const p of backs) expect(panelBox(p).min[2]).toBeGreaterThanOrEqual(-0.5)
+    const front = b.panels.find((p) => p.id.includes("colback") && Math.abs(p.placement.zAxis[2]) === 1)!
+    expect(panelBox(front).min[2]).toBeCloseTo(190, 0)
+    expect(new Set(b.panels.map((p) => p.id)).size).toBe(b.panels.length)
   })
 })

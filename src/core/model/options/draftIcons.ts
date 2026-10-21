@@ -1,10 +1,9 @@
 import { OPTION_ICON_IDS, type OptionControl } from "./optionTypes"
 
 /**
- * Les icones dels nodes de l'esborrany de la cascada: les de les seccions de l'inspector, les de les parts del moble
+ * Les icones dels nodes del dibuix de la cascada: les de les seccions de l'inspector, les de les parts del moble
  * (interior, base, calaixos, tirador, frontissa, sòcol, potes…), les de les mides, les del control de cada fila i les genèriques
- * d'opció i de tria. La clau es desa als nodes on l'usuari l'ha triada: **no se'n canvia el dibuix** (`legs` va ser la
- * fletxa a terra abans que les potes fossin `feet`). La UI les tradueix a `react-icons/lu` (`features/settings/cascade/cascadeIcons.ts`).
+ * d'opció i de tria. La UI les tradueix a `react-icons/lu` (`features/settings/cascade/cascadeIcons.ts`).
  */
 export const DRAFT_ICONS = [
   ...OPTION_ICON_IDS,
@@ -14,7 +13,6 @@ export const DRAFT_ICONS = [
   "list", "toggle", "number", "text", "buttons", "option", "choice",
 ] as const
 export type DraftIcon = (typeof DRAFT_ICONS)[number]
-export const DRAFT_ICON_SET: ReadonlySet<string> = new Set(DRAFT_ICONS)
 
 /** La icona d'una fila segons el seu control. */
 export const CONTROL_ICON: Record<OptionControl, DraftIcon> = { choice: "list", switch: "toggle", number: "number", material: "materials", hardware: "hardware", text: "text", buttons: "buttons" }

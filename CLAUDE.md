@@ -227,8 +227,8 @@ Les etiquetes i les ajudes de la UI fan servir sempre aquestes paraules (auditor
     mòduls de terra) **no es repeteix** a l'inspector del mòdul ni s'hi posa un missatge: hi surt el que hi ha (text) i un
     botó **«Modificar opció global»** que obre la secció del Moble on es tria.
   - **Opció nova a un inspector → al registre** de les opcions en cascada (`core/model/options/`, `optionId` a la fila; ho
-    comprova `src/optionCascade.test.ts`): així surt a l'esborrany de Preferències › Opcions en cascada (un dibuix per
-    pensar la cascada; **no s'aplica a l'Editor**, [convencions](docs/convencions.md)).
+    comprova `src/optionCascade.test.ts`): així surt a Preferències › Opcions en cascada (el dibuix de la cascada tal com
+    és, només per mirar; **no s'aplica a l'Editor**, [convencions](docs/convencions.md)).
   - Quan aparegui un cas nou, s'afegeix aquí.
 - Abans de codi nou al `core/`, escriu o actualitza els tests (Vitest). Canvis de fabricació: proves d'or (vegeu més amunt).
 - Canvis petits i verificables. Després de cada canvi ha de passar `pnpm check` (typecheck, lint amb 0 avisos, codi mort,

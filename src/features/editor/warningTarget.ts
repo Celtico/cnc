@@ -12,7 +12,7 @@ type Code = BuildWarning["code"]
 interface FixPlace {
   level: "module" | "zone" | "moble" | "ref" | "part"
   folds: string[]
-  /** Com ho diu el botó: «Caixa › Fons». */
+  /** Com ho diu el botó: «Fons». */
   label: string
 }
 
@@ -24,8 +24,8 @@ const FIX_PLACES: Record<FixPlaceKey, FixPlace> = {
   position: MODULE(["mod-position"], "Posició"),
   dims: MODULE(["mod-dims"], "Mides"),
   support: { level: "moble", folds: ["moble-support"], label: "Cuina" },
-  back: MODULE(["mod-structure", "mod-carcass-back"], "Caixa › Fons"),
-  sides: MODULE(["mod-structure", "mod-carcass-sides"], "Caixa › Laterals"),
+  back: MODULE(["mod-carcass-back"], "Fons"),
+  sides: MODULE(["mod-carcass-left"], "Esquerra"),
   materials: MODULE(["mod-materials"], "Materials"),
   front: ZONE(["zone-front"], "Front"),
   shelves: ZONE(["zone-front", "zone-shelves-shelves"], "Front › Prestatges"),
@@ -58,12 +58,12 @@ const FIX: Partial<Record<Code, FixPlace>> = {
   "inner-drawers": ZONE(["zone-front"], "Front › Calaixos"),
   appliance: ZONE(["zone-front"], "Front"),
   layout: ZONE(["zone-split"], "Divisió"),
-  "back-groove": MODULE(["mod-structure", "mod-carcass-back"], "Caixa › Fons"),
-  "back-inset": MODULE(["mod-structure", "mod-carcass-back"], "Caixa › Fons"),
-  hanging: MODULE(["mod-structure", "mod-carcass-back"], "Caixa › Fons"),
-  "no-side": MODULE(["mod-structure", "mod-carcass-sides"], "Caixa › Laterals"),
-  table: MODULE(["mod-structure", "mod-carcass-top"], "Caixa › Tapa"),
-  mitre: MODULE(["mod-structure"], "Caixa"),
+  "back-groove": MODULE(["mod-carcass-back"], "Fons"),
+  "back-inset": MODULE(["mod-carcass-back"], "Fons"),
+  hanging: MODULE(["mod-carcass-back"], "Fons"),
+  "no-side": MODULE(["mod-carcass-left"], "Esquerra"),
+  table: MODULE(["mod-carcass-top"], "Tapa"),
+  mitre: MODULE(["mod-carcass-left"], "Esquerra"),
   "drawer-bottom": MODULE(["mod-materials"], "Materials › Fons del calaix"),
   "material-heat": MODULE(["mod-materials"], "Materials"),
   "unknown-material": MODULE(["mod-materials"], "Materials"),
@@ -72,7 +72,7 @@ const FIX: Partial<Record<Code, FixPlace>> = {
   overlap: MODULE(["mod-position"], "Posició"),
 }
 
-/** On s'arregla un avís, com ho diu el botó («Caixa › Fons»), o res si no té un lloc. */
+/** On s'arregla un avís, com ho diu el botó («Fons»), o res si no té un lloc. */
 export function fixLabel(w: Pick<CompositionWarning, "code" | "zoneId" | "moduleId" | "options">): string | null {
   // Amb opcions, cada una porta el seu lloc.
   if (w.options?.length) return null

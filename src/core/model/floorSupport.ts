@@ -221,7 +221,7 @@ export function withSupport(comp: Composition): Composition {
 /**
  * **Qui té el suport del moble** (per decisió de l'usuari, 2026-10-20: «si és cuina, les opcions d'ara; si és un moble
  * normal, les d'abans»): la cuina, un sol suport per a tots els mòduls de terra (Moble › Cuina) i un sòcol per tram; els
- * altres (moble, armari, taula), el de cada mòdul, com abans de les cuines (Caixa › Base: Directe a terra · Sòcol · Potes ·
+ * altres (moble, armari, taula), el de cada mòdul, com abans de les cuines (Mòdul › Base: Directe a terra · Sòcol · Potes ·
  * Sense base).
  */
 function globalSupport(kind: CompositionKind): boolean {

@@ -1,8 +1,8 @@
 import { SimpleGrid, Stack, Text } from "@chakra-ui/react"
-import { useState, type ReactNode } from "react"
-import { LuFolders, LuHistory, LuRows3 } from "react-icons/lu"
+import { useEffect, useState, type ReactNode } from "react"
+import { LuBlocks, LuFlaskConical, LuFolders, LuHistory, LuRows3, LuShapes } from "react-icons/lu"
 import { SearchBar } from "../../components/SearchBar"
-import { FURNITURE_COLLECTIONS, SLICED_GALLERY, STORE_CATALOG, withInnerClearance, withZonePlinths, type Composition, type Template } from "../../core/model"
+import { FURNITURE_COLLECTIONS, JOINED_COMBOS, SLICED_GALLERY, MODEL_COMBOS, SHAPE_COMBOS, STORE_CATALOG, type ComboCategory, withInnerClearance, withZonePlinths, type Composition, type Template } from "../../core/model"
 import { useSettings } from "../settings/SettingsContext"
 import { kindLabel } from "./kindLabel"
 import { TemplateCard } from "./TemplateCard"
@@ -10,12 +10,14 @@ import { FoldGroup, FoldItem } from "../../components/Fold"
 import { GALLERY_COLS, fold, useSessionList } from "./galleryGrid"
 import { CatalogSection } from "./CatalogSection"
 import { CollectionsSection } from "./CollectionsSection"
+import { CombosSection } from "./CombosSection"
 
 const COLS = GALLERY_COLS
 
 /**
  * Pàgina de Mobles, com l'inici de Figma o Google Docs: cercador i acordions (tots tancats en
- * obrir l'app): Historial (el que és de pas), Projectes (els grups), el catàleg de botigues i les col·leccions de mobles.
+ * obrir l'app): Historial (el que és de pas), Projectes (els grups), el catàleg de botigues, les col·leccions de mobles i
+ * els models constructius (les combinacions de les regles del model).
  */
 export function NewMobleGallery({
   onCreate,
@@ -54,12 +56,34 @@ export function NewMobleGallery({
     pieces: c.pieces.filter((t) => !q || fold(`${c.name} ${t.name} ${t.description} ${kindLabel(t.kind)} ${Object.values(t.study).join(" ")}`).includes(q)),
   }))
   const collectionsCount = collections.reduce((n, c) => n + c.pieces.length, 0)
+  // Les mostres de proves (fitxers i aleatoris) es carreguen a part: són grans.
+  const [samples, setSamples] = useState<ComboCategory[]>([])
+  useEffect(() => {
+    let live = true
+    void import("./sampleMobles").then((m) => live && setSamples(m.sampleCategories()))
+    return () => {
+      live = false
+    }
+  }, [])
+  const filterCats = (cs: ComboCategory[]) => cs.map((c) => ({ ...c, items: c.items.filter((t) => !q || fold(`${c.name} ${t.name} ${t.description}`).includes(q)) }))
+  const combos = filterCats(MODEL_COMBOS)
+  const combosCount = combos.reduce((n, c) => n + c.items.length, 0)
+  const shapes = filterCats(SHAPE_COMBOS)
+  const shapesCount = shapes.reduce((n, c) => n + c.items.length, 0)
+  const joined = filterCats(JOINED_COMBOS)
+  const joinedCount = joined.reduce((n, c) => n + c.items.length, 0)
+  const tests = filterCats(samples)
+  const testsCount = tests.reduce((n, c) => n + c.items.length, 0)
   const [openCats, setOpenCats] = useSessionList(`${storageKey}-store`)
   const [openCols, setOpenCols] = useSessionList(`${storageKey}-collections`)
   const [openSliced, setOpenSliced] = useSessionList(`${storageKey}-sliced`)
+  const [openCombos, setOpenCombos] = useSessionList(`${storageKey}-combos`)
+  const [openShapes, setOpenShapes] = useSessionList(`${storageKey}-shapes`)
+  const [openJoined, setOpenJoined] = useSessionList(`${storageKey}-joined`)
+  const [openTests, setOpenTests] = useSessionList(`${storageKey}-tests`)
   const hist = history(matches, !!q)
   // Amb cerca, s'obren les seccions que tenen resultats.
-  const found = [...(hist.projects?.count ? ["projects"] : []), ...(hist.count ? ["history"] : []), ...(storeCount ? ["store"] : []), ...(slicedCount ? ["sliced"] : []), ...(collectionsCount ? ["collections"] : [])]
+  const found = [...(hist.projects?.count ? ["projects"] : []), ...(hist.count ? ["history"] : []), ...(storeCount ? ["store"] : []), ...(slicedCount ? ["sliced"] : []), ...(collectionsCount ? ["collections"] : []), ...(combosCount ? ["combos"] : []), ...(shapesCount ? ["shapes"] : []), ...(joinedCount ? ["joined"] : []), ...(testsCount ? ["tests"] : [])]
   // Una plantilla instanciada a partir d'ara pren la folgança de les peces de dins de Preferències (com un mòdul nou).
   const { settings } = useSettings()
   const pick = (t: Template) => onCreate(withZonePlinths(withInnerClearance({ ...t.make(), kind: t.kind }, settings.gaps.innerClearance, settings.gaps.grooveClearance)), t.name)
@@ -126,6 +150,40 @@ export function NewMobleGallery({
           }))}
         />
         <CollectionsSection value="collections" collections={collections} searching={!!q} open={openCols} onOpenChange={setOpenCols} onCreate={pick} />
+        <CombosSection value="combos" categories={combos} searching={!!q} open={openCombos} onOpenChange={setOpenCombos} onCreate={pick} />
+        <CombosSection
+          value="shapes"
+          title="Formes"
+          icon={LuShapes}
+          description="Mobles amb forma (L, U, T, escala, piràmide, pont, creu, Z, caixa penjada), fets amb zones que treuen les parets del mig. Cada forma, petita, mitjana, gran, penjada o sense fons, amb calaixos o portes. I l'abecedari: cada lletra, buida o plena."
+          categories={shapes}
+          searching={!!q}
+          open={openShapes}
+          onOpenChange={setOpenShapes}
+          onCreate={pick}
+        />
+        <CombosSection
+          value="joined"
+          title="Mobles junts"
+          icon={LuBlocks}
+          description="Composicions de mòduls de mides diferents que es toquen (escala, piràmide, escacs, ciutat, torres, pont de TV, rebedor, penjats en cascada): el mòdul més baix no porta el lateral del costat del veí, que fa de lateral dels dos."
+          categories={joined}
+          searching={!!q}
+          open={openJoined}
+          onOpenChange={setOpenJoined}
+          onCreate={pick}
+        />
+        <CombosSection
+          value="tests"
+          title="Proves"
+          icon={LuFlaskConical}
+          description="Els mòduls dels teus fitxers de proves (regles del model, caixa de la zona, divisions, estructura) i mobles i formes a l'atzar, amb els seus materials. Tria'n un per obrir-lo com a moble nou."
+          categories={tests}
+          searching={!!q}
+          open={openTests}
+          onOpenChange={setOpenTests}
+          onCreate={pick}
+        />
       </FoldGroup>
 
     </Stack>

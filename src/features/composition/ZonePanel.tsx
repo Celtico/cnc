@@ -1,4 +1,4 @@
-import { Button, HStack, Menu, Stack, Text } from "@chakra-ui/react"
+import { Box, Button, Menu, Stack, Text } from "@chakra-ui/react"
 import { LuArrowUp, LuClipboardPaste, LuCopy, LuColumns2, LuRows2, LuPlus, LuSquareSplitHorizontal, LuSquareSplitVertical, LuTrash2, LuUngroup } from "react-icons/lu"
 import type { ReactNode } from "react"
 import { FoldItem } from "../../components/Fold"
@@ -17,6 +17,7 @@ import {
   nicheAppliance,
   pasteZone,
   coversSplit,
+  type Carcass,
   type Front,
   type ModuleHardware,
   type Zone,
@@ -26,6 +27,8 @@ import type { KitOrder } from "../../core/build/buildModule"
 import { SplitSizes, SplitThickness } from "./zone/SplitSizes"
 import { ZoneFrontSection } from "./zone/FrontSection"
 import { ZoneShelvesSection } from "./zone/ShelvesSection"
+import { ZoneBoxSection } from "./zone/BoxSection"
+import type { Layout } from "../../core/build/layout"
 import { ActionsMenu } from "../../components/ActionsMenu"
 import { toaster } from "../../components/ui/toaster"
 import { readClip, writeClip } from "../editor/clipboard"
@@ -114,8 +117,21 @@ export function ZonePanel({
   system32,
   onSelect,
   childSizes,
+  layout,
   moduleFronts,
+  carcass,
+  noBox = false,
+  onCarcass,
 }: {
+  /**
+   * Sense la caixa (al panell del mòdul, l'Interior; per decisió de l'usuari, 2026-10-21, el disseny de la seva imatge:
+   * Tapa · Laterals · Fons · Base són els del mòdul, i el Front i la Divisió o Dividir, els de l'Interior).
+   */
+  noBox?: boolean
+  /** El Fons del mòdul: el que fa l'Interior i els valors que una zona pot triar (`ZoneBackSection`). */
+  carcass: Carcass
+  /** Canvia la caixa del mòdul: els costats de la zona que en són (la tapa del mòdul a l'Interior, per exemple). */
+  onCarcass?: (c: Carcass, root?: Zone) => void
   root: Zone
   zone: Zone
   /**
@@ -128,7 +144,7 @@ export function ZonePanel({
   coverFront?: Front
   /** El gruix del cos del mòdul (el Gruix dels prestatges i els divisors gruixuts). */
   bodyThickness: number
-  /** El retirada dels prestatges del mòdul (Mòdul › Caixa): el que hereten els del compartiment. */
+  /** El retirada dels prestatges del mòdul (Mòdul): el que hereten els del compartiment. */
   shelfSetback?: number
   /** % d'àrea oberta si la zona té reixeta. */
   openRatio?: number
@@ -159,6 +175,8 @@ export function ZonePanel({
    * `layout` del mòdul): les de les zones «Auto» i el que sobra a l'última.
    */
   childSizes?: number[]
+  /** Les zones com es construeixen (el que treu la zona del costat d'un divisor). */
+  layout?: Pick<Layout, "rects" | "dividers">
   /** «Fronts del mòdul» (`ModuleFrontsFold`: estil i folgances de tots els fronts), dins del Front si en porta. */
   moduleFronts?: ReactNode
 }) {
@@ -184,29 +202,35 @@ export function ZonePanel({
         <>
           {/* El Front de la zona dividida, a dalt de tot: el mateix panell que el d'una fulla (regla 1), amb els fronts que la
               poden tapar (regla 3: porta, abatible, reixeta o front fix). */}
+          {/* La caixa (Tapa, Laterals, Fons, Base) i després el Front (per decisió de l'usuari, 2026-10-21): la mateixa a
+              qualsevol zona (regla 1). */}
+          {!noBox && <ZoneBoxSection root={root} zone={zone} carcass={carcass} bounds={bounds} {...(layout ? { layout } : {})} onChange={onChange} {...(onCarcass ? { onCarcass } : {})} />}
           <ZoneFrontSection root={root} zone={zone} onChange={onChange} hardware={hardware} noHandles={noHandles} bounds={bounds} afterHinge={system32?.at === "front" ? system32.row : undefined} moduleFronts={moduleFronts} kinds={SPLIT_FRONTS} hides={hiddenInside(zone)} {...(coveredBy ? { covered: { by: coveredBy, fixed: !!coveredByFixed, hinges: [], onMargin: () => {} } } : {})} />
+          {/* La Divisió, separada de la caixa i el front (el disseny de l'usuari, 2026-10-21). */}
+          <Box h={8} />
           <FoldItem optionId="zone.split" id="zone-split" title={`Divisió ${zone.split.dir === "v" ? "vertical" : "horitzontal"}`} badge={`${zone.split.children.length} zones`} icon={zone.split.dir === "v" ? LuColumns2 : LuRows2}>
             <SplitSizes root={root} zone={zone} onChange={onChange} onSelect={onSelect} childSizes={childSizes} />
             <SplitThickness root={root} zone={zone} onChange={onChange} board={bodyThickness} />
-            <HStack wrap="wrap">
-              <Button size="sm" variant="outline" onClick={() => onChange(addChild(root, zone.id))}>
+            <Stack gap={2}>
+              <Button size="sm" variant="outline" w="full" onClick={() => onChange(addChild(root, zone.id))}>
                 <LuPlus /> Afegir zona
               </Button>
-              <Button size="sm" variant="outline" onClick={() => onChange(unsplitZone(root, zone.id))}>
+              <Button size="sm" variant="outline" w="full" onClick={() => onChange(unsplitZone(root, zone.id))}>
                 <LuUngroup /> Treure la divisió
               </Button>
               {/* Girar-la: només si la de l'altra direcció té on unir el divisor (`splitDirsFor`). */}
               {splitDirsFor(bounds).includes(zone.split.dir === "v" ? "h" : "v") && (
-                <Button size="sm" variant="outline" onClick={() => onChange(flipSplit(root, zone.id))}>
+                <Button size="sm" variant="outline" w="full" onClick={() => onChange(flipSplit(root, zone.id))}>
                   {zone.split.dir === "v" ? <LuRows2 /> : <LuColumns2 />} Passar a {zone.split.dir === "v" ? "horitzontal" : "vertical"}
                 </Button>
               )}
-            </HStack>
+            </Stack>
             {splitExtra}
           </FoldItem>
         </>
       ) : (
         <>
+          {!noBox && <ZoneBoxSection root={root} zone={zone} carcass={carcass} bounds={bounds} {...(layout ? { layout } : {})} onChange={onChange} {...(onCarcass ? { onCarcass } : {})} />}
           {/* L'electrodomèstic és un contingut més del Front, a qualsevol zona i també a l'Interior (regla 1 del model únic):
               si ocupa el compartiment, ni Prestatges ni Dividir. */}
           <ZoneFrontSection root={root} zone={zone} openRatio={openRatio} drawerHeights={drawerHeights} onChange={onChange} hardware={hardware} noHandles={noHandles} kits={kits} bounds={bounds} afterHinge={system32?.at === "front" ? system32.row : undefined} interior={interior} appliance moduleFronts={moduleFronts} {...(coveredBy ? { covered: { by: coveredBy, fixed: !!coveredByFixed, hinges: hingeSidesOf(coverFront), onMargin: (side: "left" | "right") => onChange(addSideMargin(root, zone.id, side)) } } : {})} />
@@ -214,24 +238,27 @@ export function ZonePanel({
           {/* Només les direccions on el divisor té on unir-se (`splitDirsFor`): el vertical, a sota i a sobre; el
               travesser, als dos costats. Sense cap, o darrere d'un front fix, la secció no surt. */}
           {splitDirsFor(bounds).length > 0 && !behindFixed && !niche && (
+            <>
+            <Box h={8} />
             <FoldItem optionId="zone.divide" id="zone-divide" title="Dividir" icon={LuSquareSplitHorizontal} defaultOpen={false}>
               <Text textStyle="xs" color="fg.muted">
                 Parteix aquest compartiment en dos. El contingut es queda al primer.
                 {splitDirsFor(bounds).length < 2 && (splitDirsFor(bounds)[0] === "v" ? " En horitzontal no: el travesser necessita un lateral o un divisor a cada costat." : " En vertical no: el divisor necessita una peça a sota i una a sobre (base, tapa o travesser).")}
               </Text>
-              <HStack wrap="wrap">
+              <Stack gap={2}>
                 {splitDirsFor(bounds).includes("v") && (
-                  <Button size="sm" variant="outline" onClick={() => onChange(splitZone(root, zone.id, "v", 2))}>
+                  <Button size="sm" variant="outline" w="full" onClick={() => onChange(splitZone(root, zone.id, "v", 2))}>
                     <LuSquareSplitHorizontal /> En vertical
                   </Button>
                 )}
                 {splitDirsFor(bounds).includes("h") && (
-                  <Button size="sm" variant="outline" onClick={() => onChange(splitZone(root, zone.id, "h", 2))}>
+                  <Button size="sm" variant="outline" w="full" onClick={() => onChange(splitZone(root, zone.id, "h", 2))}>
                     <LuSquareSplitVertical /> En horitzontal
                   </Button>
                 )}
-              </HStack>
+              </Stack>
             </FoldItem>
+            </>
           )}
         </>
       )}

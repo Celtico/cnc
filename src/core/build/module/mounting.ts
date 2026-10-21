@@ -150,7 +150,7 @@ export class MountingBuilder extends CarcassBuilder {
     if (room < spec.gap && (placed.length || std))
       this.warnings.push({
         code: "hanging",
-        message: `Penjadors: ${std ? "el penjador i la regleta van" : "la regleta i el ganxo van"} entre la paret i el fons i hi calen ${fmtNum(spec.gap, 1)} mm; ${c.back === "screwed" ? "el fons cargolat darrere no en deixa" : `el fons en deixa ${fmtNum(room, 1)}`}. Posa el fons en ranura amb la «Ranura del fons» a ${fmtNum(spec.gap, 1)} mm o més (o encastat retirat) a ${"Mòdul › Caixa"}.`,
+        message: `Penjadors: ${std ? "el penjador i la regleta van" : "la regleta i el ganxo van"} entre la paret i el fons i hi calen ${fmtNum(spec.gap, 1)} mm; ${c.back === "screwed" ? "el fons cargolat darrere no en deixa" : `el fons en deixa ${fmtNum(room, 1)}`}. Posa el fons en ranura amb la «Ranura del fons» a ${fmtNum(spec.gap, 1)} mm o més (o encastat retirat) a ${"Mòdul"}.`,
       })
     if (placed.length) this.buildWallRail(r(topY - spec.railTop))
   }

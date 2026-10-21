@@ -162,8 +162,9 @@ interface ChatRow {
 }
 
 /**
- * Esborranys de treball que no són un moble (fila per esborrany; id = "option-cascade": el dibuix de Preferències ›
- * Opcions en cascada, `db/cascadeDraftStore.ts`). El contingut es valida en llegir-lo.
+ * Esborranys de treball que no són un moble. Ja no se n'hi desa cap: hi era el dibuix editable de Preferències › Opcions
+ * en cascada (id = "option-cascade"), que des del 2026-10-21 només es mira i surt del codi. La taula es queda perquè la
+ * base de dades no canviï de versió.
  */
 interface DraftRow {
   id: string

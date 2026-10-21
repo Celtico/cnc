@@ -26,8 +26,8 @@ export interface ViewerModule {
 }
 
 export interface CabinetViewerProps {
-  /** Acabats propis de l'escena de Presentació (`Composition.scene`): terra i paret. */
-  sceneFinish?: { floor?: string; wall?: string }
+  /** Acabats propis de l'escena de Presentació (`Composition.scene`): terra, paret i parets dels costats. */
+  sceneFinish?: { floor?: string; wall?: string; leftWall?: boolean; rightWall?: boolean }
   panels: Panel[]
   /** Mides exteriors del moble (o de tota la composició) en mm, per centrar la càmera. */
   size: { width: number; height: number; depth: number }

@@ -3,10 +3,9 @@
  * dels inspectors (moble, mòdul, compartiment, peça lliure, objecte de referència i selecció múltiple), amb un id estable
  * que la fila de la UI porta (`optionId`) i que un test comprova (`src/optionCascade.test.ts`). Només dades.
  *
- * És la cascada **tal com és al codi** i la llavor de l'esborrany de Preferències › Opcions en cascada (`cascadeDraft.ts`):
- * l'usuari hi dibuixa com la vol, però res no s'aplica a l'Editor (per decisió de l'usuari, 2026-10-15: «no per aplicar a la
- * realitat fins que no ho tinguem clar»). `hideable`, `defaultEditable` i `why` són informatius: el que es podria amagar o
- * triar si un dia es fa.
+ * És la cascada **tal com és al codi**, la que dibuixa Preferències › Opcions en cascada (`cascadeDraft.ts`), només per
+ * mirar (per decisió de l'usuari, 2026-10-21). `hideable`, `defaultEditable` i `why` són informatius: el que es podria
+ * amagar o triar si un dia es fa.
  */
 
 /** Valor per defecte: el `value` d'una tria, un número (mm, unitats) o un interruptor. */
@@ -93,6 +92,7 @@ export const UI = {
   shelves: "features/composition/zone/ShelvesSection.tsx",
   split: "features/composition/zone/SplitSizes.tsx",
   appliance: "features/composition/zone/ApplianceSection.tsx",
+  zoneBox: "features/composition/zone/BoxSection.tsx",
   type: "features/editor/ModuleTypeSection.tsx",
   support: "features/composition/SupportForm.tsx",
   part: "features/composition/PartInspector.tsx",

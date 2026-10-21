@@ -264,13 +264,24 @@ export class LightsBuilder extends MountingBuilder {
     const notes: string[] = []
     const base = this.panels.find((p) => p.role === "bottom")
     const topP = this.panels.find((p) => p.role === "top")
-    const back = this.panels.find((p) => p.role === "back")
     const bk = m.carcass.base.kind
     const up = bk === "wall" && !!topP
     const below = (bk === "legs" || bk === "plinth") && !!base
     const inside = !up && !below
-    if (inside && !base) return
-    const ref = (up ? topP : base)!
+    // A dins, sense base (per decisió de l'usuari, 2026-10-21: «el cablejat dels leds»): l'alimentador va sobre el prestatge
+    // fix de més avall, com sobre la base.
+    const lowest = this.panels.filter((p) => p.role === "fixedShelf").sort((a, b) => worldBoxOf(a).min[1] - worldBoxOf(b).min[1])[0]
+    const floor = base ?? (inside ? lowest : undefined)
+    const onWhat = floor === base ? "la base" : "el prestatge fix de baix"
+    if (inside && !floor) {
+      this.warnings.push({ code: "light", message: "Llums: el mòdul no té base ni cap prestatge fix on posar l'alimentador. El cablejat no es fa: posa-hi un prestatge fix a baix o una base." })
+      return
+    }
+    const ref = (up ? topP : floor)!
+    // El fons de darrere de l'alimentador (amb fons per zona o una columna, n'hi pot haver més d'un tros).
+    const rbx = worldBoxOf(ref)
+    const backs = this.panels.filter((p) => p.role === "back")
+    const back = backs.find((p) => { const q = worldBoxOf(p); return q.min[0] <= (rbx.min[0] + rbx.max[0]) / 2 && q.max[0] >= (rbx.min[0] + rbx.max[0]) / 2 }) ?? backs[0]
     const rb = worldBoxOf(ref)
     const zBack = back ? worldBoxOf(back).max[2] : rb.min[2]
     const zAlong = (xa: number, xb: number) => Math.max(zBack, this.rearAt(Math.min(xa, xb) - 15, Math.max(xa, xb) + 15))
@@ -298,7 +309,7 @@ export class LightsBuilder extends MountingBuilder {
     const hy = up ? rb.max[1] : below ? rb.min[1] : rb.max[1]
     const dy0 = up || inside ? hy : hy - 16
     const zDrv = Math.max(zBack, this.rearAt(dx0, dx1)) + 20
-    if (inside) notes.push("El mòdul no té aire a sota ni va penjat: l'alimentador va a dins, sobre la base, i el tros fins a ell va per sobre de la base (tapa'l amb la tapa passacables).")
+    if (inside) notes.push(`El mòdul no té aire a sota ni va penjat: l'alimentador va a dins, sobre ${onWhat}, i el tros fins a ell va per sobre ${onWhat === "la base" ? "de la base" : "del prestatge"} (tapa'l amb la tapa passacables).`)
     // La cambra del darrere (per decisió de l'usuari: «per la trasera del moble»): amb el fons en ranura o encastat i
     // retirat ≥ 8 mm, entre el fons i el cantell de darrere dels laterals hi ha lloc per al cable (Ø4): hi va vertical,
     // sense res a la vista. Sense (fons cargolat o enrasat), per dins, tapat amb la tapa passacables.
@@ -372,7 +383,7 @@ export class LightsBuilder extends MountingBuilder {
           // Totes les peces horitzontals que travessa (també els prestatges regulables: el cable hi passa pel forat).
           if (!(p.role === "fixedShelf" || p.role === "shelf" || p === topP || p === base)) continue
           const pb = worldBoxOf(p)
-          if (l.x > pb.min[0] && l.x < pb.max[0] && zc > pb.min[2] && zc < pb.max[2] && pb.min[1] >= lo - 0.5 && pb.max[1] <= hi + 0.5 && !(inside && p === base)) drill(p, [l.x, (pb.min[1] + pb.max[1]) / 2, zc], l.d, "pas del cable")
+          if (l.x > pb.min[0] && l.x < pb.max[0] && zc > pb.min[2] && zc < pb.max[2] && pb.min[1] >= lo - 0.5 && pb.max[1] <= hi + 0.5 && !(inside && p === floor)) drill(p, [l.x, (pb.min[1] + pb.max[1]) / 2, zc], l.d, "pas del cable")
         }
         const yEnd = inside ? hy + 8 : hy + (up ? 3 : -3)
         path.push([l.x, yEnd, zc])
@@ -401,9 +412,10 @@ export class LightsBuilder extends MountingBuilder {
     let mains: Wiring["mains"]
     if (inside && back && !(this.rearAt(dx0, dx1) > this.d.backInnerZ + 1)) {
       const mx = (dx0 + dx1) / 2, my = hy + 40
-      const lb = toLocal(back, [mx, my, worldBoxOf(back).min[2]])
-      if (lb[0] > 25 && lb[1] > 12 && lb[0] < back.length - 25 && lb[1] < back.width - 12) {
-        ;(back.cutouts ??= []).push({ kind: "slot", x: r(lb[0] - 20), y: r(lb[1] - 8), w: 40, h: 16, tag: "cable-mains" })
+      const mb = backs.find((p) => { const q = worldBoxOf(p); return q.min[0] < mx && q.max[0] > mx && q.min[1] < my && q.max[1] > my }) ?? back
+      const lb = toLocal(mb, [mx, my, worldBoxOf(mb).min[2]])
+      if (lb[0] > 25 && lb[1] > 12 && lb[0] < mb.length - 25 && lb[1] < mb.width - 12) {
+        ;(mb.cutouts ??= []).push({ kind: "slot", x: r(lb[0] - 20), y: r(lb[1] - 8), w: 40, h: 16, tag: "cable-mains" })
         mains = { x: r(mx), y: r(my) }
       }
     } else if (inside && back) notes.push("Hi ha una columna darrere de l'alimentador: el cable de xarxa no surt pel fons, passa'l per l'osca de la columna fins a l'endoll.")
@@ -429,7 +441,7 @@ export class LightsBuilder extends MountingBuilder {
     })
     const sw = this.lightKits[0]?.switch
     this.wiring = {
-      driver: { x0: r(dx0), x1: r(dx1), y0: r(dy0), y1: r(dy0 + 16), name: drv.name, article: drv.article, where: up ? "a sobre de la tapa" : below ? "a sota de la base" : "a dins, sobre la base" },
+      driver: { x0: r(dx0), x1: r(dx1), y0: r(dy0), y1: r(dy0 + 16), name: drv.name, article: drv.article, where: up ? "a sobre de la tapa" : below ? "a sota de la base" : `a dins, sobre ${onWhat}` },
       lamps: this.lampSpots.map((l) => ({ x: r(l.x), y: r(l.y), label: l.label })),
       runs,
       ...(sw === "door" && this.switchSpot ? { switch: { ...this.switchSpot, kind: "door" as const } } : sw === "touch" ? { switch: { x: r(rb.min[0] + 30), y: r(hy + (up ? -60 : 60)), kind: "touch" as const } } : {}),

@@ -1,5 +1,5 @@
 import type { LinearPiece } from "../linearOrders"
-import type { HardwareItem, KitLevel, KitOptions, Panel } from "../../model"
+import type { Carcass, HardwareItem, KitLevel, KitOptions, Panel } from "../../model"
 import type { KitOrderLine, KitWoodSize } from "../drawerKit"
 import type { SlotSpec } from "../hardware"
 import type { Layout } from "../layout"
@@ -119,6 +119,8 @@ export interface ModuleBuild {
   layout: Layout
   /** % d'àrea oberta de cada reixeta, per id de zona (o "top" per a la tapa). */
   openRatios: Record<string, number>
+  /** El tipus de cada peça de fons, per id (el del mòdul o el de la seva zona): els fons al voltant d'una columna (`columnWalls`). */
+  backKinds: Record<string, Carcass["back"]>
   /** Alçades reals dels fronts de cada pila de calaixos (mm, de baix a dalt), per id de zona: les de les «Auto» a l'inspector. */
   drawerHeights: Record<string, number[]>
 }

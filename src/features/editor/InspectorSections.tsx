@@ -1,5 +1,5 @@
-import { Stack } from "@chakra-ui/react"
-import { LuArrowDown, LuArrowDownToLine, LuMoveDiagonal2, LuMoveHorizontal, LuArrowLeft, LuArrowRight, LuArrowUp, LuBrickWall, LuFrame, LuPalette, LuPanelTop } from "react-icons/lu"
+import { Stack, Switch } from "@chakra-ui/react"
+import { LuArrowDown, LuArrowDownToLine, LuMoveDiagonal2, LuMoveHorizontal, LuArrowLeft, LuArrowRight, LuArrowUp, LuBrickWall, LuPalette, LuPanelTop } from "react-icons/lu"
 import { FoldItem } from "../../components/Fold"
 import { FormRow } from "../../components/FormRow"
 import { IconChoice } from "../../components/IconChoice"
@@ -139,27 +139,33 @@ export function ModulePositionFields({ comp, module, moduleX, updateModule }: { 
  * Les portes d'una zona dividida són al seu Front (per decisió de l'usuari, 2026-10-20).
  * Per decisió de l'usuari (2026-10-08) no hi ha secció «Acabats»: cada fila és a la secció del que toca, un sol
  * lloc per decisió i només el que la construcció llegeix (`moduleRows`): el fons, l'estil, les folgances i
- * la retirada a la Caixa; el material dels fronts a Materials; l'espiga a Caixa › Laterals. Els ferratges per defecte del
+ * la retirada a la Caixa; el material dels fronts a Materials; l'espiga a Mòdul › Laterals. Els ferratges per defecte del
  * mòdul no surten: cada compartiment tria el seu (o «Com el mòdul»).
  */
-export function ModuleSections({ module, updateModule, support, onSupport, moble }: { module: Module; updateModule: (m: Module) => void; moduleBuild?: ModuleBuild | undefined; /** El cos del moble (el més repetit dels mòduls): «Com el moble» a Materials. */ moble?: { material: string; thickness: number }; /** El suport dels mòduls de terra (Moble › Cuina): la Caixa el diu. */ support?: FloorSupport; /** Canvia el suport de tots els mòduls de terra (Moble › Cuina). */ onSupport?: (patch: Partial<FloorSupport>) => void }) {
+/**
+ * La caixa del mòdul (per decisió de l'usuari, 2026-10-21, el disseny de la seva imatge): Tapa · Laterals · Fons · Base,
+ * seccions del mòdul com a la divisió i a l'obertura (sense la secció «Caixa»). El Front (el de l'Interior) i, separats,
+ * Posició · Mides · Materials, a `EditorInspector`.
+ */
+export function ModuleBoxSections({ module, updateModule, support, onSupport }: { module: Module; updateModule: (m: Module) => void; /** El suport dels mòduls de terra (Moble › Cuina): la Base el diu. */ support?: FloorSupport; /** Canvia el suport de tots els mòduls de terra (Moble › Cuina). */ onSupport?: (patch: Partial<FloorSupport>) => void }) {
+  return <CarcassForm module={module} onChange={updateModule} section="structure" rows={moduleRows(module)} support={support} onSupport={onSupport} />
+}
+
+/** Mòdul › Materials. */
+export function ModuleMaterialsSection({ module, updateModule, moble }: { module: Module; updateModule: (m: Module) => void; /** El cos del moble (el més repetit dels mòduls): «Com el moble» a Materials. */ moble?: { material: string; thickness: number } }) {
   const rows = moduleRows(module)
   return (
-    <>
-      <FoldItem optionId="module.carcass" id="mod-structure" title="Caixa" icon={LuFrame}>
-        <CarcassForm module={module} onChange={updateModule} section="structure" rows={rows} support={support} onSupport={onSupport} />
-      </FoldItem>
-      <FoldItem optionId="module.materials" id="mod-materials" title="Materials" icon={LuPalette}>
-        <MaterialsForm scope="module" carcass={module.carcass} {...(moble ? { moble } : {})} hasDrawers={hasDrawers(visibleModule(module).root)} hasFronts={rows.frontMaterial} onPatch={(patch) => updateModule({ ...module, carcass: { ...module.carcass, ...patch } })} />
-      </FoldItem>
-    </>
+    <FoldItem optionId="module.materials" id="mod-materials" title="Materials" icon={LuPalette}>
+      <MaterialsForm scope="module" carcass={module.carcass} {...(moble ? { moble } : {})} hasDrawers={hasDrawers(visibleModule(module).root)} hasFronts={rows.frontMaterial} onPatch={(patch) => updateModule({ ...module, carcass: { ...module.carcass, ...patch } })} />
+    </FoldItem>
   )
 }
 
 /** Les propietats d'un compartiment (`ZonePanel`) amb el que en sap la construcció. */
-export function ZoneSection({ module, zone, moduleBuild, moduleX, updateModule, selectZone }: { module: Module; zone: Zone; moduleBuild: ModuleBuild | undefined; moduleX: number | undefined; updateModule: (m: Module) => void; selectZone: (id: string) => void }) {
+export function ZoneSection({ module, zone, moduleBuild, moduleX, updateModule, selectZone, noBox = false }: { module: Module; zone: Zone; moduleBuild: ModuleBuild | undefined; moduleX: number | undefined; updateModule: (m: Module) => void; selectZone: (id: string) => void; /** Sense la caixa (l'Interior, al panell del mòdul: Front i Divisió). */ noBox?: boolean }) {
   return (
     <ZonePanel
+      noBox={noBox}
       root={module.root}
       zone={zone}
       bounds={zoneBounds(module, zone.id) ?? carcassBounds(module.carcass)}
@@ -169,6 +175,8 @@ export function ZoneSection({ module, zone, moduleBuild, moduleX, updateModule, 
         return cover ? { coveredBy: zoneLabel(cover, { root: cover.id === module.root.id }), coveredByFixed: cover.front?.kind === "panel", ...(cover.front ? { coverFront: cover.front } : {}) } : {}
       })()}
       bodyThickness={module.carcass.thickness}
+      carcass={module.carcass}
+      onCarcass={(carcass, root) => updateModule({ ...module, carcass, ...(root ? { root } : {}) })}
       shelfSetback={module.carcass.shelfSetback}
       hardware={module.hardware}
       noHandles={module.fronts.handles === "none"}
@@ -186,6 +194,7 @@ export function ZoneSection({ module, zone, moduleBuild, moduleX, updateModule, 
       }}
       onSelect={selectZone}
       childSizes={moduleBuild ? splitChildSizes(moduleBuild.layout, zone) : undefined}
+      {...(moduleBuild ? { layout: moduleBuild.layout } : {})}
       moduleFronts={<ModuleFrontsFold module={module} onChange={updateModule} />}
       // La filera System 32 del mòdul: als Prestatges o al Front d'aquest compartiment, si li toca (`system32RowPlace`).
       system32={(() => {
@@ -215,9 +224,22 @@ export function SceneFinishFields({ comp, setComp, materials }: { comp: Composit
             onChange={(v) => setComp((c) => {
               const next = { ...c.scene, [k]: v || undefined }
               const { scene: _s, ...rest } = c
-              return next.floor || next.wall ? { ...rest, scene: next } : rest
+              return next.floor || next.wall || next.leftWall || next.rightWall ? { ...rest, scene: next } : rest
             })}
           />
+        </FormRow>
+      ))}
+      {(["leftWall", "rightWall"] as const).map((k) => (
+        <FormRow key={k} optionId={k === "leftWall" ? "moble.scene.leftWall" : "moble.scene.rightWall"} label={k === "leftWall" ? "Paret esquerra" : "Paret dreta"} maxW="280px">
+          <Switch.Root size="sm" pt="6px" checked={!!comp.scene?.[k]} onCheckedChange={(e) => setComp((c) => {
+            const next = { ...c.scene, [k]: e.checked || undefined }
+            const { scene: _s, ...rest } = c
+            return next.floor || next.wall || next.leftWall || next.rightWall ? { ...rest, scene: next } : rest
+          })}>
+            <Switch.HiddenInput />
+            <Switch.Control />
+            <Switch.Label fontSize="sm">{k === "leftWall" ? "A ras del costat esquerre" : "A ras del costat dret"}</Switch.Label>
+          </Switch.Root>
         </FormRow>
       ))}
     </Stack>

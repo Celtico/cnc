@@ -260,7 +260,7 @@ export const CompositionSchema = z.object({
    * Acabats de l'escena on es presenta (mode Presentació i miniatura): material del terra i de la paret, com
    * els dels ambients. Sense (o buit), els de Preferències › Visor 3D.
    */
-  scene: z.object({ floor: z.string().optional(), wall: z.string().optional() }).optional(),
+  scene: z.object({ floor: z.string().optional(), wall: z.string().optional(), leftWall: z.boolean().optional(), rightWall: z.boolean().optional() }).optional(),
   /** Última càmera del visor 3D (es desa sense marcar el moble com a modificat). Opcional. */
   camera: CameraPoseSchema,
   /**

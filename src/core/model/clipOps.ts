@@ -161,3 +161,42 @@ export function duplicateGroup(comp: Composition, group: string): { comp: Compos
   const r = insertItemsCopy(comp, copyGroup(comp, group))
   return { comp: r.comp, group: r.group ?? copyGroupName(comp, group) }
 }
+
+/**
+ * **Afegir un moble fet com a mòduls** (per decisió de l'usuari, 2026-10-21: «al fer mòdul nou, de zero o seleccionar de
+ * mòduls ja fets com als ambients»): els mòduls, les peces lliures i els models d'un altre moble (una plantilla del
+ * catàleg, un moble teu…) s'afegeixen a aquest, com en enganxar-los: els de fila a continuació a la seva fila, els lliures
+ * a la dreta de tot el que ja hi ha. Si en són més d'un, en un grup amb el nom del moble (`name`). Els objectes de
+ * referència, el taulell i el sòcol de la cuina del moble triat no hi entren (són del lloc on era).
+ */
+export function addCompositionModules(comp: Composition, src: Composition, name: string): { comp: Composition; items: MultiItem[] } {
+  const all: MultiItem[] = [
+    ...comp.modules.map((m) => ({ kind: "module" as const, id: m.id })),
+    ...(comp.parts ?? []).map((p) => ({ kind: "part" as const, id: p.id })),
+    ...(comp.models ?? []).map((m) => ({ kind: "model" as const, id: m.id })),
+  ]
+  const here = multiBox(comp, all)
+  const there = multiBox(src, [
+    ...src.modules.map((m) => ({ kind: "module" as const, id: m.id })),
+    ...(src.parts ?? []).map((p) => ({ kind: "part" as const, id: p.id })),
+    ...(src.models ?? []).map((m) => ({ kind: "model" as const, id: m.id })),
+  ])
+  const dx = here && there ? Math.round(here.max[0] + 300 - there.min[0]) : 0
+  const clip: ItemsClip = structuredClone({ dx, modules: src.modules, parts: src.parts ?? [], models: src.models ?? [], refs: [] })
+  const many = clip.modules.length + clip.parts.length + clip.models.length > 1
+  const taken = new Set(groupNames(comp))
+  let group = name.trim() || "Moble"
+  for (let n = 2; many && taken.has(group); n++) group = `${name.trim() || "Moble"} (${n})`
+  const r = insertItemsCopy(comp, clip, { group: many ? group : null })
+  // Els mòduls enganxats a un altre (`anchor`): al de la seva còpia; si no hi és, solts.
+  const ids = new Map(clip.modules.map((m, i) => [m.id, r.items.filter((x) => x.kind === "module")[i]!.id]))
+  const added = new Set(ids.values())
+  const modules = r.comp.modules.map((m) => {
+    if (!added.has(m.id) || !m.anchor) return m
+    const to = ids.get(m.anchor.module)
+    if (to) return { ...m, anchor: { ...m.anchor, module: to } }
+    const { anchor: _a, ...rest } = m
+    return rest
+  })
+  return { comp: { ...r.comp, modules }, items: r.items }
+}

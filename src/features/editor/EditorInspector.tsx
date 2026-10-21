@@ -5,7 +5,7 @@ import { FoldGroup, FoldItem } from "../../components/Fold"
 import type { CompositionBuild } from "../../core/build/buildComposition"
 import type { ModuleBuild } from "../../core/build/buildModule"
 import { activeIslands } from "../../core/build/islands"
-import { groupItems, groupMulti, hasDrawers, mobleBody, moveMultiBy, newGroupName, partJoinery, partsOnlyKind, removeGroup, removeMulti, setSupport, visibleModule, type Composition, type compositionKind, type Module, type MultiItem, type Settings, type Zone } from "../../core/model"
+import { groupItems, groupMulti, hasDrawers, mobleBody, moveMultiBy, newGroupName, partJoinery, partsOnlyKind, removeGroup, removeMulti, setSupport, visibleModule, withNeighbourSides, type Composition, type compositionKind, type Module, type MultiItem, type Settings, type Zone } from "../../core/model"
 import type { Project } from "../../db/db"
 import { CarcassForm, MaterialsForm } from "../composition/CarcassForm"
 import { HardwarePlacements, PlacementInspector, type PlacementActions } from "../composition/HardwarePlacements"
@@ -21,7 +21,7 @@ import { InlineWarningsContext } from "../../components/inlineWarnings"
 import type { CompositionWarning } from "../../core/build/buildComposition"
 import type { FixPlaceKey } from "../../core/build/buildModule"
 import { InspectorHeader } from "./InspectorHeader"
-import { ModuleSections, SceneFinishFields, ZoneSection } from "./InspectorSections"
+import { ModuleBoxSections, ModuleMaterialsSection, SceneFinishFields, ZoneSection } from "./InspectorSections"
 import { ModulePositionSection } from "./ModuleTypeSection"
 import { SupportForm } from "../composition/SupportForm"
 import type { SetComp } from "./useEditorDoc"
@@ -87,6 +87,10 @@ export function EditorInspector({
   const totalHoles = panels.reduce((n, p) => n + p.holes.length, 0)
   // El mòdul triat és el de darrere d'una illa (es col·loca sol): la Posició ho diu i no en mostra els camps.
   const islandBack = module ? activeIslands(comp).find((i) => i.back === module.id) : undefined
+  // El compartiment, tal com es construeix: un costat sense lateral on toca un altre mòdul l'aguanta el veí
+  // (`withNeighbourSides`), i hi caben els mateixos fronts.
+  const held = useMemo(() => (module ? withNeighbourSides(comp).modules.find((m) => m.id === module.id) : undefined), [comp, module])
+  const zoneModule = module && held && held.carcass.corner !== module.carcass.corner ? held : module
   // «Duplicar» d'un grup o de la selecció múltiple: el mateix camí que ⌘D.
   const duplicateSelection = () => {
     const clip = clipOf(comp, selection, zone)
@@ -156,7 +160,7 @@ export function EditorInspector({
             </FoldItem>
           )}
           {/* Com els Acabats dels ambients: terra i paret de l'escena on es presenta (per defecte, les de Preferències). */}
-          <FoldItem optionId="moble.scene" id="moble-scene" title="Acabats de l'escena" icon={LuLampFloor} badge={comp.scene?.floor || comp.scene?.wall ? "Propis" : undefined}>
+          <FoldItem optionId="moble.scene" id="moble-scene" title="Acabats de l'escena" icon={LuLampFloor} badge={comp.scene?.floor || comp.scene?.wall || comp.scene?.leftWall || comp.scene?.rightWall ? "Propis" : undefined}>
             <SceneFinishFields comp={comp} setComp={setComp} materials={settings.materials} />
           </FoldItem>
           {!partsOnlyKind(kind) && comp.modules[0] && <FoldItem optionId="moble.materials" id="moble-materials" title="Materials de tot el moble" icon={LuPalette}>
@@ -234,26 +238,29 @@ export function EditorInspector({
         </Stack>
       ) : selection.kind === "zone" && zone && module ? (
         <Stack gap={3}>
-          <ZoneSection module={module} zone={zone} moduleBuild={moduleBuild} moduleX={build?.modules[moduleIndex]?.x} updateModule={updateModule} selectZone={selectZone} />
+          <ZoneSection module={zoneModule ?? module} zone={zone} moduleBuild={moduleBuild} moduleX={build?.modules[moduleIndex]?.x} updateModule={updateModule} selectZone={selectZone} />
         </Stack>
       ) : module ? (
         // Seccions plegables independents (com Figma o Fusion): es poden tenir diverses
         // obertes i cada una recorda el seu estat.
         // Ordre (per decisió de l'usuari, 2026-10-13; el Tipus, 2026-10-16): Tipus (moble o electrodomèstic i l'aparell) ·
         // Posició · Mides · Caixa · Portes (dividit) · Unió · Materials.
+        // El disseny de l'usuari (2026-10-21): la caixa (Tapa · Laterals · Fons · Base) i el Front de l'Interior, com a la
+        // divisió i a l'obertura; separats, Posició · Mides · Materials.
         <Stack gap={0}>
+          <ModuleBoxSections
+            module={module}
+            updateModule={updateModule}
+            support={comp.support}
+            onSupport={(patch) => setComp((c) => (c.support ? setSupport(c, { ...c.support, ...patch }) : c))}
+          />
+          <ZoneSection module={zoneModule ?? module} zone={(zoneModule ?? module).root} moduleBuild={moduleBuild} moduleX={build?.modules[moduleIndex]?.x} updateModule={updateModule} selectZone={selectZone} noBox />
+          <Box h={8} />
           <ModulePositionSection comp={comp} module={module} moduleX={build?.modules[moduleIndex]?.x} updateModule={updateModule} islandFront={islandBack ? comp.modules.find((m) => m.id === islandBack.front)?.name : undefined} />
           <FoldItem optionId="module.dims" id="mod-dims" title="Mides" icon={LuMoveDiagonal} badge={`${module.carcass.width} × ${module.carcass.height}`}>
             <CarcassForm module={module} onChange={updateModule} section="dims" />
           </FoldItem>
-          <ModuleSections
-            module={module}
-            moduleBuild={moduleBuild}
-            updateModule={updateModule}
-            support={comp.support}
-            moble={mobleBody(comp)}
-            onSupport={(patch) => setComp((c) => (c.support ? setSupport(c, { ...c.support, ...patch }) : c))}
-          />
+          <ModuleMaterialsSection module={module} updateModule={updateModule} moble={mobleBody(comp)} />
           {/* «Ferratges» (col·locats a mà i els de les regles) no surt a l'inspector del mòdul (per decisió de l'usuari,
               2026-10-08): els col·locats es conserven, es fabriquen i es veuen al 3D (on es trien i s'editen). */}
         </Stack>

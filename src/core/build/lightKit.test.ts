@@ -252,3 +252,24 @@ describe("cables per la cambra de darrere del fons", () => {
     expect(b.wiring!.notes.some((n) => n.includes("cambra"))).toBe(true)
   })
 })
+
+// Per decisió de l'usuari, 2026-10-21 («el cablejat dels leds»): sense base, el cablejat també es fa (abans, res).
+describe("cables dels llums en un mòdul sense base", () => {
+  const item = () => structuredClone(HAFELE_LOOX_ITEMS.find((x) => x.light && x.light.recess.shape === "round")!)
+  const zones = (): Zone => ({ id: "z", split: { dir: "h", sizes: ["auto", "auto", "auto"], children: [{ id: "a" }, { id: "b", led: { hardware: item() } }, { id: "c" }] } })
+  it("l'alimentador va sobre el prestatge fix de baix", () => {
+    const m = { ...defaultModule("m", "Alt", { width: 800, height: 1200, depth: 400, base: { kind: "none" } }), root: zones() } as never as ReturnType<typeof defaultModule>
+    m.carcass = { ...m.carcass, noBottom: true, top: { kind: "none" } }
+    const b = buildModule(m)
+    expect(b.panels.some((p) => p.role === "bottom")).toBe(false)
+    expect(b.wiring?.driver.where).toBe("a dins, sobre el prestatge fix de baix")
+    expect(b.wiring!.runs.length).toBeGreaterThan(0)
+  })
+  it("sense base ni prestatge fix: no es fa i ho diu", () => {
+    const m = { ...defaultModule("m", "Alt", { width: 800, height: 1200, depth: 400, base: { kind: "none" } }), root: { id: "z", led: { hardware: item() } } } as never as ReturnType<typeof defaultModule>
+    m.carcass = { ...m.carcass, noBottom: true }
+    const b = buildModule(m)
+    expect(b.wiring).toBeUndefined()
+    if (b.lightKits.length) expect(b.warnings.some((w) => w.code === "light" && w.message.includes("alimentador"))).toBe(true)
+  })
+})

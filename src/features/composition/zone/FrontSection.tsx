@@ -1,6 +1,7 @@
 import { Button, HStack } from "@chakra-ui/react"
 import { useState, type ReactNode } from "react"
 import { LuPlus, LuRefrigerator } from "react-icons/lu"
+import { RxBorderAll } from "react-icons/rx"
 import { FoldItem } from "../../../components/Fold"
 import { APPLIANCE_LABELS, fillsNiche, findZone, frontLimitsHelp, isAppliance, setFront, switchFront, updateZone, type Front, type ModuleHardware, type Zone, type ZoneBounds } from "../../../core/model"
 import type { KitOrder } from "../../../core/build/buildModule"
@@ -106,7 +107,7 @@ export function ZoneFrontSection({ root, zone, onChange, openRatio, drawerHeight
     ? [app ? APPLIANCE_LABELS[app.kind] : "Electrodomèstic", ...(withFront ? [withInterior(FRONT_LABELS[current], interior)] : [])].join(" · ")
     : withInterior(FRONT_LABELS[current], interior)
   return (
-          <FoldItem optionId="zone.front" id="zone-front" title="Front" badge={badge} icon={applianceMode ? LuRefrigerator : FRONT_ICONS[current]}>
+          <FoldItem optionId="zone.front" id="zone-front" title="Front" badge={badge} icon={RxBorderAll}>
             {/* Tipus de front: un botó amb la icona de cada tipus (el nom, al tooltip, a sota i a la insígnia). */}
             <FormRow optionId="zone.front.kind" label="Contingut" help={covered ? coveredHelp(covered, applianceMode ? "appliance" : current) : applianceMode ? undefined : [limits, kinds && (current === "none" ? "Tapa totes les zones de dins: el que hi ha a dins es fa igual, per dins." : hides?.length ? `Tapa i no es fan: ${hides.map((h) => `«${h}»`).join(", ")}. Si s'han de veure, posa el front a la zona de dins.` : "Tapa totes les zones de dins: el que hi ha a dins es fa igual, per dins.")].filter(Boolean).join(" ") || undefined}>
               <IconChoice<Front["kind"] | "none" | "appliance">
