@@ -155,6 +155,15 @@ export const REF = group("ref", "Objecte de referència", { icon: "ref", code: U
     default: "box",
     choices: [{ value: "box", label: "Caixa" }, { value: "cylinder", label: "Cilindre", reveals: ["ref.orient"] }, { value: "profile", label: "Perfil", reveals: ["ref.orient"] }, { value: "mesh", label: "Forma lliure", hides: ["ref.orient"] }, { value: "image", label: "Relleu d'imatge", hides: ["ref.orient"] }],
   }),
+  section("ref.slices", "Llistons", { icon: "cnc", code: UI.ref, control: "buttons", showIf: "Forma lliure", choices: [{ value: "slice", label: "Tallar en llistons" }], note: "Drecera: crea peces lliures normals (llistons), peces que tallen (forats) i barres que tallen, al grup de la forma." }, [
+    field("ref.slices.axis", "Apilats", { code: UI.ref, control: "choice", default: "x", choices: [{ value: "x", label: "De costat" }, { value: "z", label: "Cap a la paret" }, { value: "y", label: "Vertical" }] }),
+    field("ref.slices.thickness", "Gruix", { code: UI.ref, control: "number", default: 19, defaultEditable: true }),
+    field("ref.slices.gap", "Separació", { code: UI.ref, control: "number", default: 15, defaultEditable: true }),
+    field("ref.slices.material", "Material", { code: UI.ref, control: "material", defaultText: "Roure massís / xapat" }),
+    field("ref.slices.rods", "Barres", { code: UI.ref, control: "choice", default: "2", choices: ["0", "1", "2", "3", "4"].map((value) => ({ value, label: value })) }, [
+      field("ref.slices.rodDiameter", "Ø barra", { code: UI.ref, control: "number", showIf: "Barres > 0", default: 10, defaultEditable: true }),
+    ]),
+  ]),
   section("ref.orient", "Orientació", { icon: "orient", code: UI.ref, control: "choice", showIf: "Forma ≠ Caixa, o Talla (no la forma lliure)", default: "z", choices: [{ value: "z", label: "Cap a la paret" }, { value: "y", label: "Vertical" }, { value: "x", label: "De costat" }] }),
   section("ref.size", "Mides", { icon: "dims", code: UI.ref, control: "number", defaultText: "600 × 600 × 100", hideable: false, why: STRUCTURAL }),
   section("ref.material", "Material", { icon: "materials", code: UI.ref, control: "material", showIf: "No talla", defaultText: "Cap (fantasma)" }),

@@ -6,10 +6,10 @@ import { MeshEditor } from "./MeshEditor"
 import { readReliefImage } from "./reliefImage"
 import type { IconType } from "react-icons"
 import { IconChoice, type IconOption } from "../../components/IconChoice"
-import { LuBox, LuCylinder, LuMoveDiagonal2, LuMoveHorizontal, LuMoveVertical, LuScissors, LuShield, LuSpline, LuArrowDownToLine, LuBrickWall, LuBookmark, LuCopy, LuMove, LuMoveDiagonal, LuPencilRuler, LuLink, LuPalette, LuShapes, LuImage, LuTrash2 } from "react-icons/lu"
+import { LuBox, LuCylinder, LuMoveDiagonal2, LuMoveHorizontal, LuMoveVertical, LuScissors, LuShield, LuSpline, LuArrowDownToLine, LuBrickWall, LuBookmark, LuCopy, LuMove, LuMoveDiagonal, LuPencilRuler, LuLink, LuPalette, LuShapes, LuImage, LuTrash2, LuRows3, LuSlice } from "react-icons/lu"
 import { FoldItem } from "../../components/Fold"
 import { toaster } from "../../components/ui/toaster"
-import { AXIS_INDEX, SECTION_AXES, anchorRef, boxCage, insertRefCopy, makeRoomForRef, refBlocksRow, toNodes, newId, type Composition, type RefObject } from "../../core/model"
+import { AXIS_INDEX, SECTION_AXES, anchorRef, applySlices, boxCage, currentSlices, type SliceAxis, type SliceOptions, insertRefCopy, makeRoomForRef, refBlocksRow, toNodes, newId, type Composition, type RefObject } from "../../core/model"
 import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { useSettings } from "../settings/SettingsContext"
@@ -145,6 +145,7 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
           </Stack>
         </FormRow>
       </FoldItem>
+      {o.shape === "mesh" && o.mesh && <SlicesFold comp={comp} o={o} onChange={onChange} />}
       {oriented && (
         <FoldItem optionId="ref.orient" id="ref-orient" title="Orientació" icon={axisOpt.icon} badge={axisOpt.label}>
           {o.shape === "profile" ? (
@@ -261,6 +262,55 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
 }
 
 type Axis = "x" | "y" | "z"
+
+/** Com s'apilen els llistons (la normal del tauler). */
+const SLICE_AXES: IconOption<SliceAxis>[] = [
+  { value: "x", label: "De costat", icon: LuMoveHorizontal, hint: "Llistons drets de costat, l'un al costat de l'altre d'esquerra a dreta (un banc, un taulell)" },
+  { value: "z", label: "De cara", icon: LuMoveDiagonal2, hint: "Llistons drets de cara, l'un darrere l'altre cap a la paret" },
+  { value: "y", label: "Estirats", icon: LuMoveVertical, hint: "Llistons estirats, l'un sobre l'altre (capes encolades, com una escultura)" },
+]
+
+/**
+ * «Llistons» de la forma lliure (per decisió de l'usuari, 2026-10-21): la drecera que la talla en llistons paral·lels
+ * (`applySlices`). Les opcions surten de com es va tallar l'últim cop (els llistons del grup).
+ */
+function SlicesFold({ comp, o, onChange }: { comp: Composition; o: RefObject; onChange: (c: Composition) => void }) {
+  const { settings } = useSettings()
+  const [opts, setOpts] = useState<SliceOptions>(() => currentSlices(comp, o.id))
+  const set = (p: Partial<SliceOptions>) => setOpts({ ...opts, ...p })
+  const made = o.group ? (comp.parts ?? []).filter((p) => p.group === o.group && !p.effect).length : 0
+  const slice = () => {
+    const { comp: next, result } = applySlices(comp, o.id, opts)
+    if (!result.count) {
+      toaster.create({ type: "error", title: "No s'hi pot fer cap llistó", description: result.warnings.join(" ") })
+      return
+    }
+    onChange(next)
+    toaster.create({ type: result.warnings.length ? "warning" : "success", title: `${result.count} llistons i ${result.rods.length} barres al grup «${result.parts[0]!.group}»`, description: result.warnings.join(" ") || "La forma queda amagada al grup: mostra-la per editar-la i torna a tallar." })
+  }
+  return (
+    <FoldItem optionId="ref.slices" id="ref-slices" title="Llistons" icon={LuRows3} badge={made ? `${made} llistons` : "Cap"} badgePalette={made ? "wood" : "gray"}>
+      <FormRow optionId="ref.slices.axis" label="Apilats" help="Com van els llistons: drets de costat (d'esquerra a dreta), drets de cara (cap a la paret) o estirats (de baix a dalt). Cada llistó té la forma de la secció al mig del seu gruix.">
+        <IconChoice label="Apilats" hideLabel value={opts.axis} options={SLICE_AXES} onChange={(axis) => set({ axis })} />
+      </FormRow>
+      <NumRow optionId="ref.slices.thickness" label="Gruix" value={opts.thickness} min={3} max={60} step={1} onChange={(thickness) => set({ thickness })} />
+      <NumRow optionId="ref.slices.gap" label="Separació" help="Aire entre dos llistons. 0 = encolats l'un contra l'altre; amb aire, separadors a les barres." value={opts.gap} min={0} max={200} step={1} onChange={(gap) => set({ gap })} />
+      <FormRow optionId="ref.slices.material" label="Material" maxW="280px">
+        <MaterialSelect label="Material" materials={settings.materials} value={opts.material} hideLabel onChange={(material) => material && set({ material })} />
+      </FormRow>
+      <FormRow optionId="ref.slices.rods" label="Barres" help="Barres roscades que travessen els llistons: cada una va on travessa més llistons seguits, amb marge a la vora. Són cilindres que tallen (el forat a cada llistó), al grup.">
+        <ChoiceChips label="Barres" value={String(opts.rods)} options={["0", "1", "2", "3", "4"].map((id) => ({ id, label: id }))} onChange={(v) => set({ rods: Number(v) })} />
+      </FormRow>
+      {opts.rods > 0 && <NumRow optionId="ref.slices.rodDiameter" label="Ø barra" value={opts.rodDiameter} min={4} max={30} step={1} onChange={(rodDiameter) => set({ rodDiameter })} />}
+      <Button size="sm" colorPalette="wood" alignSelf="flex-start" onClick={slice}>
+        <LuSlice /> {made ? "Tornar a tallar" : "Tallar en llistons"}
+      </Button>
+      <Text fontSize="xs" color="fg.muted">
+        Els llistons són peces lliures normals al grup de la forma; tornar a tallar els refà (els canvis fets a mà es perden). La forma queda amagada al grup.
+      </Text>
+    </FoldItem>
+  )
+}
 
 /** Direcció (eix) amb icona; el tooltip diu quines peces talla. */
 const AXIS_OPTIONS: IconOption<Axis>[] = [

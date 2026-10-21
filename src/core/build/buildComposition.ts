@@ -1,5 +1,5 @@
 import type { KitOrderLine } from "./drawerKit"
-import { activeRuns, compositionKind, freeX, withSupport, isSolidMaterial, moduleFrontFace, moduleRot, rotXZ, unrot, type ModuleRot, modelFootprint, modulePlacements, NO_EDGES, partsOnlyKind, partCutters, type Composition, type ModelObject, type Module, type Panel, type Vec3 } from "../model"
+import { activeRuns, compositionKind, freeX, withSupport, isSolidMaterial, moduleFrontFace, moduleRot, rotXZ, unrot, type ModuleRot, modelFootprint, modulePlacements, NO_EDGES, partsOnlyKind, partCutters, resolveParts, type Composition, type ModelObject, type Module, type Panel, type Vec3 } from "../model"
 import { applyRefCuts, migrateCableHoles, refTouchesBox } from "./refCuts"
 import { columnRearLimits, columnWalls, relayLegs } from "./columnWalls"
 import { clipHangingToRefs } from "./hangingCuts"
@@ -369,10 +369,12 @@ export function buildComposition(input: Composition): CompositionBuild {
       warnings.push({ code: "hole-clash", message, panelId: p.id, ...(moduleId ? { moduleId } : {}) })
     }
 
-  // Obstacles que xoquen amb alguna peça.
+  // Obstacles que xoquen amb alguna peça. Les peces lliures del seu mateix grup no hi xoquen: són la mateixa cosa (la
+  // forma dels llistons, `slices.ts`, i els llistons que n'han sortit).
+  const partGroup = new Map(resolveParts(comp).map((p) => [`part:${p.id}`, p.group]))
   for (const ref of comp.references) {
     if (ref.effect === "cut") continue
-    const hit = panels.find((p) => refTouchesBox(ref, panelBox(p)))
+    const hit = panels.find((p) => !(ref.group && partGroup.get(p.id) === ref.group) && refTouchesBox(ref, panelBox(p)))
     if (hit) {
       const moduleId = modules.find((m) => m.index === hit.module)?.id
       warnings.push({ code: "collision", message: `«${ref.name}» xoca amb ${hit.label}.`, panelId: hit.id, refId: ref.id, ...(moduleId ? { moduleId } : {}) })

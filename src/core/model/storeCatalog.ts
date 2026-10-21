@@ -7,6 +7,7 @@ import { setModuleAppliance } from "./moduleType"
 import { addTopPlinth } from "./plinthZones"
 import { boxCage, refineCage } from "./meshShape"
 import { encodeLevels } from "./imageRelief"
+import { SLICED_TYPES } from "./slicedFurniture"
 
 /**
  * Plantilles per a botigues de mobles (catàleg de `cad-mobles-cataleg.md`, més la categoria Cuina): per a cada tipus de
@@ -1129,6 +1130,8 @@ export const STORE_CATALOG: StoreCategory[] = [
       ]),
     ],
   },
+  // Mobles de llistons tallats d'una forma lliure (`slicedFurniture.ts`): al final, perquè les proves d'or de les altres no es moguin.
+  { id: "llistons", name: "Llistons", types: SLICED_TYPES },
 ]
 
 /** Totes les plantilles de botiga en una llista (per als tests i la cerca). */

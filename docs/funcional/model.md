@@ -439,6 +439,16 @@
   manegadors `in`/`out` relatius, `t` = reflex (cantonada · angle · angle i llarg) i `b` (bulge, arcs d'«Arrodonir»); els
   antics `[x, y, bulge]` es llegeixen amb `toNodes`. Per tallar, les cúbiques passen a arcs i rectes (`cubicToArcs`, error
   < 0,02 mm): DXF amb bulge i STEP amb cares cilíndriques; xocs i 3D amb el contorn mostrejat. Pendent: rebaixos de contorn.
+- **Llistons** (per decisió de l'usuari, 2026-10-21: bancs, sofàs, taulells i murals «paramètrics» de molts taulers
+  tallats; `model/slices.ts`): drecera de l'objecte de **forma lliure** (secció «Llistons» de l'inspector). Talla la
+  superfície suau en plans paral·lels (apilats de costat, de cara o estirats; gruix, separació, material) i cada secció
+  al mig del gruix és una **peça lliure normal** amb aquell contorn (`side`/`front`/`flat`); un forat de la secció, una
+  peça lliure que **talla**; les **barres roscades** (0–4, Ø) són cilindres que tallen, cadascun on travessa més llistons
+  seguits amb marge (radi + 15 mm). Tot va al grup de la forma, que queda amagada; tornar a tallar refà el grup (les
+  opcions surten dels llistons que hi ha, `currentSlices`). Un obstacle no xoca amb les peces lliures del seu mateix grup
+  (`buildComposition`). Catàleg › **Llistons** (`model/slicedFurniture.ts`): nou mobles fets així, la forma estirada al
+  llarg de X amb `loftCage` (`meshShape.ts`: seccions unides i tapades, costats `sharp` plans: terra, paret, sobre).
+  Pendent: llistons radials (girats al voltant d'un eix) i formes de relleu d'imatge.
 - **Peces lliures** (`Composition.parts`, `model/freePart.ts`, `build/freeParts.ts`): taulers solts col·locats
   com els objectes però que són peces de debò (rol `part`, un «mòdul» més per a les refs). Orientació `front` (X·Y) · `side`
   (Z·Y) · `flat` (X·Z, v cap al fons); `w × h` al seu pla, gruix, material, veta, forma amb l'editor de perfils.
