@@ -118,6 +118,15 @@ export const CLADDING_MATERIALS: MaterialPref[] = [
   { id: "sim-lawn", name: "Gespa", thicknesses: [10], hasGrain: false, finish: LAWN_FINISH, edge: "", cnc: false, category: "sim" },
   { id: "sim-oak-cladding-rift", name: "Revestiment de roure de fil", thicknesses: [10], hasGrain: true, finish: { kind: "wood", species: "oak", gen: { base: "#b48e62", dark: "#8c6a44", lines: 60, wobble: 0.025, bands: 30, contrast: 0.4, figure: 0, pores: 2400, grain: 10, tileMm: 1200, seed: 131 } }, edge: "", cnc: false, category: "sim" },
 ]
+/**
+ * Roure massís de debò (per decisió de l'usuari, 2026-10-21: els llistons «al 4 cantos que si no es veu malament o
+ * crear una fusta massissa?»): no es canteja i al 3D el cantell és la mateixa fusta. El fan servir els mobles de la
+ * galeria Llistons. Afegit a la v52.
+ */
+const OAK_PHOTO: MaterialPref["finish"] = { kind: "image", src: "textures/oak_veneer_01/diff.jpg", normalMap: "textures/oak_veneer_01/nor.jpg", roughMap: "textures/oak_veneer_01/rough.jpg", tileMm: 600, seamless: true, grain: "y", color: "#a17e57" }
+export const SOLID_WOOD_MATERIALS: MaterialPref[] = [
+  { id: "oak-solid", name: "Roure massís", thicknesses: [16, 19, 30, 40], hasGrain: true, finish: OAK_PHOTO, edge: "", solid: true },
+]
 /** v17: les pantalles de lli feien massa llum (surtien blanques del tot al render del vespre). */
 export const LAMPSHADE_GLOW = 2.2
 
@@ -264,6 +273,7 @@ export const BUILTIN_MATERIALS: MaterialPref[] = upgradeToPhoto([
   ...CORIAN_MATERIALS,
   ...CORIAN_CATALOG,
   ...CLADDING_MATERIALS,
+  ...SOLID_WOOD_MATERIALS,
   ...PHOTO_MATERIALS,
 ])
 

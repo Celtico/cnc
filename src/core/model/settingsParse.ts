@@ -8,7 +8,7 @@ import { defaultMachine, defaultMachineRules, MachineRulesSchema, migrateMachine
 import { repairValue } from "./repair"
 import { AssistantPrefSchema, GapsPrefSchema, MaterialPrefSchema, RefPresetSchema, SETTINGS_VERSION, SettingsSchema, materialNameKey, type MaterialPref, type RefPreset, type Settings } from "./settingsSchema"
 import { CORIAN_CATALOG } from "./corianColors"
-import { BUILTIN_MATERIALS, BUILTIN_REFERENCES, CLADDING_MATERIALS, CORIAN_MATERIALS, CORIAN_V50_FINISH, DEFAULT_GROOVE_CLEARANCE, DEFAULT_INNER_CLEARANCE, DEFAULT_SETTINGS, APPLIANCE_MATERIALS, FRAME_MATERIALS, GLOSS_MATERIALS, LAMPSHADE_GLOW, LAWN_FINISH, LED_MATERIALS, NON_CNC_MATERIALS, OLD_LAWN_FINISH, RETIRED_TEMPLATE_MATERIALS, RIFT_MATERIALS, SIM_MATERIALS, SIM_MATERIALS_SINCE, TEMPLATE_MATERIALS, isRetired } from "./settingsDefaults"
+import { BUILTIN_MATERIALS, BUILTIN_REFERENCES, CLADDING_MATERIALS, CORIAN_MATERIALS, CORIAN_V50_FINISH, DEFAULT_GROOVE_CLEARANCE, DEFAULT_INNER_CLEARANCE, DEFAULT_SETTINGS, APPLIANCE_MATERIALS, FRAME_MATERIALS, GLOSS_MATERIALS, LAMPSHADE_GLOW, LAWN_FINISH, LED_MATERIALS, NON_CNC_MATERIALS, OLD_LAWN_FINISH, RETIRED_TEMPLATE_MATERIALS, RIFT_MATERIALS, SIM_MATERIALS, SIM_MATERIALS_SINCE, SOLID_WOOD_MATERIALS, TEMPLATE_MATERIALS, isRetired } from "./settingsDefaults"
 
 // --- Migració i importació ------------------------------------------------------------
 
@@ -202,8 +202,10 @@ function migrateMaterials(materialsRaw: MaterialPref[], version: number, problem
     : v50m
   // v51: la carta de colors de Corian (categoria Corian), si no hi és.
   const v51c = version < 51 && v51m !== BUILTIN_MATERIALS ? [...v51m, ...missing(CORIAN_CATALOG, v51m)] : v51m
+  // v52: el roure massís que no es canteja (galeria Llistons), si no hi és.
+  const v52m = version < 52 && v51c !== BUILTIN_MATERIALS ? [...v51c, ...missing(SOLID_WOOD_MATERIALS, v51c)] : v51c
   // Noms únics (sempre): un de repetit passa a «X 2» amb un avís (abans no es comprovava).
-  const unique = dedupeMaterialNames(v51c)
+  const unique = dedupeMaterialNames(v52m)
   problems.push(...unique.problems)
   return { materials: unique.materials, renames: v12.renames }
 }

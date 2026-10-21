@@ -14,7 +14,7 @@ import type { Template } from "./templates"
 
 export type P = [number, number]
 
-export const OAK = "Roure massís / xapat"
+export const OAK = "Roure massís"
 export const GLASS = "Vidre"
 
 /** La secció a la posició t (0–1) del llarg: el contorn i, si és un tub, el forat de banda a banda. */

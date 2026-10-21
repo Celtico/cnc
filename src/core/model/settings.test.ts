@@ -286,7 +286,7 @@ describe("v12: duplicats fora i noms únics", () => {
     expect(names).not.toContain("DM 10")
     expect(names).not.toContain("Pi")
     expect(names).toContain("Fulles de pi")
-    expect(SETTINGS_VERSION).toBe(51)
+    expect(SETTINGS_VERSION).toBe(52)
   })
 
   it("v50: les preferències d'abans reben els Corian (massissos, de CNC, sense veta), un sol cop", () => {

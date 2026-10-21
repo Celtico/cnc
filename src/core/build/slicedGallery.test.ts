@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { CompositionSchema, SLICED_GALLERY } from "../model"
+import { CompositionSchema, parseSettings, SLICED_GALLERY } from "../model"
 import { DEFAULT_SETTINGS } from "../model/settings"
 import { buildComposition } from "./buildComposition"
 import { materialIssues } from "./materialIssues"
@@ -22,9 +22,15 @@ describe("galeria Llistons", () => {
       expect(materialIssues(b, comp, DEFAULT_SETTINGS.materials)).toEqual([])
       const slats = (comp.parts ?? []).filter((p) => !p.effect && p.name.startsWith("Llistó"))
       expect(slats.length).toBeGreaterThan(5)
-      expect(slats.every((p) => p.material === "Roure massís / xapat")).toBe(true)
+      expect(slats.every((p) => p.material === "Roure massís")).toBe(true)
       // La forma queda amagada al grup, i les barres hi són.
       expect(comp.references.some((r) => r.shape === "mesh" && r.hidden)).toBe(true)
       expect(comp.references.filter((r) => r.shape === "cylinder").length).toBeGreaterThan(0)
     })
+
+  it("el «Roure massís» (sense cantell) arriba a unes preferències d'abans (v52)", () => {
+    const old = { ...DEFAULT_SETTINGS, version: 51, materials: DEFAULT_SETTINGS.materials.filter((m) => m.name !== "Roure massís") }
+    const m = parseSettings(JSON.parse(JSON.stringify(old))).settings.materials.find((x) => x.name === "Roure massís")
+    expect(m?.solid).toBe(true)
+  })
 })

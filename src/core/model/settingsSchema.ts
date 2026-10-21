@@ -69,8 +69,9 @@ const mm = z.number().finite()
  * v48: opcions en cascada (`optionPrefs`: amagar una opció de l'Editor i el seu valor per defecte als elements nous).
  * v49: fora `optionPrefs` (per decisió de l'usuari, 2026-10-15: res de les opcions en cascada s'aplica a l'Editor fins que
  * no es tingui clar; Preferències › Opcions en cascada és un esborrany a part, `db.drafts`). Es treu en llegir.
+ * v52: «Roure massís» (`SOLID_WOOD_MATERIALS`, massís: no es canteja), additiu.
  */
-export const SETTINGS_VERSION = 51
+export const SETTINGS_VERSION = 52
 
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
