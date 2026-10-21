@@ -1,9 +1,10 @@
 import { DEFAULT_JOINERY, type FreePart } from "./freePart"
 import type { PNode } from "./polygon"
-import { defaultModule, modulePlacements, DEFAULT_GRILLE, newId, partsOnlyKind, tableModule, type Carcass, type Composition, type CompositionKind, type Module, type RefObject, type Zone } from "./composition"
+import { defaultModule, moduleFootprint, moduleFrontFace, modulePlacements, DEFAULT_GRILLE, newId, partsOnlyKind, tableModule, type Carcass, type Composition, type CompositionKind, type Module, type RefObject, type Zone } from "./composition"
 import type { Template } from "./templates"
 import { applianceById, applianceKitchen } from "./applianceModules"
 import { setModuleAppliance } from "./moduleType"
+import { addCorner } from "./cornerModule"
 import { addTopPlinth } from "./plinthZones"
 import { boxCage, refineCage } from "./meshShape"
 import { encodeLevels } from "./imageRelief"
@@ -44,6 +45,8 @@ const ASH = "Freixe xapat"
 const IRON = "Ferro negre"
 const INOX = "Acer inox"
 const STONE = "Pedra"
+const MARBLE = "Marbre blanc"
+const MARBLE_DARK = "Marbre negre"
 const GLASS = "Vidre"
 
 // --- Zones -----------------------------------------------------------------------------------
@@ -414,6 +417,44 @@ function kitchen(o: KitchenOpts): Composition {
   return { kind: "cuina", modules, references, parts, runs }
 }
 
+/** El taulell de pedra de `kitchen` en un altre material (marbre). */
+const withStone = (c: Composition, material: string): Composition => ({ ...c, parts: (c.parts ?? []).map((p) => (p.material === STONE ? { ...p, material } : p)) })
+
+/**
+ * Cuina en L: la fila de `kitchen` (columnes a l'esquerra) i, a la dreta, el braç de la cantonada (`addCorner`, un mòdul
+ * girat de sempre) de `arm` mm: el racó obert, una porta i un mòdul de calaixos al cap. El taulell de pedra va en dues
+ * peces: la de la fila fins a la paret de la dreta i la del braç, que hi topa.
+ */
+function cornerKitchen(o: KitchenOpts, arm: number, stone: string): Composition {
+  const c = withStone(kitchen({ ...o, tallsLeft: true, top: { kind: "stone" } }), stone)
+  const bases = c.modules.filter((m) => m.wallGap === undefined && m.carcass.base.kind !== "wall" && m.carcass.height === K_H)
+  const last = bases.at(-1)!
+  const res = addCorner(c, last.id, "right", arm)!
+  const armM = res.comp.modules.find((m) => m.id === res.id)!
+  const split = armM.root.split!
+  const corner = split.sizes[0] as number
+  const t = armM.carcass.thickness
+  const doorW = 600 - t
+  const root: Zone = { id: newId(), split: { dir: "v", sizes: [corner, doorW, "auto"], children: [split.children[0]!, split.children[1]!, drawers(3)] } }
+  const modules = res.comp.modules.map((m) => (m.id === res.id ? { ...m, name: "Cantonada", root } : m))
+  const x0 = (o.talls?.length ?? 0) * 600
+  const rowEnd = x0 + bases.reduce((n, m) => n + m.carcass.width, 0)
+  const wall = rowEnd + moduleFrontFace(armM)
+  const D = K_D + 60
+  const tops = (res.comp.parts ?? []).filter((p) => p.material !== stone)
+  return {
+    ...res.comp,
+    modules,
+    parts: [...tops, metal({ name: "Taulell de pedra", orient: "flat", material: stone, w: wall - x0, h: D, thickness: K_TOP, x: x0, y: K_H + K_LEGS, z: 0 }), metal({ name: "Taulell de pedra · cantonada", orient: "flat", material: stone, w: D, h: arm + 20 - D, thickness: K_TOP, x: wall - D, y: K_H + K_LEGS, z: D })],
+  }
+}
+
+/** Cuina recta amb un pilar d'obra de `w` × `w` a la paret (a `x`): els mòduls i el taulell es tallen al seu voltant. */
+function pillarKitchen(o: KitchenOpts, x: number, w: number, stone: string): Composition {
+  const c = withStone(kitchen(o), stone)
+  return { ...c, references: [...(c.references ?? []), { id: newId("r"), name: "Pilar", w, h: 2600, d: w, x, y: 0, z: -60, effect: "cut", axis: "y" }] }
+}
+
 // --- Plantilla --------------------------------------------------------------------------------
 
 interface Variant {
@@ -440,9 +481,11 @@ export const compositionDims = (c: Composition): string => {
   const xs: [number, number][] = [], ys: [number, number][] = [], zs: [number, number][] = []
   mods.forEach((m, i) => {
     const pl = ps[i]!
-    xs.push([pl.x, pl.x + m.carcass.width])
+    // Girats a 90° o 270° (cantonada): la petjada a la planta.
+    const f = moduleFootprint(m, pl, m.carcass.depth)
+    xs.push([f.x0, f.x1])
     ys.push([m.carcass.base.kind === "wall" ? pl.y : 0, pl.y + m.carcass.height])
-    zs.push([pl.z ?? 0, (pl.z ?? 0) + m.carcass.depth])
+    zs.push([f.z0, f.z1])
   })
   for (const p of c.parts ?? []) {
     xs.push([p.x, p.x + (p.orient === "side" ? p.thickness : p.w)])
@@ -804,6 +847,11 @@ export const STORE_CATALOG: StoreCategory[] = [
         { name: "Roure", style: "Contemporani", materials: "melamina blanca, fronts de roure, taulell de pedra", colors: "blanc, roure, pedra", use: "Columnes de frigorífic combi i de forn amb microones, rentaplats integrable en un mòdul sense res, placa d'inducció sobre calaixos i grup filtrant al moble de dalt (Bosch), amb els fronts muntats com diu el fabricant", audience: "cuines amb electrodomèstics integrables", price: 9900, make: () => applianceKitchen(OAKM) },
         { name: "Greige", style: "Minimalista", materials: "melamina blanca, fronts lacats greige, taulell de pedra", colors: "greige, pedra", use: "La mateixa cuina integrada amb fronts lacats: els electrodomèstics no es veuen", audience: "cuines obertes al menjador", price: 10900, make: () => applianceKitchen(GREIGE) },
         { name: "Antracita", style: "Modern", materials: "melamina blanca, fronts lacats antracita, taulell de pedra", colors: "antracita, pedra", use: "Cuina integrada fosca amb columnes de frigorífic i forn", audience: "reformes de cuina", price: 10900, make: () => applianceKitchen(ANTH) },
+      ]),
+      items("cuina", "Cuina en L i amb columna", [
+        { name: "Marbre", style: "Modern luxe", materials: "melamina blanca, fronts lacats, taulell de marbre blanc", colors: "blanc, marbre", use: "Cuina en L amb pica, placa i calaixos a la fila, racó de cantonada i braç de porta i calaixos, i alts de porta", audience: "cuines tancades de dues parets", price: 6900, make: () => cornerKitchen({ mat: WHITE, front: LAC, bases: [["drawers", 600], ["sink", 800], ["hob", 600], ["door", 600]], walls: [["door", 600], ["doors", 800], ["gap", 600], ["door", 600]] }, 1800, MARBLE) },
+        { name: "Pilar", style: "Contemporani", materials: "melamina blanca, fronts de roure, taulell de marbre blanc", colors: "roure, marbre", use: "Cuina recta tallada al voltant d'un pilar de 300 × 300 a la paret, amb pica, placa i alts", audience: "pisos amb pilars a la cuina", price: 4900, make: () => pillarKitchen({ mat: WHITE, front: OAKM, bases: [["sink", 800], ["drawers", 600], ["doors", 800], ["hob", 600], ["drawers", 600]], walls: [["doors", 800], ["door", 600], ["gap", 800], ["gap", 600], ["door", 600]], top: { kind: "stone" } }, 1550, 300, MARBLE) },
+        { name: "Columna", style: "Modern", materials: "melamina blanca, fronts lacats antracita, taulell de marbre negre", colors: "antracita, marbre negre", use: "Cuina en L amb columnes de frigorífic i forn a l'esquerra, pica i placa a la fila i braç de cantonada", audience: "reformes de cuina amb paret per a columnes", price: 8900, make: () => cornerKitchen({ mat: WHITE, front: ANTH, bases: [["sink", 800], ["hob", 600], ["door", 600]], talls: ["fridge", "oven"], walls: [["doors", 800], ["gap", 600], ["door", 600]] }, 1600, MARBLE_DARK) },
       ]),
       items("cuina", "Racó de cafè", [
         { name: "Barista", style: "Contemporani", materials: "fronts antracita, taulell de pedra, prestatges de roure", colors: "antracita, roure, marbre", use: "Moble de cafè amb calaixos i porta i prestatges a sobre", audience: "menjadors i despatxos", price: 1490, make: () => kitchen({ mat: GREY, front: ANTH, bases: [["drawers", 600], ["door", 600]], shelves: { n: 2, mat: OAK }, top: { kind: "stone" } }) },

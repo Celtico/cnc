@@ -1,4 +1,54 @@
 {
+ "store-bany-columna-3": {
+  "panels": 11,
+  "extras": 5,
+  "warnings": [],
+  "p": [
+   "back|trassera|1577x377x10|DM (fons)|none|e0000|h0|g0|c2:224d53c6|o-|@7390b26b",
+   "bottom|baix|362x320x19|Noguera xapada|x|e0010|h6:fe429946|g1:9da24ca6|c0|o-|@f9cedb87",
+   "door|porta|637x396x19|Noguera xapada|x|e1111|h2:a81c0d24|g0|c2:aa351364|o-|@5fac3906",
+   "door|porta|637x396x19|Noguera xapada|x|e1111|h2:fce5a443|g0|c2:aa351364|o-|@2e907f7f",
+   "fixedShelf|estanter fixe|362x290x19|Noguera xapada|x|e0010|h6:1199690c|g0|c0|o-|@17a08db5",
+   "fixedShelf|estanter fixe|362x290x19|Noguera xapada|x|e0010|h6:1199690c|g0|c0|o-|@7865ffb0",
+   "shelf|estanter 2|361x270x19|Noguera xapada|x|e0010|h0|g0|c0|o-|@81bb34e3",
+   "shelf|estanter|361x270x19|Noguera xapada|x|e0010|h0|g0|c0|o-|@fe9b2702",
+   "side|lat d|1600x320x19|Noguera xapada|x|e0011|h100:94288702|g1:4738720a|c0|o-|@0f923282",
+   "side|lat e|1600x320x19|Noguera xapada|x|e1001|h100:b137d254|g1:0e7bbfa5|c0|o-|@047f4fa1",
+   "top|dalt|362x320x19|Noguera xapada|x|e1000|h6:fe429946|g1:ad70bc27|c0|o-|@435476f7"
+  ]
+ },
+ "store-bany-armari-de-bany-1": {
+  "panels": 9,
+  "extras": 5,
+  "warnings": [],
+  "p": [
+   "back|trassera|777x627x10|DM (fons)|none|e0000|h0|g0|c2:33baa7aa|o-|@e8279fbe",
+   "bottom|baix|762x160x19|MDF lacat|x|e0010|h6:c35dfe1a|g1:5804a0a9|c0|o-|@1918c966",
+   "door|porta d|646x396.5x19|MDF lacat|x|e1111|h2:0d4eb70d|g0|c2:65c91280|o-|@18d14aee",
+   "door|porta e|646x396.5x19|MDF lacat|x|e1111|h2:fce5a443|g0|c2:ba147f44|o-|@3a6b411e",
+   "shelf|estanter 1|761x110x19|MDF lacat|x|e0010|h0|g0|c0|o-|@71cde634",
+   "shelf|estanter 2|761x110x19|MDF lacat|x|e0010|h0|g0|c0|o-|@781980a1",
+   "side|lat d|650x160x19|MDF lacat|x|e0011|h44:0e14082d|g1:a511681e|c0|o-|@f235c551",
+   "side|lat e|650x160x19|MDF lacat|x|e1001|h44:052bb735|g1:037a14f8|c0|o-|@d8798120",
+   "top|dalt|762x160x19|MDF lacat|x|e1000|h6:c35dfe1a|g1:bce6b3fb|c0|o-|@435476f7"
+  ]
+ },
+ "store-bany-armari-de-bany-2": {
+  "panels": 9,
+  "extras": 5,
+  "warnings": [],
+  "p": [
+   "back|trassera|777x577x10|DM (fons)|none|e0000|h0|g0|c2:0254a7da|o-|@e8279fbe",
+   "bottom|baix|762x180x19|Roure massís / xapat|x|e0010|h9:f3eacc6a|g1:68e560ff|c0|o-|@9886641c",
+   "divider|divisor|562x150x19|Roure massís / xapat|x|e1000|h70:ba517572|g0|c0|o-|@b50b0d10",
+   "door|porta|596x396.5x19|Roure massís / xapat|x|e1111|h2:c71bc7d5|g0|c2:5da1231a|o-|@7fd40af4",
+   "shelf|estanter 2|370.5x130x19|Roure massís / xapat|x|e0010|h0|g0|c0|o-|@edfe2a72",
+   "shelf|estanter|370.5x130x19|Roure massís / xapat|x|e0010|h0|g0|c0|o-|@d0c1fae2",
+   "side|lat d|600x180x19|Roure massís / xapat|x|e0011|h42:8a2dd3d2|g1:c59e2a5c|c0|o-|@6303cd7b",
+   "side|lat e|600x180x19|Roure massís / xapat|x|e1001|h42:14202498|g1:4a5fc340|c0|o-|@d8798120",
+   "top|dalt|762x180x19|Roure massís / xapat|x|e1000|h9:7ed375fa|g1:bce6b3fb|c0|o-|@c100b575"
+  ]
+ },
  "store-bany-armari-de-bany-3": {
   "panels": 7,
   "extras": 5,

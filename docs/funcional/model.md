@@ -70,7 +70,10 @@
     «Retirada dels costats» de la cara del lateral o del darrere. De **fusta**: de terra fins a 5 mm sota la base (l'alçada
     del sòcol AXILO = H − 5), del material i gruix del cos del primer mòdul (o els triats), cantonades a tope o a inglet
     (`plinthPieces`, `Panel.mitres`, avís `mitre`); un tram més llarg que un tauler (2400) es fa **a trossos**, amb les
-    juntes on es toquen dos mòduls. D'**alumini** (`plinthProfile`): cap peça de CNC, els perfils a `extras`, la comanda
+    juntes on es toquen dos mòduls. Un tram **en L o en U** (una fila amb fronts endavant i, a un extrem, el braç girat
+    de la cantonada, `addCorner`; 2026-10-21, la «Cuina en L» del catàleg) fa un sòcol recte per a la fila i un per a cada
+    braç (`tramLegs`): el de la fila arriba fins a la cara de fora del del braç i el del braç comença a la cara de davant
+    del de la fila (a tope al racó), amb el cap del braç a «Retirada dels costats». D'**alumini** (`plinthProfile`): cap peça de CNC, els perfils a `extras`, la comanda
     per metres amb un clip a cada pota i les cantoneres; avís si el perfil no hi cap sota la base o hi deixa més de 20 mm.
     Les peces són un «mòdul» més per a les refs (n + 1, com el taulell). L'**entrada d'aire** dels electrodomèstics
     (`ModuleBuild.ventInlets`) és un retall al sòcol del tram davant del compartiment. Avisos: el sòcol que toca el peu

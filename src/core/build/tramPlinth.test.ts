@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { BUILTIN_TEMPLATES, PLINTH_PROFILE_ITEMS, defaultModule, dishwasherModule, floorTrams, setTramSides, withSupport, type Composition, type FloorSupport, type Module } from "../model"
+import { BUILTIN_TEMPLATES, PLINTH_PROFILE_ITEMS, addCorner, defaultModule, dishwasherModule, floorTrams, setTramSides, withSupport, type Composition, type FloorSupport, type Module } from "../model"
 import { HAFELE_LEGS } from "../model/hafele/hafeleLegs"
 import { MAG_FURNITURE } from "../model/magFurniture"
 import { buildComposition } from "./buildComposition"
@@ -163,5 +163,19 @@ describe("els mobles d'abans passen al suport del moble", () => {
     const lights = (kind: FloorSupport["kind"]) => buildComposition(comp([lit], plinth({}, { kind }))).extras.filter((p) => p.id.includes("under")).length
     expect(lights("legs")).toBeGreaterThan(0)
     expect(lights("plinth")).toBe(0)
+  })
+
+  it("cuina en L (braç girat de cantonada): el sòcol de la fila i el del braç, que es troben a tope al racó", () => {
+    const row = comp([box("a", 600), box("b", 600)], plinth())
+    const c = addCorner(row, "b", "right", 1200)!.comp
+    const ps = plinths(c).map((p) => panelBox(p))
+    // La fila: de l'esquerra fins a passar el gruix del sòcol del braç, que comença on acaba la fila.
+    const front = ps.find((b) => b.max[2] - b.min[2] < 20 && b.min[0] < 1)!
+    const arm = ps.find((b) => b.max[0] - b.min[0] < 20)!
+    expect(front.max[0]).toBeCloseTo(arm.max[0], 0)
+    expect(arm.min[0]).toBeCloseTo(1200 + 24, 0)
+    expect(arm.min[2]).toBeCloseTo(front.max[2], 0)
+    // I el cap del braç, a la retirada de l'extrem.
+    expect(ps.some((b) => b.max[2] - b.min[2] < 20 && b.min[0] > 1000)).toBe(true)
   })
 })

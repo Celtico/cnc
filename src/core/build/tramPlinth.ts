@@ -1,4 +1,4 @@
-import { floorTrams, isApplianceModule, moduleFootprint, moduleFrontFace, moduleRot, tramHeightMismatches, tramSides, type Composition, type Facing, type ModulePlacement, type ModuleRot, type Panel } from "../model"
+import { floorTrams, isApplianceModule, moduleFootprint, moduleFrontFace, moduleRot, tramHeightMismatches, tramSides, type Composition, type FloorTram, type Facing, type ModulePlacement, type ModuleRot, type Panel } from "../model"
 import type { LinearPiece } from "./linearOrders"
 import type { BuildWarning, VentInlet } from "./module/types"
 import { aluPlinth, plinthPieces, woodPlinthPanels, type PlinthFrame } from "./plinth"
@@ -46,13 +46,15 @@ export function buildTramPlinths(comp: Composition, places: ModulePlacement[], m
   const pl = s.plinth
   const H = s.height
   let mitreNote = false
-  for (const tram of trams) {
+  const footprints = (mods: number[]) => mods.map((i) => ({ i, ...moduleFootprint(comp.modules[i]!, places[i]!, moduleFrontFace(comp.modules[i]!), rotOf(i)) }))
+  for (const { tram, corner } of trams.flatMap((t) => tramLegs(comp, t, footprints(t.modules), pl.setback))) {
     const ms = tram.modules.map((i) => comp.modules[i]!)
     const first = ms[0]!
     const sides = tramSides(s, tram, comp)
     const ss = pl.sideSetback ?? pl.setback
+    const t0 = pl.hardware ? Number(pl.hardware.params.depth ?? first.carcass.thickness) : (pl.thickness ?? first.carcass.thickness)
     // La petjada de cada mòdul a la planta i cap on miren els fronts (`moduleFootprint`: girats 90°, 180° o 270°, `rotOf`).
-    const fps = tram.modules.map((i) => ({ i, ...moduleFootprint(comp.modules[i]!, places[i]!, moduleFrontFace(comp.modules[i]!), rotOf(i)) }))
+    const fps = footprints(tram.modules)
     const X0 = Math.min(...fps.map((f) => f.x0)), X1 = Math.max(...fps.map((f) => f.x1)), Z0 = Math.min(...fps.map((f) => f.z0))
     // Els que miren cap a un costat; per a la cara, sense els electrodomèstics de terra (el seu front de moble s'enrasa amb
     // els del costat), si n'hi ha d'altres.
@@ -76,6 +78,10 @@ export function buildTramPlinths(comp: Composition, places: ModulePlacement[], m
       y0: 0,
       sides: { front: fz.length > 0 || !bz.length || !!sides.back, back: bz.length > 0 || !!sides.back, left: lx.length > 0 || !!sides.left, right: rx.length > 0 || !!sides.right },
     }
+    // Un tram en L (`tramLegs`): la fila arriba fins a la cara de fora del sòcol del braç; el braç comença a la de davant de la fila.
+    if (corner?.rightArm !== undefined) Object.assign(frame, { x1: corner.rightArm + pl.setback + t0, sides: { ...frame.sides, right: false } })
+    if (corner?.leftArm !== undefined) Object.assign(frame, { x0: corner.leftArm - pl.setback - t0, sides: { ...frame.sides, left: false } })
+    if (corner?.rowFront !== undefined) Object.assign(frame, { zBack: corner.rowFront, sides: { ...frame.sides, back: false } })
     const x0 = X0, x1 = X1
     const prefix = `tram:${tram.id}:`
     if (pl.hardware) {
@@ -114,10 +120,37 @@ export function buildTramPlinths(comp: Composition, places: ModulePlacement[], m
       for (const q of pieces) out.panels.push({ ...q, module: moduleNumber })
       if (f.corners === "mitre" && plinthPieces(f).some((p) => p.mitres.length)) mitreNote = true
     }
-    legFeet(out, s, pl.setback, ss, { back: !bz.length && !!sides.back, left: !lx.length && !!sides.left, right: !rx.length && !!sides.right }, ms, pl.hardware ? Number(pl.hardware.params.depth ?? first.carcass.thickness) : (pl.thickness ?? first.carcass.thickness))
+    legFeet(out, s, pl.setback, ss, { back: !bz.length && !!sides.back && !corner, left: !lx.length && !!sides.left && corner?.leftArm === undefined, right: !rx.length && !!sides.right && corner?.rightArm === undefined }, ms, t0)
   }
   if (mitreNote) out.warnings.push({ code: "mitre", message: "Sòcol a inglet: tall a 45° als extrems dels trams que fan cantonada; encolar-los (o una escaire per dins)." })
   return out
+}
+
+type Footprint = ReturnType<typeof moduleFootprint> & { i: number }
+interface TramLeg {
+  tram: FloorTram
+  /** Tram en L: on és la cara de fronts del braç de la dreta o de l'esquerra (fila) o la cara de davant del sòcol de la fila (braç). */
+  corner?: { rightArm?: number; leftArm?: number; rowFront?: number }
+}
+
+/**
+ * **El sòcol d'una cuina en L o en U** (2026-10-21, la «Cuina en L» del catàleg): un tram amb una fila de fronts endavant i,
+ * als extrems, mòduls girats 90° o 270° (el braç de la cantonada, `addCorner`) són dos o tres trams de sòcol rectes que es
+ * troben al racó, no un de sol (el marc d'un tram és un rectangle i el sòcol de la fila es perdia). Un tram sense girats o
+ * amb fronts endarrere (una illa), tal com és.
+ */
+function tramLegs(comp: Composition, tram: FloorTram, fps: Footprint[], setback: number): TramLeg[] {
+  const row = fps.filter((f) => f.facing === "+z")
+  const right = fps.filter((f) => f.facing === "-x"), left = fps.filter((f) => f.facing === "+x")
+  if (!row.length || (!right.length && !left.length) || fps.some((f) => f.facing === "-z")) return [{ tram }]
+  const own = row.filter((f) => !isApplianceModule(comp.modules[f.i]!))
+  const rowFront = Math.min(...(own.length ? own : row).map((f) => f.z1)) - setback
+  const leg = (fs: Footprint[], id: string): FloorTram => ({ ...tram, id, modules: fs.map((f) => f.i) })
+  return [
+    { tram: leg(row, tram.id), corner: { ...(right.length ? { rightArm: Math.max(...right.map((f) => f.x0)) } : {}), ...(left.length ? { leftArm: Math.min(...left.map((f) => f.x1)) } : {}) } },
+    ...(right.length ? [{ tram: leg(right, `${tram.id}-r`), corner: { rowFront } }] : []),
+    ...(left.length ? [{ tram: leg(left, `${tram.id}-l`), corner: { rowFront } }] : []),
+  ]
 }
 
 /** El tros de sòcol de fusta més llarg (cap al tauler de 2.440 amb els marges, amb la veta al llarg). */

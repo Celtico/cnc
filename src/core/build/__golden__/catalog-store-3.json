@@ -1,4 +1,58 @@
 {
+ "store-dormitori-banc-de-llit-2": {
+  "panels": 7,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "back|trassera|1200x450x10|DM (fons)|none|e0000|h0|g0|c0|o-|@d3864258",
+   "bottom|baix|1162x410x19|MDF lacat blau fosc|x|e0010|h6:741aa635|g0|c0|o-|@33f2f767",
+   "flap|abatible|1196x386x19|MDF lacat blau fosc|y|e1111|h2:ea0cbdd1|g0|c2:ab7dd322|o-|@37064186",
+   "plinth|socol|1162x60x19|MDF lacat blau fosc|x|e0000|h0|g0|c0|o-|@39ebe8f6",
+   "side|lat d|450x410x19|MDF lacat blau fosc|x|e0110|h24:d113f5fa|g0|c0|o-|@21281b9b",
+   "side|lat e|450x410x19|MDF lacat blau fosc|x|e1100|h24:d113f5fa|g0|c0|o-|@641cff2b",
+   "top|dalt|1162x410x19|MDF lacat blau fosc|x|e1000|h6:741aa635|g0|c0|o-|@1e8db413"
+  ]
+ },
+ "store-dormitori-banc-de-llit-3": {
+  "panels": 1,
+  "extras": 4,
+  "warnings": [
+   "table"
+  ],
+  "p": [
+   "top|dalt|1300x380x30|Noguera xapada|x|e1111|h0|g0|c0|o-|@948cd610"
+  ]
+ },
+ "store-dormitori-tocador-1": {
+  "panels": 23,
+  "extras": 0,
+  "warnings": [],
+  "p": [
+   "back|trassera|720x350x10|DM (fons)|none|e0000|h0|g0|c0|o-|@159c6b95",
+   "back|trassera|720x350x10|DM (fons)|none|e0000|h0|g0|c0|o-|@b8a56c05",
+   "bottom|baix|420x312x19|MDF lacat|y|e0001|h6:2a54af3a|g0|c0|o-|@44f6ab57",
+   "bottom|baix|420x312x19|MDF lacat|y|e0001|h6:2a54af3a|g0|c0|o-|@7883020a",
+   "door|porta|716x346x19|MDF lacat|x|e1111|h2:85af45d4|g0|c2:5abbefb5|o-|@d25002ce",
+   "drawerBack|darrere calaix|298.5x255x16|MDF lacat|y|e0100|h4:389c92a0|g0|c0|o-|@a1b93914",
+   "drawerBack|darrere calaix|298.5x255x16|MDF lacat|y|e0100|h4:389c92a0|g0|c0|o-|@acc7656e",
+   "drawerBottom|fons calaix|407x270x10|DM (fons)|none|e0000|h0|g0|c0|o-|@6461d0b4",
+   "drawerBottom|fons calaix|407x270x10|DM (fons)|none|e0000|h0|g0|c0|o-|@8696fd41",
+   "drawerFront|frontal calaix|356.5x346x19|MDF lacat|y|e1111|h4:3f8490aa|g1:792e78ae|c2:8268f3f2|o-|@545a6462",
+   "drawerFront|frontal calaix|356.5x346x19|MDF lacat|y|e1111|h4:3f8490aa|g1:792e78ae|c2:8268f3f2|o-|@b0df31ed",
+   "drawerSide|lateral calaix|400x320.5x16|MDF lacat|x|e1000|h6:976fc543|g1:45309763|c0|o-|@49455dbe",
+   "drawerSide|lateral calaix|400x320.5x16|MDF lacat|x|e1000|h6:976fc543|g1:45309763|c0|o-|@f1d7fefc",
+   "drawerSide|lateral calaix|400x320.5x16|MDF lacat|x|e1000|h6:ccc3b15b|g1:45309763|c0|o-|@24f5ce2e",
+   "drawerSide|lateral calaix|400x320.5x16|MDF lacat|x|e1000|h6:ccc3b15b|g1:45309763|c0|o-|@bf2f40c4",
+   "part|Tauler|1100x450x30|MDF lacat|x|e0000|h0|g0|c0|o-|@13606797",
+   "shelf|estanter|400x311x19|MDF lacat|y|e0001|h0|g0|c0|o-|@bbc01d8e",
+   "side|lat d|720x420x19|MDF lacat|x|e0110|h10:db9606dd|g0|c0|o-|@3b798677",
+   "side|lat d|720x420x19|MDF lacat|x|e0110|h46:60574587|g0|c0|o-|@fb9ecf27",
+   "side|lat e|720x420x19|MDF lacat|x|e1100|h10:67a78a85|g0|c0|o-|@641cff2b",
+   "side|lat e|720x420x19|MDF lacat|x|e1100|h46:60574587|g0|c0|o-|@67430057",
+   "top|dalt|420x312x19|MDF lacat|y|e0100|h6:2a54af3a|g0|c0|o-|@0986940d",
+   "top|dalt|420x312x19|MDF lacat|y|e0100|h6:2a54af3a|g0|c0|o-|@17cf026e"
+  ]
+ },
  "store-dormitori-tocador-2": {
   "panels": 10,
   "extras": 5,
@@ -1353,72 +1407,6 @@
   ],
   "p": [
    "top|dalt|2400x1100x30|Melamina roure|x|e1111|h0|g0|c0|o19bb2374|@b5521c3c"
-  ]
- },
- "store-despatx-moble-auxiliar-1": {
-  "panels": 21,
-  "extras": 0,
-  "warnings": [],
-  "p": [
-   "back|trassera|900x700x10|DM (fons)|none|e0000|h0|g0|c0|o-|@00f6ae24",
-   "bottom|baix|862x490x19|Melamina gris|x|e0010|h9:1df9a321|g0|c0|o-|@36293ffc",
-   "divider|divisor|662x490x19|Melamina gris|x|e1000|h50:1bb0b40f|g0|c0|o-|@c96220af",
-   "drawerBack|darrere calaix|363x172x16|Melamina gris|x|e1000|h4:95a050f2|g0|c0|o-|@06b79896",
-   "drawerBack|darrere calaix|363x172x16|Melamina gris|x|e1000|h4:95a050f2|g0|c0|o-|@1866e95a",
-   "drawerBack|darrere calaix|363x172x16|Melamina gris|x|e1000|h4:95a050f2|g0|c0|o-|@ba6eba12",
-   "drawerBottom|fons calaix|457x378x10|DM (fons)|none|e0000|h0|g0|c0|o-|@a206118b",
-   "drawerBottom|fons calaix|457x378x10|DM (fons)|none|e0000|h0|g0|c0|o-|@ab9638a5",
-   "drawerBottom|fons calaix|457x378x10|DM (fons)|none|e0000|h0|g0|c0|o-|@c8107ae4",
-   "drawerFront|frontal calaix|445x230x19|Melamina gris|x|e1111|h4:7003e81a|g1:513ecd2a|c2:86adcea2|o-|@4ebd3cc3",
-   "drawerFront|frontal calaix|445x230x19|Melamina gris|x|e1111|h4:7003e81a|g1:513ecd2a|c2:86adcea2|o-|@767f7378",
-   "drawerFront|frontal calaix|445x230x19|Melamina gris|x|e1111|h4:7003e81a|g1:513ecd2a|c2:86adcea2|o-|@df5b5f75",
-   "drawerSide|lateral calaix|450x194x16|Melamina gris|x|e1000|h6:b44d4391|g1:075800a4|c0|o-|@48fc08bd",
-   "drawerSide|lateral calaix|450x194x16|Melamina gris|x|e1000|h6:b44d4391|g1:075800a4|c0|o-|@d9408c09",
-   "drawerSide|lateral calaix|450x194x16|Melamina gris|x|e1000|h6:b44d4391|g1:075800a4|c0|o-|@e404a34a",
-   "drawerSide|lateral calaix|450x194x16|Melamina gris|x|e1000|h6:c3b53424|g1:075800a4|c0|o-|@218e1b53",
-   "drawerSide|lateral calaix|450x194x16|Melamina gris|x|e1000|h6:c3b53424|g1:075800a4|c0|o-|@906c0946",
-   "drawerSide|lateral calaix|450x194x16|Melamina gris|x|e1000|h6:c3b53424|g1:075800a4|c0|o-|@ca72f077",
-   "side|lat d|700x490x19|Melamina gris|x|e0110|h12:bff8a75c|g0|c0|o-|@c21b6f62",
-   "side|lat e|700x490x19|Melamina gris|x|e1100|h44:c977ab94|g0|c0|o-|@6ae7bd8f",
-   "top|dalt|862x490x19|Melamina gris|x|e1000|h9:1df9a321|g0|c0|o-|@70992c25"
-  ]
- },
- "store-despatx-moble-auxiliar-2": {
-  "panels": 12,
-  "extras": 1,
-  "warnings": [],
-  "p": [
-   "back|trassera|1200x880x10|DM (fons)|none|e0000|h0|g0|c0|o-|@d3864258",
-   "bottom|baix|1162x490x19|MDF lacat antracita|x|e0010|h9:71f389e1|g0|c0|o-|@5fd3667a",
-   "divider|divisor|781x490x19|MDF lacat antracita|x|e1100|h95:260b29dc|g0|c0|o-|@25fde234",
-   "door|porta d|796x296.8x19|MDF lacat antracita|x|e1111|h2:9dd02815|g0|c2:e687efb6|o-|@88b9457c",
-   "door|porta d|796x296.8x19|MDF lacat antracita|x|e1111|h2:9dd02815|g0|c2:e687efb6|o-|@8fcc8fe7",
-   "door|porta e|796x296.8x19|MDF lacat antracita|x|e1111|h2:d254e0ad|g0|c2:c1abbe30|o-|@d74ce658",
-   "door|porta e|796x296.8x19|MDF lacat antracita|x|e1111|h2:d254e0ad|g0|c2:c1abbe30|o-|@fad787ea",
-   "plinth|socol|1162x80x19|MDF lacat antracita|x|e0000|h0|g0|c0|o-|@7fbd1f1a",
-   "shelf|estanter 2|570.5x470x19|MDF lacat antracita|x|e0010|h0|g0|c0|o-|@25207a88",
-   "shelf|estanter|570.5x470x19|MDF lacat antracita|x|e0010|h0|g0|c0|o-|@25aacbfe",
-   "side|lat d|880x490x19|MDF lacat antracita|x|e0110|h49:12077d3c|g0|c0|o-|@f1447efa",
-   "side|lat e|880x490x19|MDF lacat antracita|x|e1100|h49:12077d3c|g0|c0|o-|@641cff2b"
-  ]
- },
- "store-despatx-moble-auxiliar-3": {
-  "panels": 12,
-  "extras": 9,
-  "warnings": [],
-  "p": [
-   "back|trassera|1577x577x10|DM (fons)|none|e0000|h0|g0|c2:e79c2c2b|o-|@bf8931a6",
-   "bottom|baix|1562x450x19|Noguera xapada|x|e0010|h9:ec023087|g1:a718fe9c|c0|o-|@4de51600",
-   "divider|divisor|562x420x19|Noguera xapada|x|e1000|h70:223911a6|g0|c0|o-|@60ddff8c",
-   "door|porta d|596x396.8x19|Noguera xapada|x|e1111|h2:eff192fb|g0|c2:5da1231a|o-|@50e788a3",
-   "door|porta d|596x396.8x19|Noguera xapada|x|e1111|h2:eff192fb|g0|c2:5da1231a|o-|@a6f22ce3",
-   "door|porta e|596x396.8x19|Noguera xapada|x|e1111|h2:9cc49b8f|g0|c2:afebb92e|o-|@b70887ba",
-   "door|porta e|596x396.8x19|Noguera xapada|x|e1111|h2:9cc49b8f|g0|c2:afebb92e|o-|@d7c7cebe",
-   "shelf|estanter 2|770.5x400x19|Noguera xapada|x|e0010|h0|g0|c0|o-|@701e757a",
-   "shelf|estanter|770.5x400x19|Noguera xapada|x|e0010|h0|g0|c0|o-|@63b5f66e",
-   "side|lat d|600x450x19|Noguera xapada|x|e0011|h42:73eb877c|g1:b7f4cd00|c0|o-|@33d07916",
-   "side|lat e|600x450x19|Noguera xapada|x|e1001|h42:d26a6b26|g1:4a5fc340|c0|o-|@0d6debb2",
-   "top|dalt|1562x450x19|Noguera xapada|x|e1000|h9:c2791a9f|g1:9f9922e8|c0|o-|@ae07f343"
   ]
  }
 }
