@@ -1,5 +1,5 @@
 import { SimpleGrid, Stack, Text } from "@chakra-ui/react"
-import { useEffect, useState, type ReactNode } from "react"
+import { useDeferredValue, useEffect, useState, type ReactNode } from "react"
 import { LuBlocks, LuFlaskConical, LuFolders, LuHistory, LuRows3, LuShapes } from "react-icons/lu"
 import { SearchBar } from "../../components/SearchBar"
 import { FURNITURE_COLLECTIONS, JOINED_COMBOS, SLICED_GALLERY, MODEL_COMBOS, SHAPE_COMBOS, STORE_CATALOG, type ComboCategory, withInnerClearance, withZonePlinths, type Composition, type Template } from "../../core/model"
@@ -7,7 +7,7 @@ import { useSettings } from "../settings/SettingsContext"
 import { kindLabel } from "./kindLabel"
 import { TemplateCard } from "./TemplateCard"
 import { FoldGroup, FoldItem } from "../../components/Fold"
-import { GALLERY_COLS, fold, useSessionList } from "./galleryGrid"
+import { GALLERY_COLS, fold, searchKey, useSessionList } from "./galleryGrid"
 import { CatalogSection } from "./CatalogSection"
 import { CollectionsSection } from "./CollectionsSection"
 import { CombosSection } from "./CombosSection"
@@ -39,7 +39,8 @@ export function NewMobleGallery({
   // Sense filtre de tipus: el cercador també troba pel tipus («cuina», «armari», «taula»…).
   // Cercador de tota la pàgina: historial, projectes, catàleg i col·leccions (sense accents).
   const [query, setQuery] = useState("")
-  const q = fold(query.trim())
+  // Comença a filtrar a les 3 lletres, i la llista es refà després d'escriure (la pàgina no es penja mentre s'escriu).
+  const q = searchKey(useDeferredValue(query))
   const matches = (text: string) => !q || fold(text).includes(q)
   const store = STORE_CATALOG.map((c) => ({
     ...c,

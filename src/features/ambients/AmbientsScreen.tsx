@@ -1,5 +1,5 @@
 import { Badge, Button, Dialog, Input, Portal, SimpleGrid, Stack, Text, VStack } from "@chakra-ui/react"
-import { useEffect, useState, type ReactNode } from "react"
+import { useDeferredValue, useEffect, useState, type ReactNode } from "react"
 import { LuFolders, LuHistory, LuPlus } from "react-icons/lu"
 import { SearchBar } from "../../components/SearchBar"
 import { OpenFileButton } from "../file/OpenFileButton"
@@ -11,7 +11,7 @@ import { createAmbient, db, deleteAmbient, duplicateAmbient, setAmbientsFolder, 
 import { useSettings } from "../settings/SettingsContext"
 import { useLiveQuery } from "../../db/useLiveQuery"
 import { FoldGroup, FoldItem } from "../../components/Fold"
-import { GALLERY_COLS, fold, useSessionList } from "../projects/galleryGrid"
+import { GALLERY_COLS, fold, searchKey, useSessionList } from "../projects/galleryGrid"
 import { ClearHistory } from "../projects/ClearHistory"
 import { FolderedGrid, MoveToFolderDialog } from "../projects/Folders"
 import { createAmbientFromTemplate } from "./fromTemplate"
@@ -36,7 +36,8 @@ export function AmbientsScreen({ onOpen, onOpenProject }: { onOpen: (id: number)
   const [toMove, setToMove] = useState<AmbientRow | null>(null)
   const [query, setQuery] = useState("")
   const [busy, setBusy] = useState<string | null>(null)
-  const q = fold(query.trim())
+  // Comença a filtrar a les 3 lletres, i la llista es refà després d'escriure (la pàgina no es penja mentre s'escriu).
+  const q = searchKey(useDeferredValue(query))
   const matches = (text: string) => !q || fold(text).includes(q)
   const shownRows = (rows ?? []).filter((r) => matches(`${r.name} ${r.folder ?? ""}`))
   const looseRows = shownRows.filter((r) => !r.folder)

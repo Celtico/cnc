@@ -1,12 +1,12 @@
 import { SimpleGrid, Stack } from "@chakra-ui/react"
 import type { ReactNode } from "react"
-import { useState } from "react"
+import { useDeferredValue, useState } from "react"
 import { LuFolders, LuHistory } from "react-icons/lu"
 import { SearchBar } from "../../components/SearchBar"
 import { OBJECT_CATEGORIES, OBJECT_TEMPLATES, objectCategory, type Composition, type Template } from "../../core/model"
 import { TemplateCard } from "../projects/TemplateCard"
 import { FoldGroup, FoldItem } from "../../components/Fold"
-import { GALLERY_COLS, fold, useSessionList } from "../projects/galleryGrid"
+import { GALLERY_COLS, fold, searchKey, useSessionList } from "../projects/galleryGrid"
 import { CatalogSection } from "../projects/CatalogSection"
 
 
@@ -30,7 +30,8 @@ export function ObjectsGallery({
   storageKey?: string
 }) {
   const [query, setQuery] = useState("")
-  const q = fold(query.trim())
+  // Comença a filtrar a les 3 lletres, i la llista es refà després d'escriure (la pàgina no es penja mentre s'escriu).
+  const q = searchKey(useDeferredValue(query))
   const matches = (text: string) => !q || fold(text).includes(q)
   // Com al catàleg d'ambients: també per la categoria («Llums», «Plantes»…).
   const templates = OBJECT_TEMPLATES.filter((t) => matches(`${t.name} ${t.description} ${OBJECT_CATEGORIES.find((c) => c.id === objectCategory(t))?.label ?? ""}`))
