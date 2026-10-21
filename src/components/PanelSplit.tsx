@@ -9,11 +9,12 @@ import { splitterPanels, splitterSizes, widthUpdates, type SplitPanelSpec } from
  * queda la resta. Arrossegar, el teclat (fletxes, Inici/Fi, Retorn plega) i el cursor són del Splitter.
  *
  * Per sota de `from` (el mòbil) no hi ha vores: els panells van en columna amb la seva alçada (es treuen els estils en
- * línia del Splitter) i cada pantalla tria què ensenya amb `display` i `order`.
+ * línia del Splitter) i cada pantalla tria què ensenya amb `display` i `order`. `stackWhen`: una altra condició per anar en
+ * columna en lloc de `from` (p. ex. una consulta de contenidor, el Render, que depèn de l'amplada del seu panell).
  *
  * Els fills són `Splitter.Panel` (amb `id` com els de `panels`) i `SplitHandle` entre ells.
  */
-export function PanelSplit({ panels, from = "md", children, ...rest }: { panels: SplitPanelSpec[]; from?: "md" | "lg" } & Omit<SplitterRootProps, "panels" | "size" | "onResize">) {
+export function PanelSplit({ panels, from = "md", stackWhen, children, ...rest }: { panels: SplitPanelSpec[]; from?: "md" | "lg"; stackWhen?: string } & Omit<SplitterRootProps, "panels" | "size" | "onResize">) {
   const root = useRef<HTMLDivElement>(null)
   // L'amplada del grup: si la finestra és estreta, els laterals s'encongeixen abans que el visor (`splitterSizes`).
   const [groupPx, setGroupPx] = useState(0)
@@ -37,7 +38,7 @@ export function PanelSplit({ panels, from = "md", children, ...rest }: { panels:
         }
       }}
       css={{
-        [`${from}Down`]: {
+        [stackWhen ?? `${from}Down`]: {
           flexDirection: "column !important",
           height: "auto !important",
           overflow: "visible !important",

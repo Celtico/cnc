@@ -1,7 +1,9 @@
-import { Button, Stack, Text } from "@chakra-ui/react"
+import { Box, Button, Splitter, Stack, Text } from "@chakra-ui/react"
 import { useMemo, useRef, useState } from "react"
 import { bounds, normalizeNodes, polygonArea, sampleProfile, selfIntersects, type PNode, type Vec2 } from "../../core/model"
 import { FloatingWindow } from "../../components/FloatingWindow"
+import { PanelSplit, SplitHandle } from "../../components/PanelSplit"
+import { usePersistentNumber } from "../../lib/usePersistentNumber"
 import { useUndoKeys } from "../history/useHistory"
 import { useProfileShape } from "./profile/useProfileShape"
 import { useProfileKeys } from "./profile/useProfileKeys"
@@ -9,6 +11,9 @@ import { useProfilePointer } from "./profile/useProfilePointer"
 import { ProfileToolbar } from "./profile/ProfileToolbar"
 import { ProfileCanvas } from "./profile/ProfileCanvas"
 import { ProfileOptions } from "./profile/ProfileOptions"
+
+/** L'amplada per defecte de la columna d'opcions (px). */
+const OPTIONS_WIDTH = 280
 
 /**
  * Editor de perfil 2D amb corbes de Bézier cúbiques compostes (com la ploma d'Illustrator o
@@ -40,6 +45,7 @@ export function ProfileEditor({
   const shape = useProfileShape(open, initial)
   const { nodes, drawing, view, undo, redo } = shape
   const [radius, setRadius] = useState(20)
+  const [optionsWidth, setOptionsWidth] = usePersistentNumber("mobles:profile-options-width", OPTIONS_WIDTH)
   const content = useRef<HTMLDivElement>(null)
 
   const closed = !drawing && nodes.length >= 3
@@ -77,12 +83,20 @@ export function ProfileEditor({
     >
       <Stack gap={3}>
         <ProfileToolbar shape={shape} b={b} />
-        <Stack direction={{ base: "column", md: "row" }} gap={3} align="stretch">
-          {/* Dibuix quadrat, com a molt l'alçada que queda a la finestra. */}
-          <ProfileCanvas shape={shape} pointer={pointer} sample={sample} closed={closed} bad={bad} unit={unit} minor={minor} />
-          {/* Opcions en seccions plegables (l'acordió de l'app, recordades durant la sessió): sense desplaçament. */}
-          <ProfileOptions shape={shape} axes={axes} radius={radius} setRadius={setRadius} minor={minor} />
-        </Stack>
+        {/* Les opcions amb la vora arrossegable (`PanelSplit`); l'amplada desada no compta els 12 px fins al dibuix. */}
+        <PanelSplit panels={[{ id: "canvas", min: 320 }, { id: "options", width: optionsWidth + 12, setWidth: (w) => setOptionsWidth(w - 12), min: 252, max: 492 }]}>
+          <Splitter.Panel id="canvas" display="flex">
+            {/* Dibuix quadrat, com a molt l'alçada que queda a la finestra. */}
+            <ProfileCanvas shape={shape} pointer={pointer} sample={sample} closed={closed} bad={bad} unit={unit} minor={minor} />
+          </Splitter.Panel>
+          <SplitHandle id="canvas:options" label="Amplada de les opcions" onReset={() => setOptionsWidth(OPTIONS_WIDTH)} />
+          <Splitter.Panel id="options">
+            {/* Opcions en seccions plegables (l'acordió de l'app, recordades durant la sessió): sense desplaçament. */}
+            <Box ps={{ md: 3 }} pt={{ base: 3, md: 0 }}>
+              <ProfileOptions shape={shape} axes={axes} radius={radius} setRadius={setRadius} minor={minor} />
+            </Box>
+          </Splitter.Panel>
+        </PanelSplit>
         <Text textStyle="xs" color={bad ? "fg.error" : "fg.muted"}>
           {bad ? "El contorn es talla a si mateix: mou algun node o manegador." : closed ? `${Math.round(b.x1 - b.x0)} × ${Math.round(b.y1 - b.y0)} mm · ${nodes.length} nodes · àrea ${(area / 1e6).toFixed(3)} m². Les corbes es tallen com a arcs (error < 0,02 mm).` : " "}
         </Text>

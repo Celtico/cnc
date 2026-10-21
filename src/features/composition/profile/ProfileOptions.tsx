@@ -22,7 +22,7 @@ export function ProfileOptions({ shape, axes, radius, setRadius, minor }: { shap
   const selType = selNode ? (selNode.in || selNode.out ? (selNode.t ?? "corner") : "corner") : "corner"
   const canFillet = sel !== null && filletNode(nodes, sel, radius) !== null
   return (
-    <Stack w={{ base: "full", md: "280px" }} gap={0} flexShrink={0}>
+    <Stack w="full" gap={0} flexShrink={0}>
       <FoldItem
         id="profile-node"
         icon={LuMousePointer2}

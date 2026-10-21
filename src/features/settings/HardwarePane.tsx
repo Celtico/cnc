@@ -2,6 +2,7 @@ import { Badge, Menu, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useContext, useRef, useState } from "react"
 import { LuStar } from "react-icons/lu"
 import { FloatingWindow } from "../../components/FloatingWindow"
+import { StageFormSplit } from "../../components/StageFormSplit"
 import { FoldGroup, FoldItem } from "../../components/Fold"
 import { toaster } from "../../components/ui/toaster"
 import { syncPairedPlates } from "../../core/model/hardwareEdit"
@@ -224,39 +225,44 @@ export function HardwareList({
         initialFocus={it !== null && justAdded === it.id ? "[data-hardware-name]" : false}
         split
       >
-        {it && <HardwareStage item={it} base={mountBase} materials={materials} />}
         {it && (
-          <HardwareCard
-            key={it.id}
-            item={it}
-            dirty={dirty}
-            plates={items.filter((x) => x.engine === "plate")}
-            library={items}
-            isDefault={(() => {
-              const sl = slotOfEngine(it.engine)
-              return !!sl && defaults[sl.slot] === it.id
-            })()}
-            onDefault={() => {
-              const sl = slotOfEngine(it.engine)
-              if (sl) onDefaults({ ...defaults, [sl.slot]: it.id })
-            }}
-            onChange={changeItem}
-            onRetarget={async (engine) => {
-              // Canviar «què és»: el motor nou i el model 3D refet al seu marc (estimat de la malla), sense confirmar.
-              const r = await reframeImported(it, engine, items, importBase())
-              changeItem(r.item)
-              if (r.note) toaster.create({ title: "Model 3D sense orientar", description: r.note, type: "warning", duration: 9000 })
-            }}
-            autoFocusName={justAdded === it.id}
-            onDuplicate={() => {
-              const copy = copyHardwareItem(it, newId("hw"), uniqueName(`${it.name} (còpia)`))
-              const next = [...items]
-              next.splice(i + 1, 0, copy)
-              onChange(next)
-              setSel(copy.id)
-              setJustAdded(copy.id)
-            }}
-            onDelete={() => onDelete(it)}
+          <StageFormSplit
+            id="hardware-editor"
+            stage={<HardwareStage item={it} base={mountBase} materials={materials} />}
+            form={
+              <HardwareCard
+                key={it.id}
+                item={it}
+                dirty={dirty}
+                plates={items.filter((x) => x.engine === "plate")}
+                library={items}
+                isDefault={(() => {
+                  const sl = slotOfEngine(it.engine)
+                  return !!sl && defaults[sl.slot] === it.id
+                })()}
+                onDefault={() => {
+                  const sl = slotOfEngine(it.engine)
+                  if (sl) onDefaults({ ...defaults, [sl.slot]: it.id })
+                }}
+                onChange={changeItem}
+                onRetarget={async (engine) => {
+                  // Canviar «què és»: el motor nou i el model 3D refet al seu marc (estimat de la malla), sense confirmar.
+                  const r = await reframeImported(it, engine, items, importBase())
+                  changeItem(r.item)
+                  if (r.note) toaster.create({ title: "Model 3D sense orientar", description: r.note, type: "warning", duration: 9000 })
+                }}
+                autoFocusName={justAdded === it.id}
+                onDuplicate={() => {
+                  const copy = copyHardwareItem(it, newId("hw"), uniqueName(`${it.name} (còpia)`))
+                  const next = [...items]
+                  next.splice(i + 1, 0, copy)
+                  onChange(next)
+                  setSel(copy.id)
+                  setJustAdded(copy.id)
+                }}
+                onDelete={() => onDelete(it)}
+              />
+            }
           />
         )}
       </FloatingWindow>

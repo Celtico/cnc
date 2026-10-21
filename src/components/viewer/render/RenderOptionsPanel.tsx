@@ -266,7 +266,7 @@ function ImageSection({ look, setLook, denoiser, scheduleDenoise }: { look: Look
 /** La columna d'opcions del Render: Qualitat · Càmera · Escena · Llums · Imatge, i «Restablir». */
 export function RenderOptionsPanel({ settings, engine, viewKind, pano, setPano, setNotice, setLook, denoiser, scheduleDenoise, onReset }: { settings: RenderSettings; engine: RenderEngineState; viewKind: NonNullable<RenderOpts["view"]>; pano: Pano; setPano: (p: Pano) => void; setNotice: (n: string | null) => void; setLook: (patch: Partial<Look>) => void; denoiser: "oidn" | "atrous"; scheduleDenoise: (force?: boolean) => void; onReset: () => void }) {
   return (
-    <Stack w="full" flexShrink={0} gap={1} ps="3px" pe={1} pb={4} css={{ [WIDE]: { width: "300px", overflowY: "auto", paddingBottom: 0 } }}>
+    <Stack w="full" flexShrink={0} gap={1} ps="3px" pe={1} pt={4} pb={4} css={{ [WIDE]: { flex: 1, minHeight: 0, overflowY: "auto", paddingTop: 0, paddingBottom: 0, paddingInlineStart: "19px" } }}>
       <QualitySection settings={settings} engine={engine} />
       <CameraSection settings={settings} />
       <SceneSection settings={settings} viewKind={viewKind} pano={pano} setPano={setPano} setNotice={setNotice} />

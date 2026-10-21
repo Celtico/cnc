@@ -3,6 +3,7 @@ import { useContext, useEffect, useRef, useState, type ReactNode, type RefObject
 import { LuCopy, LuFactory, LuImagePlus, LuLayers2, LuLayers3, LuPaintbrush, LuSprayCan, LuStar, LuSwatchBook, LuTrash2, LuGem } from "react-icons/lu"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { FloatingWindow } from "../../components/FloatingWindow"
+import { StageFormSplit } from "../../components/StageFormSplit"
 import { SearchBar } from "../../components/SearchBar"
 import { NumberField } from "../../components/NumRow"
 import { toaster } from "../../components/ui/toaster"
@@ -202,28 +203,33 @@ export function MaterialsList({ materials, onChange, onRename, onDelete, footer,
         initialFocus={shownM !== null && justAdded === shownM.id ? "[data-material-name]" : false}
         split
       >
-        {shownM && <MaterialStage m={shownM} live={editorOpen} />}
         {shownM && (
-          <MaterialCard
-            key={shownM.id}
-            m={shownM}
-            dirty={dirty}
-            footer={materialCategory(shownM) !== "sim" ? footer : undefined}
-            onChange={(patch) => i >= 0 && update(i, patch)}
-            nameError={(name) => materialNameError(materials, shownM.id, name)}
-            onRename={(name) => i >= 0 && onRename(shownM.name, name)}
-            autoFocusName={justAdded === shownM.id}
-            onDuplicate={() => {
-              if (i < 0) return
-              const copy = { ...shownM, id: newId("mat"), name: uniqueName(`${shownM.name} (còpia)`) }
-              const next = [...materials]
-              next.splice(i + 1, 0, copy)
-              onChange(next)
-              setSel(copy.id)
-              setJustAdded(copy.id)
-            }}
-            onDelete={() => onDelete(shownM)}
-            canDelete={materials.length > 1}
+          <StageFormSplit
+            id="material-editor"
+            stage={<MaterialStage m={shownM} live={editorOpen} />}
+            form={
+              <MaterialCard
+                key={shownM.id}
+                m={shownM}
+                dirty={dirty}
+                footer={materialCategory(shownM) !== "sim" ? footer : undefined}
+                onChange={(patch) => i >= 0 && update(i, patch)}
+                nameError={(name) => materialNameError(materials, shownM.id, name)}
+                onRename={(name) => i >= 0 && onRename(shownM.name, name)}
+                autoFocusName={justAdded === shownM.id}
+                onDuplicate={() => {
+                  if (i < 0) return
+                  const copy = { ...shownM, id: newId("mat"), name: uniqueName(`${shownM.name} (còpia)`) }
+                  const next = [...materials]
+                  next.splice(i + 1, 0, copy)
+                  onChange(next)
+                  setSel(copy.id)
+                  setJustAdded(copy.id)
+                }}
+                onDelete={() => onDelete(shownM)}
+                canDelete={materials.length > 1}
+              />
+            }
           />
         )}
       </FloatingWindow>
@@ -354,7 +360,7 @@ function MaterialCard({ m, dirty, footer, onChange, onRename, nameError, onDupli
     <>
       <TextureEditor m={m} open={editing} onClose={() => setEditing(false)} onApply={(f) => onChange({ finish: f })} />
 
-      <Box w={{ base: "full", lg: "min(560px, 48%)" }} flexShrink={0} overflowY={{ lg: "auto" }} borderStartWidth={{ lg: "1px" }} css={{ scrollbarWidth: "thin", scrollbarGutter: "stable" }}>
+      <Box w="full" flex={{ lg: 1 }} minH={0} flexShrink={0} overflowY={{ lg: "auto" }} borderStartWidth={{ lg: "1px" }} css={{ scrollbarWidth: "thin", scrollbarGutter: "stable" }}>
       <Box maxW={{ base: "760px", lg: "none" }} mx="auto" pb={{ base: 8, lg: 6 }}>
       {/* Nom (editable, gran) i accions. */}
       <HStack gap={2} px={{ base: 4, sm: 6 }} pt={4} pb={4} align="flex-start">

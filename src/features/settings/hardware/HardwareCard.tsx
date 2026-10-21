@@ -62,7 +62,7 @@ export function HardwareCard({
   const nOps = item.targets.reduce((a, t) => a + t.ops.length, 0)
   const opsBadge = nOps ? `${nOps} ${nOps === 1 ? "forat" : "forats"}` : undefined
   return (
-    <Box w={{ base: "full", lg: "min(560px, 48%)" }} flexShrink={0} overflowY={{ lg: "auto" }} borderStartWidth={{ lg: "1px" }} css={{ scrollbarWidth: "thin", scrollbarGutter: "stable" }}>
+    <Box w="full" flex={{ lg: 1 }} minH={0} flexShrink={0} overflowY={{ lg: "auto" }} borderStartWidth={{ lg: "1px" }} css={{ scrollbarWidth: "thin", scrollbarGutter: "stable" }}>
       <Box maxW={{ base: "760px", lg: "none" }} mx="auto" pb={{ base: 8, lg: 6 }}>
         <NameHeader item={item} dirty={dirty} onChange={onChange} onDuplicate={onDuplicate} onDelete={onDelete} autoFocusName={autoFocusName} />
 

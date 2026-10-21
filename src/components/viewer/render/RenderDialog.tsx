@@ -1,11 +1,13 @@
-import { Flex } from "@chakra-ui/react"
+import { Splitter } from "@chakra-ui/react"
 import { useRef, useState } from "react"
 import type { BackdropKind, Panorama } from "./backdrops"
+import { PanelSplit, SplitHandle } from "../../PanelSplit"
+import { usePersistentNumber } from "../../../lib/usePersistentNumber"
 import { DEFAULT_LOOK, type Job, type Look, type RenderSource, type SceneGetter } from "./renderConfig"
 import { RenderFrame } from "./RenderFrame"
 import { RenderOptionsPanel } from "./RenderOptionsPanel"
 import { renderProgressText, usePublishRenderStatus } from "./renderStore"
-import { WIDE } from "./renderLayout"
+import { NARROW } from "./renderLayout"
 import { RenderViewport } from "./RenderViewport"
 import { useBackdropLoader } from "./useBackdropLoader"
 import { useAutoRestart, useElapsedClock, useRenderEngine } from "./useRenderEngine"
@@ -14,6 +16,9 @@ import { useRenderOutput } from "./useRenderOutput"
 import { useRenderSettings, useSaveRenderPrefs } from "./useRenderSettings"
 
 export type { SceneGetter } from "./renderConfig"
+
+/** L'amplada per defecte de la columna d'opcions (px). */
+const OPTIONS_WIDTH = 300
 
 /**
  * «Render»: imatge fotorealista amb path tracing, com el render físic de Cinema 4D. Dos motors
@@ -58,6 +63,7 @@ export function RenderDialog({ open, onClose, shown, getScene, name, saveKey }: 
   const { begun, preparing, passes, elapsed, engineLabel } = engine
   const j = job.current
   const [minimized, setMinimized] = useState(false)
+  const [optionsWidth, setOptionsWidth] = usePersistentNumber("mobles:render-options-width", OPTIONS_WIDTH)
   // Desat en PNG: la feina i les passades del moment (si en calcula més o torna a començar, ja no ho és).
   const [saved, setSaved] = useState<{ job: Job | null; passes: number } | null>(null)
   const markSaved = () => setSaved({ job: j, passes })
@@ -73,13 +79,18 @@ export function RenderDialog({ open, onClose, shown, getScene, name, saveKey }: 
 
   return (
     <RenderFrame open={open} onClose={onClose} shown={shown} name={name} progress={progress} onMinimizedChange={setMinimized}>
-      {/* Estret (el mòbil o el panell petit): la imatge a dalt i les opcions a sota, tot amb desplaçament; ample, de costat. */}
-      <Flex direction="column" gap={4} minH={0} css={{ [WIDE]: { flexDirection: "row", height: "100%" } }}>
-        <RenderViewport canvas={output.canvas} engine={engine} background={look.background} preview={preview} notice={notice} status={status} name={name} onSaved={markSaved} />
-
-        {/* 3 px a l'esquerra: el desplaçament de la columna no talla la vora ni l'anell de focus dels controls. */}
-        <RenderOptionsPanel settings={settings} engine={engine} viewKind={viewKind} pano={pano} setPano={setPano} setNotice={setNotice} setLook={setLook} denoiser={output.denoiser} scheduleDenoise={output.scheduleDenoise} onReset={reset} />
-      </Flex>
+      {/* Estret (el mòbil o el panell petit): la imatge a dalt i les opcions a sota, tot amb desplaçament; ample, de costat,
+          amb la vora arrossegable (`PanelSplit`). L'amplada desada és la de les opcions, sense els 16 px fins a la imatge. */}
+      <PanelSplit stackWhen={NARROW} minH={0} h="full" panels={[{ id: "image", min: 320 }, { id: "options", width: optionsWidth + 16, setWidth: (w) => setOptionsWidth(w - 16), min: 276, max: 576 }]}>
+        <Splitter.Panel id="image" display="flex" flexDirection="column" minH={0}>
+          <RenderViewport canvas={output.canvas} engine={engine} background={look.background} preview={preview} notice={notice} status={status} name={name} onSaved={markSaved} />
+        </Splitter.Panel>
+        <SplitHandle id="image:options" label="Amplada de les opcions del Render" onReset={() => setOptionsWidth(OPTIONS_WIDTH)} />
+        <Splitter.Panel id="options" display="flex" flexDirection="column" minH={0}>
+          {/* 3 px a l'esquerra: el desplaçament de la columna no talla la vora ni l'anell de focus dels controls. */}
+          <RenderOptionsPanel settings={settings} engine={engine} viewKind={viewKind} pano={pano} setPano={setPano} setNotice={setNotice} setLook={setLook} denoiser={output.denoiser} scheduleDenoise={output.scheduleDenoise} onReset={reset} />
+        </Splitter.Panel>
+      </PanelSplit>
     </RenderFrame>
   )
 }
