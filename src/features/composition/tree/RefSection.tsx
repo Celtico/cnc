@@ -1,12 +1,12 @@
 import { Box, Menu, Text } from "@chakra-ui/react"
 import { useRef } from "react"
-import { LuCopy, LuGroup, LuImage, LuPlus, LuScan, LuShapes, LuTrash2, LuUngroup } from "react-icons/lu"
-import { boxCage, groupMulti, groupNames, insertRefCopy, newGroupName, ungroupMulti, type RefObject } from "../../../core/model"
+import { LuBox, LuCopy, LuGroup, LuImage, LuPlus, LuScan, LuShapes, LuTrash2, LuUngroup } from "react-icons/lu"
+import { boxCage, importedMesh, parseStl, groupMulti, groupNames, insertRefCopy, newGroupName, ungroupMulti, type RefObject } from "../../../core/model"
 import { GroupRow } from "./GroupRow"
 import { UngroupDropZone } from "./UngroupDropZone"
 import { TreeRow, TreeRowMenu, TreeSection } from "../../../components/TreeRow"
 import { useSettings } from "../../settings/SettingsContext"
-import { cutterOver, refFromPreset } from "../addElements"
+import { cutterOver, refFor, refFromPreset } from "../addElements"
 import { readReliefImage } from "../reliefImage"
 import { toaster } from "../../../components/ui/toaster"
 import type { TreeCtx } from "./treeCtx"
@@ -25,6 +25,7 @@ export function RefSection({ tree, isObject, onAddBlank }: { tree: TreeCtx; isOb
   }
 
   const imageInput = useRef<HTMLInputElement>(null)
+  const modelInput = useRef<HTMLInputElement>(null)
   const add = (r: RefObject) => {
     onChange({ ...comp, references: [...comp.references, r] })
     onSelect({ kind: "ref", id: r.id })
@@ -49,6 +50,33 @@ export function RefSection({ tree, isObject, onAddBlank }: { tree: TreeCtx; isOb
             .catch(() => toaster.create({ type: "error", title: "No s'ha pogut llegir la imatge" }))
         }}
       />
+      {/* Un model 3D (.stl) com a forma lliure: per tallar-lo en llistons o fresar-lo (`meshImport.ts`). */}
+      <input
+        ref={modelInput}
+        type="file"
+        accept=".stl,model/stl"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0]
+          e.target.value = ""
+          if (!f) return
+          f.arrayBuffer()
+            .then((buf) => {
+              const m = importedMesh(parseStl(buf))
+              const used = new Set(comp.references.map((r) => r.name))
+              const base = f.name.replace(/\.stl$/i, "") || "Model 3D"
+              let name = base
+              for (let n = 2; used.has(name); n++) name = `${base} ${n}`
+              add(refFor({ name, shape: "mesh", mesh: m.mesh, w: m.w, h: m.h, d: m.d }))
+              toaster.create({
+                type: "info",
+                title: `«${name}»: ${Math.round(m.w)} × ${Math.round(m.h)} × ${Math.round(m.d)} mm`,
+                description: `${m.relief ? "S'ha fet com a relleu (el que es veu des del davant), amb el darrere pla. " : ""}${m.rough ? "Tenia massa triangles i s'ha simplificat: si els llistons surten malament, exporta'l amb menys de 20.000. " : ""}Si la mida no és la bona, canvia-la a l'inspector. Per fer-ne llistons: «Llistons», a l'inspector.`,
+              })
+            })
+            .catch((err: unknown) => toaster.create({ type: "error", title: "No s'ha pogut llegir el model", description: err instanceof Error ? err.message : undefined }))
+        }}
+      />
       {/* + d'objectes: els de Preferències › Objectes de referència (per decisió de l'usuari) o un en blanc. */}
       <TreeSection
         addLabel="Afegir objecte de referència"
@@ -62,6 +90,9 @@ export function RefSection({ tree, isObject, onAddBlank }: { tree: TreeCtx; isOb
               </Menu.Item>
               <Menu.Item value="image" onClick={() => imageInput.current?.click()}>
                 <LuImage /> Relleu d'imatge…
+              </Menu.Item>
+              <Menu.Item value="model" onClick={() => modelInput.current?.click()}>
+                <LuBox /> Model 3D (.stl)…
               </Menu.Item>
             </Menu.ItemGroup>
             <Menu.Separator />

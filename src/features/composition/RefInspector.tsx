@@ -97,10 +97,16 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
                 <LuPencilRuler /> Editar la forma…
               </Button>
             )}
-            {o.shape === "mesh" && (
+            {/* Un model importat (milers de punts) no s'edita punt a punt: l'editor no ho aguantaria. */}
+            {o.shape === "mesh" && (o.mesh?.v.length ?? 0) <= MAX_EDIT_POINTS && (
               <Button size="xs" variant="outline" alignSelf="flex-start" onClick={() => setMeshing(true)}>
                 <LuShapes /> Editar la forma lliure…
               </Button>
+            )}
+            {o.shape === "mesh" && (o.mesh?.v.length ?? 0) > MAX_EDIT_POINTS && (
+              <Text fontSize="xs" color="fg.muted">
+                Model importat ({o.mesh!.v.length} punts): es pot moure, estirar i tallar en llistons, però no editar punt a punt.
+              </Text>
             )}
             {o.shape === "image" && o.image && (
               <Stack gap={2}>
@@ -320,6 +326,9 @@ const AXIS_OPTIONS: IconOption<Axis>[] = [
 ]
 
 /** Forma de l'objecte: pastilles amb icona i nom (la icona també és la de la secció). */
+/** Punts de la caixa de control com a molt per obrir l'editor de la forma lliure. */
+const MAX_EDIT_POINTS = 3000
+
 const SHAPES: { id: "box" | "cylinder" | "profile" | "mesh" | "image"; name: string; icon: IconType }[] = [
   { id: "box", name: "Caixa", icon: LuBox },
   { id: "cylinder", name: "Cilindre", icon: LuCylinder },

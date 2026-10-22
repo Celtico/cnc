@@ -20,8 +20,8 @@ export const MeshCageSchema = z.object({
   v: z.array(z.tuple([z.number(), z.number(), z.number()])).min(4),
   /** Cares (índexs de `v`, antihoraris vistes de fora; quadrats o triangles). */
   f: z.array(z.array(z.number().int().min(0)).min(3)).min(2),
-  /** Vegades que se suavitza (1–4; sense, 3). */
-  level: z.number().int().min(1).max(4).optional(),
+  /** Vegades que se suavitza (1–4; sense, 3). 0: tal com és (un model importat, `meshImport.ts`). */
+  level: z.number().int().min(0).max(4).optional(),
   /** Arestes vives (parells d'índexs de `v`): no s'arrodoneixen (un cantell recte, una cantonada). */
   crease: z.array(z.tuple([z.number().int().min(0), z.number().int().min(0)])).optional(),
 })

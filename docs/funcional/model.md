@@ -457,6 +457,14 @@
   taulells i bufets, murals (rostres, vestíbul, mural amb banc) i prestatges, tots de llistons de roure massís; secció per
   categories (`CatalogSection` amb títol i icona). Cada disseny és una secció en funció de la posició (punts suavitzats,
   una cinta per a les cadires en S, un relleu per als murals) i la mateixa drecera. Pendent: llistons radials (girats al voltant d'un eix) i formes de relleu d'imatge.
+  **Model 3D (.stl)** (per petició de l'usuari, 2026-10-22: el mural de la seva cara amb ones fet al Cinema 4D;
+  `model/meshImport.ts`, + d'«Objectes de referència» › «Model 3D (.stl)…»): el fitxer passa a una forma lliure de sempre
+  amb la malla tal com ve com a caixa de control (`MeshCage.level` 0: sense suavitzar), per tallar-la en llistons o
+  fresar-la. Eixos Z amunt → Y amunt i el davant a +z; unitats endevinades (< 10, metres; < 200, centímetres; si no, mm).
+  Una malla oberta (superfícies soltes, un escaneig) o un relleu tancat de més de 20.000 triangles es fa **relleu**: el
+  que es veu des del davant en una graella de 140 pel costat llarg, el darrere pla i la vora viva. Una malla tancada de
+  més de 20.000 triangles que no és relleu es redueix agrupant vèrtexs (pot quedar mal tancada: l'app ho avisa). Amb més
+  de 3.000 punts, l'editor de malla no s'obre (es pot moure, estirar i tallar).
 - **Peces lliures** (`Composition.parts`, `model/freePart.ts`, `build/freeParts.ts`): taulers solts col·locats
   com els objectes però que són peces de debò (rol `part`, un «mòdul» més per a les refs). Orientació `front` (X·Y) · `side`
   (Z·Y) · `flat` (X·Z, v cap al fons); `w × h` al seu pla, gruix, material, veta, forma amb l'editor de perfils.
