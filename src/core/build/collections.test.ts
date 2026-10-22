@@ -4,9 +4,7 @@ import { DEFAULT_NEST_OPTIONS, STANDARD_SHEETS } from "../nesting/nest"
 import { panelProcesses } from "../process/processes"
 import { toCutList } from "../cutlist/toCutList"
 import { buildComposition } from "./buildComposition"
-
-// Els mateixos avisos que el catàleg de botiga: un disseny mal fet.
-const BAD = ["layout", "collision", "ref-cut", "door-too-wide", "door-too-tall", "shelf-span", "drawer-no-slide", "hole-clash", "no-side", "rail", "hollow-thin", "cable-hole", "invalid-part", "hinge", "grille-open-ratio", "overlap", "drawer-box", "handle", "shelves"]
+import { DESIGN_ERRORS } from "./designErrors"
 
 describe("col·leccions de mobles", () => {
   it("dues col·leccions, ids únics i fitxa completa", () => {
@@ -26,7 +24,7 @@ describe("col·leccions de mobles", () => {
       const comp = t.make()
       expect(CompositionSchema.safeParse(comp).success).toBe(true)
       const b = buildComposition(comp)
-      expect(b.warnings.filter((w) => BAD.includes(w.code)).map((w) => `${w.code}: ${w.message}`)).toEqual([])
+      expect(b.warnings.filter((w) => DESIGN_ERRORS.includes(w.code)).map((w) => `${w.code}: ${w.message}`)).toEqual([])
       // Parets buides massa primes: es fan massisses (el disseny no és el que diu la fitxa).
       expect(b.warnings.filter((w) => w.code === "hollow" && /massisses/.test(w.message)).map((w) => w.message)).toEqual([])
       expect(b.panels.length + b.extras.length).toBeGreaterThan(0)

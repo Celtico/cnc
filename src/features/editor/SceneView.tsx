@@ -104,8 +104,6 @@ export function SceneView({
       parts={solidParts}
       selectedPartId={selection.kind === "part" ? selection.id : null}
       onSelectPart={selectPartFrom3D}
-      selectedGroup={null}
-      onMoveGroup={selectionLocked ? undefined : (g, dx, dy, dz) => moveGroup(g, dx, dy, dz)}
       selectedSet={selection.kind === "multi" ? selection.items : selection.kind === "group" ? groupItems(comp, selection.id) : undefined}
       onMoveSet={selectionLocked ? undefined : selection.kind === "multi" ? (dx, dy, dz) => setComp((c) => moveMultiBy(c, selection.items, dx, dy, dz)) : selection.kind === "group" ? (dx, dy, dz) => moveGroup(selection.id, dx, dy, dz) : undefined}
       onMovePart={selectionLocked ? undefined : movePart}

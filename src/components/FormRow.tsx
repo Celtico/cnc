@@ -2,7 +2,8 @@ import { Box, Button, Grid, HStack, Stack, Text } from "@chakra-ui/react"
 import type { ReactNode } from "react"
 import { segGroup, segItem } from "./segmented"
 import { SectionLabel } from "./SectionLabel"
-import { InlineWarningList, useOptionWarnings } from "./inlineWarnings"
+import { InlineWarningList } from "./inlineWarnings"
+import { useOptionWarnings } from "./inlineWarningsContext"
 
 /**
  * Fila de formulari, la mateixa a tota l'app (com la Configuració de macOS o l'inspector de Figma):

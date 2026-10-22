@@ -74,9 +74,6 @@ export interface CabinetViewerProps {
   selectedPartId?: string | null
   onSelectPart?: (id: string) => void
   onMovePart?: (id: string, pos: { x: number; y: number; z: number }) => void
-  /** Grup de peces lliures seleccionat: caixa del grup amb el gizmo; es mou tot junt (delta en mm). */
-  selectedGroup?: string | null
-  onMoveGroup?: (group: string, dx: number, dy: number, dz: number) => void
   /** Selecció múltiple (Maj + clic): una caixa amb el gizmo que els mou tots junts. */
   selectedSet?: { kind: "part" | "model" | "ref" | "module"; id: string }[]
   onMoveSet?: (dx: number, dy: number, dz: number) => void

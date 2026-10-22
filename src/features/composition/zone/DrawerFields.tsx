@@ -99,7 +99,7 @@ export function DrawerSlides({ front, kits, onChange, optionId = "zone.front.dra
 }
 
 /** Els ids de les files de `KitFields`. */
-export interface KitFieldIds {
+interface KitFieldIds {
   closing: string
   back: string
   finish: string

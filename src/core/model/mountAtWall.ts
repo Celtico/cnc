@@ -1,5 +1,6 @@
 import { freeX, moduleFootprint, moduleFrontFace, modulePlacements, moduleRot, rowOf, sideWallOf, type Composition, type Module, type ModuleMount } from "./composition"
 import { setModuleMount } from "./editOps"
+import { detachFromRow } from "./wallBacks"
 
 /**
  * **A quina paret va** (per decisió de l'usuari, 2026-10-22: «quan li dic a un mòdul paret no sap a quina paret ha d'anar,
@@ -20,13 +21,7 @@ export function mountModule(comp: Composition, id: string, mount: ModuleMount, h
   const { rot: _r, turned: _t, sideAlong: _s, ...clean } = setModuleMount(m, mount, here, floorHeight)
   const all = comp.modules.map((x, k) => foot(x, places[k]!))
   // Sense ell, el següent de la seva fila es queda on era (guanya la seva separació i el seu lloc).
-  const rest = comp.modules.map((x) => ({ ...x }))
-  if (!freeX(m) && !sideWallOf(m)) {
-    const mates = comp.modules.map((x, k) => (k !== i && rowOf(x) === rowOf(m) && !freeX(x) && !sideWallOf(x) ? k : -1)).filter((k) => k >= 0)
-    const after = mates.find((k) => k > i)
-    const prev = mates.filter((k) => k < i).at(-1)
-    if (after !== undefined) rest[after]!.gapBefore = Math.max(0, Math.round(all[after]!.x0 - (prev !== undefined ? all[prev]!.x1 : 0)))
-  }
+  const rest = detachFromRow(comp, i)
   rest.splice(i, 1)
   if (!rest.length) return put({ ...clean, gapBefore: 0 })
   const xmin = Math.min(...all.map((b) => b.x0)), xmax = Math.max(...all.map((b) => b.x1))

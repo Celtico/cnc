@@ -1,6 +1,7 @@
 import { modulePlacements, newId, type Carcass, type Composition, type Module, type RefObject, type Zone } from "./composition"
 import { applianceById } from "./applianceModules"
 import { addTopPlinth } from "./plinthZones"
+import { addSideMargin } from "./zoneOps"
 import { storeBuilders } from "./storeCatalog"
 import type { Template } from "./templates"
 
@@ -53,6 +54,21 @@ const appliance = (ref: string): Zone => ({ id: id(), appliance: { hardware: app
 const rail = (): Zone => ({ id: id(), rail: {} })
 const led = (n: number): Zone => ({ ...open(n), led: {} })
 const withBack = (z: Zone, back: NonNullable<Zone["back"]>): Zone => ({ ...z, back })
+/**
+ * Calaixos darrere d'una porta: «Marge a les frontisses» (`addSideMargin`) al costat de cada frontissa, com faria l'usuari,
+ * perquè el braç de la frontissa no hi topi.
+ */
+function hingeMargins(z: Zone, front: NonNullable<Zone["front"]>): Zone {
+  if (front.kind !== "door") return z
+  const sides: ("left" | "right")[] = front.mode === "double" ? ["left", "right"] : [front.hinge === "left" ? "left" : "right"]
+  let root = z
+  for (const side of sides) {
+    const drawersId = findDrawers(root)
+    if (drawersId) root = addSideMargin(root, drawersId, side)
+  }
+  return root
+}
+const findDrawers = (z: Zone): string | undefined => (z.front?.kind === "drawers" ? z.id : z.split?.children.map(findDrawers).find(Boolean))
 
 // --- 1. Base × fons ---------------------------------------------------------------------------------------------------
 
@@ -142,16 +158,18 @@ const TOP_PLINTHS: Axis<{ height: number; setback: number } | null> = [
 
 // --- 6. Electrodomèstic × lloc -----------------------------------------------------------------------------------------
 
-const APPLIANCES: Axis<string> = [
-  { label: "Forn", value: "bosch-hba514es4" },
-  { label: "Microones", value: "bosch-bfl7221b1" },
+// El nínxol de cada aparell, com diu el fabricant (alt; d'ample, 564 mm): el mòdul de 600 en deixa 562 entre laterals.
+const APPLIANCES: Axis<{ ref: string; niche: number }> = [
+  { label: "Forn", value: { ref: "bosch-hba514es4", niche: 590 } },
+  { label: "Microones", value: { ref: "bosch-bfl7221b1", niche: 381 } },
 ]
-const PLACES: Axis<{ w: number; place: (a: Zone) => Zone }> = [
-  { label: "A baix", value: { w: 600, place: (a) => h([600, "auto"], [a, doors(2)]) } },
-  { label: "Al mig", value: { w: 600, place: (a) => h([700, 600, "auto"], [drawers(2), a, doors(2)]) } },
-  { label: "A dalt", value: { w: 600, place: (a) => h(["auto", 600], [doors(2), a]) } },
-  { label: "Al costat d'una porta", value: { w: 1100, place: (a) => v([600, "auto"], [h(["auto", 600, "auto"], [drawers(2), a, open(1)]), door("right", 3)]) } },
-  { label: "Darrere de portes", value: { w: 600, place: (a) => covering({ kind: "door", mode: "double", hinge: "left" }, h(["auto", 600, "auto"], [open(1), a, open(1)])) } },
+const NICHE_W = 564
+const PLACES: Axis<{ w: number; place: (a: Zone, n: number) => Zone }> = [
+  { label: "A baix", value: { w: 600, place: (a, n) => h([n, "auto"], [a, doors(2)]) } },
+  { label: "Al mig", value: { w: 600, place: (a, n) => h([700, n, "auto"], [drawers(2), a, doors(2)]) } },
+  { label: "A dalt", value: { w: 600, place: (a, n) => h(["auto", n], [doors(2), a]) } },
+  { label: "Al costat d'una porta", value: { w: 1100, place: (a, n) => v([NICHE_W, "auto"], [h(["auto", n, "auto"], [drawers(2), a, open(1)]), door("right", 3)]) } },
+  { label: "Darrere de portes", value: { w: 600, place: (a, n) => covering({ kind: "door", mode: "double", hinge: "left" }, h(["auto", n, "auto"], [open(1), a, open(1)])) } },
 ]
 
 // --- 7. Columna de la casa × fons --------------------------------------------------------------------------------------
@@ -282,7 +300,7 @@ export const MODEL_COMBOS: ComboCategory[] = [
   cross("fronts-divisions", "Fronts que tapen divisions", "Un front a la zona de fora tapa totes les de dins (regla 3): cada front amb cada divisió.", FRONTS, LAYOUTS, (front, layout) =>
     one(box("Moble", { w: 600, h: 900, d: 450, mat: GREIGE, base: plinth(80, 30) }, covering(front, layout())))),
   cross("contingut", "Contingut i front", "Què hi ha a dins (prestatges, barra, calaixos darrere de la porta, llum) i com es tanca.", CONTENTS, COVERS, (content, cover) =>
-    one(box("Armari", { w: 600, h: 1800, d: 550, mat: WHITE, front: "Melamina roure", base: plinth(80, 30), ...(cover.inset ? { inset: true } : {}) }, cover.front ? covering(cover.front, content()) : content()))),
+    one(box("Armari", { w: 600, h: 1800, d: 550, mat: WHITE, front: "Melamina roure", base: plinth(80, 30), ...(cover.inset ? { inset: true } : {}) }, cover.front ? covering(cover.front, hingeMargins(content(), cover.front)) : content()))),
   cross("caixa-fronts", "Caixa i estil dels fronts", "Com és la caixa (inglet, parets buides, sense tapa, divisors gruixuts) amb cada estil de front.", CARCASSES, FRONT_STYLES, (c, f) => {
     const cols = v(auto(3), [drawers(3), doors(1), open(2)])
     const root = c.thick ? { ...cols, split: { ...cols.split!, thickness: c.thick } } : cols
@@ -292,8 +310,8 @@ export const MODEL_COMBOS: ComboCategory[] = [
     const m = box("Armari", { w: 800, h: 2200, d: 600, mat: GREIGE, base }, covering({ kind: "door", mode: "double", hinge: "left" }, h([900, "auto"], [open(2), rail()])))
     return one(top ? addTopPlinth(m, top.height, top.setback) : m)
   }),
-  cross("electrodomestic", "Electrodomèstic a qualsevol zona", "Un aparell és el Contingut d'una zona: a baix, al mig, a dalt, al costat o darrere de portes.", APPLIANCES, PLACES, (ref, p) =>
-    one(box("Columna", { w: p.w, h: 2200, d: 580, mat: WHITE, front: GREIGE, base: plinth(80, 30) }, p.place(appliance(ref))))),
+  cross("electrodomestic", "Electrodomèstic a qualsevol zona", "Un aparell és el Contingut d'una zona: a baix, al mig, a dalt, al costat o darrere de portes.", APPLIANCES, PLACES, (a, p) =>
+    one(box("Columna", { w: p.w, h: 2200, d: 580, mat: WHITE, front: GREIGE, base: plinth(80, 30) }, p.place(appliance(a.ref), a.niche)))),
   cross("columna", "Columna de la casa", "Una columna que entra pel darrere: el moble s'hi tanca amb els fons que falten, de cada tipus.", PILLARS, PILLAR_BACKS, (cols, b) => {
     const w = 800
     const lower = open(1), upper = open(2)
@@ -402,7 +420,7 @@ type Layout = Block[]
  * Treu el lateral que toca un veí que el cobreix de dalt a baix i és almenys igual de fondo (el veí l'aguanta). Amb dos
  * iguals, el de la dreta.
  */
-export function joinTouchingSides(comp: Composition): Composition {
+function joinTouchingSides(comp: Composition): Composition {
   const places = modulePlacements(comp)
   const box3 = comp.modules.map((m, i) => ({ x0: places[i]!.x, x1: places[i]!.x + m.carcass.width, y0: places[i]!.y, y1: places[i]!.y + m.carcass.height, d: m.carcass.depth }))
   const E = 1
@@ -462,7 +480,7 @@ export const JOINED_COMBOS: ComboCategory[] = LAYOUTS_JOINED.map((layout, i) => 
   const c = cross(`junts-${i + 1}`, layout.label, `${layout.label}: mòduls de mides diferents que es toquen; el més baix no porta el lateral del costat del veí, que fa de lateral dels dos.`, [layout], JOINED_VARIANTS, (blocks, o) => {
     // Primer els mòduls buits i els laterals que es treuen; després el contingut, que en depèn (les frontisses).
     const joined = joinTouchingSides(
-      row(blocks.map((b, k) => box(`Mòdul ${k + 1}`, { w: b.w, h: b.h, d: b.wall ? Math.min(350, o.d) : o.d, mat: WHITE, base: b.wall ? hung(b.wall.bottom) : o.base, ...(o.back ? { back: o.back } : {}), ...(b.gap ? { gapBefore: b.gap } : {}) }, open()))),
+      row(blocks.map((b, k) => box(`Mòdul ${k + 1}`, { w: b.w, h: b.h, d: b.wall ? Math.min(350, o.d) : o.d, mat: WHITE, base: b.wall ? hung(b.wall.bottom) : o.base, ...(o.back && !b.wall ? { back: o.back } : {}), ...(b.gap ? { gapBefore: b.gap } : {}) }, open()))),
     )
     return {
       ...joined,

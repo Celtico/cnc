@@ -4,7 +4,7 @@ import { panelBox } from "../../core/build/geometry"
 import type { BuildWarning, FixPlaceKey } from "../../core/build/buildModule"
 import type { Composition } from "../../core/model"
 import type { Selection } from "../composition/StructureTree"
-import type { InlineWarning, InlineWarnings } from "../../components/inlineWarnings"
+import type { InlineWarning, InlineWarnings } from "../../components/inlineWarningsContext"
 
 type Code = BuildWarning["code"]
 

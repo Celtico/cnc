@@ -24,7 +24,7 @@ const FRONT_LABELS: Record<Front["kind"] | "none", string> = {
  * Les «Opcions de l'interior» (prestatges, accessoris, calaixos interiors) dins del Front, a sota del «Contingut» (per
  * decisió de l'usuari, 2026-10-20): les files i el resum per a la insígnia.
  */
-export interface FrontInterior {
+interface FrontInterior {
   node: ReactNode
   badge?: string
 }

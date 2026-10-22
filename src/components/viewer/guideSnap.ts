@@ -50,7 +50,7 @@ export function snapWithGuides(box: GuideBox, axes: readonly Axis[], others: rea
 }
 
 /** Les guies d'una caixa ja col·locada: per a cada eix que es mou, una per cada vora o mig d'una altra caixa a la mateixa coordenada. */
-export function guidesFor(box: GuideBox, axes: readonly Axis[], others: readonly GuideBox[]): Guide[] {
+function guidesFor(box: GuideBox, axes: readonly Axis[], others: readonly GuideBox[]): Guide[] {
   const guides: Guide[] = []
   for (const a of axes) {
     const mine = anchors(box, a)

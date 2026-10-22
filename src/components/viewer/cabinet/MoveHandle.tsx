@@ -60,7 +60,8 @@ export function MoveHandle({
     const three = getThree()
     const tol = snapToleranceMm(three.camera, three.size.height, p, S)
     const z0 = m.z ?? 0
-    const r = snapWithGuides({ x: m.x + raw.x, y: m.y + raw.y, z: z0 + raw.z, w: m.width, h: m.height, d: m.depth }, s0.axes, others, planes, tol, e.altKey)
+    // Amb Maj es mou tot el moble: els altres mòduls i les parets es mouen amb ell, no hi ha res on enganxar-se.
+    const r = snapWithGuides({ x: m.x + raw.x, y: m.y + raw.y, z: z0 + raw.z, w: m.width, h: m.height, d: m.depth }, s0.axes, others, planes, tol, e.altKey || s0.all)
     // «Al terra»: endavant i enrere, sense passar la paret.
     const dz = Math.max(-(m.side ? (m.along ?? 0) : z0), Math.round(r.box.z - z0))
     return { dx: Math.round(r.box.x - m.x), dy: Math.round(r.box.y - m.y), dz, all: s0.all, guides: s0.all ? [] : r.guides }

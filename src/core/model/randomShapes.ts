@@ -118,7 +118,7 @@ function innerWallsOnly(m: Module): Module {
 }
 
 /** Un moble a l'atzar: un mòdul, una fila de dos o tres (d'alçades diferents o un penjat a sobre) i, a vegades, una cantonada en L. */
-export function randomShapeComposition(seed: number): Composition {
+function randomShapeComposition(seed: number): Composition {
   const r = rng(seed)
   const k = r()
   let modules: Module[]

@@ -1,12 +1,12 @@
 import { useMemo } from "react"
-import { modelFootprint, partSize, partsBox, type RefObject } from "../../../core/model"
+import { modelFootprint, partSize, type RefObject } from "../../../core/model"
 import type { SnapTargets } from "./RefGhost"
 import type { CabinetViewerProps } from "./types"
 
-type Args = Pick<CabinetViewerProps, "size" | "modules" | "parts" | "models" | "ghosts" | "selectedSet" | "selectedPartId" | "selectedModelId" | "selectedGroup">
+type Args = Pick<CabinetViewerProps, "size" | "modules" | "parts" | "models" | "ghosts" | "selectedSet" | "selectedPartId" | "selectedModelId">
 
-/** Caixes dels objectes que es mouen amb el gizmo (peces lliures, models, grup, selecció múltiple) i les arestes on s'enganxen. */
-export function useObjectBoxes({ size, modules, parts, models, ghosts, selectedSet, selectedPartId, selectedModelId, selectedGroup }: Args) {
+/** Caixes dels objectes que es mouen amb el gizmo (peces lliures, models, selecció múltiple i grup) i les arestes on s'enganxen. */
+export function useObjectBoxes({ size, modules, parts, models, ghosts, selectedSet, selectedPartId, selectedModelId }: Args) {
   // Plans on s'enganxen els objectes en arrossegar-los: terra i paret (les vores del moble). Els mòduls hi són com a caixes
   // (`moduleBoxes`), per a les guies del Figma (`snapWithGuides`).
   const snapTargets = useMemo((): SnapTargets => ({ x: [0, size.width], y: [0, size.height], z: [0, size.depth] }), [size.width, size.height, size.depth])
@@ -40,28 +40,5 @@ export function useObjectBoxes({ size, modules, parts, models, ghosts, selectedS
     return { id: "multi", name: `${boxes.length} elements`, x: x0, y: y0, z: z0, w: x1 - x0, h: y1 - y0, d: z1 - z0 }
   }, [selectedSet, partBoxes, modelBoxes, ghosts, modules])
   const selectedModel = models?.find((m) => m.id === selectedModelId)
-  // La caixa del grup triat: les seves peces lliures i els seus models 3D.
-  const groupBox = useMemo((): RefObject | null => {
-    const members = (parts ?? []).filter((p) => p.group && p.group === selectedGroup)
-    const ms = (models ?? []).filter((m) => m.group && m.group === selectedGroup)
-    if (!members.length && !ms.length) return null
-    const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity]
-    if (members.length) {
-      const b = partsBox(members)
-      for (let k = 0; k < 3; k++) {
-      min[k] = Math.min(min[k]!, b.min[k]!)
-      max[k] = Math.max(max[k]!, b.max[k]!)
-    }
-    }
-    for (const m of ms) {
-      const f = modelFootprint(m)
-      const lo = [f.x, m.y, f.z], hi = [f.x + f.w, m.y + m.h, f.z + f.d]
-      for (let k = 0; k < 3; k++) {
-      min[k] = Math.min(min[k]!, lo[k]!)
-      max[k] = Math.max(max[k]!, hi[k]!)
-    }
-    }
-    return { id: `group:${selectedGroup}`, name: selectedGroup!, x: min[0]!, y: min[1]!, z: min[2]!, w: max[0]! - min[0]!, h: max[1]! - min[1]!, d: max[2]! - min[2]! }
-  }, [parts, models, selectedGroup])
-  return { snapTargets, moduleBoxes, partBoxes, selectedPartBox, modelBoxes, selectedModelBox, setBox, selectedModel, groupBox }
+  return { snapTargets, moduleBoxes, partBoxes, selectedPartBox, modelBoxes, selectedModelBox, setBox, selectedModel }
 }

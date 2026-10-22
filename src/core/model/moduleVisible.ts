@@ -84,7 +84,7 @@ export function visibleModule(m: Module): Module {
   }
   // Sòcol de dalt d'abans: no es fa (passa a la drecera de zones en obrir el moble, `withZonePlinths`).
   delete carcass.topFiller
-  const root = visibleBacks(visibleZone(m.root, kitDefaultOf(m), false, carcassBounds(carcass), false, true), carcass, moduleBack(carcass))
+  const root = visibleBacks(visibleZone(m.root, kitDefaultOf(m), false, carcassBounds(carcass), false, true), moduleBack(carcass))
   // Fons del calaix: només amb calaixos que es fan (la fila de Materials no surt sense).
   if (!hasDrawers(root) || !c.drawerBottomMaterial) delete carcass.drawerBottomMaterial
   // Folgança de les peces de dins: només amb l'arrel dividida (la fila no surt sense); 0 és l'absència.
@@ -98,14 +98,14 @@ export function visibleModule(m: Module): Module {
 }
 
 /** Fons de cada zona (`Zone.back`): només el que canvia respecte a la zona de més amunt. La retirada, només encastat. */
-function visibleBacks(z: Zone, c: Carcass, parent: ZoneBack): Zone {
+function visibleBacks(z: Zone, parent: ZoneBack): Zone {
   const b = childBack(parent, z)
   const out: Zone = { ...z }
   delete out.back
   delete out.backInsetSetback
   if (b.kind !== parent.kind) out.back = b.kind
   if (b.kind === "inset" && (parent.kind !== "inset" || b.setback !== parent.setback)) out.backInsetSetback = b.setback
-  if (z.split) out.split = { ...z.split, children: z.split.children.map((ch) => visibleBacks(ch, c, b)) }
+  if (z.split) out.split = { ...z.split, children: z.split.children.map((ch) => visibleBacks(ch, b)) }
   return out
 }
 

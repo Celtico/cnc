@@ -61,8 +61,6 @@ export function CabinetViewer({
   selectedPartId,
   onSelectPart,
   onMovePart,
-  selectedGroup,
-  onMoveGroup,
   selectedSet,
   onMoveSet,
   models,
@@ -114,7 +112,7 @@ export function CabinetViewer({
   const [hoverModule, setHoverModule] = useState<number | null>(null)
   const [moduleDrag, setModuleDrag] = useState<{ index: number; dx: number; dy: number; dz: number; all: boolean } | null>(null)
   const { onFittingSelect, onPanelHover, onPanelClick } = usePanelHandlers({ onSelectModule, onSelectPart, onSelectHardware, modules, size }, setHoverModule)
-  const { snapTargets, moduleBoxes, partBoxes, selectedPartBox, modelBoxes, selectedModelBox, setBox, selectedModel, groupBox } = useObjectBoxes({ size, modules, parts, models, ghosts, selectedSet, selectedPartId, selectedModelId, selectedGroup })
+  const { snapTargets, moduleBoxes, partBoxes, selectedPartBox, modelBoxes, selectedModelBox, setBox, selectedModel } = useObjectBoxes({ size, modules, parts, models, ghosts, selectedSet, selectedPartId, selectedModelId })
   // Un sol imant per a tot el que es mou amb el gizmo (per decisió de l'usuari, 2026-10-16: «uns s'enganxen ràpid i altres
   // no»): les vores i el mig dels mòduls, les peces lliures, els models i els objectes, menys els que es mouen, amb les
   // guies del Figma (`snapWithGuides`); a més, `snapTargets`: terra i paret. La distància, en píxels de pantalla.
@@ -264,20 +262,6 @@ export function CabinetViewer({
             onSelect={onSelectModel}
             onMove={onMoveModel ? (id, pos) => onMoveModel(id, toModelPos(pos)) : undefined}
             onDrag={(pos) => setModelDrag(pos && { id: selectedModelBox.id, ...toModelPos(pos) })}
-            outline
-          />
-        )}
-        {groupBox && (
-          <RefGhost
-            key={groupBox.id}
-            g={groupBox}
-            selected
-            hit={false}
-            guides={q.guides}
-            offset={[-size.width * S * 0.5, 0, -size.depth * S * 0.5]}
-            targets={snapTargets}
-            others={snapOthers(new Set([...(parts ?? []), ...(models ?? []), ...(ghosts ?? [])].filter((q) => q.group && q.group === selectedGroup).map((q) => q.id)))}
-            onMove={onMoveGroup ? (_, pos) => onMoveGroup(selectedGroup!, pos.x - groupBox.x, pos.y - groupBox.y, pos.z - groupBox.z) : undefined}
             outline
           />
         )}

@@ -68,7 +68,7 @@ export function useSceneData({
         const sameBottom = bottom && own && Math.abs(bottom.length * bottom.width - own.length * own.width) < 1
         const legs = c.base.kind === "legs" ? legsView(c.base, w ? place.depth : c.depth, m.build.panels, sameBottom ? bottom : undefined) : undefined
         const side = sides[m.index - 1]
-        const along = side === "left" || side === "right" ? { side, along: mountOf(mod) === "floor" ? (mod.wallGap ?? 0) : (mod.sideAlong ?? 0) } : {}
+        const along = side === "left" || side === "right" ? { side, along: mod.sideAlong ?? 0 } : {}
         return { id: m.id, index: m.index, ...place, y: m.y, height: c.height, wall: c.base.kind === "wall", free: mountOf(mod) === "floor", ...along, ...(legs ? { legs } : {}) }
       })
     }, [build, comp])

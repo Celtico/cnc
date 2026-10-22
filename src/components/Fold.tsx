@@ -5,7 +5,8 @@ import { LuChevronRight } from "react-icons/lu"
 import { readSessionFlag, readSessionList, writeSessionFlag } from "./sessionState"
 import { useFoldRequest } from "./foldOpen"
 import { FoldContext, STATIC_VARIANTS, sectionKey, type FoldGroupState, type FoldVariant } from "./foldContext"
-import { InlineWarningList, useFoldWarnings } from "./inlineWarnings"
+import { InlineWarningList } from "./inlineWarnings"
+import { useFoldWarnings } from "./inlineWarningsContext"
 
 /**
  * L'acordió de tota l'app (sobre `Accordion` de Chakra): un sol component per a les seccions dels inspectors, el

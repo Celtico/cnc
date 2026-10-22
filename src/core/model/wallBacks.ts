@@ -1,7 +1,7 @@
 import { freeX, moduleFootprint, moduleFrontFace, modulePlacements, moduleRot, rightWallX, rowOf, sideWallOf, type Composition, type Module, type ModuleRot } from "./composition"
 
 /** La paret que un mòdul de la fila té al darrere: la del fons o la d'un costat. */
-export type BackWall = "back" | "left" | "right"
+type BackWall = "back" | "left" | "right"
 
 const E = 1
 
@@ -76,12 +76,13 @@ export function detachFromRow(comp: Pick<Composition, "modules">, i: number): Mo
 export function withRightWall(prev: Composition, next: Composition): Composition {
   const now = rightWallX(next)
   if (now === undefined) return next
-  const before = prev.scene?.rightWallX ?? rightWallX(prev) ?? rightmost(prev)
+  const before = prev.scene?.rightWallX ?? rightWallX(prev) ?? rightmost(prev, new Set(next.modules.filter((m) => sideWallOf(m) === "right").map((m) => m.id)))
   const x = Math.round(Math.max(now, next.scene?.rightWallX ?? before))
   return x === next.scene?.rightWallX && now <= x ? next : { ...next, scene: { ...next.scene, rightWallX: x } }
 }
 
-const rightmost = (comp: Composition): number => {
+/** On acaba el moble: els de la fila i els que van a la paret dreta (`ids`); els lliures al terra, no (no l'empenyen). */
+const rightmost = (comp: Composition, ids: ReadonlySet<string>): number => {
   const at = modulePlacements(comp)
-  return Math.max(0, ...comp.modules.map((m, i) => moduleFootprint(m, at[i]!, moduleFrontFace(m)).x1))
+  return Math.max(0, ...comp.modules.flatMap((m, i) => (freeX(m) && !ids.has(m.id) ? [] : [moduleFootprint(m, at[i]!, moduleFrontFace(m)).x1])))
 }

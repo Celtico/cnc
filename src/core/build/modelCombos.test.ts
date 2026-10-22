@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { COMBO_TEMPLATES, CompositionSchema, JOINED_COMBOS, MODEL_COMBOS, visibleModule, withNeighbourSides, type Zone } from "../model"
 import { buildComposition } from "./buildComposition"
-
-// Els mateixos avisos de disseny mal fet que el catàleg de botigues (`storeCatalog.test.ts`).
-const BAD = ["layout", "collision", "ref-cut", "door-too-wide", "door-too-tall", "shelf-span", "drawer-no-slide", "hole-clash", "no-side", "rail", "hollow-thin", "cable-hole", "invalid-part", "hinge", "overlap", "drawer-box", "handle", "shelves"]
+import { DESIGN_ERRORS } from "./designErrors"
 
 describe("models constructius", () => {
   it("unes 25 combinacions per categoria, amb ids únics", () => {
@@ -15,7 +13,7 @@ describe("models constructius", () => {
       const comp = t.make()
       expect(CompositionSchema.safeParse(comp).success).toBe(true)
       const b = buildComposition(comp)
-      expect(b.warnings.filter((w) => BAD.includes(w.code)).map((w) => `${w.code}: ${w.message}`)).toEqual([])
+      expect(b.warnings.filter((w) => DESIGN_ERRORS.includes(w.code)).map((w) => `${w.code}: ${w.message}`)).toEqual([])
       expect(b.panels.length).toBeGreaterThan(0)
     })
 })
