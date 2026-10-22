@@ -81,10 +81,9 @@ export function EditorInspector({
   edits: CompositionEdits
   hardwareActions: PlacementActions
 }) {
-  const { panels, size, empty, warnings, collisions } = scene
+  const { panels, warnings, collisions } = scene
   const { updateModule, moveGroup } = edits
   const photoInspector = photoTab && selection.kind === "moble"
-  const totalHoles = panels.reduce((n, p) => n + p.holes.length, 0)
   // El mòdul triat és el de darrere d'una illa (es col·loca sol): la Posició ho diu i no en mostra els camps.
   const islandBack = module ? activeIslands(comp).find((i) => i.back === module.id) : undefined
   // El compartiment, tal com es construeix: un costat sense lateral on toca un altre mòdul l'aguanta el veí
@@ -117,67 +116,7 @@ export function EditorInspector({
       {photoInspector ? (
         <Box ref={setPhotoControls} />
       ) : selection.kind === "moble" ? (
-        <Stack gap={0}>
-          <FoldItem optionId="moble.summary" id="moble-summary" title="Resum" icon={LuBox}>
-            <Text fontSize="sm" color="fg.muted">
-              {empty ? (partsOnlyKind(kind) ? "Buit: afegeix-hi peces amb el + de «Peces lliures»." : "Buit: comença amb el + de «Mòduls» (o de «Peces lliures»).") : `${comp.modules.length} ${comp.modules.length === 1 ? "mòdul" : "mòduls"} · ${size.width} × ${size.height} × ${size.depth} mm`}
-            </Text>
-            <HStack gap={2} wrap="wrap">
-              <Badge variant="subtle">{panels.length} peces</Badge>
-              <Badge variant="subtle">{totalHoles} forats</Badge>
-              {comp.references.length > 0 && <Badge variant="subtle">{comp.references.length} objectes de referència</Badge>}
-              {(comp.models?.length ?? 0) > 0 && <Badge variant="subtle">{comp.models!.length === 1 ? "1 model 3D" : `${comp.models!.length} models 3D`}</Badge>}
-            </HStack>
-            <Text fontSize="xs" color="fg.muted" display={empty ? "none" : undefined}>
-              Selecciona un mòdul, un compartiment o un objecte a l'estructura (o clica'l al 3D) per editar-lo.
-            </Text>
-          </FoldItem>
-          {/* Cuina (abans «Suport general»; per decisió de l'usuari, 2026-10-20, només a la cuina: el moble normal té el suport a
-              cada mòdul): un sol suport per a tots els mòduls de terra i un sòcol per tram (per decisió de l'usuari,
-              2026-10-15: «és un sòcol per a tots els mòduls i no un per a cada un»). */}
-          {!partsOnlyKind(kind) && comp.support && (
-            <FoldItem optionId="moble.support" id="moble-support" title="Cuina" icon={LuPanelBottom} badge={comp.support.kind === "plinth" ? `Sòcol ${comp.support.height}` : comp.support.kind === "legs" ? `Potes ${comp.support.height}` : "A terra"}>
-              <SupportForm comp={comp} setComp={setComp} />
-            </FoldItem>
-          )}
-          {/* Sense «Tipus» (es tria en crear el moble). Els documents només de peces ho diuen aquí. */}
-          {kind === "objecte" ? (
-            <Text fontSize="xs" color="fg.muted" px={1} py={2}>
-              Objecte per als ambients: fes-lo amb peces lliures (forma amb l'editor de perfils, «Talla» per als forats i buidats) i materials de simulació. Només es veu: no va al nesting ni als fitxers del taller.
-            </Text>
-          ) : kind === "lliure" ? (
-            <Text fontSize="xs" color="fg.muted" px={1} py={2}>
-              Moble només de peces lliures (sense mòduls). Les que tenen «Encaixos» activat fan l'encaix sol on es toquen o s'encreuen: pestanyes, mitja fusta, dits o espigues. Les de ferro, pedra o vidre no van al nesting.
-            </Text>
-          ) : null}
-          {/* Sense «Taulell i sòcol» (per decisió de l'usuari, 2026-10-13: «que no aparegui»). Treure ≠ esborrar: les peces
-              corregudes que ja hi són (`comp.runs`) es conserven i es fabriquen igual. */}
-          {/* Sense «Illes» (per decisió de l'usuari, 2026-10-13: «treu l'opció illa, això és més fàcil amb peces lliures»).
-              Treure ≠ esborrar: les illes que ja hi són es conserven i es fabriquen igual. */}
-          {(comp.parts ?? []).some((p) => partJoinery(comp, p)) && (
-            <FoldItem optionId="moble.joinery" id="moble-joinery" title="Encaixos" icon={LuPuzzle} badge={build?.joints.length || undefined}>
-              <PartJoineryForm comp={comp} onChange={setComp} />
-            </FoldItem>
-          )}
-          {/* Com els Acabats dels ambients: terra i paret de l'escena on es presenta (per defecte, les de Preferències). */}
-          <FoldItem optionId="moble.scene" id="moble-scene" title="Acabats de l'escena" icon={LuLampFloor} badge={comp.scene?.floor || comp.scene?.wall || comp.scene?.leftWall || comp.scene?.rightWall ? "Propis" : undefined}>
-            <SceneFinishFields comp={comp} setComp={setComp} materials={settings.materials} />
-          </FoldItem>
-          {!partsOnlyKind(kind) && comp.modules[0] && <FoldItem optionId="moble.materials" id="moble-materials" title="Materials de tot el moble" icon={LuPalette}>
-            <MaterialsForm
-              scope="moble"
-              carcass={comp.modules[0].carcass}
-              hasBack={comp.modules.some((m) => m.carcass.back !== "none")}
-              hasDrawers={comp.modules.some((m) => hasDrawers(visibleModule(m).root))}
-              mixed={comp.modules.some((m) => {
-                const a = m.carcass
-                const b = comp.modules[0]!.carcass
-                return a.material !== b.material || (a.frontMaterial ?? "") !== (b.frontMaterial ?? "") || a.backMaterial !== b.backMaterial || a.thickness !== b.thickness || a.backThickness !== b.backThickness
-              })}
-              onPatch={(patch) => setComp((c) => ({ ...c, modules: c.modules.map((m) => ({ ...m, carcass: { ...m.carcass, ...patch } })) }))}
-            />
-          </FoldItem>}
-        </Stack>
+        <MobleInspector comp={comp} setComp={setComp} kind={kind} settings={settings} build={build} scene={scene} />
       ) : selection.kind === "model" ? (
         <ModelInspector comp={comp} id={selection.id} onChange={setComp} />
       ) : selection.kind === "hardware" ? (
@@ -185,47 +124,26 @@ export function EditorInspector({
       ) : selection.kind === "ref" ? (
         <RefInspector comp={comp} id={selection.id} onChange={setComp} />
       ) : selection.kind === "multi" ? (
-        <MultiInspector
+        <ItemsInspector
           comp={comp}
+          setComp={setComp}
+          select={select}
           items={selection.items}
-          onChange={setComp}
-          onSelect={(x) => select({ kind: x.kind, id: x.id })}
           onMove={(dx, dy, dz) => setComp((c) => moveMultiBy(c, selection.items, dx, dy, dz))}
-          onGroup={() => {
-            const g = newGroupName(comp)
-            setComp(groupMulti(comp, selection.items, g))
-            select({ kind: "group", id: g })
-          }}
           onDuplicate={duplicateSelection}
-          onRemove={() => {
-            setComp(removeMulti(comp, selection.items))
-            select({ kind: "moble" })
-          }}
+          onRemove={() => setComp(removeMulti(comp, selection.items))}
         />
       ) : selection.kind === "group" ? (
         // Un grup té les mateixes propietats que una selecció múltiple (per decisió de l'usuari): els seus elements.
-        (() => {
-          const items: MultiItem[] = groupItems(comp, selection.id)
-          return (
-            <MultiInspector
-              comp={comp}
-              items={items}
-              onChange={setComp}
-              onSelect={(x) => select({ kind: x.kind, id: x.id })}
-              onMove={(dx, dy, dz) => moveGroup(selection.id, dx, dy, dz)}
-              onGroup={() => {
-                const g = newGroupName(comp)
-                setComp(groupMulti(comp, items, g))
-                select({ kind: "group", id: g })
-              }}
-              onDuplicate={duplicateSelection}
-              onRemove={() => {
-                setComp(removeGroup(comp, selection.id))
-                select({ kind: "moble" })
-              }}
-            />
-          )
-        })()
+        <ItemsInspector
+          comp={comp}
+          setComp={setComp}
+          select={select}
+          items={groupItems(comp, selection.id)}
+          onMove={(dx, dy, dz) => moveGroup(selection.id, dx, dy, dz)}
+          onDuplicate={duplicateSelection}
+          onRemove={() => setComp(removeGroup(comp, selection.id))}
+        />
       ) : selection.kind === "part" ? (
         <Stack gap={0}>
           <PartInspector comp={comp} id={selection.id} joints={build?.joints ?? []} onChange={setComp} />
@@ -273,3 +191,94 @@ export function EditorInspector({
   )
 }
 
+/** El moble sencer (res seleccionat): resum, cuina, encaixos, acabats de l'escena i materials de tot el moble. */
+function MobleInspector({ comp, setComp, kind, settings, build, scene }: { comp: Composition; setComp: SetComp; kind: ReturnType<typeof compositionKind>; settings: Settings; build: CompositionBuild | undefined; scene: Pick<SceneData, "panels" | "size" | "empty"> }) {
+  const { panels, size, empty } = scene
+  const totalHoles = panels.reduce((n, p) => n + p.holes.length, 0)
+  return (
+    <Stack gap={0}>
+      <FoldItem optionId="moble.summary" id="moble-summary" title="Resum" icon={LuBox}>
+        <Text fontSize="sm" color="fg.muted">
+          {empty ? (partsOnlyKind(kind) ? "Buit: afegeix-hi peces amb el + de «Peces lliures»." : "Buit: comença amb el + de «Mòduls» (o de «Peces lliures»).") : `${comp.modules.length} ${comp.modules.length === 1 ? "mòdul" : "mòduls"} · ${size.width} × ${size.height} × ${size.depth} mm`}
+        </Text>
+        <HStack gap={2} wrap="wrap">
+          <Badge variant="subtle">{panels.length} peces</Badge>
+          <Badge variant="subtle">{totalHoles} forats</Badge>
+          {comp.references.length > 0 && <Badge variant="subtle">{comp.references.length} objectes de referència</Badge>}
+          {(comp.models?.length ?? 0) > 0 && <Badge variant="subtle">{comp.models!.length === 1 ? "1 model 3D" : `${comp.models!.length} models 3D`}</Badge>}
+        </HStack>
+        <Text fontSize="xs" color="fg.muted" display={empty ? "none" : undefined}>
+          Selecciona un mòdul, un compartiment o un objecte a l'estructura (o clica'l al 3D) per editar-lo.
+        </Text>
+      </FoldItem>
+      {/* Cuina (abans «Suport general»; per decisió de l'usuari, 2026-10-20, només a la cuina: el moble normal té el suport a
+          cada mòdul): un sol suport per a tots els mòduls de terra i un sòcol per tram (per decisió de l'usuari,
+          2026-10-15: «és un sòcol per a tots els mòduls i no un per a cada un»). */}
+      {!partsOnlyKind(kind) && comp.support && (
+        <FoldItem optionId="moble.support" id="moble-support" title="Cuina" icon={LuPanelBottom} badge={comp.support.kind === "plinth" ? `Sòcol ${comp.support.height}` : comp.support.kind === "legs" ? `Potes ${comp.support.height}` : "A terra"}>
+          <SupportForm comp={comp} setComp={setComp} />
+        </FoldItem>
+      )}
+      {/* Sense «Tipus» (es tria en crear el moble). Els documents només de peces ho diuen aquí. */}
+      {kind === "objecte" ? (
+        <Text fontSize="xs" color="fg.muted" px={1} py={2}>
+          Objecte per als ambients: fes-lo amb peces lliures (forma amb l'editor de perfils, «Talla» per als forats i buidats) i materials de simulació. Només es veu: no va al nesting ni als fitxers del taller.
+        </Text>
+      ) : kind === "lliure" ? (
+        <Text fontSize="xs" color="fg.muted" px={1} py={2}>
+          Moble només de peces lliures (sense mòduls). Les que tenen «Encaixos» activat fan l'encaix sol on es toquen o s'encreuen: pestanyes, mitja fusta, dits o espigues. Les de ferro, pedra o vidre no van al nesting.
+        </Text>
+      ) : null}
+      {/* Sense «Taulell i sòcol» (per decisió de l'usuari, 2026-10-13: «que no aparegui»). Treure ≠ esborrar: les peces
+          corregudes que ja hi són (`comp.runs`) es conserven i es fabriquen igual. */}
+      {/* Sense «Illes» (per decisió de l'usuari, 2026-10-13: «treu l'opció illa, això és més fàcil amb peces lliures»).
+          Treure ≠ esborrar: les illes que ja hi són es conserven i es fabriquen igual. */}
+      {(comp.parts ?? []).some((p) => partJoinery(comp, p)) && (
+        <FoldItem optionId="moble.joinery" id="moble-joinery" title="Encaixos" icon={LuPuzzle} badge={build?.joints.length || undefined}>
+          <PartJoineryForm comp={comp} onChange={setComp} />
+        </FoldItem>
+      )}
+      {/* Com els Acabats dels ambients: terra i paret de l'escena on es presenta (per defecte, les de Preferències). */}
+      <FoldItem optionId="moble.scene" id="moble-scene" title="Acabats de l'escena" icon={LuLampFloor} badge={comp.scene?.floor || comp.scene?.wall || comp.scene?.leftWall || comp.scene?.rightWall ? "Propis" : undefined}>
+        <SceneFinishFields comp={comp} setComp={setComp} materials={settings.materials} />
+      </FoldItem>
+      {!partsOnlyKind(kind) && comp.modules[0] && <FoldItem optionId="moble.materials" id="moble-materials" title="Materials de tot el moble" icon={LuPalette}>
+        <MaterialsForm
+          scope="moble"
+          carcass={comp.modules[0].carcass}
+          hasBack={comp.modules.some((m) => m.carcass.back !== "none")}
+          hasDrawers={comp.modules.some((m) => hasDrawers(visibleModule(m).root))}
+          mixed={comp.modules.some((m) => {
+            const a = m.carcass
+            const b = comp.modules[0]!.carcass
+            return a.material !== b.material || (a.frontMaterial ?? "") !== (b.frontMaterial ?? "") || a.backMaterial !== b.backMaterial || a.thickness !== b.thickness || a.backThickness !== b.backThickness
+          })}
+          onPatch={(patch) => setComp((c) => ({ ...c, modules: c.modules.map((m) => ({ ...m, carcass: { ...m.carcass, ...patch } })) }))}
+        />
+      </FoldItem>}
+    </Stack>
+  )
+}
+
+/** Una selecció múltiple o un grup: els seus elements, moure'ls, agrupar-los, duplicar-los o treure'ls. */
+function ItemsInspector({ comp, setComp, select, items, onMove, onDuplicate, onRemove }: { comp: Composition; setComp: SetComp; select: (s: Selection) => void; items: MultiItem[]; onMove: (dx: number, dy: number, dz: number) => void; onDuplicate: () => void; onRemove: () => void }) {
+  return (
+    <MultiInspector
+      comp={comp}
+      items={items}
+      onChange={setComp}
+      onSelect={(x) => select({ kind: x.kind, id: x.id })}
+      onMove={onMove}
+      onGroup={() => {
+        const g = newGroupName(comp)
+        setComp(groupMulti(comp, items, g))
+        select({ kind: "group", id: g })
+      }}
+      onDuplicate={onDuplicate}
+      onRemove={() => {
+        onRemove()
+        select({ kind: "moble" })
+      }}
+    />
+  )
+}

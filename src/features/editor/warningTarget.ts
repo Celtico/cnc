@@ -41,35 +41,35 @@ const FIX_PLACES: Record<FixPlaceKey, FixPlace> = {
  * on està el fallo què cal tocar»). Els que no tenen un sol lloc (un xoc de forats, un ferratge) no en porten.
  */
 const FIX: Partial<Record<Code, FixPlace>> = {
-  "door-too-wide": ZONE(["zone-front"], "Front"),
-  "door-too-tall": ZONE(["zone-front"], "Front"),
-  hinge: ZONE(["zone-front"], "Front"),
-  "grille-open-ratio": ZONE(["zone-front"], "Front"),
-  "drawer-no-slide": ZONE(["zone-front"], "Front"),
-  "drawer-box": ZONE(["zone-front"], "Front"),
+  "door-too-wide": FIX_PLACES.front,
+  "door-too-tall": FIX_PLACES.front,
+  hinge: FIX_PLACES.front,
+  "grille-open-ratio": FIX_PLACES.front,
+  "drawer-no-slide": FIX_PLACES.front,
+  "drawer-box": FIX_PLACES.front,
   handle: ZONE(["zone-handle"], "Tirador"),
   push: ZONE(["zone-handle"], "Tirador"),
-  "shelf-span": ZONE(["zone-front", "zone-shelves-shelves"], "Front › Prestatges"),
-  shelves: ZONE(["zone-front", "zone-shelves-shelves"], "Front › Prestatges"),
-  hollow: ZONE(["zone-front", "zone-shelves-shelves"], "Front › Prestatges"),
-  "shelf-strut": ZONE(["zone-front", "zone-shelves-shelves"], "Front › Prestatges"),
+  "shelf-span": FIX_PLACES.shelves,
+  shelves: FIX_PLACES.shelves,
+  hollow: FIX_PLACES.shelves,
+  "shelf-strut": FIX_PLACES.shelves,
   rail: ZONE(["zone-front", "zone-shelves-accessories"], "Front › Accessoris"),
   light: ZONE(["zone-front", "zone-shelves-accessories"], "Front › Accessoris"),
-  "inner-drawers": ZONE(["zone-front"], "Front › Calaixos"),
-  appliance: ZONE(["zone-front"], "Front"),
+  "inner-drawers": FIX_PLACES.innerDrawers,
+  appliance: FIX_PLACES.appliance,
   layout: ZONE(["zone-split"], "Divisió"),
-  "back-groove": MODULE(["mod-carcass-back"], "Fons"),
-  "back-inset": MODULE(["mod-carcass-back"], "Fons"),
-  hanging: MODULE(["mod-carcass-back"], "Fons"),
-  "no-side": MODULE(["mod-carcass-left"], "Esquerra"),
+  "back-groove": FIX_PLACES.back,
+  "back-inset": FIX_PLACES.back,
+  hanging: FIX_PLACES.back,
+  "no-side": FIX_PLACES.sides,
   table: MODULE(["mod-carcass-top"], "Tapa"),
-  mitre: MODULE(["mod-carcass-left"], "Esquerra"),
+  mitre: FIX_PLACES.sides,
   "drawer-bottom": MODULE(["mod-materials"], "Materials › Fons del calaix"),
-  "material-heat": MODULE(["mod-materials"], "Materials"),
-  "unknown-material": MODULE(["mod-materials"], "Materials"),
-  "thickness-not-listed": MODULE(["mod-materials"], "Materials"),
-  "invalid-part": MODULE(["mod-dims"], "Mides"),
-  overlap: MODULE(["mod-position"], "Posició"),
+  "material-heat": FIX_PLACES.materials,
+  "unknown-material": FIX_PLACES.materials,
+  "thickness-not-listed": FIX_PLACES.materials,
+  "invalid-part": FIX_PLACES.dims,
+  overlap: FIX_PLACES.position,
 }
 
 /** On s'arregla un avís, com ho diu el botó («Fons»), o res si no té un lloc. */
@@ -160,8 +160,7 @@ export function warningTarget(w: CompositionWarning, comp: Composition, build: C
     const rect = mb.build.layout.rects.get(w.zoneId)
     const m = comp.modules.find((x) => x.id === w.moduleId)
     if (rect && m) {
-      const z = moduleBoxToWorld(mb, { x0: rect.x0, x1: rect.x1, y0: rect.y0, y1: rect.y1, z0: 0, z1: m.carcass.depth + m.carcass.thickness })
-      box = { min: [z.x0, z.y0, z.z0], max: [z.x1, z.y1, z.z1] }
+      box = zoneBox(mb, rect, m)
       // Les peces del mòdul que hi cauen (el front, els prestatges…), per marcar-les.
       const inZone = (build?.panels ?? []).filter((p) => p.module === mb.index && inside(center(panelBox(p)), box!))
       // Si l'avís parla d'unes peces (el fons del calaix), només aquestes.
@@ -186,7 +185,7 @@ export function warningTarget(w: CompositionWarning, comp: Composition, build: C
   }
 
   // L'electrodomèstic d'un mòdul sense dividir es tria al mòdul (Tipus), no al compartiment.
-  if ((place === FIX.appliance || place === FIX_PLACES.appliance) && w.moduleId && w.zoneId && comp.modules.find((m) => m.id === w.moduleId)?.root.id === w.zoneId) place = MODULE(["mod-type"], "Tipus")
+  if (place === FIX_PLACES.appliance && w.moduleId && w.zoneId && comp.modules.find((m) => m.id === w.moduleId)?.root.id === w.zoneId) place = MODULE(["mod-type"], "Tipus")
   // Un lloc del compartiment però l'avís només diu la peça (un gruix): el compartiment més petit que la conté.
   let zoneId = w.zoneId
   if (!zoneId && place?.level === "zone" && mb && panels.length) {
@@ -195,31 +194,43 @@ export function warningTarget(w: CompositionWarning, comp: Composition, build: C
     let best: { id: string; size: number } | null = null
     for (const [id, rect] of mb.build.layout.rects) {
       if (!m) break
-      const z = moduleBoxToWorld(mb, { x0: rect.x0, x1: rect.x1, y0: rect.y0, y1: rect.y1, z0: 0, z1: m.carcass.depth + m.carcass.thickness })
-      const zb: Box = { min: [z.x0, z.y0, z.z0], max: [z.x1, z.y1, z.z1] }
-      const size = (z.x1 - z.x0) * (z.y1 - z.y0)
+      const zb = zoneBox(mb, rect, m)
+      const size = (zb.max[0] - zb.min[0]) * (zb.max[1] - zb.min[1])
       if (inside(c, zb) && (!best || size < best.size)) best = { id, size }
     }
     zoneId = best?.id
   }
 
-  // Què seleccionar: el que té la secció on s'arregla; si no, el més concret que hi ha.
-  let select: Selection | null = null
-  if (place?.level === "moble") select = { kind: "moble" }
-  else if (place?.level === "ref" && w.refId && !w.refId.startsWith("part:")) select = { kind: "ref", id: w.refId }
-  else if (place?.level === "part" && (w.partId || w.refId?.startsWith("part:"))) select = { kind: "part", id: w.partId ?? w.refId!.slice(5) }
-  else if (place?.level === "zone" && zoneId && w.moduleId) select = { kind: "zone", moduleId: w.moduleId, zoneId: zoneId }
-  else if (place?.level === "module" && w.moduleId) select = { kind: "module", id: w.moduleId }
-  else if (w.refId && !w.refId.startsWith("part:")) select = { kind: "ref", id: w.refId }
-  else if (w.partId) select = { kind: "part", id: w.partId }
-  else if (zoneId && w.moduleId) select = { kind: "zone", moduleId: w.moduleId, zoneId: zoneId }
-  else if (w.moduleId) select = { kind: "module", id: w.moduleId }
+  const select = selectionFor(w, place, zoneId)
   // Una secció de compartiment sense compartiment, o de mòdul sense mòdul: no es pot obrir.
   const fix = place && select && place.level === (select.kind === "moble" ? "moble" : select.kind) ? place : null
   return { select, panels, box, fix }
 }
 
 type Box = NonNullable<WarningTarget["box"]>
+
+/** Què seleccionar per a un avís: el que té la secció on s'arregla (`place`); si no, el més concret que hi ha. */
+function selectionFor(w: CompositionWarning, place: FixPlace | null, zoneId: string | undefined): Selection | null {
+  const ref = w.refId && !w.refId.startsWith("part:") ? w.refId : undefined
+  const part = w.partId ?? (w.refId?.startsWith("part:") ? w.refId.slice(5) : undefined)
+  if (place?.level === "moble") return { kind: "moble" }
+  if (place?.level === "ref" && ref) return { kind: "ref", id: ref }
+  if (place?.level === "part" && part) return { kind: "part", id: part }
+  if (place?.level === "zone" && zoneId && w.moduleId) return { kind: "zone", moduleId: w.moduleId, zoneId }
+  if (place?.level === "module" && w.moduleId) return { kind: "module", id: w.moduleId }
+  if (ref) return { kind: "ref", id: ref }
+  if (w.partId) return { kind: "part", id: w.partId }
+  if (zoneId && w.moduleId) return { kind: "zone", moduleId: w.moduleId, zoneId }
+  if (w.moduleId) return { kind: "module", id: w.moduleId }
+  return null
+}
+
+/** La caixa d'un compartiment del mòdul a la composició (de davant a darrere de la caixa). */
+function zoneBox(mb: CompositionBuild["modules"][number], rect: { x0: number; x1: number; y0: number; y1: number }, m: Composition["modules"][number]): Box {
+  const z = moduleBoxToWorld(mb, { x0: rect.x0, x1: rect.x1, y0: rect.y0, y1: rect.y1, z0: 0, z1: m.carcass.depth + m.carcass.thickness })
+  return { min: [z.x0, z.y0, z.z0], max: [z.x1, z.y1, z.z1] }
+}
+
 const center = (b: Box): [number, number, number] => [(b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2]
 const inside = (c: [number, number, number], b: Box) => [0, 1, 2].every((k) => c[k]! >= b.min[k]! - 0.5 && c[k]! <= b.max[k]! + 0.5)
 function union(bs: Box[]): Box {
