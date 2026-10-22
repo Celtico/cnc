@@ -94,11 +94,12 @@ export interface Project {
    * fitxer o posar-lo en un grup el treu (`keepProject`).
    */
   draft?: boolean
-  /** Miniatura 3D de la targeta (JPEG, data URL), l'`updatedAt` que retrata, la versió i la càmera (`thumbIsStale`). */
+  /** Miniatura 3D de la targeta (JPEG, data URL), l'`updatedAt` que retrata, la versió, la càmera i l'escena (`thumbIsStale`). */
   thumb?: string
   thumbAt?: number
   thumbV?: number
   thumbCam?: string
+  thumbStudio?: string
   createdAt: number
   updatedAt: number
 }

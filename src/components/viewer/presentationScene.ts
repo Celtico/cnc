@@ -62,6 +62,9 @@ const DEFAULT_SCENE: PresentationScene = { floor: "oak", wall: WALLS[0]!.color, 
 const KEY = "mobles:presentation-scene"
 const EVENT = "mobles:presentation-scene-change"
 
+/** L'escena d'ara com a text, per saber si una miniatura es va fer en una altra (`thumbIsStale`). */
+export const presentationScenePrint = (): string => JSON.stringify(readPresentationScene())
+
 export function readPresentationScene(): PresentationScene {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) ?? "null") as Partial<PresentationScene> | null

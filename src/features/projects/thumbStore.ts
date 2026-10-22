@@ -47,6 +47,22 @@ export function materialsPrint(materials: readonly object[]): string {
   return p
 }
 
+/**
+ * L'empremta només dels materials que pinten la plantilla: els que hi surten pel nom i els que no són de taulell
+ * (metalls, vidres: els ferratges hi van sense nom a la plantilla). Afegir o tocar un altre material de Preferències no
+ * torna a fer totes les miniatures (per decisió de l'usuari, 2026-10-22: «ara sempre torna a fer el render de tot»).
+ */
+export function usedMaterialsPrint(value: unknown, materials: readonly { name: string; cnc?: boolean }[]): string {
+  const names = new Set<string>()
+  const collect = (v: unknown) => {
+    if (typeof v === "string") names.add(v)
+    else if (Array.isArray(v)) v.forEach(collect)
+    else if (v && typeof v === "object") Object.values(v).forEach(collect)
+  }
+  collect(value)
+  return fingerprint(JSON.stringify(materials.filter((m) => names.has(m.name) || m.cnc === false)))
+}
+
 const prefixOf = (kind: string, id: string) => `/__thumbs__/${kind}/${encodeURIComponent(id)}/`
 const urlOf = (kind: string, id: string, sig: string) => `${location.origin}${prefixOf(kind, id)}${sig}`
 
@@ -64,6 +80,20 @@ export async function readThumb(kind: string, id: string, sig: string): Promise<
   if (!c) return undefined
   try {
     const r = await c.match(urlOf(kind, id, sig))
+    return r ? await r.text() : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/** L'última miniatura desada d'aquesta plantilla, sigui quina sigui l'empremta (n'hi ha una sola: `writeThumb` esborra les velles). */
+export async function readLatestThumb(kind: string, id: string): Promise<string | undefined> {
+  const c = await open()
+  if (!c) return undefined
+  try {
+    const prefix = location.origin + prefixOf(kind, id)
+    const req = (await c.keys()).find((r) => r.url.startsWith(prefix))
+    const r = req && (await c.match(req))
     return r ? await r.text() : undefined
   } catch {
     return undefined

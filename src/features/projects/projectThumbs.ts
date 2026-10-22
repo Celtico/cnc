@@ -1,8 +1,9 @@
 import { cameraSignature, isEmptyComposition, thumbIsStale, type Composition, type MaterialPref } from "../../core/model"
 import { THUMB_VERSION } from "../../components/viewer/thumbVersion"
+import { presentationScenePrint, readPresentationScene } from "../../components/viewer/presentationScene"
 import { compositionOf } from "../../db/compositionStore"
 import { db, type Project } from "../../db/db"
-import { materialsPrint, templatePrint, readThumb, writeThumb } from "./thumbStore"
+import { templatePrint, usedMaterialsPrint, readLatestThumb, readThumb, writeThumb } from "./thumbStore"
 
 /** El renderitzador (three.js) es carrega en fer la primera miniatura, no en obrir la galeria. */
 const jobs = () => import("./thumbJobs")
@@ -33,8 +34,12 @@ function want(key: number | string): () => void {
   }
 }
 
+/**
+ * També quan canvia l'escena de Preferències › Visor 3D (per decisió de l'usuari, 2026-10-22: «només els mobles que he
+ * retocat surten amb el fons de formigó»).
+ */
 export function needsThumb(p: Project): boolean {
-  return thumbIsStale(p, p.updatedAt, THUMB_VERSION, p.composition?.camera)
+  return thumbIsStale(p, p.updatedAt, THUMB_VERSION, p.composition?.camera, presentationScenePrint())
 }
 
 /** Demana la miniatura del moble; la funció que torna la cancel·la (si cap altra targeta la vol). */
@@ -49,10 +54,11 @@ export function requestProjectThumb(p: Project, materials: MaterialPref[]): () =
       const fresh = await db.projects.get(p.id)
       if (!fresh || !needsThumb(fresh)) return
       const comp = compositionOf(fresh)
+      const studio = presentationScenePrint()
       const url = await (await jobs()).renderProjectThumb(comp, materials)
       // Sense tocar `updatedAt` ni `edited`. `thumbCam` és la de la fila (la que mira `needsThumb`).
       const cam = cameraSignature(fresh.composition?.camera)
-      if (url) await db.projects.update(p.id, { thumb: url, thumbAt: fresh.updatedAt, thumbV: THUMB_VERSION, thumbCam: cam })
+      if (url) await db.projects.update(p.id, { thumb: url, thumbAt: fresh.updatedAt, thumbV: THUMB_VERSION, thumbCam: cam, thumbStudio: studio })
       // Buit (s'han tret tots els mòduls): fora la miniatura d'abans, que ensenyaria el que ja no hi és.
       else if (fresh.thumb && isEmptyComposition(comp)) await db.projects.update(p.id, { thumb: undefined })
     },
@@ -116,12 +122,35 @@ export function requestStoredThumb(kind: string, id: string, sig: string, render
 }
 
 /** Plantilles (catàleg de botiga, objectes): la miniatura es fa igual que la d'un moble, amb l'empremta de la plantilla. */
-const templateSig = (comp: Composition, materials: readonly MaterialPref[]) => `${THUMB_VERSION}-${templatePrint(comp)}-${materialsPrint(materials)}`
+// L'escena (terra i paret de Preferències) també hi és: canviar-la torna a fer les miniatures.
+const templateSig = (comp: Composition, materials: readonly MaterialPref[]) => {
+  const studio = readPresentationScene()
+  return `${THUMB_VERSION}-${templatePrint(comp)}-${templatePrint(studio)}-${usedMaterialsPrint([comp, studio], materials)}`
+}
+/**
+ * L'última miniatura que s'ha vist d'una plantilla (en aquesta sessió o desada), sense fer-la: la targeta l'ensenya de
+ * seguida mentre es fa la plantilla per mirar si ha canviat (per decisió de l'usuari, 2026-10-22: «ara sempre torna a
+ * fer el render de tot, on es nota més és als Llistons»).
+ */
+const latestThumbs = new Map<string, string>()
+export function lastTemplateThumb(id: string, onFound: (url: string) => void): void {
+  const hit = latestThumbs.get(id)
+  if (hit) return onFound(hit)
+  void readLatestThumb("moble", id).then((url) => {
+    if (url) {
+      latestThumbs.set(id, url)
+      onFound(url)
+    }
+  })
+}
 export function templateThumb(id: string, comp: Composition, materials: readonly MaterialPref[]): string | undefined {
   return storedThumb("moble", id, templateSig(comp, materials))
 }
 export function requestTemplateThumb(id: string, make: () => Composition, materials: MaterialPref[], onDone: (url: string) => void): () => void {
-  return requestStoredThumb("moble", id, templateSig(make(), materials), async () => (await jobs()).renderTemplateThumb(make(), materials), onDone)
+  return requestStoredThumb("moble", id, templateSig(make(), materials), async () => (await jobs()).renderTemplateThumb(make(), materials), (url) => {
+    latestThumbs.set(id, url)
+    onDone(url)
+  })
 }
 
 /** Afegeix una feina a la cua comuna de miniatures (una cada cop; `key` evita repetir-la). */

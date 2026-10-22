@@ -51,9 +51,14 @@ interface ThumbStamp {
   thumbV?: number
   /** `cameraSignature` de la càmera amb què es va fer (sense càmera, no hi és). */
   thumbCam?: string
+  /** L'escena de Preferències › Visor 3D (terra, paret) amb què es va fer (`presentationScenePrint`). */
+  thumbStudio?: string
 }
 
-/** Cal refer la miniatura: no n'hi ha, el document ha canviat, la manera de fer-les o la càmera desada. */
-export function thumbIsStale(t: ThumbStamp, updatedAt: number, version: number, camera: unknown): boolean {
-  return !t.thumb || t.thumbAt !== updatedAt || t.thumbV !== version || t.thumbCam !== cameraSignature(camera)
+/**
+ * Cal refer la miniatura: no n'hi ha, el document ha canviat, la manera de fer-les, la càmera desada o, si es dona
+ * `studio`, l'escena de Preferències on es fan.
+ */
+export function thumbIsStale(t: ThumbStamp, updatedAt: number, version: number, camera: unknown, studio?: string): boolean {
+  return !t.thumb || t.thumbAt !== updatedAt || t.thumbV !== version || t.thumbCam !== cameraSignature(camera) || (studio !== undefined && t.thumbStudio !== studio)
 }

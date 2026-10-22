@@ -5,7 +5,7 @@ import type { Composition, Template } from "../../core/model"
 import { useSettings } from "../settings/SettingsContext"
 import { GalleryCard } from "./GalleryCard"
 import { kindLabel } from "./kindLabel"
-import { requestTemplateThumb, templateThumb } from "./projectThumbs"
+import { lastTemplateThumb, requestTemplateThumb, templateThumb } from "./projectThumbs"
 
 const euros = (n: number) => `${n.toLocaleString("ca-ES")} €`
 
@@ -34,13 +34,35 @@ function enqueueMake(run: () => void): () => void {
   }
 }
 
+/**
+ * Les plantilles ja fetes en aquesta sessió: tornar a la galeria (en tancar un moble) no les torna a fer (els llistons
+ * costen ~1 s cadascun). Les plantilles són fixes (les del codi), així que el mateix objecte fa sempre el mateix.
+ */
+const made = new WeakMap<Template, Composition>()
+
 /** Targeta d'una plantilla (catàleg, col·leccions, objectes): la miniatura es calcula en muntar-la (al catàleg, en obrir la categoria). */
 export function TemplateCard({ t, title, kicker, onPick }: { t: Template; title?: string; kicker?: string; onPick: (t: Template) => void }) {
   const [comp, setComp] = useState<Composition | null>(null)
-  useEffect(() => enqueueMake(() => setComp(t.make())), [t])
-  // Foto 3D feta fora de pantalla (desada entre sessions); mentrestant, el dibuix.
+  useEffect(() => {
+    const done = made.get(t)
+    if (done) return setComp(done)
+    return enqueueMake(() => {
+      const c = t.make()
+      made.set(t, c)
+      setComp(c)
+    })
+  }, [t])
+  // Foto 3D feta fora de pantalla (desada entre sessions); mentrestant, l'última que se n'ha vist i, si no n'hi ha cap,
+  // el dibuix.
   const { settings } = useSettings()
   const [thumb, setThumb] = useState<string | undefined>()
+  useEffect(() => {
+    let live = true
+    lastTemplateThumb(t.id, (url) => live && setThumb((cur) => cur ?? url))
+    return () => {
+      live = false
+    }
+  }, [t.id])
   useEffect(() => {
     if (!comp) return
     const stored = templateThumb(t.id, comp, settings.materials)
