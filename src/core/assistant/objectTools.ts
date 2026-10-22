@@ -191,103 +191,113 @@ function nextPartName(comp: Composition): string {
 
 const replacePart = (comp: Composition, p: FreePart): Composition => ({ ...comp, parts: parts(comp).map((x) => (x.id === p.id ? p : x)) })
 
-function apply(comp: Composition, name: ObjectToolName, input: never, ctx: ObjectToolContext): Done {
-  switch (name) {
-    case "get_object":
-      return { doc: comp, result: {} }
-    case "add_part": {
-      const i = input as In<"add_part">
-      const h = i.shape?.kind === "circle" ? i.w : i.h
-      const shapeNow = shapeNodes(i.shape, i.w, h)
-      const p: FreePart = tidyPart({
-        id: newId("p"),
-        name: i.name?.trim() || nextPartName(comp),
-        orient: i.orient,
-        w: i.w,
-        h,
-        thickness: i.thickness,
-        material: pickMaterial(ctx, i.material),
-        x: i.x,
-        y: i.y,
-        z: i.z,
-        ...(nestFor(ctx, pickMaterial(ctx, i.material)) === false ? { nest: false } : {}),
-        ...(shapeNow ? { shape: shapeNow } : {}),
-        ...(i.group ? { group: i.group.trim() } : {}),
-      })
-      return { doc: { ...comp, parts: [...parts(comp), p] }, result: { part_id: p.id, name: p.name } }
-    }
-    case "update_part": {
-      const i = input as In<"update_part">
-      const old = findPart(comp, i.part)
-      const was = partShapeKind(old)
-      let p: FreePart = i.orient ? reorientPart(old, i.orient as PartOrient) : { ...old }
-      if (i.name !== undefined) p.name = i.name.trim()
-      if (i.w !== undefined) p.w = i.w
-      if (i.h !== undefined) p.h = i.h
-      if (i.thickness !== undefined) p.thickness = i.thickness
-      if (i.x !== undefined) p.x = i.x
-      if (i.y !== undefined) p.y = i.y
-      if (i.z !== undefined) p.z = i.z
-      if (i.material !== undefined) p.material = pickMaterial(ctx, i.material)
-      if (i.group !== undefined) {
-        if (i.group === null) delete p.group
-        else p.group = i.group.trim()
-      }
-      // La forma: la nova, o la d'abans refeta a la mida nova (un arrodonit es queda amb el mateix radi).
-      const next = i.shape ?? (was.kind === "rounded" ? { kind: "rounded" as const, radius: was.radius! } : was.kind === "ellipse" || was.kind === "circle" ? { kind: was.kind } : undefined)
-      if (next?.kind === "circle") {
-        if (i.w !== undefined && i.h !== undefined && i.w !== i.h) fail("Un cercle té w = h.")
-        const d = i.h !== undefined && i.w === undefined ? p.h : p.w
-        p.w = d
-        p.h = d
-      }
-      if (next) {
-        const nodes = shapeNodes(next, p.w, p.h)
-        if (nodes) p.shape = nodes
-        else delete p.shape
-      }
-      // Com la UI: un objecte, sempre sense nesting; un moble, segons el material.
-      if (nestFor(ctx, p.material) === false) p.nest = false
-      else delete p.nest
-      p = tidyPart(p)
-      return { doc: replacePart(comp, p), result: { part_id: p.id, name: p.name } }
-    }
-    case "remove_part": {
-      const p = findPart(comp, (input as In<"remove_part">).part)
-      return { doc: { ...comp, parts: parts(comp).filter((x) => x.id !== p.id) }, result: { removed: p.name, part_id: p.id } }
-    }
-    case "duplicate_part": {
-      const i = input as In<"duplicate_part">
-      const src = findPart(comp, i.part)
-      const r = insertPartCopy(comp, src)
-      let doc = r.comp
-      if (i.dx !== undefined || i.dy !== undefined || i.dz !== undefined) {
-        const copy = parts(doc).find((p) => p.id === r.id)!
-        const y = src.y + (i.dy ?? 0)
-        if (y < 0) fail("La còpia quedaria sota terra (y < 0).")
-        doc = replacePart(doc, { ...copy, x: src.x + (i.dx ?? 0), y, z: src.z + (i.dz ?? 0) })
-      }
-      return { doc, result: { part_id: r.id, name: parts(doc).find((p) => p.id === r.id)?.name } }
-    }
-    case "set_group": {
-      const i = input as In<"set_group">
-      const ids = new Set(i.parts.map((ref) => findPart(comp, ref).id))
-      const g = i.group === null ? undefined : i.group.trim()
-      const doc = { ...comp, parts: parts(comp).map((p) => (ids.has(p.id) ? (g ? { ...p, group: g } : withoutGroup(p)) : p)) }
-      return { doc, result: { group: g ?? null, parts: [...ids] } }
-    }
-    case "move_group": {
-      const i = input as In<"move_group">
-      if (!parts(comp).some((p) => p.group === i.group)) fail(`No hi ha cap grup «${i.group}». Grups: ${partGroups(parts(comp)).join(", ") || "cap"}.`)
-      return { doc: moveGroupBy(comp, i.group, i.dx, i.dy, i.dz), result: { group: i.group } }
-    }
-    case "duplicate_group": {
-      const i = input as In<"duplicate_group">
-      if (!parts(comp).some((p) => p.group === i.group)) fail(`No hi ha cap grup «${i.group}». Grups: ${partGroups(parts(comp)).join(", ") || "cap"}.`)
-      const r = duplicateGroup(comp, i.group)
-      return { doc: r.comp, result: { group: r.group } }
-    }
+function addPartTool(comp: Composition, i: In<"add_part">, ctx: ObjectToolContext): Done {
+  const h = i.shape?.kind === "circle" ? i.w : i.h
+  const shapeNow = shapeNodes(i.shape, i.w, h)
+  const p: FreePart = tidyPart({
+    id: newId("p"),
+    name: i.name?.trim() || nextPartName(comp),
+    orient: i.orient,
+    w: i.w,
+    h,
+    thickness: i.thickness,
+    material: pickMaterial(ctx, i.material),
+    x: i.x,
+    y: i.y,
+    z: i.z,
+    ...(nestFor(ctx, pickMaterial(ctx, i.material)) === false ? { nest: false } : {}),
+    ...(shapeNow ? { shape: shapeNow } : {}),
+    ...(i.group ? { group: i.group.trim() } : {}),
+  })
+  return { doc: { ...comp, parts: [...parts(comp), p] }, result: { part_id: p.id, name: p.name } }
+}
+
+function updatePartTool(comp: Composition, i: In<"update_part">, ctx: ObjectToolContext): Done {
+  const old = findPart(comp, i.part)
+  const was = partShapeKind(old)
+  let p: FreePart = i.orient ? reorientPart(old, i.orient as PartOrient) : { ...old }
+  if (i.name !== undefined) p.name = i.name.trim()
+  if (i.w !== undefined) p.w = i.w
+  if (i.h !== undefined) p.h = i.h
+  if (i.thickness !== undefined) p.thickness = i.thickness
+  if (i.x !== undefined) p.x = i.x
+  if (i.y !== undefined) p.y = i.y
+  if (i.z !== undefined) p.z = i.z
+  if (i.material !== undefined) p.material = pickMaterial(ctx, i.material)
+  if (i.group !== undefined) {
+    if (i.group === null) delete p.group
+    else p.group = i.group.trim()
   }
+  // La forma: la nova, o la d'abans refeta a la mida nova (un arrodonit es queda amb el mateix radi).
+  const next = i.shape ?? (was.kind === "rounded" ? { kind: "rounded" as const, radius: was.radius! } : was.kind === "ellipse" || was.kind === "circle" ? { kind: was.kind } : undefined)
+  if (next?.kind === "circle") {
+    if (i.w !== undefined && i.h !== undefined && i.w !== i.h) fail("Un cercle té w = h.")
+    const d = i.h !== undefined && i.w === undefined ? p.h : p.w
+    p.w = d
+    p.h = d
+  }
+  if (next) {
+    const nodes = shapeNodes(next, p.w, p.h)
+    if (nodes) p.shape = nodes
+    else delete p.shape
+  }
+  // Com la UI: un objecte, sempre sense nesting; un moble, segons el material.
+  if (nestFor(ctx, p.material) === false) p.nest = false
+  else delete p.nest
+  p = tidyPart(p)
+  return { doc: replacePart(comp, p), result: { part_id: p.id, name: p.name } }
+}
+
+function removePartTool(comp: Composition, i: In<"remove_part">): Done {
+  const p = findPart(comp, i.part)
+  return { doc: { ...comp, parts: parts(comp).filter((x) => x.id !== p.id) }, result: { removed: p.name, part_id: p.id } }
+}
+
+function duplicatePartTool(comp: Composition, i: In<"duplicate_part">): Done {
+  const src = findPart(comp, i.part)
+  const r = insertPartCopy(comp, src)
+  let doc = r.comp
+  if (i.dx !== undefined || i.dy !== undefined || i.dz !== undefined) {
+    const copy = parts(doc).find((p) => p.id === r.id)!
+    const y = src.y + (i.dy ?? 0)
+    if (y < 0) fail("La còpia quedaria sota terra (y < 0).")
+    doc = replacePart(doc, { ...copy, x: src.x + (i.dx ?? 0), y, z: src.z + (i.dz ?? 0) })
+  }
+  return { doc, result: { part_id: r.id, name: parts(doc).find((p) => p.id === r.id)?.name } }
+}
+
+function setGroupTool(comp: Composition, i: In<"set_group">): Done {
+  const ids = new Set(i.parts.map((ref) => findPart(comp, ref).id))
+  const g = i.group === null ? undefined : i.group.trim()
+  const doc = { ...comp, parts: parts(comp).map((p) => (ids.has(p.id) ? (g ? { ...p, group: g } : withoutGroup(p)) : p)) }
+  return { doc, result: { group: g ?? null, parts: [...ids] } }
+}
+
+function moveGroupTool(comp: Composition, i: In<"move_group">): Done {
+  if (!parts(comp).some((p) => p.group === i.group)) fail(`No hi ha cap grup «${i.group}». Grups: ${partGroups(parts(comp)).join(", ") || "cap"}.`)
+  return { doc: moveGroupBy(comp, i.group, i.dx, i.dy, i.dz), result: { group: i.group } }
+}
+
+function duplicateGroupTool(comp: Composition, i: In<"duplicate_group">): Done {
+  if (!parts(comp).some((p) => p.group === i.group)) fail(`No hi ha cap grup «${i.group}». Grups: ${partGroups(parts(comp)).join(", ") || "cap"}.`)
+  const r = duplicateGroup(comp, i.group)
+  return { doc: r.comp, result: { group: r.group } }
+}
+
+/** Cada eina, amb la seva entrada ja validada. */
+const APPLY: { [N in ObjectToolName]: (comp: Composition, i: In<N>, ctx: ObjectToolContext) => Done } = {
+  get_object: (comp) => ({ doc: comp, result: {} }),
+  add_part: addPartTool,
+  update_part: updatePartTool,
+  remove_part: removePartTool,
+  duplicate_part: duplicatePartTool,
+  set_group: setGroupTool,
+  move_group: moveGroupTool,
+  duplicate_group: duplicateGroupTool,
+}
+
+function apply(comp: Composition, name: ObjectToolName, input: never, ctx: ObjectToolContext): Done {
+  return (APPLY[name] as (comp: Composition, i: never, ctx: ObjectToolContext) => Done)(comp, input, ctx)
 }
 
 function withoutGroup(p: FreePart): FreePart {

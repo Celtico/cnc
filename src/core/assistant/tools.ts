@@ -224,204 +224,218 @@ export function runAssistantTool(comp: Composition, name: string, rawInput: unkn
 }
 
 type In<N extends ToolName> = z.output<(typeof TOOL_INPUTS)[N]>
+type Done = { comp: Composition; result: Record<string, unknown> }
 
-function apply(comp: Composition, name: ToolName, input: never, ctx: ToolContext): { comp: Composition; result: Record<string, unknown> } {
-  const modulesOnly = () => {
-    if (partsOnlyKind(compositionKind(comp))) fail("Aquest document només té peces lliures (objecte o flat-pack d'abans): no hi van mòduls.")
+function modulesOnly(comp: Composition): void {
+  if (partsOnlyKind(compositionKind(comp))) fail("Aquest document només té peces lliures (objecte o flat-pack d'abans): no hi van mòduls.")
+}
+
+function addModuleTool(comp: Composition, i: In<"add_module">, ctx: ToolContext): Done {
+  modulesOnly(comp)
+  const id = newId("m")
+  const label = i.name?.trim() || nextModuleName(comp)
+  const base = compositionKind(comp) === "taula" ? tableModule(id, label) : i.preset === "empty" ? emptyModule(id, label) : defaultModule(id, label)
+  const sized = applySettingsToModule(ctx.settings as Settings, base)
+  let m: Module = { ...sized, carcass: { ...sized.carcass, width: i.width, height: i.height, depth: i.depth } }
+  m = setModuleMount(m, i.mount, 0, i.floor_height)
+  const modules = [...comp.modules]
+  const after = i.after ? findModule(comp, i.after) : undefined
+  const at = after ? modules.indexOf(after) + 1 : modules.length
+  modules.splice(at, 0, m)
+  let next: Composition = { ...comp, modules }
+  // Lliure al terra: al costat del que hi ha (no a sobre).
+  if (i.mount === "floor") {
+    const b = buildComposition(next)
+    const right = b.modules.filter((x) => x.id !== m.id).reduce((acc, x) => Math.max(acc, x.x + (next.modules.find((y) => y.id === x.id)?.carcass.width ?? 0)), 0)
+    next = replaceModule(next, { ...m, x: right ? Math.round(right + 100) : 0 })
   }
-  switch (name) {
-    case "get_moble":
-      return { comp, result: {} }
-    case "add_module": {
-      modulesOnly()
-      const i = input as In<"add_module">
-      const id = newId("m")
-      const label = i.name?.trim() || nextModuleName(comp)
-      const base = compositionKind(comp) === "taula" ? tableModule(id, label) : i.preset === "empty" ? emptyModule(id, label) : defaultModule(id, label)
-      const sized = applySettingsToModule(ctx.settings as Settings, base)
-      let m: Module = { ...sized, carcass: { ...sized.carcass, width: i.width, height: i.height, depth: i.depth } }
-      m = setModuleMount(m, i.mount, 0, i.floor_height)
-      const modules = [...comp.modules]
-      const after = i.after ? findModule(comp, i.after) : undefined
-      const at = after ? modules.indexOf(after) + 1 : modules.length
-      modules.splice(at, 0, m)
-      let next: Composition = { ...comp, modules }
-      // Lliure al terra: al costat del que hi ha (no a sobre).
-      if (i.mount === "floor") {
-        const b = buildComposition(next)
-        const right = b.modules.filter((x) => x.id !== m.id).reduce((acc, x) => Math.max(acc, x.x + (next.modules.find((y) => y.id === x.id)?.carcass.width ?? 0)), 0)
-        next = replaceModule(next, { ...m, x: right ? Math.round(right + 100) : 0 })
-      }
-      return { comp: next, result: { module_id: m.id, name: m.name, interior_zone: m.root.id } }
-    }
-    case "remove_module": {
-      const i = input as In<"remove_module">
-      const m = findModule(comp, i.module)
-      const res = removeModule(comp, m.id)
-      return { comp: res.comp, result: { removed: m.name, ...(res.notes.length ? { notes: res.notes } : {}) } }
-    }
-    case "rename_module": {
-      const i = input as In<"rename_module">
-      const m = findModule(comp, i.module)
-      return { comp: replaceModule(comp, { ...m, name: i.name.trim() }), result: { module_id: m.id, name: i.name.trim() } }
-    }
-    case "set_module_size": {
-      const i = input as In<"set_module_size">
-      const m = findModule(comp, i.module)
-      if (i.width === undefined && i.height === undefined && i.depth === undefined) fail("Cal almenys una mida (width, height o depth).")
-      const c = { ...m.carcass, ...(i.width !== undefined ? { width: i.width } : {}), ...(i.height !== undefined ? { height: i.height } : {}), ...(i.depth !== undefined ? { depth: i.depth } : {}) }
-      return { comp: replaceModule(comp, { ...m, carcass: c }), result: { module_id: m.id, width: c.width, height: c.height, depth: c.depth } }
-    }
-    case "set_module_position": {
-      const i = input as In<"set_module_position">
-      let m = findModule(comp, i.module)
-      const idx = comp.modules.indexOf(m)
-      if (i.mount && i.mount !== (m.carcass.base.kind === "wall" ? "hung" : m.wallGap !== undefined ? "floor" : "wall")) {
-        const here = Math.round(buildComposition(comp).modules[idx]?.x ?? 0)
-        m = setModuleMount(m, i.mount, here, i.floor_height)
-      }
-      if (i.floor_height !== undefined) {
-        if (m.carcass.base.kind !== "wall") fail("floor_height només és per als mòduls penjats (mount=hung).")
-        m = { ...m, carcass: { ...m.carcass, base: { kind: "wall", height: i.floor_height } } }
-      }
-      if (i.wall_gap !== undefined || i.x !== undefined) {
-        if (m.wallGap === undefined || m.carcass.base.kind === "wall") fail("wall_gap i x només són per als mòduls lliures al terra (mount=floor).")
-        m = { ...m, ...(i.wall_gap !== undefined ? { wallGap: i.wall_gap } : {}), ...(i.x !== undefined ? { x: i.x } : {}) }
-      }
-      if (i.gap_before !== undefined) {
-        if (m.x !== undefined && m.wallGap !== undefined && m.carcass.base.kind !== "wall") fail("Un mòdul lliure al terra no és a la fila: fes servir x.")
-        m = { ...m, gapBefore: i.gap_before }
-      }
-      return { comp: replaceModule(comp, m), result: { module_id: m.id } }
-    }
-    case "set_carcass": {
-      const i = input as In<"set_carcass">
-      const m = findModule(comp, i.module)
-      const c = { ...m.carcass }
-      let support: { kind: "floor" | "plinth" | "legs"; height?: number; setback?: number } | undefined
-      if (i.base) {
-        if (c.base.kind === "wall") fail("El mòdul és penjat: no té base de terra. Primer set_module_position mount=wall o floor.")
-        // «open» (sense base, d'abans) és directe a terra amb `noBottom` (la forma d'ara, com la UI).
-        if (c.base.kind === "open" && !c.noBottom) c.noBottom = true
-        // El suport és el de tots els mòduls de terra (Moble › Cuina): es canvia al moble i el sòcol és per tram.
-        support = i.base.kind === "legs" ? { kind: "legs", height: i.base.height } : i.base.kind === "plinth" ? { kind: "plinth", height: i.base.height, setback: i.base.setback } : { kind: "floor" }
-        if (i.base.kind === "open") c.noBottom = true
-      }
-      if (i.bottom !== undefined) {
-        if (i.bottom) delete c.noBottom
-        else c.noBottom = true
-      }
-      if (i.back) {
-        c.back = i.back
-        // Encastat amb un fons prim: com la UI, el del cos (calen ≥ 15 mm per a les espigues).
-        if (i.back === "inset" && c.backThickness < 15) {
-          c.backMaterial = c.material
-          c.backThickness = c.thickness
-        }
-      }
-      if (i.top) c.top = typeof i.top === "string" ? { kind: i.top } : { kind: "ventSlot", gap: i.top.gap }
-      if (i.sides) c.sides = i.sides
-      if (i.joint) {
-        if (i.joint === "mitre") c.joint = "mitre"
-        else delete c.joint
-      }
-      const fronts = i.front_style ? { ...m.fronts, style: i.front_style } : m.fronts
-      const next = replaceModule(comp, { ...m, carcass: c, fronts })
-      if (!support) return { comp: next, result: { module_id: m.id } }
-      const cur = next.support ?? { kind: "floor" as const, height: 100, plinth: { setback: 20 } }
-      const s = support
-      return { comp: withZonePlinths(setSupport(next, { ...cur, kind: s.kind, ...(s.height ? { height: s.height } : {}), ...(s.setback !== undefined ? { plinth: { ...cur.plinth, setback: s.setback } } : {}) })), result: { module_id: m.id, support: "el de tots els mòduls de terra" } }
-    }
-    case "split_zone": {
-      const i = input as In<"split_zone">
-      const m = findModule(comp, i.module)
-      const z = findZoneIn(m, i.zone)
-      if (z.split) fail(`${zoneName(m, z)} ja és dividit (${z.split.children.length} zones). Canvia'n les mides amb set_zone_size, divideix una de les zones o treu la divisió amb unsplit_zone.`)
-      const b = zoneBounds(m, z.id)
-      const dirs = b ? splitDirsFor(b) : []
-      if (!dirs.includes(i.dir))
-        fail(`${zoneName(m, z)} no es pot dividir en ${i.dir === "v" ? "vertical (el divisor s'uneix a sota i a sobre)" : "horitzontal (el travesser s'uneix a esquerra i dreta)"}: hi falta ${i.dir === "v" ? "una peça a sota o a sobre" : "un lateral o un divisor a un costat"}. ${dirs.length ? `Es pot en: ${dirs.join(", ")}.` : "Afegeix laterals, base o tapa amb set_carcass."}`)
-      if (i.sizes && i.sizes.length > i.n - 1) fail(`Amb ${i.n} zones es posen com a molt ${i.n - 1} mides: l'última és el que sobra.`)
-      let root = splitZone(m.root, z.id, i.dir, i.n)
-      const split = findZone(root, z.id)!.split!
-      const sizes = [...split.children.map((_, k) => (k < i.n - 1 ? (i.sizes?.[k] ?? "auto") : "auto"))]
-      root = updateSizes(root, z.id, sizes)
-      const children = findZone(root, z.id)!.split!.children.map((c) => c.id)
-      return { comp: replaceModule(comp, { ...m, root }), result: { module_id: m.id, zone: z.id, children } }
-    }
-    case "unsplit_zone": {
-      const i = input as In<"unsplit_zone">
-      const m = findModule(comp, i.module)
-      const z = findZoneIn(m, i.zone)
-      if (!z.split) fail(`${zoneName(m, z)} no és dividit.`)
-      return { comp: replaceModule(comp, { ...m, root: unsplitZone(m.root, z.id) }), result: { module_id: m.id, zone: z.id } }
-    }
-    case "set_zone_size": {
-      const i = input as In<"set_zone_size">
-      const m = findModule(comp, i.module)
-      const z = findZoneIn(m, i.zone)
-      const parent = parentOf(m.root, z.id)
-      if (!parent?.split) fail(`${zoneName(m, z)} no és dins de cap divisió: la seva mida és la del mòdul (set_module_size).`)
-      const index = parent!.split!.children.findIndex((c) => c.id === z.id)
-      if (index === parent!.split!.children.length - 1) fail(`És l'última zona de la divisió: la seva mida és el que sobra. Canvia la de les altres zones.`)
-      const mb = buildComposition(comp).modules[comp.modules.indexOf(m)]?.build
-      const current = mb ? splitChildSizes(mb.layout, parent!) : undefined
-      const root = setSplitSize(m.root, parent!.id, index, i.size, current)
-      return { comp: replaceModule(comp, { ...m, root }), result: { module_id: m.id, zone: z.id, size: i.size } }
-    }
-    case "set_front":
-      return setFrontTool(comp, input as In<"set_front">, ctx)
-    case "set_shelves": {
-      const i = input as In<"set_shelves">
-      const m = findModule(comp, i.module)
-      const z = findZoneIn(m, i.zone)
-      if (z.split) fail(`${zoneName(m, z)} és dividit: posa els prestatges a una de les seves zones.`)
-      const b = zoneBounds(m, z.id)
-      if (i.n > 0 && b && !canHoldShelves(b)) fail(`${zoneName(m, z)} no pot portar prestatges: cal un lateral o un divisor a cada costat (set_carcass sides).`)
-      if (i.n > 0 && (z.front?.kind === "drawers" || z.front?.kind === "panel")) fail(`${zoneName(m, z)} té ${z.front.kind === "drawers" ? "calaixos" : "un front fix"}: no hi van prestatges. Canvia el contingut (set_front) o divideix-lo.`)
-      const shelves = { ...(z.shelves ?? { adjustable: true }), n: i.n, ...(i.adjustable !== undefined ? { adjustable: i.adjustable } : {}) }
-      return { comp: replaceModule(comp, { ...m, root: setShelves(m.root, z.id, shelves) }), result: { module_id: m.id, zone: z.id, shelves: { n: shelves.n, adjustable: shelves.adjustable } } }
-    }
-    case "set_material": {
-      const i = input as In<"set_material">
-      const targets = i.module ? [findModule(comp, i.module)] : comp.modules
-      if (!targets.length) fail("No hi ha cap mòdul.")
-      if (!i.body && i.thickness === undefined && !i.fronts && !i.back && i.back_thickness === undefined) fail("Cal algun material o gruix.")
-      const body = i.body ? pickMaterial(ctx.settings, i.body, "board") : undefined
-      const fronts = i.fronts && i.fronts !== "same" ? pickMaterial(ctx.settings, i.fronts, "board") : undefined
-      const back = i.back && i.back !== "same" ? pickMaterial(ctx.settings, i.back, "back") : undefined
-      let next = comp
-      for (const m of targets) {
-        const c = { ...m.carcass }
-        const sameBack = c.backMaterial === c.material && c.backThickness === c.thickness
-        if (body) {
-          c.material = body.name
-          c.thickness = body.thicknesses.includes(c.thickness) ? c.thickness : nearest(body.thicknesses, c.thickness)
-        }
-        if (i.thickness !== undefined) {
-          const list = materialByName(ctx.settings as Settings, c.material)?.thicknesses
-          if (list && !list.includes(i.thickness)) fail(`«${c.material}» no té gruix de ${i.thickness} mm (en té ${list.join(", ")}).`)
-          c.thickness = i.thickness
-        }
-        if (i.fronts === "same") delete c.frontMaterial
-        else if (fronts) c.frontMaterial = fronts.name
-        if (i.back === "same" || (sameBack && !back && (body || i.thickness !== undefined))) {
-          c.backMaterial = c.material
-          c.backThickness = c.thickness
-        } else if (back) {
-          c.backMaterial = back.name
-          c.backThickness = back.thicknesses.includes(c.backThickness) ? c.backThickness : nearest(back.thicknesses, c.backThickness)
-        }
-        if (i.back_thickness !== undefined) {
-          const list = materialByName(ctx.settings as Settings, c.backMaterial)?.thicknesses
-          if (list && !list.includes(i.back_thickness)) fail(`«${c.backMaterial}» no té gruix de ${i.back_thickness} mm (en té ${list.join(", ")}).`)
-          c.backThickness = i.back_thickness
-        }
-        next = replaceModule(next, { ...m, carcass: c })
-      }
-      return { comp: next, result: { modules: targets.map((m) => m.id) } }
+  return { comp: next, result: { module_id: m.id, name: m.name, interior_zone: m.root.id } }
+}
+
+function removeModuleTool(comp: Composition, i: In<"remove_module">): Done {
+  const m = findModule(comp, i.module)
+  const res = removeModule(comp, m.id)
+  return { comp: res.comp, result: { removed: m.name, ...(res.notes.length ? { notes: res.notes } : {}) } }
+}
+
+function renameModuleTool(comp: Composition, i: In<"rename_module">): Done {
+  const m = findModule(comp, i.module)
+  return { comp: replaceModule(comp, { ...m, name: i.name.trim() }), result: { module_id: m.id, name: i.name.trim() } }
+}
+
+function setModuleSizeTool(comp: Composition, i: In<"set_module_size">): Done {
+  const m = findModule(comp, i.module)
+  if (i.width === undefined && i.height === undefined && i.depth === undefined) fail("Cal almenys una mida (width, height o depth).")
+  const c = { ...m.carcass, ...(i.width !== undefined ? { width: i.width } : {}), ...(i.height !== undefined ? { height: i.height } : {}), ...(i.depth !== undefined ? { depth: i.depth } : {}) }
+  return { comp: replaceModule(comp, { ...m, carcass: c }), result: { module_id: m.id, width: c.width, height: c.height, depth: c.depth } }
+}
+
+function setModulePositionTool(comp: Composition, i: In<"set_module_position">): Done {
+  let m = findModule(comp, i.module)
+  const idx = comp.modules.indexOf(m)
+  if (i.mount && i.mount !== (m.carcass.base.kind === "wall" ? "hung" : m.wallGap !== undefined ? "floor" : "wall")) {
+    const here = Math.round(buildComposition(comp).modules[idx]?.x ?? 0)
+    m = setModuleMount(m, i.mount, here, i.floor_height)
+  }
+  if (i.floor_height !== undefined) {
+    if (m.carcass.base.kind !== "wall") fail("floor_height només és per als mòduls penjats (mount=hung).")
+    m = { ...m, carcass: { ...m.carcass, base: { kind: "wall", height: i.floor_height } } }
+  }
+  if (i.wall_gap !== undefined || i.x !== undefined) {
+    if (m.wallGap === undefined || m.carcass.base.kind === "wall") fail("wall_gap i x només són per als mòduls lliures al terra (mount=floor).")
+    m = { ...m, ...(i.wall_gap !== undefined ? { wallGap: i.wall_gap } : {}), ...(i.x !== undefined ? { x: i.x } : {}) }
+  }
+  if (i.gap_before !== undefined) {
+    if (m.x !== undefined && m.wallGap !== undefined && m.carcass.base.kind !== "wall") fail("Un mòdul lliure al terra no és a la fila: fes servir x.")
+    m = { ...m, gapBefore: i.gap_before }
+  }
+  return { comp: replaceModule(comp, m), result: { module_id: m.id } }
+}
+
+function setCarcassTool(comp: Composition, i: In<"set_carcass">): Done {
+  const m = findModule(comp, i.module)
+  const c = { ...m.carcass }
+  let support: { kind: "floor" | "plinth" | "legs"; height?: number; setback?: number } | undefined
+  if (i.base) {
+    if (c.base.kind === "wall") fail("El mòdul és penjat: no té base de terra. Primer set_module_position mount=wall o floor.")
+    // «open» (sense base, d'abans) és directe a terra amb `noBottom` (la forma d'ara, com la UI).
+    if (c.base.kind === "open" && !c.noBottom) c.noBottom = true
+    // El suport és el de tots els mòduls de terra (Moble › Cuina): es canvia al moble i el sòcol és per tram.
+    support = i.base.kind === "legs" ? { kind: "legs", height: i.base.height } : i.base.kind === "plinth" ? { kind: "plinth", height: i.base.height, setback: i.base.setback } : { kind: "floor" }
+    if (i.base.kind === "open") c.noBottom = true
+  }
+  if (i.bottom !== undefined) {
+    if (i.bottom) delete c.noBottom
+    else c.noBottom = true
+  }
+  if (i.back) {
+    c.back = i.back
+    // Encastat amb un fons prim: com la UI, el del cos (calen ≥ 15 mm per a les espigues).
+    if (i.back === "inset" && c.backThickness < 15) {
+      c.backMaterial = c.material
+      c.backThickness = c.thickness
     }
   }
+  if (i.top) c.top = typeof i.top === "string" ? { kind: i.top } : { kind: "ventSlot", gap: i.top.gap }
+  if (i.sides) c.sides = i.sides
+  if (i.joint) {
+    if (i.joint === "mitre") c.joint = "mitre"
+    else delete c.joint
+  }
+  const fronts = i.front_style ? { ...m.fronts, style: i.front_style } : m.fronts
+  const next = replaceModule(comp, { ...m, carcass: c, fronts })
+  if (!support) return { comp: next, result: { module_id: m.id } }
+  const cur = next.support ?? { kind: "floor" as const, height: 100, plinth: { setback: 20 } }
+  const s = support
+  return { comp: withZonePlinths(setSupport(next, { ...cur, kind: s.kind, ...(s.height ? { height: s.height } : {}), ...(s.setback !== undefined ? { plinth: { ...cur.plinth, setback: s.setback } } : {}) })), result: { module_id: m.id, support: "el de tots els mòduls de terra" } }
+}
+
+function splitZoneTool(comp: Composition, i: In<"split_zone">): Done {
+  const m = findModule(comp, i.module)
+  const z = findZoneIn(m, i.zone)
+  if (z.split) fail(`${zoneName(m, z)} ja és dividit (${z.split.children.length} zones). Canvia'n les mides amb set_zone_size, divideix una de les zones o treu la divisió amb unsplit_zone.`)
+  const b = zoneBounds(m, z.id)
+  const dirs = b ? splitDirsFor(b) : []
+  if (!dirs.includes(i.dir))
+    fail(`${zoneName(m, z)} no es pot dividir en ${i.dir === "v" ? "vertical (el divisor s'uneix a sota i a sobre)" : "horitzontal (el travesser s'uneix a esquerra i dreta)"}: hi falta ${i.dir === "v" ? "una peça a sota o a sobre" : "un lateral o un divisor a un costat"}. ${dirs.length ? `Es pot en: ${dirs.join(", ")}.` : "Afegeix laterals, base o tapa amb set_carcass."}`)
+  if (i.sizes && i.sizes.length > i.n - 1) fail(`Amb ${i.n} zones es posen com a molt ${i.n - 1} mides: l'última és el que sobra.`)
+  let root = splitZone(m.root, z.id, i.dir, i.n)
+  const split = findZone(root, z.id)!.split!
+  const sizes = [...split.children.map((_, k) => (k < i.n - 1 ? (i.sizes?.[k] ?? "auto") : "auto"))]
+  root = updateSizes(root, z.id, sizes)
+  const children = findZone(root, z.id)!.split!.children.map((c) => c.id)
+  return { comp: replaceModule(comp, { ...m, root }), result: { module_id: m.id, zone: z.id, children } }
+}
+
+function unsplitZoneTool(comp: Composition, i: In<"unsplit_zone">): Done {
+  const m = findModule(comp, i.module)
+  const z = findZoneIn(m, i.zone)
+  if (!z.split) fail(`${zoneName(m, z)} no és dividit.`)
+  return { comp: replaceModule(comp, { ...m, root: unsplitZone(m.root, z.id) }), result: { module_id: m.id, zone: z.id } }
+}
+
+function setZoneSizeTool(comp: Composition, i: In<"set_zone_size">): Done {
+  const m = findModule(comp, i.module)
+  const z = findZoneIn(m, i.zone)
+  const parent = parentOf(m.root, z.id)
+  if (!parent?.split) fail(`${zoneName(m, z)} no és dins de cap divisió: la seva mida és la del mòdul (set_module_size).`)
+  const index = parent!.split!.children.findIndex((c) => c.id === z.id)
+  if (index === parent!.split!.children.length - 1) fail(`És l'última zona de la divisió: la seva mida és el que sobra. Canvia la de les altres zones.`)
+  const mb = buildComposition(comp).modules[comp.modules.indexOf(m)]?.build
+  const current = mb ? splitChildSizes(mb.layout, parent!) : undefined
+  const root = setSplitSize(m.root, parent!.id, index, i.size, current)
+  return { comp: replaceModule(comp, { ...m, root }), result: { module_id: m.id, zone: z.id, size: i.size } }
+}
+
+function setShelvesTool(comp: Composition, i: In<"set_shelves">): Done {
+  const m = findModule(comp, i.module)
+  const z = findZoneIn(m, i.zone)
+  if (z.split) fail(`${zoneName(m, z)} és dividit: posa els prestatges a una de les seves zones.`)
+  const b = zoneBounds(m, z.id)
+  if (i.n > 0 && b && !canHoldShelves(b)) fail(`${zoneName(m, z)} no pot portar prestatges: cal un lateral o un divisor a cada costat (set_carcass sides).`)
+  if (i.n > 0 && (z.front?.kind === "drawers" || z.front?.kind === "panel")) fail(`${zoneName(m, z)} té ${z.front.kind === "drawers" ? "calaixos" : "un front fix"}: no hi van prestatges. Canvia el contingut (set_front) o divideix-lo.`)
+  const shelves = { ...(z.shelves ?? { adjustable: true }), n: i.n, ...(i.adjustable !== undefined ? { adjustable: i.adjustable } : {}) }
+  return { comp: replaceModule(comp, { ...m, root: setShelves(m.root, z.id, shelves) }), result: { module_id: m.id, zone: z.id, shelves: { n: shelves.n, adjustable: shelves.adjustable } } }
+}
+
+function setMaterialTool(comp: Composition, i: In<"set_material">, ctx: ToolContext): Done {
+  const targets = i.module ? [findModule(comp, i.module)] : comp.modules
+  if (!targets.length) fail("No hi ha cap mòdul.")
+  if (!i.body && i.thickness === undefined && !i.fronts && !i.back && i.back_thickness === undefined) fail("Cal algun material o gruix.")
+  const body = i.body ? pickMaterial(ctx.settings, i.body, "board") : undefined
+  const fronts = i.fronts && i.fronts !== "same" ? pickMaterial(ctx.settings, i.fronts, "board") : undefined
+  const back = i.back && i.back !== "same" ? pickMaterial(ctx.settings, i.back, "back") : undefined
+  let next = comp
+  for (const m of targets) {
+    const c = { ...m.carcass }
+    const sameBack = c.backMaterial === c.material && c.backThickness === c.thickness
+    if (body) {
+      c.material = body.name
+      c.thickness = body.thicknesses.includes(c.thickness) ? c.thickness : nearest(body.thicknesses, c.thickness)
+    }
+    if (i.thickness !== undefined) {
+      const list = materialByName(ctx.settings as Settings, c.material)?.thicknesses
+      if (list && !list.includes(i.thickness)) fail(`«${c.material}» no té gruix de ${i.thickness} mm (en té ${list.join(", ")}).`)
+      c.thickness = i.thickness
+    }
+    if (i.fronts === "same") delete c.frontMaterial
+    else if (fronts) c.frontMaterial = fronts.name
+    if (i.back === "same" || (sameBack && !back && (body || i.thickness !== undefined))) {
+      c.backMaterial = c.material
+      c.backThickness = c.thickness
+    } else if (back) {
+      c.backMaterial = back.name
+      c.backThickness = back.thicknesses.includes(c.backThickness) ? c.backThickness : nearest(back.thicknesses, c.backThickness)
+    }
+    if (i.back_thickness !== undefined) {
+      const list = materialByName(ctx.settings as Settings, c.backMaterial)?.thicknesses
+      if (list && !list.includes(i.back_thickness)) fail(`«${c.backMaterial}» no té gruix de ${i.back_thickness} mm (en té ${list.join(", ")}).`)
+      c.backThickness = i.back_thickness
+    }
+    next = replaceModule(next, { ...m, carcass: c })
+  }
+  return { comp: next, result: { modules: targets.map((m) => m.id) } }
+}
+
+/** Cada eina, amb la seva entrada ja validada. */
+const APPLY: { [N in ToolName]: (comp: Composition, i: In<N>, ctx: ToolContext) => Done } = {
+  get_moble: (comp) => ({ comp, result: {} }),
+  add_module: addModuleTool,
+  remove_module: removeModuleTool,
+  rename_module: renameModuleTool,
+  set_module_size: setModuleSizeTool,
+  set_module_position: setModulePositionTool,
+  set_carcass: setCarcassTool,
+  split_zone: splitZoneTool,
+  unsplit_zone: unsplitZoneTool,
+  set_zone_size: setZoneSizeTool,
+  set_front: setFrontTool,
+  set_shelves: setShelvesTool,
+  set_material: setMaterialTool,
+}
+
+function apply(comp: Composition, name: ToolName, input: never, ctx: ToolContext): Done {
+  return (APPLY[name] as (comp: Composition, i: never, ctx: ToolContext) => Done)(comp, input, ctx)
 }
 
 function updateSizes(root: Zone, id: string, sizes: (number | "auto")[]): Zone {
@@ -429,7 +443,7 @@ function updateSizes(root: Zone, id: string, sizes: (number | "auto")[]): Zone {
   return walk(root)
 }
 
-function setFrontTool(comp: Composition, i: In<"set_front">, ctx: ToolContext): { comp: Composition; result: Record<string, unknown> } {
+function setFrontTool(comp: Composition, i: In<"set_front">, ctx: ToolContext): Done {
   const m = findModule(comp, i.module)
   const z = findZoneIn(m, i.zone)
   const isRoot = z.id === m.root.id
