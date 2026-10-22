@@ -110,6 +110,98 @@ export function moduleBoxToWorld(mb: { x: number; y: number; z: number; turn?: M
   return { x0: Math.min(...xs), x1: Math.max(...xs), y0: b.y0 + mb.y, y1: b.y1 + mb.y, z0: Math.min(...zs), z1: Math.max(...zs) }
 }
 
+/**
+ * Columnes de la casa que travessen la base d'un mòdul (qualsevol, no només les del darrere; un mòdul girat, en mirall):
+ * on no hi va l'alimentador dels llums ni hi ha potes al costat (trams en X del mòdul).
+ */
+function pillarKeepOut(comp: Composition, m: Module, pl: { x: number; z?: number }): [number, number][] {
+  const mz = pl.z ?? 0
+  const W = m.carcass.width, D = m.carcass.depth + m.carcass.thickness
+  const rot = moduleRot(m)
+  const out: [number, number][] = []
+  for (const o of comp.references) {
+    if (o.effect !== "cut" || !isPillar(o) || o.y > 1) continue
+    // La petjada de la columna al mòdul (desfent el gir al voltant del centre de la caixa).
+    const pts = [[o.x, o.z], [o.x + o.w, o.z], [o.x, o.z + o.d], [o.x + o.w, o.z + o.d]].map(([x, z]) => rotXZ(x! - pl.x, z! - mz, unrot(rot), W / 2, D / 2))
+    const x0 = Math.min(...pts.map((p) => p[0])), x1 = Math.max(...pts.map((p) => p[0]))
+    const z0 = Math.min(...pts.map((p) => p[1])), z1 = Math.max(...pts.map((p) => p[1]))
+    if (x1 <= 0 || x0 >= W || z0 >= D || z1 <= 0) continue
+    out.push([x0, x1])
+  }
+  return out
+}
+
+/**
+ * La col·locació d'una peça del mòdul a la composició: girada (`turn`, gir i no mirall: les peces són les mateixes) i
+ * desplaçada a `x`, `y`, `z`.
+ */
+function placeIn(turn: ModuleTurn | undefined, x: number, y: number, z: number): (pl: Panel["placement"]) => Panel["placement"] {
+  return (pl) => {
+    const o = pl.origin
+    if (!turn) return { ...pl, origin: [o[0] + x, o[1] + y, o[2] + z] }
+    if (turn.rot === 180) {
+      const v = (a: Vec3): Vec3 => [-a[0], a[1], -a[2]]
+      return { origin: [2 * turn.cx - o[0] + x, o[1] + y, 2 * turn.cz - o[2] + z], xAxis: v(pl.xAxis), yAxis: v(pl.yAxis), zAxis: v(pl.zAxis), explodeDir: v(pl.explodeDir) }
+    }
+    const v = (a: Vec3): Vec3 => {
+      const [vx, vz] = rotXZ(a[0], a[2], turn.rot)
+      return [vx, a[1], vz]
+    }
+    const [ox, oz] = rotXZ(o[0], o[2], turn.rot, turn.cx, turn.cz)
+    return { origin: [ox + x, o[1] + y, oz + z], xAxis: v(pl.xAxis), yAxis: v(pl.yAxis), zAxis: v(pl.zAxis), explodeDir: v(pl.explodeDir) }
+  }
+}
+
+/**
+ * Mòduls que es trepitgen (una columna i un penjat a la mateixa X, una illa sobre la fila, el voladís d'un tauler de
+ * taula dins del veí…): la caixa de les peces de cada mòdul no pot entrar dins d'una altra més de 0,5 mm en les tres
+ * direccions. Un mòdul sense peces compta amb la seva caixa nominal.
+ */
+function overlapWarnings(comp: Composition, places: { x: number; y: number; z?: number }[], panels: Panel[]): CompositionWarning[] {
+  const boxes = comp.modules.map((m, i) => {
+    const own = panels.filter((q) => q.module === i + 1)
+    if (own.length) {
+      const b = localBox(own)
+      return { m, lo: b.min, hi: b.max }
+    }
+    const p = places[i]!
+    const z = p.z ?? 0
+    return { m, lo: [p.x, p.y, z], hi: [p.x + m.carcass.width, p.y + m.carcass.height, z + m.carcass.depth] }
+  })
+  const out: CompositionWarning[] = []
+  for (const [i, a] of boxes.entries())
+    for (const b of boxes.slice(i + 1)) {
+      const ov = [0, 1, 2].map((k) => Math.min(a.hi[k]!, b.hi[k]!) - Math.max(a.lo[k]!, b.lo[k]!))
+      if (!ov.every((o) => o > 0.5)) continue
+      out.push({
+        code: "overlap",
+        moduleId: b.m.id,
+        message: `Els mòduls «${a.m.name}» i «${b.m.name}» es trepitgen (${ov.map((o) => fmtNum(o, 1)).join(" × ")} mm): mou-ne un o canvia'n les mides.`,
+      })
+    }
+  return out
+}
+
+/** Treu les peces sense mida (llarg, ample o gruix ≤ 0) de la llista i del seu mòdul, i n'avisa. */
+function dropUnmakeable(panels: Panel[], modules: CompositionBuild["modules"], warnings: CompositionWarning[]): void {
+  const valid = (v: number) => Number.isFinite(v) && v > 0
+  for (let i = panels.length - 1; i >= 0; i--) {
+    const p = panels[i]!
+    if (valid(p.length) && valid(p.width) && valid(p.thickness)) continue
+    panels.splice(i, 1)
+    const mod = modules.find((m) => m.index === p.module)
+    if (mod) {
+      const localId = p.id.slice(mod.id.length + 1)
+      mod.build = { ...mod.build, panels: mod.build.panels.filter((q) => q.id !== localId) }
+    }
+    warnings.push({ code: "invalid-part", message: `${p.label} fa ${p.length} × ${p.width} × ${p.thickness} mm: no té mida i no es fabrica. Revisa les mides del mòdul.`, panelId: p.id, ...(mod ? { moduleId: mod.id } : {}) })
+  }
+}
+
+/** L'id del mòdul amb aquest número (el de les peces, des d'1). */
+function moduleIdAt(modules: CompositionBuild["modules"], index: number | undefined): string | undefined {
+  return modules.find((m) => m.index === index)?.id
+}
 
 /**
  * Construeix tota la composició: cada mòdul al seu lloc (`modulePlacements`: fila,
@@ -139,31 +231,13 @@ export function buildComposition(input: Composition): CompositionBuild {
   // Tipus «Lliure» (flat-pack): només peces lliures; els mòduls es guarden però no es fan.
   const onlyParts = partsOnlyKind(compositionKind(comp))
   // Columnes de la casa que entren pel darrere: els calaixos del seu tram, més curts (`columnRearLimits`).
-  // I les columnes que travessen la base (qualsevol, no només les del darrere; un mòdul girat, en mirall): on no hi va
-  // l'alimentador dels llums ni hi ha potes al costat (`keepOut`).
-  const keepOut = (m: Module, i: number): [number, number][] => {
-    const pl = places[i]!
-    const mz = pl.z ?? 0
-    const W = m.carcass.width, D = m.carcass.depth + m.carcass.thickness
-    const rot = moduleRot(m)
-    const out: [number, number][] = []
-    for (const o of comp.references ?? []) {
-      if (o.effect !== "cut" || !isPillar(o) || o.y > 1) continue
-      // La petjada de la columna al mòdul (desfent el gir al voltant del centre de la caixa).
-      const pts = [[o.x, o.z], [o.x + o.w, o.z], [o.x, o.z + o.d], [o.x + o.w, o.z + o.d]].map(([x, z]) => rotXZ(x! - pl.x, z! - mz, unrot(rot), W / 2, D / 2))
-      const x0 = Math.min(...pts.map((p) => p[0])), x1 = Math.max(...pts.map((p) => p[0]))
-      const z0 = Math.min(...pts.map((p) => p[1])), z1 = Math.max(...pts.map((p) => p[1]))
-      if (x1 <= 0 || x0 >= W || z0 >= D || z1 <= 0) continue
-      out.push([x0, x1])
-    }
-    return out
-  }
+  // I les columnes que travessen la base: on no hi va l'alimentador dels llums ni hi ha potes (`pillarKeepOut`).
   // El sòcol per defecte dels electrodomèstics de terra: l'alçada de les potes del moble (el sòcol del tram passa per davant).
   const appliancePlinth = comp.support && comp.support.kind !== "floor" ? comp.support.height : undefined
   // Amb sòcol (el del moble o el de les potes del mòdul), la llum a sota dels mòduls de terra quedaria amagada: no es fa (es guarda, per si es
   // canvia a potes vistes).
   const lit = (m: Module): Module => ((comp.support?.kind === "plinth" || (m.carcass.base.kind === "legs" && m.carcass.base.plinth)) && m.carcass.base.kind === "legs" && m.carcass.underLight ? { ...m, carcass: (({ underLight: _u, ...c }) => c)(m.carcass) } : m)
-  const builds = onlyParts ? [] : comp.modules.map(lit).map((m, i) => buildModule(m, { ...(moduleRot(m) ? {} : { rearLimits: columnRearLimits(m, comp.references, places[i]!) }), keepOut: keepOut(m, i), ...(appliancePlinth !== undefined ? { appliancePlinth } : {}), ...(compositionKind(comp) === "taula" ? { freestanding: true } : {}) }))
+  const builds = onlyParts ? [] : comp.modules.map(lit).map((m, i) => buildModule(m, { ...(moduleRot(m) ? {} : { rearLimits: columnRearLimits(m, comp.references, places[i]!) }), keepOut: pillarKeepOut(comp, m, places[i]!), ...(appliancePlinth !== undefined ? { appliancePlinth } : {}), ...(compositionKind(comp) === "taula" ? { freestanding: true } : {}) }))
   // Illes: el mòdul de darrere es gira 180° i es posa enganxat al darrere del de davant (mateixa X, a `gap` mm), sigui
   // quina sigui la seva posició pròpia.
   const islands = onlyParts ? [] : activeIslands(comp)
@@ -190,20 +264,7 @@ export function buildComposition(input: Composition): CompositionBuild {
     // lateral toca la paret i el mòdul ocupa la seva fondària a la fila.
     const inRow = !backOf.has(m.id) && !freeX(m)
     const turn = !rot ? undefined : inRow ? { rot, cx: m.carcass.width / 2, cz: moduleFrontFace(m) / 2 } : turnFrame(build.panels, rot)
-    const place = (pl: Panel["placement"]): Panel["placement"] => {
-      const o = pl.origin
-      if (!turn) return { ...pl, origin: [o[0] + x, o[1] + y, o[2] + z] }
-      if (turn.rot === 180) {
-        const v = (a: Vec3): Vec3 => [-a[0], a[1], -a[2]]
-        return { origin: [2 * turn.cx - o[0] + x, o[1] + y, 2 * turn.cz - o[2] + z], xAxis: v(pl.xAxis), yAxis: v(pl.yAxis), zAxis: v(pl.zAxis), explodeDir: v(pl.explodeDir) }
-      }
-      const v = (a: Vec3): Vec3 => {
-        const [vx, vz] = rotXZ(a[0], a[2], turn.rot)
-        return [vx, a[1], vz]
-      }
-      const [ox, oz] = rotXZ(o[0], o[2], turn.rot, turn.cx, turn.cz)
-      return { origin: [ox + x, o[1] + y, oz + z], xAxis: v(pl.xAxis), yAxis: v(pl.yAxis), zAxis: v(pl.zAxis), explodeDir: v(pl.explodeDir) }
-    }
+    const place = placeIn(turn, x, y, z)
     for (const p of build.panels) panels.push({ ...p, id: `${m.id}:${p.id}`, module: i + 1, placement: place(p.placement) })
     for (const p of build.extras) moduleExtras.push({ ...p, id: `${m.id}:${p.id}`, module: i + 1, placement: place(p.placement) })
     for (const k of build.hardwareKits) hardwareKits.push({ ...k, module: i + 1, moduleId: m.id })
@@ -226,40 +287,7 @@ export function buildComposition(input: Composition): CompositionBuild {
     modules.push({ id: m.id, index: i + 1, x, y, z, build, ...(turn ? { turn } : {}) })
   })
 
-  // Mòduls que es trepitgen (una columna i un penjat a la mateixa X, una illa sobre la fila, el voladís d'un tauler de
-  // taula dins del veí…): la caixa de les peces de cada mòdul no pot entrar dins d'una altra més de 0,5 mm en les tres
-  // direccions.
-  if (!onlyParts) {
-    const boxes = comp.modules.map((m, i) => {
-      const p = places[i]!
-      const z = p.z ?? 0
-      const lo = [p.x, p.y, z], hi = [p.x + m.carcass.width, p.y + m.carcass.height, z + m.carcass.depth]
-      const own = panels.filter((q) => q.module === i + 1)
-      if (own.length) {
-        lo.fill(Infinity)
-        hi.fill(-Infinity)
-        for (const q of own) {
-          const b = panelBox(q)
-          for (let k = 0; k < 3; k++) {
-            lo[k] = Math.min(lo[k]!, b.min[k]!)
-            hi[k] = Math.max(hi[k]!, b.max[k]!)
-          }
-        }
-      }
-      return { m, lo, hi }
-    })
-    for (let i = 0; i < boxes.length; i++)
-      for (let j = i + 1; j < boxes.length; j++) {
-        const a = boxes[i]!, b = boxes[j]!
-        const ov = [0, 1, 2].map((k) => Math.min(a.hi[k]!, b.hi[k]!) - Math.max(a.lo[k]!, b.lo[k]!))
-        if (!ov.every((o) => o > 0.5)) continue
-        warnings.push({
-          code: "overlap",
-          moduleId: b.m.id,
-          message: `Els mòduls «${a.m.name}» i «${b.m.name}» es trepitgen (${ov.map((o) => fmtNum(o, 1)).join(" × ")} mm): mou-ne un o canvia'n les mides.`,
-        })
-      }
-  }
+  if (!onlyParts) warnings.push(...overlapWarnings(comp, places, panels))
 
   // Dos mòduls que es toquen sense cap lateral entre ells: la base, la tapa i els prestatges en línia, d'una sola peça.
   if (!onlyParts) {
@@ -304,20 +332,8 @@ export function buildComposition(input: Composition): CompositionBuild {
   panels.push(...free.panels)
   for (const w of free.warnings) warnings.push({ code: w.code ?? "layout", message: w.message, partId: w.partId })
 
-  // Peces sense mida (llarg, ample o gruix ≤ 0, p. ex. un calaix sense lloc): no es poden
-  // fabricar. Es treuen i s'avisa.
-  const valid = (v: number) => Number.isFinite(v) && v > 0
-  for (let i = panels.length - 1; i >= 0; i--) {
-    const p = panels[i]!
-    if (valid(p.length) && valid(p.width) && valid(p.thickness)) continue
-    panels.splice(i, 1)
-    const mod = modules.find((m) => m.index === p.module)
-    if (mod) {
-      const localId = p.id.slice(mod.id.length + 1)
-      mod.build = { ...mod.build, panels: mod.build.panels.filter((q) => q.id !== localId) }
-    }
-    warnings.push({ code: "invalid-part", message: `${p.label} fa ${p.length} × ${p.width} × ${p.thickness} mm: no té mida i no es fabrica. Revisa les mides del mòdul.`, panelId: p.id, ...(mod ? { moduleId: mod.id } : {}) })
-  }
+  // Peces sense mida (llarg, ample o gruix ≤ 0, p. ex. un calaix sense lloc): no es poden fabricar. Es treuen i s'avisa.
+  dropUnmakeable(panels, modules, warnings)
 
   // Ferratges col·locats a mà (generador de mecanitzats): tot o res per ferratge, avís `hardware` si no.
   if (comp.hardwarePlacements?.length)
@@ -338,7 +354,7 @@ export function buildComposition(input: Composition): CompositionBuild {
       behindPillar.add(pr.panel)
       continue
     }
-    const moduleId = modules.find((m) => m.index === pr.panel.module)?.id
+    const moduleId = moduleIdAt(modules, pr.panel.module)
     const owner = pr.refId.startsWith("part:") ? { partId: pr.refId.slice(5) } : { refId: pr.refId }
     warnings.push({ code: "ref-cut", message: pr.message, panelId: pr.panel.id, ...owner, ...(moduleId ? { moduleId } : {}), ...(pr.options ? { options: pr.options } : {}) })
   }
@@ -346,7 +362,7 @@ export function buildComposition(input: Composition): CompositionBuild {
   // La regleta i els penjadors dels penjats: la columna també els talla (`hangingCuts.ts`).
   const hanging = clipHangingToRefs(moduleExtras, linear, comp.references, panelBox)
   for (const { moduleIndex, ...w } of hanging.warnings) {
-    const moduleId = modules.find((m) => m.index === moduleIndex)?.id
+    const moduleId = moduleIdAt(modules, moduleIndex)
     warnings.push({ ...w, ...(moduleId ? { moduleId } : {}) })
   }
   for (const h of hanging.removed) {
@@ -369,7 +385,7 @@ export function buildComposition(input: Composition): CompositionBuild {
       if (i >= 0) panels.splice(i, 1)
     }
     for (const pr of cw.problems) {
-      const moduleId = modules.find((m) => m.index === pr.panel.module)?.id
+      const moduleId = moduleIdAt(modules, pr.panel.module)
       warnings.push({ code: "ref-cut", message: pr.message, panelId: pr.panel.id, refId: pr.refId, ...(moduleId ? { moduleId } : {}) })
     }
     // Les potes de l'app (AXILO 78) a les cantonades de la base retallada, com les genèriques.
@@ -378,7 +394,7 @@ export function buildComposition(input: Composition): CompositionBuild {
       return module && !moduleRot(module) ? [{ index: m.index, module }] : []
     })
     for (const pr of relayLegs(panels, legModules)) {
-      const moduleId = modules.find((m) => m.index === pr.panel.module)?.id
+      const moduleId = moduleIdAt(modules, pr.panel.module)
       warnings.push({ code: "hardware", message: pr.message, panelId: pr.panel.id, ...(moduleId ? { moduleId } : {}) })
     }
   }
@@ -387,7 +403,7 @@ export function buildComposition(input: Composition): CompositionBuild {
   // s'escurcen com ho faria un tècnic; els que no es poden resoldre, s'avisen.
   for (const p of panels)
     for (const message of resolveHoleClashes(p)) {
-      const moduleId = modules.find((m) => m.index === p.module)?.id
+      const moduleId = moduleIdAt(modules, p.module)
       warnings.push({ code: "hole-clash", message, panelId: p.id, ...(moduleId ? { moduleId } : {}) })
     }
 
@@ -398,7 +414,7 @@ export function buildComposition(input: Composition): CompositionBuild {
     if (ref.effect === "cut") continue
     const hit = panels.find((p) => !(ref.group && partGroup.get(p.id) === ref.group) && refTouchesBox(ref, panelBox(p)))
     if (hit) {
-      const moduleId = modules.find((m) => m.index === hit.module)?.id
+      const moduleId = moduleIdAt(modules, hit.module)
       warnings.push({ code: "collision", message: `«${ref.name}» xoca amb ${hit.label}.`, panelId: hit.id, refId: ref.id, ...(moduleId ? { moduleId } : {}) })
     }
   }
