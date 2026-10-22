@@ -5,10 +5,12 @@ import { App } from "./App"
 import { SettingsProvider } from "./features/settings/SettingsContext"
 import { initAccent } from "./theme/accent"
 import { initTruncatedTitles } from "./theme/truncatedTitles"
+import { reloadOnStaleChunks } from "./lib/staleChunks"
 import "./theme/layout.css"
 
 initAccent()
 initTruncatedTitles()
+reloadOnStaleChunks()
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

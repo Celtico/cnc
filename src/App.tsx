@@ -1,6 +1,7 @@
 import { Box, Container, Flex, Spinner, Splitter } from "@chakra-ui/react"
 import { Suspense, lazy, useCallback, useState } from "react"
 import { Toaster } from "./components/ui/toaster"
+import { ErrorBoundary } from "./components/ErrorBoundary"
 import { PanelSplit, SplitHandle } from "./components/PanelSplit"
 import { TopBar, TopBarActionsProvider } from "./components/TopBar"
 import { SaveFileDialog } from "./features/file/SaveFileDialog"
@@ -117,6 +118,8 @@ export function App() {
                 </Flex>
               }
             >
+              {/* Un error en una pantalla no deixa l'app en blanc: es torna a provar sol en canviar de pantalla o de document. */}
+              <ErrorBoundary what="Aquesta pantalla" resetKey={`${screen}:${projectId ?? ""}:${ambientId ?? ""}`} onLeave={nav.backToProjects} leaveLabel="Tornar als mobles">
               <AppContent
                 screen={screen}
                 projectId={projectId}
@@ -127,6 +130,7 @@ export function App() {
                 projectsRequest={projectsRequest}
                 onProjectsRequestDone={clearProjectsRequest}
               />
+              </ErrorBoundary>
             </Suspense>
           </TopBarActionsProvider>
         </Container>
@@ -135,9 +139,11 @@ export function App() {
       {/* Al mòbil, l'assistent és un calaix (amb portal): la columna no hi és. */}
       <Splitter.Panel id="assistant" display={{ base: "none", md: assistant.open ? "block" : "none" }}>
         {assistant.mounted && (
+          <ErrorBoundary what="L'assistent">
           <Suspense fallback={null}>
             <GlobalAssistant open={assistant.open} onClose={assistant.close} settings={settings} closeRequest={assistant.closeRequest} />
           </Suspense>
+          </ErrorBoundary>
         )}
       </Splitter.Panel>
       </PanelSplit>
