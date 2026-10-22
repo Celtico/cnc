@@ -1,5 +1,5 @@
 import type { KitOrderLine } from "./drawerKit"
-import { activeRuns, compositionKind, freeX, withSupport, withNeighbourSides, isSolidMaterial, moduleFrontFace, moduleRot, rotXZ, unrot, type ModuleRot, modelFootprint, modulePlacements, NO_EDGES, partsOnlyKind, partCutters, resolveParts, type Composition, type ModelObject, type Module, type Panel, type Vec3 } from "../model"
+import { activeRuns, compositionKind, freeX, withSupport, withNeighbourSides, withWallBacks, isSolidMaterial, moduleFrontFace, moduleRot, rotXZ, unrot, type ModuleRot, modelFootprint, modulePlacements, NO_EDGES, partsOnlyKind, partCutters, resolveParts, type Composition, type ModelObject, type Module, type Panel, type Vec3 } from "../model"
 import { applyRefCuts, migrateCableHoles, refTouchesBox } from "./refCuts"
 import { columnRearLimits, columnWalls, isPillar, relayLegs } from "./columnWalls"
 import { clipHangingToRefs } from "./hangingCuts"
@@ -120,7 +120,8 @@ export function buildComposition(input: Composition): CompositionBuild {
   // Passacables de la versió anterior → objectes que tallen. Un sol suport per als mòduls de terra (`withSupport`: els
   // mobles d'abans el prenen dels seus mòduls) i el sòcol de cada tram.
   // Un mòdul sense un lateral on en toca un altre: el lateral del veí l'aguanta (`withNeighbourSides`, lateral compartit).
-  const migrated = withNeighbourSides(withSupport(migrateCableHoles(input, panelBox)))
+  // Primer la posició: cada mòdul de la fila, girat cap a la paret que té al darrere (`withWallBacks`).
+  const migrated = withNeighbourSides(withSupport(migrateCableHoles(withWallBacks(input), panelBox)))
   // Objecte: les peces només es veuen (mai van al nesting ni fan encaixos).
   const comp = compositionKind(migrated) === "objecte" ? { ...migrated, parts: migrated.parts?.map((p) => ({ ...p, nest: false, joinery: false })) } : migrated
   // Còpia: el mòdul de darrere de cada illa es recol·loca (`islands.ts`).

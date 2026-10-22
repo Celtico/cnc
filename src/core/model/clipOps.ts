@@ -2,6 +2,7 @@ import { z } from "zod"
 import { anchorRef, freeX, ModelObjectSchema, ModuleSchema, newId, RefObjectSchema, rowOf, ZoneSchema, type Composition, type ModelObject, type Module, type RefObject, type Zone } from "./composition"
 import { FreePartSchema, type FreePart } from "./freePart"
 import { groupItems, groupNames, multiBox, type MultiItem } from "./editOps"
+import { wallSides } from "./wallBacks"
 
 /**
  * Uns quants elements copiats junts: un **grup sencer** (`group`, el seu nom: s'enganxa com un grup nou) o una selecció
@@ -107,8 +108,16 @@ export function insertItemsCopy(
   const modules = [...comp.modules]
   const srcIds = new Set(clip.modules.map((m) => m.id))
   const last: Partial<Record<"floor" | "wall", string>> = {}
+  // La paret de cada original (`wallSides`): la còpia hi va al costat, a la mateixa paret (2026-10-22: «si fas un copiar i
+  // enganxar pensa que està ben col·locat i el col·loca malament»).
+  const sides = wallSides(comp)
+  const sideOf = (id: string) => sides[comp.modules.findIndex((m) => m.id === id)] ?? null
   for (const src of clip.modules) {
-    const copy: Module = { ...groupOf(structuredClone(src)), id: newId("m"), ...(freeX(src) ? { x: Math.round(src.x! + dx) } : {}) }
+    const side = freeX(src) ? null : sideOf(src.id)
+    // A la paret d'un costat: la còpia, girada igual, a continuació al llarg d'aquella paret. A la del fons: tocant
+    // l'original, i el següent de la fila no es mou (si hi cap).
+    const place: Partial<Module> = side === "left" || side === "right" ? { rot: side === "left" ? 90 : 270, gapBefore: 0, sideAlong: (src.sideAlong ?? 0) + src.carcass.width } : side === "back" ? { gapBefore: 0 } : {}
+    const copy: Module = { ...groupOf(structuredClone(src)), id: newId("m"), ...place, ...(freeX(src) ? { x: Math.round(src.x! + dx) } : {}) }
     ids.set(src.id, copy.id)
     items.push({ kind: "module", id: copy.id })
     if (freeX(src)) {
@@ -124,6 +133,10 @@ export function insertItemsCopy(
     if (at < 0) at = modules.findLastIndex(inRow)
     modules.splice(at >= 0 ? at + 1 : modules.length, 0, copy)
     last[row] = copy.id
+    if (side === "back") {
+      const next = modules.findIndex((m, k) => k > at + 1 && inRow(m))
+      if (next >= 0) modules[next] = { ...modules[next]!, gapBefore: Math.max(0, modules[next]!.gapBefore - copy.carcass.width) }
+    }
   }
   const parts = clip.parts.map((src) => {
     const { module: mod, ...rest } = groupOf(structuredClone(src))

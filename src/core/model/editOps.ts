@@ -1,11 +1,14 @@
 import {
   anchorRef,
   freeX,
+  moduleFootprint,
+  moduleFrontFace,
   modulePlacements,
   newId,
   partOffset,
   resolveParts,
   rowOf,
+  sideWallOf,
   type Composition,
   type ModelObject,
   type Module,
@@ -18,6 +21,7 @@ import { cloneZone, removeZone, updateZone } from "./zoneOps"
 import { hungBack } from "./hungBack"
 import { partSize, partsBox, type FreePart } from "./freePart"
 import { modelFootprint } from "./models"
+import { detachFromRow, wallSides } from "./wallBacks"
 import { isCncBoard, materialCategory, type MaterialPref } from "./settings"
 
 /**
@@ -100,11 +104,22 @@ export function moveModuleBy(comp: Composition, id: string, dx: number, dy = 0, 
     const modules = comp.modules.map((x, k) => (k === i ? { ...x, x: Math.round(x.x! + dx), wallGap: Math.max(0, Math.round((x.wallGap ?? 0) + dz)) } : x))
     return { ...comp, modules }
   }
+  // D'esquena a la paret d'un costat: endavant i enrere al llarg d'aquella paret (al terra, la separació de la paret del
+  // fons; si no, `sideAlong`) i, penjat, amunt i avall. No es mou de costat: la paret hi és.
+  const side = wallSides(comp)[i]
+  if (side === "left" || side === "right") {
+    const base = m.carcass.base.kind === "wall" && dy ? { ...m.carcass.base, height: Math.max(0, Math.round(m.carcass.base.height + dy)) } : m.carcass.base
+    // Un d'abans (girat a l'extrem de la fila, sense `sideAlong`): passa a la paret del costat i els de la fila no es mouen.
+    const modules = m.sideAlong === undefined ? detachFromRow(comp, i) : comp.modules.map((x) => x)
+    const moved: Module = { ...m, rot: side === "left" ? 90 : 270, sideAlong: Math.max(0, Math.round((m.sideAlong ?? 0) + dz)), carcass: { ...m.carcass, base } }
+    modules[i] = moved
+    return { ...comp, modules }
+  }
   const row = rowOf(m)
   const gap = Math.max(0, Math.round(m.gapBefore + dx))
   const actual = gap - m.gapBefore
   // El veí de la dreta és el següent de la fila: les illes (X pròpia) no en formen part.
-  const j = comp.modules.findIndex((x, k) => k > i && rowOf(x) === row && !freeX(x))
+  const j = comp.modules.findIndex((x, k) => k > i && rowOf(x) === row && !freeX(x) && !sideWallOf(x))
   const modules = comp.modules.map((x, k) => {
     if (k === i) {
       const base = x.carcass.base.kind === "wall" && dy ? { ...x.carcass.base, height: Math.max(0, Math.round(x.carcass.base.height + dy)) } : x.carcass.base
@@ -126,7 +141,7 @@ function moveModulesBy(comp: Composition, ids: ReadonlySet<string>, dx: number, 
   if (!ids.size) return comp
   const modules = comp.modules.map((m) => ({ ...m }))
   for (const row of ["floor", "wall"] as const) {
-    const order = modules.map((m, k) => (rowOf(m) === row && !freeX(m) ? k : -1)).filter((k) => k >= 0)
+    const order = modules.map((m, k) => (rowOf(m) === row && !freeX(m) && !sideWallOf(m) ? k : -1)).filter((k) => k >= 0)
     for (let r = 0; r < order.length; r++) {
       const k = order[r]!
       if (!ids.has(modules[k]!.id) || (r > 0 && ids.has(modules[order[r - 1]!]!.id))) continue
@@ -145,6 +160,8 @@ function moveModulesBy(comp: Composition, ids: ReadonlySet<string>, dx: number, 
       if (!ids.has(m.id)) return m
       if (freeX(m)) return { ...m, x: Math.round(m.x! + dx), wallGap: Math.max(0, Math.round((m.wallGap ?? 0) + dz)) }
       const base = m.carcass.base.kind === "wall" && dy ? { ...m.carcass.base, height: Math.max(0, Math.round(m.carcass.base.height + dy)) } : m.carcass.base
+      // D'esquena a la paret d'un costat: al llarg de la paret (`sideAlong`), mai de costat (com `moveModuleBy`).
+      if (sideWallOf(m)) return { ...m, sideAlong: Math.max(0, Math.round(m.sideAlong! + dz)), carcass: { ...m.carcass, base } }
       const wallGap = m.wallGap !== undefined && m.carcass.base.kind !== "wall" ? Math.max(0, Math.round(m.wallGap + dz)) : m.wallGap
       return { ...m, ...(wallGap !== undefined ? { wallGap } : {}), carcass: { ...m.carcass, base } }
     }),
@@ -431,11 +448,16 @@ export function multiBox(comp: Composition, items: readonly MultiItem[]): { min:
 export function moveMultiBy(comp: Composition, items: readonly MultiItem[], dx: number, dy: number, dz: number): Composition {
   const b = multiBox(comp, items)
   if (!b) return comp
-  const ddy = Math.max(dy, -b.min[1])
   // Els mòduls, junts: a la seva fila, com la nansa (`moveModuleBy`), però una tirada de mòduls triats seguits es mou
   // sencera i conserva les separacions de dins (per decisió de l'usuari, 2026-10-16: «en moure grups es desplacen i no
   // mantenen l'espai original»); amunt i avall, només els penjats.
-  comp = moveModulesBy(comp, new Set(items.filter((x) => x.kind === "module").map((x) => x.id)), dx, ddy, dz)
+  const ids = new Set(items.filter((x) => x.kind === "module").map((x) => x.id))
+  // Tot es mou igual (2026-10-22, «quan en mous dos seleccionats a la vegada se separen els objectes de referència»): el que
+  // un mòdul no pot fer (de costat a la paret d'un costat, passar la paret del fons, baixar de terra) no ho fa cap.
+  const [mx, ddy, mz] = blockDelta(comp, ids, dx, Math.max(dy, -b.min[1]), dz)
+  dx = mx
+  dz = mz
+  comp = moveModulesBy(comp, ids, dx, ddy, dz)
   return {
     ...comp,
     // Una peça enganxada a un mòdul que també es mou ja el segueix (x relativa): no es mou dues vegades.
@@ -444,6 +466,26 @@ export function moveMultiBy(comp: Composition, items: readonly MultiItem[], dx: 
     references: comp.references.map((r) => (inMulti(items, "ref", r.id) ? anchorRef({ ...r, x: r.x + dx, y: r.y + ddy, z: r.z + dz }) : r)),
     ...(comp.models ? { models: comp.models.map((m) => (inMulti(items, "model", m.id) ? { ...m, x: m.x + dx, y: m.y + ddy, z: m.z + dz } : m)) } : {}),
   }
+}
+
+/** El desplaçament que poden fer tots els mòduls `ids` alhora: per eix, el més curt dels que fan de debò (o 0 si un no s'hi mou). */
+function blockDelta(comp: Composition, ids: ReadonlySet<string>, dx: number, dy: number, dz: number): [number, number, number] {
+  if (!ids.size) return [dx, dy, dz]
+  const centres = (c: Composition) => {
+    const at = modulePlacements(c)
+    return c.modules.flatMap((m, i) => {
+      if (!ids.has(m.id)) return []
+      const f = moduleFootprint(m, at[i]!, moduleFrontFace(m))
+      return [[(f.x0 + f.x1) / 2, at[i]!.y, (f.z0 + f.z1) / 2]]
+    })
+  }
+  const a = centres(comp), b = centres(moveModulesBy(comp, ids, dx, dy, dz))
+  const want = [dx, dy, dz]
+  return want.map((d, k) => {
+    if (!d) return 0
+    const done = a.map((p, i) => b[i]![k]! - p[k]!)
+    return done.some((x) => Math.sign(x) !== Math.sign(d) || !x) ? 0 : Math.sign(d) * Math.min(...done.map(Math.abs))
+  }) as [number, number, number]
 }
 
 /** Treu tots els elements triats. */

@@ -69,6 +69,7 @@ export const MOBLE = group("moble", "Moble", { icon: "moble", code: UI.inspector
     field("moble.scene.wall", "Paret", { code: UI.sections, control: "material", defaultText: "Com a Preferències › Visor 3D" }),
     field("moble.scene.leftWall", "Paret esquerra", { code: UI.sections, control: "switch", default: false, choices: [{ value: "on", label: "Paret al costat esquerre del moble" }], note: "Per decisió de l'usuari, 2026-10-21: parets laterals a l'escena de Presentació, a ras del moble (com la del darrere, del mateix acabat). Només es veuen: no tallen ni mouen res." }),
     field("moble.scene.rightWall", "Paret dreta", { code: UI.sections, control: "switch", default: false, choices: [{ value: "on", label: "Paret al costat dret del moble" }] }),
+    field("moble.scene.rightWallX", "Paret dreta a", { code: UI.sections, control: "number", showIf: "Hi ha mòduls d'esquena a la paret dreta", range: { min: 0, max: 20000, step: 10, suffix: "mm" }, note: "Per decisió de l'usuari, 2026-10-22 («m'ha mogut la paret»): la paret dreta es desa (`scene.rightWallX`, `withRightWall`) i no es mou quan es mouen els altres mòduls; només s'allunya si un de la fila la passaria." }),
   ]),
   materialsNodes("moble"),
 ])

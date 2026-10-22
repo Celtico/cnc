@@ -1,7 +1,7 @@
 import { Box, Menu, Text } from "@chakra-ui/react"
 import { createElement } from "react"
 import { LuArrowLeft, LuArrowRight, LuChevronDown, LuCornerDownLeft, LuCornerDownRight, LuChevronRight, LuClipboardPaste, LuCopy, LuGroup, LuRefrigerator, LuTrash2, LuUngroup } from "react-icons/lu"
-import { APPLIANCE_LABELS, addCorner, pasteModuleProps, groupMulti, nicheAppliance, groupNames, newGroupName, newId, removeModule, rowOf, ungroupMulti, type Module, type Zone } from "../../../core/model"
+import { APPLIANCE_LABELS, addCorner, pasteModuleProps, groupMulti, insertItemsCopy, nicheAppliance, groupNames, newGroupName, removeModule, rowOf, ungroupMulti, type Module, type Zone } from "../../../core/model"
 import { toaster } from "../../../components/ui/toaster"
 import { TreeRow, TreeRowMenu } from "../../../components/TreeRow"
 import { zoneIcon } from "../zoneIcons"
@@ -20,11 +20,11 @@ export function ModuleRows({ tree, openId, toggle }: { tree: TreeCtx; openId: st
   const { comp, selection, onSelect, onChange, dnd, flagsOf, inMultiSel, openGroups, openGroup } = tree
   const duplicate = (i: number) => {
     const src = comp.modules[i]!
-    const copy: Module = { ...structuredClone(src), id: newId("m"), name: `${src.name} (còpia)` }
-    const modules = [...comp.modules]
-    modules.splice(i + 1, 0, copy)
-    onChange({ ...comp, modules })
-    onSelect({ kind: "module", id: copy.id })
+    // El mateix camí que copiar i enganxar (`insertItemsCopy`): la còpia, al costat de l'original a la mateixa paret.
+    const res = insertItemsCopy(comp, { dx: src.carcass.width + 50, modules: [{ ...src, name: `${src.name} (còpia)` }], parts: [], models: [], refs: [] }, { afterModule: src.id })
+    const id = res.items[0]!.id
+    onChange(res.comp)
+    onSelect({ kind: "module", id })
   }
   // Cantonada en L (`addCorner`): el mòdul girat de l'altre braç, a un costat d'aquest.
   const corner = (i: number, side: "left" | "right") => {

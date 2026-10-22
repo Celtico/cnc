@@ -1,5 +1,5 @@
 import { useCallback } from "react"
-import { withSupport, type CameraPose, type Composition } from "../../core/model"
+import { withRightWall, withSupport, type CameraPose, type Composition } from "../../core/model"
 import { useHistory, useUndoKeys } from "../history/useHistory"
 import { useLatest } from "../../lib/useLatest"
 
@@ -15,8 +15,9 @@ export function useEditorDoc(initial: Composition) {
   const comp = history.value.comp
   const setComp: SetComp = useCallback(
     (next: Composition | ((cur: Composition) => Composition), opts?: { commit?: boolean; group?: string }) =>
-      // Cada canvi porta el suport del moble als mòduls de terra (un mòdul nou, un de penjat que baixa, un d'enganxat…).
-      setDoc((h) => ({ ...h, comp: withSupport(typeof next === "function" ? next(h.comp) : next) }), opts),
+      // Cada canvi porta el suport del moble als mòduls de terra (un mòdul nou, un de penjat que baixa, un d'enganxat…)
+      // i deixa la paret dreta on era (`withRightWall`).
+      setDoc((h) => ({ ...h, comp: withRightWall(h.comp, withSupport(typeof next === "function" ? next(h.comp) : next)) }), opts),
     [setDoc],
   )
   // L'assistent IA llegeix la composició d'ara i hi aplica els canvis en viu; en acabar el torn, un sol pas de desfer.

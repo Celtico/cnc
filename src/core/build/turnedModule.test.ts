@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { defaultModule, type Composition, type Module } from "../model"
+import { defaultModule, moveModuleBy, wallSides, type Composition, type Module } from "../model"
 import { buildComposition, moduleFromWorld, moduleToWorld } from "./buildComposition"
 import { panelBox } from "./geometry"
 
@@ -119,9 +119,28 @@ describe("fronts a un costat a la fila (arrambat, penjat o al terra sense X prò
         expect(r(a.hi[1]! - a.lo[1]!)).toBeCloseTo(A.carcass.width, 0)
         expect(n.lo[0]!).toBeGreaterThanOrEqual(a.hi[0]! - 0.5)
         expect(n.lo[0]!).toBeLessThan(a.hi[0]! + A.carcass.thickness + 0.5)
+        // Primer la posició (2026-10-22): el primer de la fila és d'esquena a la paret esquerra, i els fronts miren a la
+        // dreta (cap a dins) sigui quin sigui el gir triat.
         const fronts = b.panels.filter((p) => p.id.startsWith("A:") && p.role === "drawerFront")
-        expect(fronts.every((p) => (rot === 90 ? p.placement.explodeDir[0] > 0 : p.placement.explodeDir[0] < 0))).toBe(true)
+        expect(fronts.every((p) => p.placement.explodeDir[0] > 0)).toBe(true)
       })
+  it("l'últim de la fila, girat, és d'esquena a la paret dreta: els fronts miren a l'esquerra; enmig, el gir triat", () => {
+    const m = (id: string, rot?: 90 | 270): Module => ({ ...defaultModule(id, id), ...(rot ? { rot } : {}), root: { ...defaultModule(id, id).root, front: { kind: "drawers", n: 2, heights: ["auto", "auto"] } } })
+    const dirs = (c: Composition, id: string) => buildComposition(c).panels.filter((p) => p.id.startsWith(`${id}:`) && p.role === "drawerFront").map((p) => Math.sign(p.placement.explodeDir[0]))
+    const comp = (mods: Module[]): Composition => ({ kind: "moble", modules: mods, references: [] })
+    expect(new Set(dirs(comp([m("A"), m("B", 90)]), "B"))).toEqual(new Set([-1]))
+    expect(new Set(dirs(comp([m("A"), m("B", 90), m("C")]), "B"))).toEqual(new Set([1]))
+    expect(new Set(dirs(comp([m("A"), m("B", 270), m("C")]), "B"))).toEqual(new Set([-1]))
+    expect(wallSides(comp([m("A", 270), m("B"), m("C", 90)]))).toEqual(["left", "back", "right"])
+  })
+  it("d'esquena a una paret del costat, es mou al llarg d'aquella paret (sideAlong), no de costat", () => {
+    const c: Composition = { kind: "moble", modules: [{ ...defaultModule("A", "A"), rot: 90 }, defaultModule("B", "B")], references: [] }
+    const moved = moveModuleBy(c, "A", 300, 0, 250)
+    expect(moved.modules[0]!.gapBefore).toBe(0)
+    expect(moved.modules[0]!.sideAlong).toBe(250)
+    const z = (cc: Composition) => Math.min(...buildComposition(cc).panels.filter((p) => p.id.startsWith("A:")).map((p) => panelBox(p).min[2]!))
+    expect(z(moved) - z(c)).toBeCloseTo(250, 0)
+  })
   it("arrambat o penjat, enrere no compta (els fronts mirarien a la paret)", () => {
     const m = defaultModule("A", "A")
     const c = (rot?: 180): Composition => ({ kind: "moble", modules: [{ ...m, ...(rot ? { rot } : {}) }], references: [] })

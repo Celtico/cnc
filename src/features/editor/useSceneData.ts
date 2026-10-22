@@ -8,7 +8,7 @@ import { legPoints } from "../../core/build/columnWalls"
 import { moduleBoxToWorld, type CompositionBuild, type CompositionWarning } from "../../core/build/buildComposition"
 import type { ModuleBuild } from "../../core/build/buildModule"
 import { materialIssues } from "../../core/build/materialIssues"
-import { isEmptyComposition, mountOf, partCutters, resolveParts, viewerSize, type Composition, type HardwareItem, type Module, type Panel, type Settings } from "../../core/model"
+import { isEmptyComposition, mountOf, wallSides, partCutters, resolveParts, viewerSize, type Composition, type HardwareItem, type Module, type Panel, type Settings } from "../../core/model"
 import type { Selection } from "../composition/StructureTree"
 import type { ViewerState } from "./ViewerControls"
 
@@ -52,9 +52,10 @@ export function useSceneData({
   const empty = isEmptyComposition(comp)
   const frameSize = empty ? EMPTY_STAGE : size
 
-  const viewerModules: ViewerModule[] = useMemo(
-    () =>
-      (build?.modules ?? []).map((m) => {
+  const viewerModules: ViewerModule[] = useMemo(() => {
+      // Primer la posició: d'esquena a la paret d'un costat, es mou al llarg d'aquella paret (`wallSides`).
+      const sides = wallSides(comp)
+      return (build?.modules ?? []).map((m) => {
         const c = comp.modules[m.index - 1]!.carcass
         const mod = comp.modules[m.index - 1]!
         // Girat 90° o 270°: el contorn, la maneta i les potes genèriques van a la seva petjada a la planta.
@@ -66,10 +67,11 @@ export function useSceneData({
         const own = m.build.panels.find((p) => p.id === "bottom")
         const sameBottom = bottom && own && Math.abs(bottom.length * bottom.width - own.length * own.width) < 1
         const legs = c.base.kind === "legs" ? legsView(c.base, w ? place.depth : c.depth, m.build.panels, sameBottom ? bottom : undefined) : undefined
-        return { id: m.id, index: m.index, ...place, y: m.y, height: c.height, wall: c.base.kind === "wall", free: mountOf(mod) === "floor", ...(legs ? { legs } : {}) }
-      }),
-    [build, comp],
-  )
+        const side = sides[m.index - 1]
+        const along = side === "left" || side === "right" ? { side, along: mountOf(mod) === "floor" ? (mod.wallGap ?? 0) : (mod.sideAlong ?? 0) } : {}
+        return { id: m.id, index: m.index, ...place, y: m.y, height: c.height, wall: c.base.kind === "wall", free: mountOf(mod) === "floor", ...along, ...(legs ? { legs } : {}) }
+      })
+    }, [build, comp])
 
   const absParts = useMemo(() => resolveParts(comp), [comp])
   // Les peces que tallen es veuen com els objectes que tallen (fantasma violeta, amb el gizmo).

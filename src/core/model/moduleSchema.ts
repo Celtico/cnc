@@ -570,6 +570,12 @@ export const ModuleSchema = z.object({
    */
   wallGap: mm.min(0).optional(),
   /**
+   * D'esquena a la paret d'un costat (girat i al primer o l'últim lloc de la fila, `wallSides`): la distància des de la
+   * paret del fons, al llarg de la del costat (per decisió de l'usuari, 2026-10-22: «primer ha de mirar la posició»). Es
+   * mou per aquella paret com els altres per la del fons.
+   */
+  sideAlong: mm.min(0).optional(),
+  /**
    * Només «Lliure al terra»: girat 180° al voltant del vertical (els fronts miren enrere), per fer una illa amb dos mòduls
    * d'esquena (per decisió de l'usuari, 2026-10-13). El mòdul es construeix igual; només canvia com es col·loca
    * (`buildComposition`, al voltant del centre de la caixa de les seves peces: ocupa el mateix lloc). Res amagat compta:

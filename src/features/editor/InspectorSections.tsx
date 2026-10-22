@@ -6,7 +6,7 @@ import { IconChoice } from "../../components/IconChoice"
 import { NumRow } from "../../components/NumRow"
 import type { ModuleBuild } from "../../core/build/buildModule"
 import { splitChildSizes } from "../../core/build/layout"
-import { carcassBounds, coveringZone, freeX, hasDrawers, moduleHasInnerPieces, moduleRot, moduleRows, moduleSlotItem, mountOf, rowOf, setModuleAppliance, setModuleKind, setModuleMount, system32RowPlace, visibleModule, zoneBounds, type Composition, type FloorSupport, type Module, type Settings, type Zone } from "../../core/model"
+import { carcassBounds, coveringZone, freeX, hasDrawers, moduleHasInnerPieces, moduleRot, moduleRows, moduleSlotItem, mountOf, rowOf, setModuleAppliance, setModuleKind, mountModule, rightWallX, system32RowPlace, visibleModule, wallSides, zoneBounds, type Composition, type FloorSupport, type Module, type Settings, type Zone } from "../../core/model"
 import { CarcassForm, InnerClearanceRow, MaterialsForm, ModuleFrontsFold } from "../composition/CarcassForm"
 import { AxisLabel } from "../../components/AxisLabel"
 import { System32Pick } from "../composition/HardwarePick"
@@ -16,11 +16,15 @@ import { MaterialSelect } from "../settings/MaterialSelect"
 import type { SetComp } from "./useEditorDoc"
 
 /** On va el mòdul (Posició): arrambat, penjat o lliure al terra, l'alçada del penjat, les separacions, girat i X. */
-export function ModulePositionFields({ comp, module, moduleX, updateModule }: { comp: Composition; module: Module; moduleX: number | undefined; updateModule: (m: Module) => void }) {
+export function ModulePositionFields({ comp, setComp, module, moduleX, updateModule }: { comp: Composition; setComp: SetComp; module: Module; moduleX: number | undefined; updateModule: (m: Module) => void }) {
   // Posició dins de la seva fila (a terra o penjats) i el mòdul anterior de la fila.
   const rowMates = comp.modules.filter((m) => rowOf(m) === rowOf(module) && !freeX(m))
   const rowIndex = rowMates.indexOf(module)
   const rowPrev = rowIndex > 0 ? rowMates[rowIndex - 1] : undefined
+  // Primer la posició: la paret que té al darrere (`wallSides`) decideix el gir d'un mòdul girat a l'extrem de la fila.
+  const side = wallSides(comp)[comp.modules.indexOf(module)]
+  const atSide = side === "left" || side === "right"
+  const shownRot = side === "left" ? 90 : side === "right" ? 270 : moduleRot(module)
   return (
     <>
       {/* Dues files, com les cuines: a terra (baixos) i penjats (alts); el penjat es tria al Tipus. Dins de cada fila,
@@ -46,8 +50,9 @@ export function ModulePositionFields({ comp, module, moduleX, updateModule }: { 
             { value: "hung", label: "Penjat", icon: LuPanelTop, hint: "Penjat a la paret: es mou de costat i amunt/avall" },
             { value: "floor", label: "Lliure al terra", icon: LuArrowDownToLine, hint: "Lliure al terra: es mou pel terra, també separat de la paret (una illa)" },
           ]}
-          // Al terra: surt de la fila i es queda on és (X pròpia). El mateix camí que l'assistent (`setModuleMount`).
-          onChange={(v) => updateModule(setModuleMount(module, v, Math.round(moduleX ?? 0)))}
+          // Al terra: surt de la fila i es queda on és (X pròpia). Arrambat o penjat: a la paret més a prop d'on és
+          // (`mountModule`: la del fons, a la fila, o la d'un costat, d'esquena).
+          onChange={(v) => setComp((c) => mountModule(c, module.id, v, Math.round(moduleX ?? 0)))}
         />
       </FormRow>
       {module.carcass.base.kind === "wall" && (
@@ -111,12 +116,12 @@ export function ModulePositionFields({ comp, module, moduleX, updateModule }: { 
       <FormRow
         optionId="module.position.turned"
         label="Fronts"
-        help={moduleRot(module) === 180 ? "Els fronts miren enrere: posa'l d'esquena amb un altre mòdul per fer una illa amb calaixos pels dos costats." : !moduleRot(module) ? undefined : freeX(module) ? "Girat 90°: per a l'extrem d'una illa. Gira al voltant del seu centre; mou-lo amb la maneta fins que toqui l'illa." : "Girat 90°: a la fila ocupa la seva fondària i un lateral toca la paret."}
+        help={atSide ? `D'esquena a la paret ${side === "left" ? "esquerra" : "dreta"}: el gir surt de la posició (és el ${side === "left" ? "primer" : "últim"} de la fila). Es mou al llarg d'aquella paret.` : moduleRot(module) === 180 ? "Els fronts miren enrere: posa'l d'esquena amb un altre mòdul per fer una illa amb calaixos pels dos costats." : !moduleRot(module) ? undefined : freeX(module) ? "Girat 90°: per a l'extrem d'una illa. Gira al voltant del seu centre; mou-lo amb la maneta fins que toqui l'illa." : "Girat 90°: a la fila ocupa la seva fondària i un lateral toca la paret."}
       >
         <IconChoice
           hideLabel
           label="Fronts"
-          value={String(moduleRot(module)) as "0" | "90" | "180" | "270"}
+          value={String(shownRot) as "0" | "90" | "180" | "270"}
           options={[
             { value: "0", label: "Endavant", icon: LuArrowDown, hint: "Els fronts miren endavant (com sempre)" },
             { value: "270", label: "A l'esquerra", icon: LuArrowLeft, hint: "Girat 90°: els fronts miren a l'esquerra" },
@@ -130,6 +135,18 @@ export function ModulePositionFields({ comp, module, moduleX, updateModule }: { 
           }}
         />
       </FormRow>
+      {atSide && (
+        <NumRow
+          optionId="module.position.sideAlong"
+          label="Des de la paret del fons"
+          value={module.sideAlong ?? 0}
+          min={0}
+          max={10000}
+          step={10}
+          onChange={(sideAlong) => Number.isFinite(sideAlong) && updateModule({ ...module, sideAlong })}
+          help={`Al llarg de la paret ${side === "left" ? "esquerra" : "dreta"}, del fons al lateral del mòdul.`}
+        />
+      )}
     </>
   )
 }
@@ -211,6 +228,7 @@ export function ZoneSection({ module, zone, moduleBuild, moduleX, updateModule, 
 
 /** Terra i paret de l'escena on es presenta el moble (per defecte, les de Preferències). */
 export function SceneFinishFields({ comp, setComp, materials }: { comp: Composition; setComp: SetComp; materials: Settings["materials"] }) {
+  const wallX = rightWallX(comp)
   return (
     <Stack gap={0}>
       {(["floor", "wall"] as const).map((k) => (
@@ -224,7 +242,7 @@ export function SceneFinishFields({ comp, setComp, materials }: { comp: Composit
             onChange={(v) => setComp((c) => {
               const next = { ...c.scene, [k]: v || undefined }
               const { scene: _s, ...rest } = c
-              return next.floor || next.wall || next.leftWall || next.rightWall ? { ...rest, scene: next } : rest
+              return next.floor || next.wall || next.leftWall || next.rightWall || next.rightWallX !== undefined ? { ...rest, scene: next } : rest
             })}
           />
         </FormRow>
@@ -234,7 +252,7 @@ export function SceneFinishFields({ comp, setComp, materials }: { comp: Composit
           <Switch.Root size="sm" pt="6px" checked={!!comp.scene?.[k]} onCheckedChange={(e) => setComp((c) => {
             const next = { ...c.scene, [k]: e.checked || undefined }
             const { scene: _s, ...rest } = c
-            return next.floor || next.wall || next.leftWall || next.rightWall ? { ...rest, scene: next } : rest
+            return next.floor || next.wall || next.leftWall || next.rightWall || next.rightWallX !== undefined ? { ...rest, scene: next } : rest
           })}>
             <Switch.HiddenInput />
             <Switch.Control />
@@ -242,6 +260,18 @@ export function SceneFinishFields({ comp, setComp, materials }: { comp: Composit
           </Switch.Root>
         </FormRow>
       ))}
+      {wallX !== undefined && (
+        <NumRow
+          optionId="moble.scene.rightWallX"
+          label="Paret dreta a"
+          value={Math.round(wallX)}
+          min={0}
+          max={20000}
+          step={10}
+          onChange={(x) => Number.isFinite(x) && setComp((c) => ({ ...c, scene: { ...c.scene, rightWallX: x } }))}
+          help="Des de la paret esquerra. Els mòduls d'esquena a la paret dreta hi van; no s'acosta més del que deixen els del fons."
+        />
+      )}
     </Stack>
   )
 }

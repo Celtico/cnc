@@ -256,7 +256,7 @@ export function EditorInspector({
           />
           <ZoneSection module={zoneModule ?? module} zone={(zoneModule ?? module).root} moduleBuild={moduleBuild} moduleX={build?.modules[moduleIndex]?.x} updateModule={updateModule} selectZone={selectZone} noBox />
           <Box h={8} />
-          <ModulePositionSection comp={comp} module={module} moduleX={build?.modules[moduleIndex]?.x} updateModule={updateModule} islandFront={islandBack ? comp.modules.find((m) => m.id === islandBack.front)?.name : undefined} />
+          <ModulePositionSection comp={comp} setComp={setComp} module={module} moduleX={build?.modules[moduleIndex]?.x} updateModule={updateModule} islandFront={islandBack ? comp.modules.find((m) => m.id === islandBack.front)?.name : undefined} />
           <FoldItem optionId="module.dims" id="mod-dims" title="Mides" icon={LuMoveDiagonal} badge={`${module.carcass.width} × ${module.carcass.height}`}>
             <CarcassForm module={module} onChange={updateModule} section="dims" />
           </FoldItem>

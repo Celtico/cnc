@@ -20,6 +20,10 @@ export interface ViewerModule {
   z?: number
   /** «Al terra» lliure: es mou pel terra (de costat i endavant/enrere). */
   free?: boolean
+  /** D'esquena a la paret d'un costat (`wallSides`): es mou al llarg d'aquella paret (endavant/enrere), no de costat. */
+  side?: "left" | "right"
+  /** La distància d'ara des de la paret del fons, al llarg de la del costat (mm). */
+  along?: number
   /** Potes regulables: alçada (mm) i fondària de la caixa, per dibuixar-les. */
   /** Potes (base «Potes»): `inset` de les vores; `fitted` = la pota importada i confirmada ja es dibuixa amb el seu model (`Panel.fittings`). */
   legs?: { height: number; depth: number; inset?: number; fitted?: boolean; points?: [number, number][] }

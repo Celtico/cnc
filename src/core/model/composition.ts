@@ -120,10 +120,12 @@ export const rowOf = (m: Module): ModuleRow => (m.carcass.base.kind === "wall" ?
  */
 export function modulePlacements(comp: Composition): ModulePlacement[] {
   const cursor: Record<ModuleRow, number> = { floor: 0, wall: 0 }
-  return comp.modules.map((m) => {
+  const out = comp.modules.map((m): ModulePlacement => {
     const row = rowOf(m)
     // Al terra amb X pròpia (illa): fora de la fila, no mou el cursor.
     if (freeX(m)) return { x: m.x!, y: moduleElevation(m.carcass), ...(m.wallGap ? { z: m.wallGap } : {}) }
+    // D'esquena a la paret d'un costat: fora de la fila del fons (no mou el cursor); es col·loca després.
+    if (sideWallOf(m)) return { x: 0, y: moduleElevation(m.carcass) }
     const x = cursor[row] + m.gapBefore
     const wallZ = row === "floor" && m.wallGap ? m.wallGap : 0
     // Fronts a un costat (90° o 270°): a la fila ocupa la fondària (fins a la cara dels fronts) i un lateral toca la paret.
@@ -132,12 +134,48 @@ export function modulePlacements(comp: Composition): ModulePlacement[] {
     if (rot === 90 || rot === 270) {
       const w = m.carcass.width, d = moduleFrontFace(m)
       cursor[row] = x + d
-      const z = wallZ + (w - d) / 2
+      const z = wallZ + (m.sideAlong ?? 0) + (w - d) / 2
       return { x: x + (d - w) / 2, y: moduleElevation(m.carcass), ...(z ? { z } : {}) }
     }
     cursor[row] = x + m.carcass.width
     return { x, y: moduleElevation(m.carcass), ...(wallZ ? { z: wallZ } : {}) }
   })
+  // Els de les parets dels costats (2026-10-22, «no sap a quina paret ha d'anar»): enganxats a la paret esquerra (X = 0)
+  // o a la dreta, a `sideAlong` del fons, al llarg de la paret. La paret dreta és la desada (`scene.rightWallX`, perquè no
+  // es mogui quan es mouen els altres: «si ja hi ha un moble a la paret»), però mai dins del més fondo dels seus mòduls tocant
+  // el de la fila que és més a la dreta (els lliures al terra no l'empenyen: «quan fiques un mòdul lliure al terra mou la
+  // paret»). Tots els de la paret dreta hi van d'esquena, siguin de la fondària que siguin.
+  const sides = comp.modules.map(sideWallOf)
+  const rightEdge = Math.max(0, ...comp.modules.flatMap((m, i) => (sides[i] || freeX(m) ? [] : [moduleFootprint(m, out[i]!, moduleFrontFace(m)).x1])))
+  const rightDepth = Math.max(0, ...comp.modules.flatMap((m, i) => (sides[i] === "right" ? [moduleFrontFace(m)] : [])))
+  const wallX = Math.max(comp.scene?.rightWallX ?? 0, rightEdge + rightDepth)
+  comp.modules.forEach((m, i) => {
+    const side = sides[i]
+    if (!side) return
+    const w = m.carcass.width, d = moduleFrontFace(m)
+    const x0 = side === "left" ? 0 : wallX - d
+    const wallZ = rowOf(m) === "floor" && m.wallGap ? m.wallGap : 0
+    const z = wallZ + (m.sideAlong ?? 0) + (w - d) / 2
+    out[i] = { x: x0 + (d - w) / 2, y: moduleElevation(m.carcass), ...(z ? { z } : {}) }
+  })
+  return out
+}
+
+/** On és la paret dreta (X) si hi ha mòduls d'esquena a ella (`sideWallOf`); si no, `undefined`. */
+export function rightWallX(comp: Composition): number | undefined {
+  const at = modulePlacements(comp)
+  const xs = comp.modules.flatMap((m, i) => (sideWallOf(m) === "right" ? [moduleFootprint(m, at[i]!, moduleFrontFace(m)).x1] : []))
+  return xs.length ? Math.max(...xs) : undefined
+}
+
+/**
+ * La paret del costat on va un mòdul de la fila girat que s'hi ha posat (té `sideAlong`): fronts a la dreta (90°), d'esquena
+ * a l'esquerra; a l'esquerra (270°), a la dreta. Els girats sense `sideAlong` (els d'abans) segueixen a la fila.
+ */
+export function sideWallOf(m: Module): "left" | "right" | undefined {
+  if (freeX(m) || m.sideAlong === undefined) return undefined
+  const rot = moduleRot(m)
+  return rot === 90 ? "left" : rot === 270 ? "right" : undefined
 }
 
 /** Posicions amb els ancoratges antics (`anchor`), només per migrar mobles guardats. */
