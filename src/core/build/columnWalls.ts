@@ -115,32 +115,7 @@ export function columnWalls(
         problems.push({ refId: o.id, panel: near[0]!, message: `«${o.name}» ${throughFront ? "travessa tot el mòdul de darrere a davant" : "no toca el darrere del mòdul"}: el moble no s'hi tanca sol (els fons que falten s'han de posar a mà).` })
         continue
       }
-      // Trams d'alçada: a cada un, el fons que hi ha a l'esquerra i a la dreta de la columna (una zona sense fons a un
-      // costat, aquell costat no es tanca).
-      type Seg = { kind: Carcass["back"]; y0: number; y1: number; own0: boolean; own1: boolean; hasL: boolean; hasR: boolean; xl: number; xr: number; zr: number; tb: number; tpl: Panel }
-      const segs: Seg[] = []
-      const ys = [...new Set(near.flatMap((p) => [box(p).min[1], box(p).max[1]]).map((v) => Math.round(v * 10) / 10))].sort((a, b) => a - b)
-      for (let i = 0; i + 1 < ys.length; i++) {
-        const ya = ys[i]!, yb = ys[i + 1]!
-        if (yb - ya < 1) continue
-        const here = near.filter((p) => box(p).min[1] < ya + 0.5 && box(p).max[1] > yb - 0.5)
-        if (!here.length) continue
-        const L = here.filter((p) => box(p).min[0] < cx0 - 1), R = here.filter((p) => box(p).max[0] > cx1 + 1)
-        const tpl = L[0] ?? R[0]!
-        const q = box(tpl)
-        const kind = kindOf(tpl)!
-        const zr = rearMin ? q.min[2] : q.max[2]
-        const xl = L.length ? Math.min(...L.map((p) => box(p).min[0])) : x0
-        const xr = R.length ? Math.max(...R.map((p) => box(p).max[0])) : x1
-        // Si el tram comença o s'acaba on un fons hi comença o s'hi acaba (`own`), el fons ja té l'alçada bona (en ranura,
-        // dins la peça); si no (és l'altre costat que canvia), cal buscar la peça que hi ha.
-        const own0 = here.some((p) => Math.abs(box(p).min[1] - ya) < 1), own1 = here.some((p) => Math.abs(box(p).max[1] - yb) < 1)
-        const last = segs[segs.length - 1]
-        if (last && Math.abs(last.y1 - ya) < 0.5 && last.kind === kind && last.hasL === L.length > 0 && last.hasR === R.length > 0 && Math.abs(last.xl - xl) < 1 && Math.abs(last.xr - xr) < 1 && Math.abs(last.zr - zr) < 0.5 && last.tb === tpl.thickness) {
-          last.y1 = yb
-          last.own1 = own1
-        } else segs.push({ kind, y0: ya, y1: yb, own0, own1, hasL: L.length > 0, hasR: R.length > 0, xl, xr, zr, tb: tpl.thickness, tpl })
-      }
+      const segs = backSegments(near, box, kindOf, [cx0, cx1], [x0, x1], rearMin)
       if (!segs.length) continue
       // Un tram que comença al mig d'una peça horitzontal (un prestatge fix gruixut on el fons de l'altre costat s'acaba):
       // el fons nou comença a sobre de la peça (en ranura, dins seu), i s'acaba a sota.
@@ -209,7 +184,7 @@ export function columnWalls(
           const q = box(p)
           return (Math.abs(q.max[0] - x) < 1 || Math.abs(q.min[0] - x) < 1) && q.max[1] > yLo + 1 && q.min[1] < yHi - 1
         })
-        type Wall = { pl: ReturnType<typeof placement>; length: number; groove: [number, number, number, number]; along: "x" | "z"; from: number; to: number; mid: number; ends: Panel[] }
+        type Wall = ColumnBackRun & { pl: ReturnType<typeof placement>; length: number; groove: [number, number, number, number] }
         const walls: Wall[] = []
         const endL = !hasLeft ? ends(wallX0) : undefined
         const endR = !hasRight ? ends(wallX1) : undefined
@@ -237,45 +212,87 @@ export function columnWalls(
           k++
           const height = yHi - yLo
           if (w.length < 5 || height < 5) continue
-          // Un fons de costat va amb l'eix u al llarg de z: el pla és Z·Y i la normal X (l'origen, a la cantonada de z menor).
-          const p: Panel = {
-            ...sg.tpl,
-            id: `${id}:colback-${o.id}-${k}`,
-            label: `Fons columna ${k}`,
-            length: r(w.length),
-            width: r(height),
-            edges: { left: false, right: false, top: false, bottom: false },
-            holes: [],
-            grooves: [],
-            placement: w.pl,
-          }
-          delete p.outline
-          delete p.cutouts
-          delete p.mitres
-          const wall = normalizePanel(p)
+          const wall = columnBackPanel(sg.tpl, `${id}:colback-${o.id}-${k}`, `Fons columna ${k}`, w.length, height, w.pl)
           added.push(wall)
           if (groove) {
             if (below) addGroove(below, box(below), w.groove, box(below).max[1], g, W)
             if (above) addGroove(above, box(above), w.groove, box(above).min[1], g, W)
           }
-          // Encastat: espigues com el fons encastat (tres per costat, a `endOffset` dels extrems).
-          if (dw) {
-            for (const host of [below, above]) {
-              if (!host) continue
-              const yFace = host === below ? box(host).max[1] : box(host).min[1]
-              const pts = threeAlong(Math.min(w.from, w.to), Math.max(w.from, w.to), dw.endOffset).map((t): Vec3 => (w.along === "x" ? [t, yFace, w.mid] : [w.mid, yFace, t]))
-              dowelJoint(wall, host, pts.map(W), dw, dw.tag)
-            }
-            for (const side of w.ends) {
-              const xFace = Math.abs(box(side).max[0] - w.from) < 1 ? box(side).max[0] : box(side).min[0]
-              dowelJoint(wall, side, threeAlong(yLo, yHi, dw.endOffset).map((y): Vec3 => W([xFace, y, w.mid])), dw, dw.tag)
-            }
-          }
+          // Encastat: espigues com el fons encastat.
+          if (dw) dowelColumnBack(wall, w, below, above, [yLo, yHi], box, W, dw)
         }
       }
     }
   }
   return { added: added.filter((p) => !removed.has(p)), removed, problems }
+}
+
+/** Un tram d'alçada del fons que la columna ha tallat: el tipus, l'alçada i fins on arriba a cada costat. */
+type Seg = { kind: Carcass["back"]; y0: number; y1: number; own0: boolean; own1: boolean; hasL: boolean; hasR: boolean; xl: number; xr: number; zr: number; tb: number; tpl: Panel }
+
+/**
+ * Trams d'alçada dels fons tallats per una columna (de `cx0` a `cx1`; la part dins de la caixa, de `x0` a `x1`): a cada
+ * un, el fons que hi ha a l'esquerra i a la dreta de la columna (una zona sense fons a un costat, aquell costat no es
+ * tanca). Els trams seguits iguals, un de sol.
+ */
+function backSegments(near: Panel[], box: (p: Panel) => Box, kindOf: (p: Panel) => Carcass["back"] | undefined, [cx0, cx1]: [number, number], [x0, x1]: [number, number], rearMin: boolean): Seg[] {
+  const segs: Seg[] = []
+  const ys = [...new Set(near.flatMap((p) => [box(p).min[1], box(p).max[1]]).map((v) => Math.round(v * 10) / 10))].sort((a, b) => a - b)
+  for (let i = 0; i + 1 < ys.length; i++) {
+    const ya = ys[i]!, yb = ys[i + 1]!
+    if (yb - ya < 1) continue
+    const here = near.filter((p) => box(p).min[1] < ya + 0.5 && box(p).max[1] > yb - 0.5)
+    if (!here.length) continue
+    const L = here.filter((p) => box(p).min[0] < cx0 - 1), R = here.filter((p) => box(p).max[0] > cx1 + 1)
+    const tpl = L[0] ?? R[0]!
+    const q = box(tpl)
+    const kind = kindOf(tpl)!
+    const zr = rearMin ? q.min[2] : q.max[2]
+    const xl = L.length ? Math.min(...L.map((p) => box(p).min[0])) : x0
+    const xr = R.length ? Math.max(...R.map((p) => box(p).max[0])) : x1
+    // Si el tram comença o s'acaba on un fons hi comença o s'hi acaba (`own`), el fons ja té l'alçada bona (en ranura,
+    // dins la peça); si no (és l'altre costat que canvia), cal buscar la peça que hi ha.
+    const own0 = here.some((p) => Math.abs(box(p).min[1] - ya) < 1), own1 = here.some((p) => Math.abs(box(p).max[1] - yb) < 1)
+    const last = segs[segs.length - 1]
+    if (last && Math.abs(last.y1 - ya) < 0.5 && last.kind === kind && last.hasL === L.length > 0 && last.hasR === R.length > 0 && Math.abs(last.xl - xl) < 1 && Math.abs(last.xr - xr) < 1 && Math.abs(last.zr - zr) < 0.5 && last.tb === tpl.thickness) {
+      last.y1 = yb
+      last.own1 = own1
+    } else segs.push({ kind, y0: ya, y1: yb, own0, own1, hasL: L.length > 0, hasR: R.length > 0, xl, xr, zr, tb: tpl.thickness, tpl })
+  }
+  return segs
+}
+
+/** Un fons nou a la cara d'una columna: del tauler i el gruix del fons tallat (`tpl`), sense cantells ni mecanitzats. */
+function columnBackPanel(tpl: Panel, id: string, label: string, length: number, height: number, pl: Panel["placement"]): Panel {
+  // Un fons de costat va amb l'eix u al llarg de z: el pla és Z·Y i la normal X (l'origen, a la cantonada de z menor).
+  const p: Panel = { ...tpl, id, label, length: r(length), width: r(height), edges: { left: false, right: false, top: false, bottom: false }, holes: [], grooves: [], placement: pl }
+  delete p.outline
+  delete p.cutouts
+  delete p.mitres
+  return normalizePanel(p)
+}
+
+/** Un fons nou de columna, al llarg de x o de z (`along`, de `from` a `to`, el gruix centrat a `mid`), i on topa. */
+interface ColumnBackRun {
+  along: "x" | "z"
+  from: number
+  to: number
+  mid: number
+  ends: Panel[]
+}
+
+/** Espigues d'un fons nou encastat (tres per costat, a `endOffset` dels extrems) a la peça de sota, la de sobre i els laterals on topa. */
+function dowelColumnBack(wall: Panel, w: ColumnBackRun, below: Panel | undefined, above: Panel | undefined, [yLo, yHi]: [number, number], box: (p: Panel) => Box, W: (v: Vec3) => Vec3, dw: NonNullable<ReturnType<typeof dowelSpec>>): void {
+  for (const host of [below, above]) {
+    if (!host) continue
+    const yFace = host === below ? box(host).max[1] : box(host).min[1]
+    const pts = threeAlong(Math.min(w.from, w.to), Math.max(w.from, w.to), dw.endOffset).map((t): Vec3 => (w.along === "x" ? [t, yFace, w.mid] : [w.mid, yFace, t]))
+    dowelJoint(wall, host, pts.map(W), dw, dw.tag)
+  }
+  for (const side of w.ends) {
+    const xFace = Math.abs(box(side).max[0] - w.from) < 1 ? box(side).max[0] : box(side).min[0]
+    dowelJoint(wall, side, threeAlong(yLo, yHi, dw.endOffset).map((y): Vec3 => W([xFace, y, w.mid])), dw, dw.tag)
+  }
 }
 
 /** Peces que els fons nous no retallen: el fons i la caixa (hi entren en ranura o hi topen). */
