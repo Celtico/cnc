@@ -181,6 +181,7 @@ export function threeAlong(a: number, b: number, endOffset: number): number[] {
 /** Posicions Y d'una filera System 32 entre `yFrom` i `yTo` (des de la base de la zona). */
 export function system32Ys(yFrom: number, yTo: number, edgeOffset: number, pitch: number): number[] {
   const ys: number[] = []
+  if (!(pitch >= 1)) return ys
   for (let y = yFrom + edgeOffset; y <= yTo - edgeOffset + 1e-9; y += pitch) ys.push(r(y))
   return ys
 }

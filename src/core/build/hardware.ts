@@ -144,13 +144,16 @@ export function cupSpec(item: HardwareItem) {
     gap: param(item, "gap"),
     margin: param(item, "margin"),
     hole: door,
-    count: (height: number) => Math.max(1, Math.round(stepValue(count, height))),
+    // 1–20: una regla malmesa (un fitxer, una importació) no pot demanar milions de frontisses.
+    count: (height: number) => Math.max(1, Math.min(20, Math.round(stepValue(count, height) || 1))),
   }
 }
 
 export function system32Spec(item: HardwareItem) {
   expectEngine(item, "system32")
-  return { edgeOffset: param(item, "edgeOffset"), pitch: param(item, "pitch"), diameter: param(item, "diameter"), depth: param(item, "depth"), hole: drillSpec(item, "side") }
+  // Un pas de menys de 8 mm (o negatiu: un fitxer malmès) faria milions de forats: el de sempre, 32.
+  const pitch = param(item, "pitch")
+  return { edgeOffset: param(item, "edgeOffset"), pitch: pitch >= 8 ? pitch : 32, diameter: param(item, "diameter"), depth: param(item, "depth"), hole: drillSpec(item, "side") }
 }
 
 export function dowelSpec(item: HardwareItem) {
