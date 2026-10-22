@@ -7,16 +7,10 @@ type Args = Pick<CabinetViewerProps, "size" | "modules" | "parts" | "models" | "
 
 /** Caixes dels objectes que es mouen amb el gizmo (peces lliures, models, grup, selecció múltiple) i les arestes on s'enganxen. */
 export function useObjectBoxes({ size, modules, parts, models, ghosts, selectedSet, selectedPartId, selectedModelId, selectedGroup }: Args) {
-  // Arestes on s'enganxen els objectes en arrossegar-los: mòduls, altres objectes, terra i paret.
-  const snapTargets = useMemo((): SnapTargets => {
-    const t: SnapTargets = { x: [0, size.width], y: [0, size.height], z: [0, size.depth] }
-    for (const m of modules ?? []) {
-      t.x.push(m.x, m.x + m.width)
-      t.y.push(m.y, m.y + m.height)
-      t.z.push(m.z ?? 0, (m.z ?? 0) + m.depth)
-    }
-    return t
-  }, [modules, size.width, size.height, size.depth])
+  // Plans on s'enganxen els objectes en arrossegar-los: terra i paret (les vores del moble). Els mòduls hi són com a caixes
+  // (`moduleBoxes`), per a les guies del Figma (`snapWithGuides`).
+  const snapTargets = useMemo((): SnapTargets => ({ x: [0, size.width], y: [0, size.height], z: [0, size.depth] }), [size.width, size.height, size.depth])
+  const moduleBoxes = useMemo((): RefObject[] => (modules ?? []).map((m) => ({ id: m.id, name: m.id, x: m.x, y: m.y, z: m.z ?? 0, w: m.width, h: m.height, d: m.depth })), [modules])
   // Caixa de cada peça lliure com a «objecte» (per reutilitzar l'arrossegament i el gizmo).
   const partBoxes = useMemo((): RefObject[] => (parts ?? []).map((p) => {
     const s = partSize(p)
@@ -69,5 +63,5 @@ export function useObjectBoxes({ size, modules, parts, models, ghosts, selectedS
     }
     return { id: `group:${selectedGroup}`, name: selectedGroup!, x: min[0]!, y: min[1]!, z: min[2]!, w: max[0]! - min[0]!, h: max[1]! - min[1]!, d: max[2]! - min[2]! }
   }, [parts, models, selectedGroup])
-  return { snapTargets, partBoxes, selectedPartBox, modelBoxes, selectedModelBox, setBox, selectedModel, groupBox }
+  return { snapTargets, moduleBoxes, partBoxes, selectedPartBox, modelBoxes, selectedModelBox, setBox, selectedModel, groupBox }
 }

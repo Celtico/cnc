@@ -14,25 +14,14 @@ import { surfaceMaterial } from "../surfaceMaterial"
 import { disposeMaterial } from "../textures"
 import { S, SELECT_COLOR } from "./constants"
 import { snapToleranceMm } from "../snapTolerance"
+import { snapWithGuides, type Guide } from "../guideSnap"
+import { SmartGuides } from "../SmartGuides"
 import { useOrbitControls } from "../orbitControls"
 
 export interface SnapTargets {
   x: number[]
   y: number[]
   z: number[]
-}
-
-/** Posició (mm, arrodonida a 1) i si s'ha enganxat: prova les dues arestes de l'objecte, a `tol` mm (`snapToleranceMm`). */
-function snapAxis(pos: number, size: number, targets: number[], free: boolean, tol: number): { v: number; snapped: boolean } {
-  if (free) return { v: Math.round(pos), snapped: false }
-  let best: number | null = null
-  for (const t of targets) {
-    for (const edge of [pos, pos + size]) {
-      const delta = t - edge
-      if (Math.abs(delta) <= tol && (best === null || Math.abs(delta) < Math.abs(best))) best = delta
-    }
-  }
-  return best === null ? { v: Math.round(pos), snapped: false } : { v: Math.round(pos + best), snapped: true }
 }
 
 /** Fletxa de cada direcció a l'etiqueta d'arrossegar un objecte (com les icones de Posició). */
@@ -57,7 +46,7 @@ function useFacingAxis(): Axis | null {
 /**
  * Objecte de referència (translúcid, o sòlid si té material). Seleccionat, es mou només amb el gizmo: cada fletxa en la
  * seva direcció i la bola del mig lliure (pel terra si hi és, per la paret si hi és, si no pel pla de la pantalla); el cos
- * no s'arrossega. S'enganxa a les arestes dels mòduls i dels altres objectes (Alt: sense
+ * no s'arrossega. S'enganxa a les vores i al mig dels mòduls i dels altres objectes, amb les guies vermelles del Figma (Alt: sense
  * imant). Amb el ratolí a sobre, contorn del color de selecció.
  */
 export function RefGhost({
@@ -99,16 +88,8 @@ export function RefGhost({
   const state = useRef<{ plane: Plane; grab: Vector3; axes: Axis[]; start: [number, number]; moved: boolean } | null>(null)
   /** L'arrossegament d'ara és el de la bola (per marcar-la encara que només mogui en dues direccions). */
   const freeDrag = useRef(false)
-  const snap = useMemo((): SnapTargets => {
-    const t = { x: [...targets.x], y: [...targets.y], z: [...targets.z] }
-    for (const o of others) {
-      if (o.id === g.id) continue
-      t.x.push(o.x, o.x + o.w)
-      t.y.push(o.y, o.y + o.h)
-      t.z.push(o.z, o.z + o.d)
-    }
-    return t
-  }, [targets, others, g.id])
+  const snapBoxes = useMemo(() => others.filter((o) => o.id !== g.id), [others, g.id])
+  const [lines, setLines] = useState<Guide[]>([])
   const pos = drag ?? g
   // Ratolí a sobre: contorn del color de selecció (més suau), perquè es vegi què es triarà.
   const [hover, setHover] = useState(false)
@@ -137,6 +118,7 @@ export function RefGhost({
     const d = latest.current
     if (st.moved && d && onMove) onMove(g.id, { x: d.x, y: d.y, z: d.z })
     setDrag(null)
+    setLines([])
     onDrag?.(null)
   }
 
@@ -150,15 +132,13 @@ export function RefGhost({
         if (!at) return
         at.sub(st.grab)
         const raw = { x: (at.x - offset[0]) / S, y: (at.y - offset[1]) / S, z: (at.z - offset[2]) / S }
-        const next = { x: g.x, y: g.y, z: g.z, axes: st.axes, snapped: [] as Axis[] }
         const three = getThree()
         const tol = snapToleranceMm(three.camera, three.size.height, at, S)
-        for (const a of st.axes) {
-          const size = a === "x" ? g.w : a === "y" ? g.h : g.d
-          const r = snapAxis(raw[a], size, snap[a], e.altKey, tol)
-          next[a] = r.v
-          if (r.snapped) next.snapped.push(a)
-        }
+        const box = { ...g, x: g.x, y: g.y, z: g.z }
+        for (const a of st.axes) box[a] = raw[a]
+        const r = snapWithGuides(box, st.axes, snapBoxes, targets, tol, e.altKey)
+        const next = { x: Math.round(r.box.x), y: Math.round(r.box.y), z: Math.round(r.box.z), axes: st.axes, snapped: r.snapped }
+        setLines(r.guides)
         // No es pot enfonsar al terra.
         next.y = Math.max(0, next.y)
         setDrag(next)
@@ -185,6 +165,8 @@ export function RefGhost({
   const gizmoAxes = (["x", "y", "z"] as Axis[]).filter((a) => !(a === "y" && g.onFloor) && !(a === "z" && g.onWall) && a !== facing)
 
   return (
+    <>
+    {drag && <SmartGuides guides={lines} />}
     <group position={[(pos.x + g.w / 2) * S, (pos.y + g.h / 2) * S, (pos.z + g.d / 2) * S]}>
     <mesh
       rotation={cyl ? rotation : [0, 0, 0]}
@@ -242,5 +224,6 @@ export function RefGhost({
         </Html>
       )}
     </group>
+    </>
   )
 }

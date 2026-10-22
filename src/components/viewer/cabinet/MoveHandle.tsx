@@ -7,6 +7,9 @@ import { MoveGizmo, type GizmoHandle } from "../MoveGizmo"
 import type { Axis } from "../pixelScale"
 import { S, SELECT_COLOR } from "./constants"
 import { snapToleranceMm } from "../snapTolerance"
+import { snapWithGuides, type Guide, type GuideBox } from "../guideSnap"
+import { SmartGuides } from "../SmartGuides"
+import type { SnapTargets } from "./RefGhost"
 import type { ViewerModule } from "./types"
 import { useOrbitControls } from "../orbitControls"
 
@@ -17,17 +20,21 @@ const EDITOR_ONLY = { editorOnly: true }
  * Gizmo per moure el mòdul seleccionat (o, amb Maj, tot el moble): el mateix de les peces lliures i els objectes (per
  * decisió de l'usuari, 2026-10-22: «que sigui tot unificat»), al mig del mòdul. Només hi ha les fletxes de les direccions
  * que el mòdul es pot moure: al llarg de la fila (vermella), amunt i avall si és penjat (verda), endavant i enrere si és
- * al terra (blava). La bola del mig, lliure pel pla de la paret (penjat) o pel terra. S'enganxa a les vores dels altres
- * mòduls i dels objectes (Alt: lliure).
+ * al terra (blava). La bola del mig, lliure pel pla de la paret (penjat) o pel terra. S'enganxa a les vores i al mig dels
+ * altres mòduls i dels objectes, amb les guies vermelles del Figma (Alt: lliure).
  */
 export function MoveHandle({
   m,
   others,
+  planes,
   onDrag,
   onDrop,
 }: {
   m: ViewerModule
-  others: number[]
+  /** Caixes on s'enganxa (vores i mig), amb les guies del Figma: els altres mòduls i els objectes. */
+  others: GuideBox[]
+  /** Terra i paret. */
+  planes: SnapTargets
   onDrag: (d: { index: number; dx: number; dy: number; dz: number; all: boolean } | null) => void
   onDrop: (dx: number, dy: number, dz: number, all: boolean) => void
 }) {
@@ -36,8 +43,8 @@ export function MoveHandle({
   const getThree = useThree((st) => st.get)
   const camera = useThree((st) => st.camera)
   const start = useRef<{ p: Vector3; plane: Plane; all: boolean; axes: Axis[]; handle: GizmoHandle; moved: boolean; at: [number, number] } | null>(null)
-  const latest = useRef<{ dx: number; dy: number; dz: number; all: boolean } | null>(null)
-  const [live, setLive] = useState<{ dx: number; dy: number; dz: number; all: boolean } | null>(null)
+  const latest = useRef<{ dx: number; dy: number; dz: number; all: boolean; guides: Guide[] } | null>(null)
+  const [live, setLive] = useState<{ dx: number; dy: number; dz: number; all: boolean; guides: Guide[] } | null>(null)
   const [active, setActive] = useState<GizmoHandle | null>(null)
   // Al terra en fila: només al llarg de la fila; penjat: també amunt i avall; al terra lliure: també endavant i enrere.
   // D'esquena a la paret d'un costat: al llarg d'aquella paret (endavant i enrere) i, penjat, amunt i avall.
@@ -49,21 +56,14 @@ export function MoveHandle({
     if (!s0 || !p) return null
     const on = (a: Axis) => s0.axes.includes(a)
     // Amb Maj (tot el moble), només al llarg de la fila.
-    let dx = on("x") ? (p.x - s0.p.x) / S : 0
-    const dy = on("y") && !s0.all ? Math.round((p.y - s0.p.y) / S) : 0
+    const raw = { x: on("x") ? (p.x - s0.p.x) / S : 0, y: on("y") && !s0.all ? (p.y - s0.p.y) / S : 0, z: on("z") && !s0.all ? (p.z - s0.p.z) / S : 0 }
+    const three = getThree()
+    const tol = snapToleranceMm(three.camera, three.size.height, p, S)
+    const z0 = m.z ?? 0
+    const r = snapWithGuides({ x: m.x + raw.x, y: m.y + raw.y, z: z0 + raw.z, w: m.width, h: m.height, d: m.depth }, s0.axes, others, planes, tol, e.altKey)
     // «Al terra»: endavant i enrere, sense passar la paret.
-    const dz = on("z") && !s0.all ? Math.max(-(m.side ? (m.along ?? 0) : (m.z ?? 0)), Math.round((p.z - s0.p.z) / S)) : 0
-    if (!e.altKey && on("x")) {
-      const three = getThree()
-      const tol = snapToleranceMm(three.camera, three.size.height, p, S)
-      let best: number | null = null
-      for (const t of others) for (const edge of [m.x + dx, m.x + m.width + dx]) {
-        const d = t - edge
-        if (Math.abs(d) <= tol && (best === null || Math.abs(d) < Math.abs(best))) best = d
-      }
-      if (best !== null) dx += best
-    }
-    return { dx: Math.round(dx), dy, dz, all: s0.all }
+    const dz = Math.max(-(m.side ? (m.along ?? 0) : z0), Math.round(r.box.z - z0))
+    return { dx: Math.round(r.box.x - m.x), dy: Math.round(r.box.y - m.y), dz, all: s0.all, guides: s0.all ? [] : r.guides }
   }
   const begin = (a: GizmoHandle, e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation()
@@ -87,7 +87,7 @@ export function MoveHandle({
     if (!d) return
     latest.current = d
     setLive(d)
-    onDrag({ index: m.index, ...d })
+    onDrag({ index: m.index, dx: d.dx, dy: d.dy, dz: d.dz, all: d.all })
   }
   const end = (e: ThreeEvent<PointerEvent>) => {
     if (!start.current) return
@@ -111,6 +111,8 @@ export function MoveHandle({
   const center: [number, number, number] = [(m.x + ox + m.width / 2) * S, (m.y + oy + m.height / 2) * S, ((m.z ?? 0) + oz + m.depth / 2) * S]
 
   return (
+    <>
+    {live && <SmartGuides guides={live.guides} />}
     <group position={center} userData={EDITOR_ONLY}>
       <MoveGizmo axes={axes} free={axes.length > 1} active={active} onStart={begin} onMove={move} onEnd={end} />
       {label && (
@@ -119,5 +121,6 @@ export function MoveHandle({
         </Html>
       )}
     </group>
+    </>
   )
 }
