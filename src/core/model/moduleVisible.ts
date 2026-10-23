@@ -272,6 +272,75 @@ function visibleDrawers(f: Extract<Front, { kind: "drawers" }>, kitDefault: bool
   return drawers
 }
 
+/** Ni prestatges ni accessoris (barra i llum): es conserven i tornen quan el compartiment els pot portar. */
+function noContents(z: Zone): void {
+  delete z.shelves
+  delete z.rail
+  delete z.led
+}
+
+/** Uns calaixos interiors tal com es fan (`kitDefault`: la guia del mòdul és un joc de calaix). */
+function visibleInnerDrawers(drawers: NonNullable<Zone["innerDrawers"]>, kitDefault: boolean): NonNullable<Zone["innerDrawers"]> {
+  const d = { ...drawers }
+  const kit = d.hardware ? d.hardware.engine === "drawerKit" : kitDefault
+  if (!kit || !d.kit || !Object.keys(d.kit).length) delete d.kit
+  // El front metàl·lic del fabricant només amb un joc.
+  if (!kit) delete d.front
+  // Amb el front metàl·lic del fabricant no hi ha front de fusta per fer de vidre.
+  if (d.front === "kit" || !d.glass) delete d.glass
+  // Alçades a mida: les dels calaixos que hi ha; totes iguals = la comuna.
+  const hs = innerDrawerHeights(d)
+  if (d.sizes) delete d.heights
+  else if (new Set(hs).size > 1) d.heights = hs
+  else {
+    delete d.heights
+    d.height = hs[0] ?? d.height
+  }
+  // La guia de cada calaix: com als calaixos de fora (només amb un joc i alçades diferents).
+  const own = (d.drawerSlides ?? []).slice(0, d.n).map((h, i) => (i > 0 && h && h.engine === "drawerKit" ? h : null))
+  if (!kit || (!d.sizes && !innerPerDrawerSlides(d, { engine: "drawerKit" })) || !own.some((h) => h)) delete d.drawerSlides
+  else d.drawerSlides = own
+  return d
+}
+
+/** Un front tal com es fa: el que només compta amb una altra opció (el marc sense vidre, el patró de l'altre tipus…) no hi és. */
+function visibleFront(f: Front, kitDefault: boolean): Front {
+  switch (f.kind) {
+    case "drawers":
+      return visibleDrawers(f, kitDefault)
+    case "door": {
+      // Sense vidre, el marc triat no compta (de vidre, la frontissa i el tirador es trien com a les de fusta).
+      const door = { ...f }
+      if (!door.glass) {
+        delete door.glass
+        delete door.frame
+      }
+      if (door.mode === "double") door.hinge = "left"
+      return door
+    }
+    case "flap": {
+      // Com la porta: sense vidre, el marc no compta (de vidre, el braç i el tirador es trien igual; cap forat al tauler).
+      const flap = { ...f }
+      if (!flap.glass) {
+        delete flap.glass
+        delete flap.frame
+      } else delete flap.handleInset
+      return flap
+    }
+    case "grille": {
+      // Patró: de ranures (amplada i separació) o de forats (Ø i pas); el de l'altre tipus no surt. Amb imants, sense frontisses.
+      const p = f.pattern
+      const pattern = p.kind === "holes" ? { ...p, slotWidth: DEFAULT_GRILLE.slotWidth, slotGap: DEFAULT_GRILLE.slotGap } : { ...p, holeDiameter: DEFAULT_GRILLE.holeDiameter, holePitch: DEFAULT_GRILLE.holePitch }
+      const grille = { ...f, pattern, ...(f.mount === "removable" ? { hinge: "left" as const } : {}) }
+      // L'imant triat només compta si hi ha imants (reixeta desmuntable o trapa).
+      if (f.mount !== "removable" && !f.hatch) delete grille.hardware
+      return grille
+    }
+    default:
+      return f
+  }
+}
+
 /**
  * Un compartiment tal com es veu (vegeu `visibleModule`). `kitDefault`: la guia del mòdul és un joc de calaix (els
  * calaixos sense guia pròpia el fan servir). El «Tirador» de cada front compta sempre (també «Cap (push)»): el del mòdul
@@ -318,9 +387,7 @@ function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, given: Zone
   const childFixed = fixedCover || out.front?.kind === "panel"
   if (z.split) {
     // Un compartiment dividit no té prestatges ni barra (l'inspector no els ensenya).
-    delete out.shelves
-    delete out.rail
-    delete out.led
+    noContents(out)
     const n = z.split.children.length
     const dir = z.split.dir
     out.split = {
@@ -332,9 +399,7 @@ function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, given: Zone
   } else if (!canHoldShelves(bounds)) {
     // Sense una peça a cada costat (laterals o divisors; `zoneBoundsMap`) no hi ha on aguantar prestatges, fileres System
     // 32, barra ni llum: no surten a l'inspector i no es fan (es conserven per quan hi hagi laterals).
-    delete out.shelves
-    delete out.rail
-    delete out.led
+    noContents(out)
   } else {
     // Sense prestatges (0): gruix i «a ras» no compten; «Regulables» sí (les fileres System 32 per posar-n'hi després),
     // i sense `shelves` és com no regulables.
@@ -356,82 +421,18 @@ function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, given: Zone
     const behindDoor = (covered && !fixedCover) || out.front?.kind === "door" || out.front?.kind === "flap"
     if (z.split || !canHoldShelves(bounds) || !behindDoor) delete out.innerDrawers
     else {
-      const d = { ...out.innerDrawers }
-      const kit = d.hardware ? d.hardware.engine === "drawerKit" : kitDefault
-      if (!kit || !d.kit || !Object.keys(d.kit).length) delete d.kit
-      // El front metàl·lic del fabricant només amb un joc.
-      if (!kit) delete d.front
-      // Amb el front metàl·lic del fabricant no hi ha front de fusta per fer de vidre.
-      if (d.front === "kit" || !d.glass) delete d.glass
-      // Alçades a mida: les dels calaixos que hi ha; totes iguals = la comuna.
-      const hs = innerDrawerHeights(d)
-      if (d.sizes) delete d.heights
-      else if (new Set(hs).size > 1) d.heights = hs
-      else {
-        delete d.heights
-        d.height = hs[0] ?? d.height
-      }
-      // La guia de cada calaix: com als calaixos de fora (només amb un joc i alçades diferents).
-      const own = (d.drawerSlides ?? []).slice(0, d.n).map((h, i) => (i > 0 && h && h.engine === "drawerKit" ? h : null))
-      if (!kit || (!d.sizes && !innerPerDrawerSlides(d, { engine: "drawerKit" })) || !own.some((h) => h)) delete d.drawerSlides
-      else d.drawerSlides = own
+      const d = visibleInnerDrawers(out.innerDrawers, kitDefault)
       out.innerDrawers = d
       // Omplen el compartiment: ni prestatges ni accessoris (es conserven).
-      if (d.sizes) {
-        delete out.shelves
-        delete out.rail
-        delete out.led
-      }
+      if (d.sizes) noContents(out)
     }
   }
-  const f = out.front
-  if (f?.kind === "panel" || fixedCover) {
-    // Front fix, el seu o el de tota una zona de més amunt que el tapa (per decisió de l'usuari): darrere no hi ha res a
-    // fer servir; ni Prestatges ni Accessoris (es conserven i tornen si canvia el contingut o el front de més amunt).
-    delete out.shelves
-    delete out.rail
-    delete out.led
-  } else if (f?.kind === "drawers") {
-    // Els calaixos ocupen el compartiment: la secció Prestatges (prestatges, barra i llum) no surt.
-    delete out.shelves
-    delete out.rail
-    delete out.led
-    out.front = visibleDrawers(f, kitDefault)
-  } else if (f?.kind === "door") {
-    const door = { ...f }
-    // Sense vidre, el marc triat no compta; de vidre: frontisses del perfil, cap cassoleta ni tirador (la frontissa i el
-    // tirador triats no compten).
-    // Sense vidre, el marc triat no compta (de vidre, la frontissa i el tirador es trien com a les de fusta).
-    if (!door.glass) {
-      delete door.glass
-      delete door.frame
-    }
-    if (door.mode === "double") door.hinge = "left"
-    out.front = door
-  }
-  else if (f?.kind === "flap") {
-    // Com la porta: sense vidre, el marc no compta (de vidre, el braç i el tirador es trien igual; cap forat al tauler).
-    const flap = { ...f }
-    if (!flap.glass) {
-      delete flap.glass
-      delete flap.frame
-    } else delete flap.handleInset
-    out.front = flap
-  }
-  else if (f?.kind === "grille") {
-    // Patró: de ranures (amplada i separació) o de forats (Ø i pas); el de l'altre tipus no surt. Amb imants, sense frontisses.
-    const p = f.pattern
-    const pattern = p.kind === "holes" ? { ...p, slotWidth: DEFAULT_GRILLE.slotWidth, slotGap: DEFAULT_GRILLE.slotGap } : { ...p, holeDiameter: DEFAULT_GRILLE.holeDiameter, holePitch: DEFAULT_GRILLE.holePitch }
-    const grille = { ...f, pattern, ...(f.mount === "removable" ? { hinge: "left" as const } : {}) }
-    // L'imant triat només compta si hi ha imants (reixeta desmuntable o trapa).
-    if (f.mount !== "removable" && !f.hatch) delete grille.hardware
-    out.front = grille
-  }
+  // Front fix, el seu o el de tota una zona de més amunt que el tapa (per decisió de l'usuari): darrere no hi ha res a fer
+  // servir; ni Prestatges ni Accessoris (es conserven i tornen si canvia el contingut o el front de més amunt). Els
+  // calaixos ocupen el compartiment: la secció Prestatges (prestatges, barra i llum) no surt.
+  if (out.front?.kind === "panel" || out.front?.kind === "drawers" || fixedCover) noContents(out)
+  if (out.front) out.front = visibleFront(out.front, kitDefault)
   // L'electrodomèstic que ocupa el compartiment (el nínxol): ni prestatges ni accessoris (es conserven).
-  if (out.appliance && fillsNiche(out.appliance.hardware.appliance!)) {
-    delete out.shelves
-    delete out.rail
-    delete out.led
-  }
+  if (out.appliance && fillsNiche(out.appliance.hardware.appliance!)) noContents(out)
   return out
 }

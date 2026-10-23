@@ -290,20 +290,8 @@ export class LightsBuilder extends MountingBuilder {
     const ds = sys.drivers.slice().sort((a, b) => a.watts - b.watts)
     const drv = ds.find((x) => (x.perSlot ?? x.watts) >= peak) ?? ds[ds.length - 1]!
     const [len] = drv.size.split("×").map((v) => Number(v.trim().replace(",", ".")))
-    // A sota de la base, al mig de l'amplada (les potes van a les cantonades: ni l'alimentador ni el cable hi passen per sobre).
     const dLen = len ?? 140
-    // Fora de les columnes de la casa (l'osca de la base): el primer lloc lliure entre el mig, a l'esquerra i a la dreta.
-    // A sota de la base, tampoc on hi ha potes (per decisió de l'usuari: «aquí l'has posat a sota d'una pota»): les de les
-    // cantonades i les que es posen al costat de l'osca d'una columna (`legPoints`): 110 mm (la placa, a 50 del cantell, en fa 92).
-    const busy: [number, number][] = below
-      ? [[rb.min[0], rb.min[0] + 110], [rb.max[0] - 110, rb.max[0]], ...[...this.rearLimits.map((l): [number, number] => [l.x0, l.x1]), ...this.keepOut].map(([a, b]): [number, number] => [a - 110, b + 110])]
-      : [...this.rearLimits.map((l): [number, number] => [l.x0, l.x1]), ...this.keepOut].map(([a, b]): [number, number] => [a - 10, b + 10])
-    const free = (x: number) => !(this.rearAt(x - 10, x + dLen + 10) > this.d.backInnerZ + 1) && busy.every(([a, b]) => x + dLen <= a || x >= b)
-    const mid = (rb.min[0] + rb.max[0]) / 2 - dLen / 2
-    // Del mig cap als costats a passos de 20 mm (als penjats i a dins, primer a l'esquerra, com abans).
-    const steps = Array.from({ length: Math.ceil((rb.max[0] - rb.min[0]) / 20) }, (_, i) => mid + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 20)
-    const cands = below ? steps : [rb.min[0] + 50, ...steps]
-    const dx0 = cands.find((x) => x >= rb.min[0] + 20 && x + dLen <= rb.max[0] - 20 && free(x)) ?? (below ? mid : rb.min[0] + 50)
+    const dx0 = this.driverX(rb, dLen, below)
     const dx1 = dx0 + dLen
     // La cara on va l'alimentador (i per on corren els cables fins a ell): la de sobre de la tapa, la de sota de la base o, a dins, la de sobre de la base.
     const hy = up ? rb.max[1] : below ? rb.min[1] : rb.max[1]
@@ -327,13 +315,6 @@ export class LightsBuilder extends MountingBuilder {
       this.throughHole(p, w, d, "cable-run")
       if ((p.cutouts?.length ?? 0) > before) holes.push({ x: r(w[0]), y: r(w[1]), label })
     }
-    // El cable va per dins del tauler (el forat de cantell arriba al forat de la làmpada): el passant del cable cap a la cara
-    // de l'altre costat ja no cal (per decisió de l'usuari: es veia des de sobre, «punts de llum per sobre del moble»).
-    const dropCableThrough = (l: (typeof this.lampSpots)[number]) => {
-      const lc = toLocal(l.host, [l.x, l.y, l.z])
-      const k = (l.host.cutouts ?? []).findIndex((c) => c.kind === "circle" && c.tag === "cable" && Math.hypot(c.x - lc[0], c.y - lc[1]) < 1)
-      if (k >= 0) l.host.cutouts!.splice(k, 1)
-    }
     const runs: Wiring["runs"] = []
     const covers: { x: number; y0: number; y1: number; z: number }[] = []
     const draw: Vec3[][] = []
@@ -353,11 +334,7 @@ export class LightsBuilder extends MountingBuilder {
         // Per dins del tauler fins al darrere i, per la cambra de darrere del fons, fins a la cara amagada.
         const ym = (hb.min[1] + hb.max[1]) / 2
         const depth = r(l.z - hb.min[2])
-        // Un tauler massa prim per al forat (menys de 4 mm de pell a cada cara): el cable va per sota, arran de la làmpada.
-        if (l.host.thickness >= l.d + 8 && depth > l.d && addEdgeHole(l.host, [l.x, ym, hb.min[2]], { diameter: l.d, depth, tag: "cable-run" })) {
-          longBores += 1
-          dropCableThrough(l)
-        }
+        if (this.boreToLamp(l, ym, depth)) longBores += 1
         if (hb.min[2] > zCav + 1) drill(back!, [l.x, ym, backRear], l.d, "pas del cable al fons")
         else drill(l.host, [l.x, ym, zCav], l.d, "pas del cable a la cambra")
         const yEnd = hy + (up ? 3 : -3)
@@ -370,11 +347,7 @@ export class LightsBuilder extends MountingBuilder {
         // Per dins del tauler: forat de cantell des del darrere fins a la làmpada, pel mig del gruix.
         const ym = (hb.min[1] + hb.max[1]) / 2
         const depth = r(l.z - hb.min[2])
-        // Un tauler massa prim per al forat (menys de 4 mm de pell a cada cara): el cable va per sota, arran de la làmpada.
-        if (l.host.thickness >= l.d + 8 && depth > l.d && addEdgeHole(l.host, [l.x, ym, hb.min[2]], { diameter: l.d, depth, tag: "cable-run" })) {
-          longBores += 1
-          dropCableThrough(l)
-        }
+        if (this.boreToLamp(l, ym, depth)) longBores += 1
         path.push([l.x, ym, l.z], [l.x, ym, zc])
         // Vertical per darrere fins a la cara amagada, amb un passant a cada peça fixa que travessa (la tapa o la base també).
         const lo = up ? hb.max[1] : hy, hi = up ? hy : hb.min[1]
@@ -408,37 +381,11 @@ export class LightsBuilder extends MountingBuilder {
     }
     if (cavity && !inside) notes.push(`Els cables baixen per la cambra de darrere del fons (${fmtNum(backRear, 1)} mm entre el fons i el darrere del moble): no es veuen.`)
     if (longBores) notes.push(`${longBores === 1 ? "Un forat" : `${longBores} forats`} de cable per dins del tauler (des del cantell de darrere fins a la làmpada, pel mig del gruix): es fan després de la CNC amb una broca llarga.`)
-    // Inside: la sortida del cable de xarxa pel fons, darrere de l'alimentador.
-    let mains: Wiring["mains"]
-    if (inside && back && !(this.rearAt(dx0, dx1) > this.d.backInnerZ + 1)) {
-      const mx = (dx0 + dx1) / 2, my = hy + 40
-      const mb = backs.find((p) => { const q = worldBoxOf(p); return q.min[0] < mx && q.max[0] > mx && q.min[1] < my && q.max[1] > my }) ?? back
-      const lb = toLocal(mb, [mx, my, worldBoxOf(mb).min[2]])
-      if (lb[0] > 25 && lb[1] > 12 && lb[0] < mb.length - 25 && lb[1] < mb.width - 12) {
-        ;(mb.cutouts ??= []).push({ kind: "slot", x: r(lb[0] - 20), y: r(lb[1] - 8), w: 40, h: 16, tag: "cable-mains" })
-        mains = { x: r(mx), y: r(my) }
-      }
-    } else if (inside && back) notes.push("Hi ha una columna darrere de l'alimentador: el cable de xarxa no surt pel fons, passa'l per l'osca de la columna fins a l'endoll.")
-    else if (!inside) notes.push(`L'alimentador va ${up ? "a sobre de la tapa" : "a sota de la base"}, on no es veu: el cable de xarxa hi arriba per darrere del moble, sense cap forat.`)
+    // A dins: la sortida del cable de xarxa pel fons, darrere de l'alimentador.
+    const mains = inside && back ? this.mainsOutlet(backs, back, dx0, dx1, hy, notes) : undefined
+    if (!inside) notes.push(`L'alimentador va ${up ? "a sobre de la tapa" : "a sota de la base"}, on no es veu: el cable de xarxa hi arriba per darrere del moble, sense cap forat.`)
     // Al 3D: l'alimentador, cada cable (Ø4) pel seu recorregut i la tapa passacables als trams verticals.
-    this.hwBox("wiring-driver", drv.name, "Gris mat", [dx0, dy0, zDrv], [dx1 - dx0, 16, 50])
-    const cable = (id: string, a: Vec3, b: Vec3) => {
-      if (Math.abs(a[0] - b[0]) > 0.5) this.hwRod(id, "Cable de llum", "Gris mat", a[0], b[0], a[1], a[2], 2, "x")
-      else if (Math.abs(a[1] - b[1]) > 0.5) this.hwRod(id, "Cable de llum", "Gris mat", a[0], a[0], Math.min(a[1], b[1]), a[2], 2, "y", Math.max(a[1], b[1]))
-      else if (Math.abs(a[2] - b[2]) > 0.5) this.hwRod(id, "Cable de llum", "Gris mat", a[0], a[0], a[1], a[2], 2, "z", a[1], b[2])
-    }
-    draw.forEach((path, i) => {
-      for (let k = 0; k + 1 < path.length; k++) cable(`wiring-${i}-${k}`, path[k]!, path[k + 1]!)
-    })
-    // A dins (sense aire a sota): el tram per sobre de la base, tapat també amb la tapa passacables, arran del fons.
-    if (inside && this.lampSpots.length) {
-      const xs = this.lampSpots.map((l) => l.x)
-      const x1 = Math.max(...xs)
-      if (x1 - dx1 > 40) this.hwBox("wiring-cover-base", sys.cableCover?.name ?? "Tapa passacables", "Blanc seda", [dx1, hy, zAlong(dx1, x1) + 25 - 8], [x1 - dx1 + 10, 16, 16])
-    }
-    covers.forEach((c, i) => {
-      if (c.y1 - c.y0 > 60) this.hwBox(`wiring-cover-${i}`, sys.cableCover?.name ?? "Tapa passacables", "Blanc seda", [c.x - 10, c.y0, c.z - 8], [20, c.y1 - c.y0, 16])
-    })
+    this.drawWiring(drv.name, sys.cableCover?.name ?? "Tapa passacables", [dx0, dy0, zDrv], dLen, draw, covers, inside ? { y: hy, z: (x0: number, x1: number) => zAlong(x0, x1) + 25 - 8 } : undefined)
     const sw = this.lightKits[0]?.switch
     this.wiring = {
       driver: { x0: r(dx0), x1: r(dx1), y0: r(dy0), y1: r(dy0 + 16), name: drv.name, article: drv.article, where: up ? "a sobre de la tapa" : below ? "a sota de la base" : `a dins, sobre ${onWhat}` },
@@ -449,5 +396,74 @@ export class LightsBuilder extends MountingBuilder {
       holes,
       notes,
     }
+  }
+
+  /**
+   * El forat de cantell des del darrere del tauler fins a la làmpada, pel mig del gruix (`ym`), de `depth` mm. Amb el
+   * forat, el passant del cable cap a l'altra cara ja no cal (per decisió de l'usuari: es veia des de sobre, «punts de llum
+   * per sobre del moble»). Un tauler massa prim (menys de 4 mm de pell a cada cara): cap forat, el cable va per sota.
+   */
+  protected boreToLamp(l: (typeof this.lampSpots)[number], ym: number, depth: number): boolean {
+    const hb = worldBoxOf(l.host)
+    if (!(l.host.thickness >= l.d + 8 && depth > l.d && addEdgeHole(l.host, [l.x, ym, hb.min[2]], { diameter: l.d, depth, tag: "cable-run" }))) return false
+    const lc = toLocal(l.host, [l.x, l.y, l.z])
+    const k = (l.host.cutouts ?? []).findIndex((c) => c.kind === "circle" && c.tag === "cable" && Math.hypot(c.x - lc[0], c.y - lc[1]) < 1)
+    if (k >= 0) l.host.cutouts!.splice(k, 1)
+    return true
+  }
+
+  /**
+   * On va l'alimentador (x de l'esquerra, `dLen` de llarg) a la peça on es posa (`rb`): fora de les columnes de la casa
+   * (l'osca de la base), el primer lloc lliure entre el mig, a l'esquerra i a la dreta. A sota de la base (`below`), tampoc
+   * on hi ha potes (per decisió de l'usuari: «aquí l'has posat a sota d'una pota»): les de les cantonades i les que es posen
+   * al costat de l'osca d'una columna (`legPoints`): 110 mm (la placa, a 50 del cantell, en fa 92).
+   */
+  protected driverX(rb: { min: Vec3; max: Vec3 }, dLen: number, below: boolean): number {
+    const columns = [...this.rearLimits.map((l): [number, number] => [l.x0, l.x1]), ...this.keepOut]
+    const busy: [number, number][] = below ? [[rb.min[0], rb.min[0] + 110], [rb.max[0] - 110, rb.max[0]], ...columns.map(([a, b]): [number, number] => [a - 110, b + 110])] : columns.map(([a, b]): [number, number] => [a - 10, b + 10])
+    const free = (x: number) => !(this.rearAt(x - 10, x + dLen + 10) > this.d.backInnerZ + 1) && busy.every(([a, b]) => x + dLen <= a || x >= b)
+    const mid = (rb.min[0] + rb.max[0]) / 2 - dLen / 2
+    // Del mig cap als costats a passos de 20 mm (als penjats i a dins, primer a l'esquerra, com abans).
+    const steps = Array.from({ length: Math.ceil((rb.max[0] - rb.min[0]) / 20) }, (_, i) => mid + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 20)
+    const cands = below ? steps : [rb.min[0] + 50, ...steps]
+    return cands.find((x) => x >= rb.min[0] + 20 && x + dLen <= rb.max[0] - 20 && free(x)) ?? (below ? mid : rb.min[0] + 50)
+  }
+
+  /** La sortida del cable de xarxa pel fons, darrere de l'alimentador (de `dx0` a `dx1`, a `hy`); amb una columna al darrere, una nota. */
+  protected mainsOutlet(backs: Panel[], back: Panel, dx0: number, dx1: number, hy: number, notes: string[]): Wiring["mains"] {
+    if (this.rearAt(dx0, dx1) > this.d.backInnerZ + 1) {
+      notes.push("Hi ha una columna darrere de l'alimentador: el cable de xarxa no surt pel fons, passa'l per l'osca de la columna fins a l'endoll.")
+      return undefined
+    }
+    const mx = (dx0 + dx1) / 2, my = hy + 40
+    const mb = backs.find((p) => { const q = worldBoxOf(p); return q.min[0] < mx && q.max[0] > mx && q.min[1] < my && q.max[1] > my }) ?? back
+    const lb = toLocal(mb, [mx, my, worldBoxOf(mb).min[2]])
+    if (!(lb[0] > 25 && lb[1] > 12 && lb[0] < mb.length - 25 && lb[1] < mb.width - 12)) return undefined
+    ;(mb.cutouts ??= []).push({ kind: "slot", x: r(lb[0] - 20), y: r(lb[1] - 8), w: 40, h: 16, tag: "cable-mains" })
+    return { x: r(mx), y: r(my) }
+  }
+
+  /**
+   * Al 3D: l'alimentador (a `at`, `dLen` de llarg), cada cable (Ø4) pel seu recorregut (`paths`) i la tapa passacables als
+   * trams verticals (`covers`) i, a dins (`base`: sense aire a sota), al tram per sobre de la base, arran del fons.
+   */
+  protected drawWiring(driver: string, cover: string, at: Vec3, dLen: number, paths: Vec3[][], covers: { x: number; y0: number; y1: number; z: number }[], base?: { y: number; z: (x0: number, x1: number) => number }): void {
+    this.hwBox("wiring-driver", driver, "Gris mat", at, [dLen, 16, 50])
+    const cable = (id: string, a: Vec3, b: Vec3) => {
+      if (Math.abs(a[0] - b[0]) > 0.5) this.hwRod(id, "Cable de llum", "Gris mat", a[0], b[0], a[1], a[2], 2, "x")
+      else if (Math.abs(a[1] - b[1]) > 0.5) this.hwRod(id, "Cable de llum", "Gris mat", a[0], a[0], Math.min(a[1], b[1]), a[2], 2, "y", Math.max(a[1], b[1]))
+      else if (Math.abs(a[2] - b[2]) > 0.5) this.hwRod(id, "Cable de llum", "Gris mat", a[0], a[0], a[1], a[2], 2, "z", a[1], b[2])
+    }
+    paths.forEach((path, i) => {
+      for (let k = 0; k + 1 < path.length; k++) cable(`wiring-${i}-${k}`, path[k]!, path[k + 1]!)
+    })
+    if (base && this.lampSpots.length) {
+      const dx1 = at[0] + dLen
+      const x1 = Math.max(...this.lampSpots.map((l) => l.x))
+      if (x1 - dx1 > 40) this.hwBox("wiring-cover-base", cover, "Blanc seda", [dx1, base.y, base.z(dx1, x1)], [x1 - dx1 + 10, 16, 16])
+    }
+    covers.forEach((c, i) => {
+      if (c.y1 - c.y0 > 60) this.hwBox(`wiring-cover-${i}`, cover, "Blanc seda", [c.x - 10, c.y0, c.z - 8], [20, c.y1 - c.y0, 16])
+    })
   }
 }

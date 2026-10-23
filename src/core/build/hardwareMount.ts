@@ -1,5 +1,5 @@
 import { pairPlate, setConfirmed } from "../model/hardwareEdit"
-import { defaultModule, isPendingImport, slotForEngine, type HardwareItem, type Module, type Vec3 } from "../model"
+import { defaultModule, isPendingImport, slotForEngine, type HardwareItem, type Module, type Panel, type Vec3 } from "../model"
 import { buildModule } from "./buildModule"
 import { r, toWorld } from "./geometry"
 import { HardwareError } from "./hardware"
@@ -29,15 +29,7 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
   const rc = recipe(item)
   const pending = isPendingImport(item)
   const tags = itemTags(item)
-  if (!rc) {
-    // Només 3D: el model tal qual (cap peça, cap forat).
-    const imp = item.imported
-    const b = imp?.bbox
-    const size = b ? { width: r(b.max[0] - b.min[0]), height: r(b.max[1] - b.min[1]), depth: r(b.max[2] - b.min[2]) } : { width: 0, height: 0, depth: 0 }
-    // La caixa del model (un STEP pla té una mida 0: com a mínim 1 mm perquè la càmera tingui alguna cosa a enquadrar).
-    const region = b ? { min: b.min.map((v, k) => (b.max[k]! - v < 1 ? v - 0.5 : v)) as Vec3, max: b.max.map((v, k) => (v - b.min[k]! < 1 ? v + 0.5 : v)) as Vec3 } : { min: [-50, -50, -50] as Vec3, max: [50, 50, 50] as Vec3 }
-    return { panels: [], pending, proposedTags: [], tags, focus: null, size, warnings: [], model: { ...(imp?.asset ? { asset: imp.asset } : {}), ...(b ? { bbox: b } : {}) }, region, solid: [] }
-  }
+  if (!rc) return modelOnly(item, pending, tags)
   const empty = { panels: [], pending, proposedTags: [], tags, focus: null, size: rc.size, warnings: [], region: { min: [0, 0, 0] as Vec3, max: [rc.size.width, rc.size.height, rc.size.depth] as Vec3 }, solid: [] }
   // El que es construeix: l'item confirmat (si no, no faria cap forat), al seu lloc del joc del mòdul.
   const made = pending ? setConfirmed(item, true) : item
@@ -103,6 +95,42 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
     solid.push(p.id)
   }
   // El forat principal: la primera cassoleta (la de baix) o, si no, el forat del ferratge més a prop del mig de la seva peça.
+  const focus = mountFocus(item, panels, rc, focusTag)
+  const door = panels.find((p) => p.role === "door")
+  const side = panels.find(isLeftSide)
+  const aim = focus ? undefined : mountAim(item, panels, rc)
+  // Els avisos del ferratge (el mòdul d'exemple de les potes ja té l'alçada de la pota: no avisa de l'alçada).
+  const relevant = new Set(["hinge", "hardware", "handle"])
+  return {
+    panels,
+    pending,
+    proposedTags: pending ? tags : [],
+    tags,
+    focus,
+    ...(aim ? { aim } : {}),
+    ...(item.engine === "appliance" ? { whole: true } : {}),
+    ...((item.engine === "cup" || item.engine === "plate") && door && side ? { hinge: { doorId: door.id, sideId: side.id } } : {}),
+    size: rc.size,
+    warnings: build.warnings.filter((w) => relevant.has(w.code)).map((w) => w.message),
+    region: mountRegion(item.engine, panels, tags, focus?.at ?? aim?.at ?? null, rc),
+    solid,
+  }
+}
+
+type Recipe = NonNullable<ReturnType<typeof recipe>>
+
+/** Un ferratge només 3D (sense recepta): el model tal qual, cap peça ni cap forat. */
+function modelOnly(item: HardwareItem, pending: boolean, tags: string[]): HardwareMount {
+  const imp = item.imported
+  const b = imp?.bbox
+  const size = b ? { width: r(b.max[0] - b.min[0]), height: r(b.max[1] - b.min[1]), depth: r(b.max[2] - b.min[2]) } : { width: 0, height: 0, depth: 0 }
+  // La caixa del model (un STEP pla té una mida 0: com a mínim 1 mm perquè la càmera tingui alguna cosa a enquadrar).
+  const region = b ? { min: b.min.map((v, k) => (b.max[k]! - v < 1 ? v - 0.5 : v)) as Vec3, max: b.max.map((v, k) => (v - b.min[k]! < 1 ? v + 0.5 : v)) as Vec3 } : { min: [-50, -50, -50] as Vec3, max: [50, 50, 50] as Vec3 }
+  return { panels: [], pending, proposedTags: [], tags, focus: null, size, warnings: [], model: { ...(imp?.asset ? { asset: imp.asset } : {}), ...(b ? { bbox: b } : {}) }, region, solid: [] }
+}
+
+/** El forat on es mira el ferratge: la primera cassoleta (la de baix) o, si no, el del ferratge més a prop del mig de la seva peça. */
+function mountFocus(item: HardwareItem, panels: Panel[], rc: Recipe, focusTag: (h: { tag?: string }) => boolean): HardwareMount["focus"] {
   let focus: HardwareMount["focus"] = null
   let best = Infinity
   // Un electrodomèstic es mira sencer (l'aparell i el seu front), pel mig de l'aparell (`aim`, més avall).
@@ -129,37 +157,22 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
       }
     }
   }
-  const door = panels.find((p) => p.role === "door")
-  const side = panels.find(isLeftSide)
-  // Un accessori no fa cap forat: el pla es talla al mig del primer que es veu (la barra; el perfil de sota el sostre;
-  // el perfil de dalt del marc).
-  let aim: HardwareMount["aim"]
-  // Un tirador sense forats (el de marc de vitrina): es mira pel mig del front.
-  if (!focus && item.engine === "barHandle") {
+  return focus
+}
+
+/**
+ * Sense cap forat on mirar: un tirador sense forats (el de marc de vitrina), pel mig del front; un accessori, pel mig del
+ * primer que es veu (la barra; el perfil de sota el sostre; el perfil de dalt del marc).
+ */
+function mountAim(item: HardwareItem, panels: Panel[], rc: Recipe): HardwareMount["aim"] {
+  if (item.engine === "barHandle") {
     const fr = panels.find((p) => p.role === "drawerFront")
-    if (fr) aim = { at: toWorld(fr, [fr.length / 2, fr.width / 2, fr.thickness]), view: [0, 0, 1] }
+    if (fr) return { at: toWorld(fr, [fr.length / 2, fr.width / 2, fr.thickness]), view: [0, 0, 1] }
   }
-  if (!focus && !aim && rc.extras) {
-    const first = panels.find(rc.extras)
-    // La barra i el perfil LED van sota la tapa: de davant i una mica de sota (des de dalt, la tapa els tapa).
-    // La regleta, des de darrere (va entre la paret i el fons); el sòcol d'alumini, de davant i de costat.
-    const view: Vec3 | undefined = item.engine === "rail" || item.engine === "ledProfile" ? unit3([0.45, -0.35, 1]) : item.engine === "wallRail" ? unit3([0.5, 0.35, -1]) : item.engine === "plinthProfile" ? unit3([0.7, 0.25, 1]) : item.engine === "appliance" ? unit3([0.45, 0.3, 1]) : undefined
-    if (first) aim = { at: toWorld(first, [first.length / 2, first.width / 2, first.thickness / 2]), ...(view ? { view } : {}) }
-  }
-  // Els avisos del ferratge (el mòdul d'exemple de les potes ja té l'alçada de la pota: no avisa de l'alçada).
-  const relevant = new Set(["hinge", "hardware", "handle"])
-  return {
-    panels,
-    pending,
-    proposedTags: pending ? tags : [],
-    tags,
-    focus,
-    ...(aim ? { aim } : {}),
-    ...(item.engine === "appliance" ? { whole: true } : {}),
-    ...((item.engine === "cup" || item.engine === "plate") && door && side ? { hinge: { doorId: door.id, sideId: side.id } } : {}),
-    size: rc.size,
-    warnings: build.warnings.filter((w) => relevant.has(w.code)).map((w) => w.message),
-    region: mountRegion(item.engine, panels, tags, focus?.at ?? aim?.at ?? null, rc),
-    solid,
-  }
+  const first = rc.extras ? panels.find(rc.extras) : undefined
+  if (!first) return undefined
+  // La barra i el perfil LED van sota la tapa: de davant i una mica de sota (des de dalt, la tapa els tapa).
+  // La regleta, des de darrere (va entre la paret i el fons); el sòcol d'alumini, de davant i de costat.
+  const view: Vec3 | undefined = item.engine === "rail" || item.engine === "ledProfile" ? unit3([0.45, -0.35, 1]) : item.engine === "wallRail" ? unit3([0.5, 0.35, -1]) : item.engine === "plinthProfile" ? unit3([0.7, 0.25, 1]) : item.engine === "appliance" ? unit3([0.45, 0.3, 1]) : undefined
+  return { at: toWorld(first, [first.length / 2, first.width / 2, first.thickness / 2]), ...(view ? { view } : {}) }
 }
