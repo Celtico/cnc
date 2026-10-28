@@ -92,8 +92,12 @@ export interface CabinetViewerProps {
   cuttingRefIds?: Set<string>
   /** Compartiment seleccionat (mm, coordenades de la composició): contorn taronja. */
   highlightZone?: { x0: number; x1: number; y0: number; y1: number; z0: number; z1: number; veil?: boolean } | null
+  /** Què es ressalta amb el ratolí sobre el mòdul `moduleId` al punt `at` (mm): la clau de `useHoverLink` (el mòdul o, dins del mòdul triat, el compartiment). */
+  hoverAt?: (moduleId: string, at: [number, number, number]) => string
   /** Compartiment sota el ratolí a l'arbre (mm, com `highlightZone`): contorn suau. */
   hoverZone?: { x0: number; x1: number; y0: number; y1: number; z0: number; z1: number } | null
+  /** Clic amb el botó dret sense arrossegar (arrossegant, mou la càmera): on (px de la finestra del navegador). */
+  onContextClick?: (x: number, y: number) => void
   /** Clic a l'espai buit (sense arrossegar): treure la selecció. */
   onDeselect?: () => void
   /** Canviar-lo torna a enquadrar la càmera (la resta de canvis no la mouen). */

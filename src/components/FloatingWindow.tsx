@@ -45,8 +45,11 @@ export function FloatingWindow({
   bodyProps,
   contentRef,
   testId,
+  at,
   children,
 }: {
+  /** S'obre al costat d'aquest punt (px de la finestra del navegador), amb la mida recordada: les propietats del botó dret. */
+  at?: { x: number; y: number }
   /** La mida i el lloc es recorden per id: totes les tries de material comparteixen el seu. */
   id: string
   kind?: WindowKind
@@ -151,7 +154,7 @@ export function FloatingWindow({
     returnTo.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     setOverModal(!!document.querySelector(MODAL_OPEN))
     const view = { width: window.innerWidth, height: window.innerHeight }
-    const r = fitWindowRect(readWindowRect(id) ?? defaultWindowRect(kind, view, { width, height }), view)
+    const r = fitWindowRect(nextTo(readWindowRect(id) ?? defaultWindowRect(kind, view, { width, height }), at), view)
     rect.current = r
     panel.setSize({ width: r.width, height: r.height })
     panel.setPosition({ x: r.x, y: r.y })
@@ -181,6 +184,16 @@ export function FloatingWindow({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- en obrir-la, en demanar-la (`shown`) i en passar a mòbil; `panel` és nou a cada render
   }, [open, shown, mobile])
+
+  // Ja oberta, un altre punt (un altre clic amb el botó dret): s'hi torna a posar.
+  const atKey = at ? `${at.x},${at.y}` : ""
+  useEffect(() => {
+    if (!open || !at || justOpened.current || mobile) return
+    const r = fitWindowRect(nextTo(rect.current, at), { width: window.innerWidth, height: window.innerHeight })
+    rect.current = r
+    panel.setPosition({ x: r.x, y: r.y })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- només quan canvia el punt; `panel` és nou a cada render
+  }, [atKey])
 
   const setContent = (el: HTMLDivElement | null) => {
     inner.current = el
@@ -279,4 +292,9 @@ export function FloatingWindow({
       </Portal>
     </FloatingPanel.RootProvider>
   )
+}
+
+/** La finestra al costat del punt (a la dreta i una mica amunt, que la barra de títol quedi a prop del ratolí). */
+function nextTo(r: WindowRect, at?: { x: number; y: number }): WindowRect {
+  return at ? { ...r, x: at.x + 12, y: at.y - 24 } : r
 }

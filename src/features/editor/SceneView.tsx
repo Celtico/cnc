@@ -27,7 +27,11 @@ export function SceneView({
   picks,
   edits,
   onSceneAccess,
+  onProps,
 }: {
+  /** Botó dret: les propietats del que s'ha triat, al costat del ratolí (px). */
+  onProps: (at: { x: number; y: number }) => void
+
   comp: Composition
   setComp: SetComp
   materials: Settings["materials"]
@@ -46,7 +50,7 @@ export function SceneView({
   const { shownPanels, frameSize, viewerModules, ghosts, openOnly, cutPartIds, collidingRefs, cuttingRefs, highlightZone, zoneBox, solidParts } = scene
   const { exploded, showHoles, viewer, viewerState, quality, hardware } = opts
   const { viewDir, fitKey, setFramed, cameraRef, saveCamera, cameraGoto, cameraFly, alert } = camera
-  const { selectFrom3D, selectPartFrom3D, selectModelFrom3D } = picks
+  const { selectFrom3D, selectPartFrom3D, selectModelFrom3D, hoverKeyAt, selectHovered } = picks
   const { moveGroup, movePart, moveModel, moveRef } = edits
   // Un objecte de referència deixat sobre els mòduls d'una fila: s'avisa i es pot fer-li lloc entre ells (`makeRoomForRef`).
   const dropRef = (id: string, pos: { x: number; y: number; z: number }) => {
@@ -62,7 +66,8 @@ export function SceneView({
     })
   }
   // Compartiment sota el ratolí a l'arbre (`moduleId/zoneId`, `zoneHoverKey`).
-  const hovered = hoverTarget(useHoverLink().hover)
+  const link = useHoverLink()
+  const hovered = hoverTarget(link.hover)
   const [hoverModuleId, hoverZoneId] = hovered?.kind === "zone" ? hovered.id.split("/") : []
   return (
     <CabinetViewer
@@ -76,6 +81,7 @@ export function SceneView({
       modules={viewerModules.filter((v) => !comp.modules.find((m) => m.id === v.id)?.hidden)}
       selectedModuleId={(selection.kind === "module" || selection.kind === "zone") && module ? module.id : null}
       onSelectModule={selectFrom3D}
+      hoverAt={hoverKeyAt}
       ghosts={ghosts}
       viewDir={viewDir}
       opening={viewer.opening}
@@ -84,6 +90,10 @@ export function SceneView({
       materials={materials}
       quality={quality}
       onDeselect={() => select({ kind: "moble" })}
+      onContextClick={(x, y) => {
+        selectHovered(link.hover)
+        onProps({ x, y })
+      }}
       selectedRefId={selection.kind === "ref" ? selection.id : selection.kind === "part" && cutPartIds.has(selection.id) ? `part:${selection.id}` : null}
       collidingRefIds={collidingRefs}
       cuttingRefIds={cuttingRefs}

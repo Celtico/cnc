@@ -33,6 +33,7 @@ import { useViewerHandles } from "./useViewerHandles"
 import { useViewerOptions } from "./useViewerOptions"
 import { viewerPicks } from "./viewerPicks"
 import { HoverLinkProvider } from "../../components/HoverLinkProvider"
+import { FloatingWindow } from "../../components/FloatingWindow"
 
 export function EditorScreen({ projectId }: { projectId: number }) {
   const project = useProject(projectId)
@@ -129,6 +130,39 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   // eslint-disable-next-line react-hooks/exhaustive-deps -- només quan canvia la selecció
   }, [selection])
   const handles = useViewerHandles()
+  // Botó dret al 3D (com Figma, per decisió de l'usuari, 2026-10-28): les propietats del que hi ha sota el ratolí en una
+  // finestra al seu costat, per canviar-les allà mateix. És el mateix inspector del panell (no una còpia de camps).
+  const [propsAt, setPropsAt] = useState<{ x: number; y: number } | null>(null)
+  // Una selecció nova, un inspector nou: les finestres de tria (material, ferratge) que s'hi havien obert es tanquen
+  // (no són modals: si no, la tria aniria a parar al que s'ha seleccionat després). `popup`: el de la finestra del botó
+  // dret (sense els controls de la Foto, que són del panell).
+  const inspector = (popup: boolean) => (
+    <EditorInspector
+      key={JSON.stringify(selection)}
+      inspectorOpen={inspectorOpen}
+      setInspectorOpen={setInspectorOpen}
+      comp={comp}
+      setComp={setComp}
+      kind={kind}
+      name={name}
+      project={project}
+      settings={settings}
+      build={build}
+      scene={scene}
+      selection={selection}
+      select={select}
+      selectZone={selectZone}
+      module={module}
+      moduleIndex={moduleIndex}
+      moduleBuild={moduleBuild}
+      zone={zone}
+      photoTab={popup ? false : photoTab}
+      setPhotoControls={popup ? NO_PHOTO : setPhotoControls}
+      edits={edits}
+      hardwareActions={hardwareActions}
+      onGotoWarning={gotoWarning}
+    />
+  )
 
   return (
     <HoverLinkProvider>
@@ -150,33 +184,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         />
         }
         right={
-          // Una selecció nova, un inspector nou: les finestres de tria (material, ferratge) que s'hi havien obert es tanquen
-          // (no són modals: si no, la tria aniria a parar al que s'ha seleccionat després).
-          <EditorInspector
-            key={JSON.stringify(selection)}
-            inspectorOpen={inspectorOpen}
-            setInspectorOpen={setInspectorOpen}
-            comp={comp}
-            setComp={setComp}
-            kind={kind}
-            name={name}
-            project={project}
-            settings={settings}
-            build={build}
-            scene={scene}
-            selection={selection}
-            select={select}
-            selectZone={selectZone}
-            module={module}
-            moduleIndex={moduleIndex}
-            moduleBuild={moduleBuild}
-            zone={zone}
-            photoTab={photoTab}
-            setPhotoControls={setPhotoControls}
-            edits={edits}
-            hardwareActions={hardwareActions}
-            onGotoWarning={gotoWarning}
-          />
+          inspector(false)
         }
         // Mobles i objectes: el mateix xat amb les eines de cada tipus (un objecte només té peces lliures). Els `lliure`
         // d'abans (flat-pack que es fabrica) no en tenen.
@@ -230,6 +238,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
                 picks={picks}
                 edits={edits}
                 onSceneAccess={handles.registerScene}
+                onProps={setPropsAt}
               />
             }
             toolbar={
@@ -248,6 +257,11 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           />
         )}
       />
+      <FloatingWindow id="editor-props" kind="picker" width={360} height={600} open={!!propsAt} at={propsAt ?? undefined} onClose={() => setPropsAt(null)} title="Propietats" initialFocus={false}>
+        {inspector(true)}
+      </FloatingWindow>
     </HoverLinkProvider>
   )
 }
+
+const NO_PHOTO = () => {}

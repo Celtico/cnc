@@ -23,7 +23,7 @@ interface PanelMeshProps {
   sig?: string
   place?: string
   /** El ratolí entra o surt de la peça (ressaltat del mòdul en passar-hi per sobre). Estable: la peça va com a dada. */
-  onHover?: (panel: Panel, on: boolean) => void
+  onHover?: (panel: Panel, on: boolean, point?: Vector3) => void
   /** Ferratges visuals de la peça (frontisses i tirador als fronts, guies, espigues, suports…). */
   hardware?: boolean
   /** Forats de la filera System 32 de la peça amb un suport de prestatge (`shelfPins`), per al dibuix dels ferratges. */
@@ -169,7 +169,13 @@ export const PanelMesh = memo(function PanelMesh({
           onPointerOver={onHover ? (e: ThreeEvent<PointerEvent>) => {
             if (e.pointerType !== "mouse") return
             e.stopPropagation()
-            onHover(panel, true)
+            onHover(panel, true, e.point)
+          } : undefined}
+          // Dins d'un mòdul triat, el compartiment de sota el ratolí canvia sense sortir de la peça.
+          onPointerMove={onHover ? (e: ThreeEvent<PointerEvent>) => {
+            if (e.pointerType !== "mouse") return
+            e.stopPropagation()
+            onHover(panel, true, e.point)
           } : undefined}
           onPointerOut={onHover ? () => onHover(panel, false) : undefined}
         >

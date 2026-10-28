@@ -54,6 +54,7 @@ export function CabinetViewer({
   hardware = true,
   onSceneAccess,
   onDeselect,
+  onContextClick,
   selectedRefId,
   onSelectRef,
   onMoveRef,
@@ -74,6 +75,7 @@ export function CabinetViewer({
   cuttingRefIds,
   highlightZone,
   hoverZone,
+  hoverAt,
   fitKey = 0,
   onFramedChange,
   initialCamera,
@@ -118,7 +120,7 @@ export function CabinetViewer({
   // Un objecte que talla pot ser una peça lliure (`part:id`): la mateixa fila que la peça.
   const ghostKey = (id: string) => (id.startsWith("part:") ? hoverKey("part", id.slice(5)) : hoverKey("ref", id))
   const [moduleDrag, setModuleDrag] = useState<{ index: number; dx: number; dy: number; dz: number; all: boolean } | null>(null)
-  const { onFittingSelect, onPanelHover, onPanelClick } = usePanelHandlers({ onSelectModule, onSelectPart, onSelectHardware, modules, size }, link)
+  const { onFittingSelect, onPanelHover, onPanelClick } = usePanelHandlers({ onSelectModule, onSelectPart, onSelectHardware, modules, size, hoverAt }, link)
   const { snapTargets, moduleBoxes, partBoxes, selectedPartBox, modelBoxes, selectedModelBox, setBox, selectedModel } = useObjectBoxes({ size, modules, parts, models, ghosts, selectedSet, selectedPartId, selectedModelId })
   // Un sol imant per a tot el que es mou amb el gizmo (per decisió de l'usuari, 2026-10-16: «uns s'enganxen ràpid i altres
   // no»): les vores i el mig dels mòduls, les peces lliures, els models i els objectes, menys els que es mouen, amb les
@@ -152,13 +154,19 @@ export function CabinetViewer({
       onPointerDown={(e) => {
         downAt.current = [e.clientX, e.clientY]
       }}
+      // Botó dret: arrossegant mou la càmera; un clic sense moure's obre les propietats (`onContextClick`).
+      onPointerUp={onContextClick ? (e) => {
+        const d = downAt.current
+        if (e.button === 2 && d && Math.hypot(e.clientX - d[0], e.clientY - d[1]) < 5) onContextClick(e.clientX, e.clientY)
+      } : undefined}
+      onContextMenu={onContextClick ? (e) => e.preventDefault() : undefined}
       onPointerMissed={(e) => {
         const d = downAt.current
         if (onDeselect && d && Math.hypot(e.clientX - d[0], e.clientY - d[1]) < 5) onDeselect()
       }}
     >
       {/* Mà sobre les peces d'un mòdul que es pot triar. */}
-      <HoverCursor active={hovered?.kind === "module" || hovered?.kind === "part"} />
+      <HoverCursor active={hovered?.kind === "module" || hovered?.kind === "part" || hovered?.kind === "zone"} />
       <color attach="background" args={[q.guides ? bg : scene.wall]} />
       {/* Llum d'entorn (IBL) d'un estudi procedural, com model-viewer: reflexos i ombrejat suau. És l'única
           de l'escena: abans l'habitació de Presentació en posava una altra i, segons quina s'aplicava l'última
