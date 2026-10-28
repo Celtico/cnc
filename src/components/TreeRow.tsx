@@ -4,6 +4,7 @@ import { LuEye, LuEyeOff, LuLock, LuLockOpen, LuPlus } from "react-icons/lu"
 import { SectionLabel } from "./SectionLabel"
 import { ActionsMenu } from "./ActionsMenu"
 import { IconAction } from "./IconAction"
+import { useHoverLink } from "./hoverLink"
 
 /**
  * Fila i títol de grup dels arbres (com l'outliner de Figma o Fusion): l'Estructura de l'editor (`StructureTree`) i la
@@ -55,7 +56,10 @@ export function TreeRow({
   toggleLabel,
   dnd,
   flags,
+  hoverKey,
 }: {
+  /** L'element al 3D (`hoverKey`): passar per sobre de la fila el ressalta al 3D, i a l'inrevés (`useHoverLink`). */
+  hoverKey?: string
   /** L'ull (veure / amagar) i el cadenat (no es pot moure). */
   flags?: TreeRowFlags
   /** Arrossegar per ordenar: la fila es pot agafar i deixar abans/després d'una altra. */
@@ -82,6 +86,8 @@ export function TreeRow({
   useEffect(() => {
     if (selected) ref.current?.scrollIntoView?.({ block: "nearest" })
   }, [selected])
+  const link = useHoverLink()
+  const hovered = !!hoverKey && link.hover === hoverKey
   return (
     <HStack
       ref={ref}
@@ -92,10 +98,13 @@ export function TreeRow({
       pr={1}
       py={1}
       rounded="md"
-      bg={selected ? "wood.muted" : highlighted ? "bg.muted" : undefined}
+      bg={selected ? "wood.muted" : highlighted || hovered ? "bg.muted" : undefined}
       color={selected ? "wood.fg" : muted || flags?.hidden ? "fg.muted" : "fg"}
       _hover={{ bg: selected ? "wood.muted" : "bg.muted" }}
       onClick={onClick}
+      // Només el ratolí (en tocar una pantalla, el «passar per sobre» es quedaria enganxat).
+      onPointerEnter={hoverKey ? (e) => e.pointerType === "mouse" && link.enter(hoverKey) : undefined}
+      onPointerLeave={hoverKey ? () => link.leave(hoverKey) : undefined}
       className="group"
       minH="30px"
       position="relative"

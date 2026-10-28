@@ -1,6 +1,6 @@
 import { OrbitControls } from "@react-three/drei"
 import { Canvas, useThree, type ThreeEvent } from "@react-three/fiber"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef } from "react"
 import type { OrbitControlsImpl } from "../../components/viewer/orbitControls"
 import { Color, NeutralToneMapping, type PerspectiveCamera } from "three"
 import { BoxFrame } from "../../components/viewer/BoxFrame"
@@ -8,6 +8,7 @@ import { MoveGizmo } from "../../components/viewer/MoveGizmo"
 import { usePanModifierCursor, useViewerCursor } from "../../components/viewer/cursor"
 import { releaseModelGpu } from "../../components/viewer/models3d"
 import { SceneAccess, StudioEnvironment, TextureRefresh } from "../../components/viewer/SceneHelpers"
+import { hoverKey, hoverTarget, useHoverLink } from "../../components/hoverLink"
 import type { SceneGetter } from "../../components/viewer/render/RenderDialog"
 import { rad, sameCameraPose, type Ambient, type CameraPose, type MaterialPref } from "../../core/model"
 import type { ItemGeometry } from "./ambientData"
@@ -89,6 +90,9 @@ export function Ambient3D({
   // En tancar el 3D, els models compartits (memòria de `models3d`) s'alliberen de la GPU: si no, guardarien el
   // renderitzador mort a través dels seus escoltadors.
   useEffect(() => () => releaseModelGpu(), [])
+  // Element sota el ratolí, aquí o a la seva fila de l'arbre (`useHoverLink`; es llegeix fora del Canvas).
+  const link = useHoverLink()
+  const hovered = hoverTarget(link.hover)
   return (
     // Només pinta quan alguna cosa canvia (controls, elements, textures que arriben): a l'iPhone, un 3D quiet no gasta.
     <Canvas
@@ -110,7 +114,7 @@ export function Ambient3D({
       <TextureRefresh />
       <hemisphereLight args={["#ffffff", "#b9ad9c", 0.35]} />
       <directionalLight position={[cx + 4, 7, cz + 3]} intensity={1.6} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-span} shadow-camera-right={span} shadow-camera-top={span} shadow-camera-bottom={-span} shadow-bias={-0.0004} />
-      <Room ambient={ambient} geos={geos} materials={materials} box={box} selectedIds={selectedIds} onSelect={onSelect} onPick={onPick} onChange={onChange} snap={snap} dollhouse={dollhouse} showCeiling={showCeiling} showRoof={showRoof} cameraLocked={cameraLocked} />
+      <Room ambient={ambient} geos={geos} materials={materials} box={box} selectedIds={selectedIds} hoverId={hovered?.kind === "item" ? hovered.id : null} onHover={(id, on) => (on ? link.enter(hoverKey("item", id)) : link.leave(hoverKey("item", id)))} onSelect={onSelect} onPick={onPick} onChange={onChange} snap={snap} dollhouse={dollhouse} showCeiling={showCeiling} showRoof={showRoof} cameraLocked={cameraLocked} />
       {/* Com al visor de l'editor: esmorteïment, botó dret o dos dits per desplaçar, roda per apropar. */}
       <Controls target={[cx, 0.9, cz]} home={[cx + span * 0.5, span * 1.1 + 2, cz + span * 1.4 + 2]} fitSignal={fitSignal} eye={eyePose(ambient)} eyeSignal={eyeSignal} maxDistance={span * 4 + 10} onPoseChange={onPoseChange} initialCamera={initialCamera} onCameraChange={onCameraChange} locked={cameraLocked} goto={cameraGoto} />
       {onSceneAccess && <SceneAccess onAccess={onSceneAccess} />}
@@ -257,6 +261,8 @@ function Room({
   materials,
   box,
   selectedIds,
+  hoverId,
+  onHover,
   onSelect,
   onPick,
   onChange,
@@ -278,6 +284,8 @@ function Room({
   materials: MaterialPref[]
   box: { x0: number; y0: number; x1: number; y1: number }
   selectedIds: string[]
+  hoverId: string | null
+  onHover: (id: string, on: boolean) => void
   onSelect?: (id: string | null) => void
 }) {
   const { floor, walls, roof, ceiling } = useRoomShell({ ambient, geos, materials, box, showCeiling, showRoof })
@@ -297,7 +305,6 @@ function Room({
   const invalidate = useThree((s) => s.invalidate)
   useEffect(() => invalidate(), [scenes, dollhouse, invalidate])
 
-  const [hoverId, setHoverId] = useState<string | null>(null)
   // Mà sobre els elements que es poden triar (es neteja sola en desmuntar-se).
   const cursor = useViewerCursor()
   const { gizmoAt, activeAxis, startAxis, moveAxis, endAxis } = useGizmoDrag({ ambient, geos, selectedIds, onChange, snap, cameraLocked })
@@ -315,11 +322,11 @@ function Room({
           onPointerOver={(e: ThreeEvent<PointerEvent>) => {
             e.stopPropagation()
             cursor.hover(onPick || onSelect ? "pointer" : null)
-            if (e.pointerType === "mouse") setHoverId(s.id)
+            if (e.pointerType === "mouse") onHover(s.id, true)
           }}
           onPointerOut={() => {
             cursor.hover(null)
-            setHoverId((h) => (h === s.id ? null : h))
+            onHover(s.id, false)
           }}
           onClick={(e: ThreeEvent<MouseEvent>) => {
             // Un clic (no un arrossegament de la càmera) selecciona l'element (o el seu grup), com a l'editor.

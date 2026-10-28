@@ -1,6 +1,6 @@
 import { pocketReachIssues } from "../../core/build/pocketReach"
 import type { Machine } from "../../core/model/machine"
-import { useMemo } from "react"
+import { useCallback, useMemo } from "react"
 import { panelBox } from "../../core/build/geometry"
 import type { ViewerModule } from "../../components/viewer/CabinetViewer"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
@@ -113,6 +113,14 @@ export function useSceneData({
     if (selectionKind !== "zone" || !zoneRect) return null
     return moduleBoxToWorld(mod, { x0: zoneRect.x0, x1: zoneRect.x1, y0: zoneRect.y0, y1: zoneRect.y1, z0: 0, z1: c.depth + c.thickness })
   }, [selectionKind, zoneRect, build, moduleIndex, module])
+  // Caixa de qualsevol compartiment (mm, coordenades de la composició): el que es ressalta en passar per sobre de la seva
+  // fila a l'arbre.
+  const zoneBox = useCallback((moduleId: string, zoneId: string) => {
+    const mod = build?.modules.find((m) => comp.modules[m.index - 1]?.id === moduleId)
+    const c = mod && comp.modules[mod.index - 1]!.carcass
+    const r = mod?.build.layout.rects.get(zoneId)
+    return mod && c && r ? moduleBoxToWorld(mod, { x0: r.x0, x1: r.x1, y0: r.y0, y1: r.y1, z0: 0, z1: c.depth + c.thickness }) : null
+  }, [build, comp.modules])
   const openOnly = useMemo(() => {
     if (!viewer.openOnlySelected || !zoneRect || !build) return null
     const mod = build.modules[moduleIndex]
@@ -137,7 +145,7 @@ export function useSceneData({
   // Els que tallen i toquen alguna peça (verd); els altres que tallen, en vermell.
   const cuttingRefs = useMemo(() => new Set(build?.cutting ?? []), [build])
 
-  return { panels, size, empty, frameSize, viewerModules, absParts, solidParts, cutPartIds, ghosts, warnings, viewerPanels, shownPanels, groups, zoneRect, highlightZone, openOnly, collisions, collidingRefs, cuttingRefs }
+  return { panels, size, empty, frameSize, viewerModules, absParts, solidParts, cutPartIds, ghosts, warnings, viewerPanels, shownPanels, groups, zoneRect, highlightZone, zoneBox, openOnly, collisions, collidingRefs, cuttingRefs }
 }
 
 export type SceneData = ReturnType<typeof useSceneData>

@@ -1,6 +1,7 @@
 import { Box, Menu, Stack, Text } from "@chakra-ui/react"
 import { LuCopy, LuFileUp, LuFolderOpen, LuGroup, LuSprout, LuTrash2, LuUngroup } from "react-icons/lu"
 import { groupNames, insertModelCopy, newGroupName, setModelGroup, ungroupMulti } from "../../../core/model"
+import { hoverKey } from "../../../components/hoverLink"
 import { TreeRow, TreeRowMenu, TreeSection } from "../../../components/TreeRow"
 import { MODEL_FORMAT_HELP } from "../addElements"
 import { GroupRow } from "./GroupRow"
@@ -67,6 +68,7 @@ export function ModelSection({ tree, show, isObject, uploading, onPick }: { tree
             hint={`${Math.round(g.w)} × ${Math.round(g.h)}`}
             selected={(selection.kind === "model" && selection.id === g.id) || inMultiSel("model", g.id)}
             onClick={() => onSelect({ kind: "model", id: g.id })}
+            hoverKey={hoverKey("model", g.id)}
             flags={flagsOf("models", g)}
             dnd={dnd.dnd("model", g.id)}
             menu={

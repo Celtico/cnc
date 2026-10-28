@@ -32,6 +32,7 @@ import { useSceneData } from "./useSceneData"
 import { useViewerHandles } from "./useViewerHandles"
 import { useViewerOptions } from "./useViewerOptions"
 import { viewerPicks } from "./viewerPicks"
+import { HoverLinkProvider } from "../../components/HoverLinkProvider"
 
 export function EditorScreen({ projectId }: { projectId: number }) {
   const project = useProject(projectId)
@@ -130,7 +131,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   const handles = useViewerHandles()
 
   return (
-    <>
+    <HoverLinkProvider>
       <TopBarActions>
         <UndoRedo {...history} />
       </TopBarActions>
@@ -247,6 +248,6 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           />
         )}
       />
-    </>
+    </HoverLinkProvider>
   )
 }

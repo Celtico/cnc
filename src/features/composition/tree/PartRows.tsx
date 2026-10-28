@@ -1,6 +1,7 @@
 import { Box, Menu } from "@chakra-ui/react"
 import { LuCopy, LuGroup, LuScissors, LuTrash2, LuUngroup } from "react-icons/lu"
 import { groupNames, insertPartCopy, newGroupName, removePartFromGroup, ungroupMulti } from "../../../core/model"
+import { hoverKey } from "../../../components/hoverLink"
 import { TreeRow, TreeRowMenu } from "../../../components/TreeRow"
 import { ORIENT_ICON } from "../partOrient"
 import { GroupRow } from "./GroupRow"
@@ -37,6 +38,7 @@ export function PartRows({ tree }: { tree: TreeCtx }) {
               hint={`${Math.round(r.w)} × ${Math.round(r.h)}`}
               selected={(selection.kind === "part" && selection.id === r.id) || inMultiSel("part", r.id)}
               onClick={() => onSelect({ kind: "part", id: r.id })}
+              hoverKey={hoverKey("part", r.id)}
               dnd={dnd.dnd("part", r.id)}
               flags={flagsOf("parts", r)}
               menu={

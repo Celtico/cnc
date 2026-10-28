@@ -24,6 +24,7 @@ import { MoveHandle } from "./cabinet/MoveHandle"
 import { CableMarks, HoverCursor, ZoneHighlight } from "./cabinet/Highlights"
 import { CameraRig } from "./cabinet/CameraRig"
 import { panelBox } from "../../core/build/geometry"
+import { hoverKey, hoverTarget, useHoverLink } from "../hoverLink"
 
 /** Anar a un avís: el contorn de les seves peces i la transparència de la resta. */
 const ALERT_COLOR = "#dc2626"
@@ -72,6 +73,7 @@ export function CabinetViewer({
   collidingRefIds,
   cuttingRefIds,
   highlightZone,
+  hoverZone,
   fitKey = 0,
   onFramedChange,
   initialCamera,
@@ -108,10 +110,15 @@ export function CabinetViewer({
   const holesDrawn = holesShown || hardware
   const { groupOf, panelKeys, pinsOf, fixedOf } = usePanelVisuals(panels, holesDrawn, hardware)
   // Mòdul (o moble sencer) que s'està arrossegant amb la nansa: desplaçament en viu.
-  // Mòdul sota el ratolí: contorn suau, perquè es vegi què se seleccionarà en clicar.
-  const [hoverModule, setHoverModule] = useState<number | null>(null)
+  // Element sota el ratolí (aquí o a la seva fila de l'arbre, `useHoverLink`): contorn suau, perquè es vegi què se
+  // seleccionarà en clicar.
+  const link = useHoverLink()
+  const hovered = hoverTarget(link.hover)
+  const isHovered = (kind: string, id: string) => hovered?.kind === kind && hovered.id === id
+  // Un objecte que talla pot ser una peça lliure (`part:id`): la mateixa fila que la peça.
+  const ghostKey = (id: string) => (id.startsWith("part:") ? hoverKey("part", id.slice(5)) : hoverKey("ref", id))
   const [moduleDrag, setModuleDrag] = useState<{ index: number; dx: number; dy: number; dz: number; all: boolean } | null>(null)
-  const { onFittingSelect, onPanelHover, onPanelClick } = usePanelHandlers({ onSelectModule, onSelectPart, onSelectHardware, modules, size }, setHoverModule)
+  const { onFittingSelect, onPanelHover, onPanelClick } = usePanelHandlers({ onSelectModule, onSelectPart, onSelectHardware, modules, size }, link)
   const { snapTargets, moduleBoxes, partBoxes, selectedPartBox, modelBoxes, selectedModelBox, setBox, selectedModel } = useObjectBoxes({ size, modules, parts, models, ghosts, selectedSet, selectedPartId, selectedModelId })
   // Un sol imant per a tot el que es mou amb el gizmo (per decisió de l'usuari, 2026-10-16: «uns s'enganxen ràpid i altres
   // no»): les vores i el mig dels mòduls, les peces lliures, els models i els objectes, menys els que es mouen, amb les
@@ -151,7 +158,7 @@ export function CabinetViewer({
       }}
     >
       {/* Mà sobre les peces d'un mòdul que es pot triar. */}
-      <HoverCursor active={hoverModule !== null} />
+      <HoverCursor active={hovered?.kind === "module" || hovered?.kind === "part"} />
       <color attach="background" args={[q.guides ? bg : scene.wall]} />
       {/* Llum d'entorn (IBL) d'un estudi procedural, com model-viewer: reflexos i ombrejat suau. És l'única
           de l'escena: abans l'habitació de Presentació en posava una altra i, segons quina s'aplicava l'última
@@ -202,7 +209,7 @@ export function CabinetViewer({
                 hardware={hardware}
                 pins={pinsOf.get(p.id)}
                 fixed={fixedOf.get(p.id)}
-                onHover={onSelectModule && !isPart ? onPanelHover : undefined}
+                onHover={(isPart ? onSelectPart : onSelectModule) ? onPanelHover : undefined}
                 onClick={(isPart ? onSelectPart : onSelectModule) ? onPanelClick : undefined}
                 selectedFitting={selectedHardwareId && p.fittings?.some((f) => f.placement === selectedHardwareId) ? selectedHardwareId : null}
                 onSelectFitting={onSelectHardware ? onFittingSelect : undefined}
@@ -219,6 +226,8 @@ export function CabinetViewer({
             g={g}
             materials={materials}
             selected={g.id === selectedRefId}
+            hovered={link.hover === ghostKey(g.id)}
+            onHover={(on) => (on ? link.enter(ghostKey(g.id)) : link.leave(ghostKey(g.id)))}
             hit={(collidingRefIds?.has(g.id) ?? false) || (g.effect === "cut" && !!cuttingRefIds && !cuttingRefIds.has(g.id))}
             guides={q.guides}
             offset={[-size.width * S * 0.5, 0, -size.depth * S * 0.5]}
@@ -246,7 +255,7 @@ export function CabinetViewer({
         )}
         {models?.map((m) => {
           const live = modelDrag?.id === m.id ? modelDrag : null
-          return <ModelMesh key={m.id} m={m} selected={m.id === selectedModelId} shift={live ? [(live.x - m.x) * S, (live.y - m.y) * S, (live.z - m.z) * S] : undefined} onSelect={onSelectModel} materials={materials} />
+          return <ModelMesh key={m.id} m={m} selected={m.id === selectedModelId} hovered={isHovered("model", m.id)} onHover={(on) => (on ? link.enter(hoverKey("model", m.id)) : link.leave(hoverKey("model", m.id)))} shift={live ? [(live.x - m.x) * S, (live.y - m.y) * S, (live.z - m.z) * S] : undefined} onSelect={onSelectModel} materials={materials} />
         })}
         {/* Model seleccionat: contorn taronja amb el gizmo (com una peça lliure). */}
         {selectedModelBox && (
@@ -296,10 +305,13 @@ export function CabinetViewer({
           )
         }) : null}
         {(() => {
-          const hm = hoverModule !== null && hoverModule !== selectedIndex && !moduleDrag ? modules?.find((m) => m.index === hoverModule) : undefined
-          return hm ? (
-            <group position={[(hm.x + hm.width / 2) * S, (hm.y + hm.height / 2) * S, ((hm.z ?? 0) + hm.depth / 2) * S]}>
-              <BoxFrame w={(hm.width + 6) * S} h={(hm.height + 6) * S} d={(hm.depth + 6) * S} />
+          if (moduleDrag || !hovered) return null
+          const hm = hovered.kind === "module" && hovered.id !== selectedModuleId ? modules?.find((m) => m.id === hovered.id) : undefined
+          const hp = hovered.kind === "part" && hovered.id !== selectedPartId ? partBoxes.find((b) => b.id === hovered.id) : undefined
+          const box = hm ? { x0: hm.x, x1: hm.x + hm.width, y0: hm.y, y1: hm.y + hm.height, z0: hm.z ?? 0, z1: (hm.z ?? 0) + hm.depth } : hp ? { x0: hp.x, x1: hp.x + hp.w, y0: hp.y, y1: hp.y + hp.h, z0: hp.z, z1: hp.z + hp.d } : hovered.kind === "zone" ? hoverZone : null
+          return box ? (
+            <group position={[((box.x0 + box.x1) / 2) * S, ((box.y0 + box.y1) / 2) * S, ((box.z0 + box.z1) / 2) * S]}>
+              <BoxFrame w={(box.x1 - box.x0 + 6) * S} h={(box.y1 - box.y0 + 6) * S} d={(box.z1 - box.z0 + 6) * S} />
             </group>
           ) : null
         })()}

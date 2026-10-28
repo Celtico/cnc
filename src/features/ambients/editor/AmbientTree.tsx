@@ -2,6 +2,7 @@ import { Box, HStack, Menu, Stack } from "@chakra-ui/react"
 import { LuBox, LuChevronDown, LuChevronRight, LuCopy, LuExternalLink, LuGroup, LuHouse, LuSofa, LuTrash2, LuTriangleAlert, LuUngroup } from "react-icons/lu"
 import { useSessionList } from "../../../components/sessionState"
 import { TreeRow, TreeRowMenu, TreeSection } from "../../../components/TreeRow"
+import { hoverKey } from "../../../components/hoverLink"
 import { duplicateItems, groupIds, newItemGroupName, removeItems, setItemGroup, type Ambient, type AmbientItem } from "../../../core/model"
 import type { Project } from "../../../db/db"
 import { isEmptyGeometry, type ItemGeometry } from "../ambientData"
@@ -90,6 +91,7 @@ export function AmbientTree({
         selected={(sel?.kind === "item" && sel.id === it.id) || (sel?.kind === "multi" && sel.ids.includes(it.id))}
         highlighted={sel?.kind === "group" && sel.id === it.group}
         onClick={() => (treeClick(it.id, sectionOrder(it)), setTool("select"))}
+        hoverKey={hoverKey("item", it.id)}
         flags={itemFlags(amb, change, it)}
         dnd={itemDnd(it)}
         menu={

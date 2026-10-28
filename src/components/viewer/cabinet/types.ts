@@ -92,6 +92,8 @@ export interface CabinetViewerProps {
   cuttingRefIds?: Set<string>
   /** Compartiment seleccionat (mm, coordenades de la composició): contorn taronja. */
   highlightZone?: { x0: number; x1: number; y0: number; y1: number; z0: number; z1: number; veil?: boolean } | null
+  /** Compartiment sota el ratolí a l'arbre (mm, com `highlightZone`): contorn suau. */
+  hoverZone?: { x0: number; x1: number; y0: number; y1: number; z0: number; z1: number } | null
   /** Clic a l'espai buit (sense arrossegar): treure la selecció. */
   onDeselect?: () => void
   /** Canviar-lo torna a enquadrar la càmera (la resta de canvis no la mouen). */

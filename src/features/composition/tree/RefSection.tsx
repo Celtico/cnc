@@ -4,6 +4,7 @@ import { LuBox, LuCopy, LuGroup, LuImage, LuPlus, LuScan, LuShapes, LuTrash2, Lu
 import { boxCage, importedMesh, parseStl, groupMulti, groupNames, insertRefCopy, newGroupName, ungroupMulti, type RefObject } from "../../../core/model"
 import { GroupRow } from "./GroupRow"
 import { UngroupDropZone } from "./UngroupDropZone"
+import { hoverKey } from "../../../components/hoverLink"
 import { TreeRow, TreeRowMenu, TreeSection } from "../../../components/TreeRow"
 import { useSettings } from "../../settings/SettingsContext"
 import { cutterOver, refFor, refFromPreset } from "../addElements"
@@ -140,6 +141,7 @@ export function RefSection({ tree, isObject, onAddBlank }: { tree: TreeCtx; isOb
             hint={`${Math.round(r.w)} × ${Math.round(r.h)}`}
             selected={(selection.kind === "ref" && selection.id === r.id) || inMultiSel("ref", r.id)}
             onClick={() => onSelect({ kind: "ref", id: r.id })}
+            hoverKey={hoverKey("ref", r.id)}
             dnd={dnd.dnd("ref", r.id)}
             flags={flagsOf("references", r)}
             menu={

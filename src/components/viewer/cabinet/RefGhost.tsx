@@ -62,7 +62,12 @@ export function RefGhost({
   onDrag,
   outline = false,
   materials = [],
+  hovered = false,
+  onHover,
 }: {
+  /** Ratolí a sobre, aquí o a la seva fila de l'arbre (`useHoverLink`): contorn del color de selecció, més suau. */
+  hovered?: boolean
+  onHover?: (on: boolean) => void
   /** Posició en viu mentre s'arrossega amb el gizmo (null en acabar), per moure-hi el que hi ha a sota (models 3D). */
   onDrag?: (pos: { x: number; y: number; z: number } | null) => void
   /** Només el contorn (peça lliure: la peça de debò ja es veu a sota). */
@@ -91,8 +96,6 @@ export function RefGhost({
   const snapBoxes = useMemo(() => others.filter((o) => o.id !== g.id), [others, g.id])
   const [lines, setLines] = useState<Guide[]>([])
   const pos = drag ?? g
-  // Ratolí a sobre: contorn del color de selecció (més suau), perquè es vegi què es triarà.
-  const [hover, setHover] = useState(false)
   const cursor = useViewerCursor()
   // Obstacle en blau; objecte que talla en verd; seleccionat en taronja; amb problema (o que talla i no toca res) en vermell.
   const tint = hit ? "#dc2626" : selected ? SELECT_COLOR : g.effect === "cut" ? "#16a34a" : "#3b82f6"
@@ -182,10 +185,10 @@ export function RefGhost({
       onPointerOver={onSelect ? (e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation()
         cursor.hover("pointer")
-        if (e.pointerType === "mouse") setHover(true)
+        if (e.pointerType === "mouse") onHover?.(true)
       } : undefined}
       onPointerOut={onSelect ? () => {
-        setHover(false)
+        onHover?.(false)
         cursor.hover(null)
       } : undefined}
       // El cos no s'arrossega (per decisió de l'usuari): només les fletxes del gizmo, així sempre se sap cap on es mourà.
@@ -195,12 +198,12 @@ export function RefGhost({
       {solidMat ? (
         <primitive object={solidMat} attach="material" />
       ) : (
-        <meshStandardMaterial side={DoubleSide} color={hover && !selected && !hit ? SELECT_COLOR : tint} transparent opacity={outline ? 0.08 : selected || hit ? 0.38 : g.effect === "cut" ? 0.15 : hover ? 0.32 : 0.22} depthWrite={false} depthTest={g.effect !== "cut"} />
+        <meshStandardMaterial side={DoubleSide} color={hovered && !selected && !hit ? SELECT_COLOR : tint} transparent opacity={outline ? 0.08 : selected || hit ? 0.38 : g.effect === "cut" ? 0.15 : hovered ? 0.32 : 0.22} depthWrite={false} depthTest={g.effect !== "cut"} />
       )}
       {((guides && !solidMat) || selected || hit || g.effect === "cut") && g.shape !== "image" && <Edges color={selected ? SELECT_COLOR : tint} threshold={cyl || profileGeo ? 30 : 1} depthTest={g.effect !== "cut"} renderOrder={g.effect === "cut" ? 9 : 0} />}
     </mesh>
       {/* Seleccionat: contorn gruixut que es veu sempre (també sobre un objecte sòlid i fosc); a sobre: més prim. */}
-      {!outline && (selected || (hover && !drag)) && <BoxFrame w={(g.w + 4) * S} h={(g.h + 4) * S} d={(g.d + 4) * S} strong={selected} />}
+      {!outline && (selected || (hovered && !drag)) && <BoxFrame w={(g.w + 4) * S} h={(g.h + 4) * S} d={(g.d + 4) * S} strong={selected} />}
       {draggable && <MoveGizmo axes={gizmoAxes} active={drag ? (drag.axes.length === 1 && !freeDrag.current ? drag.axes[0]! : "free") : null} onStart={(a, e) => { freeDrag.current = a === "free"; startAxis(a, e) }} onMove={moveEvt} onEnd={end} />}
       {drag && (
         <Html position={[0, (g.h / 2) * S, 0]} center zIndexRange={[30, 20]} style={{ pointerEvents: "none" }}>

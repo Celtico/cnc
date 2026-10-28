@@ -2,6 +2,7 @@ import { CabinetViewer } from "../../components/viewer/CabinetViewer"
 import type { SceneGetter } from "../../components/viewer/render/RenderDialog"
 import { anchorRef, groupItems, makeRoomForRef, moveAllBy, moveModuleBy, moveMultiBy, refBlocksRow, type Composition, type Module, type Settings } from "../../core/model"
 import { toaster } from "../../components/ui/toaster"
+import { hoverTarget, useHoverLink } from "../../components/hoverLink"
 import type { Selection } from "../composition/StructureTree"
 import type { CompositionEdits } from "./editorCommands"
 import type { EditorCamera } from "./useEditorCamera"
@@ -42,7 +43,7 @@ export function SceneView({
   edits: Pick<CompositionEdits, "moveGroup" | "movePart" | "moveModel" | "moveRef">
   onSceneAccess: (g: SceneGetter) => void
 }) {
-  const { shownPanels, frameSize, viewerModules, ghosts, openOnly, cutPartIds, collidingRefs, cuttingRefs, highlightZone, solidParts } = scene
+  const { shownPanels, frameSize, viewerModules, ghosts, openOnly, cutPartIds, collidingRefs, cuttingRefs, highlightZone, zoneBox, solidParts } = scene
   const { exploded, showHoles, viewer, viewerState, quality, hardware } = opts
   const { viewDir, fitKey, setFramed, cameraRef, saveCamera, cameraGoto, cameraFly, alert } = camera
   const { selectFrom3D, selectPartFrom3D, selectModelFrom3D } = picks
@@ -60,6 +61,9 @@ export function SceneView({
       action: { label: "Fer-li lloc", onClick: () => setComp((c) => makeRoomForRef(c, id)) },
     })
   }
+  // Compartiment sota el ratolí a l'arbre (`moduleId/zoneId`, `zoneHoverKey`).
+  const hovered = hoverTarget(useHoverLink().hover)
+  const [hoverModuleId, hoverZoneId] = hovered?.kind === "zone" ? hovered.id.split("/") : []
   return (
     <CabinetViewer
       sceneFinish={comp.scene}
@@ -84,6 +88,7 @@ export function SceneView({
       collidingRefIds={collidingRefs}
       cuttingRefIds={cuttingRefs}
       highlightZone={highlightZone}
+      hoverZone={hoverModuleId && hoverZoneId && !(selection.kind === "zone" && selection.moduleId === hoverModuleId && selection.zoneId === hoverZoneId) ? zoneBox(hoverModuleId, hoverZoneId) : null}
       onSelectRef={(id) => {
         if (id.startsWith("part:")) return pick({ kind: "part", id: id.slice(5) })
         // D'un grup (com les peces): el primer clic tria el grup; el segon, l'objecte.

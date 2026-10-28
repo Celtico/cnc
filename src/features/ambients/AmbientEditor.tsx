@@ -33,6 +33,7 @@ import { useAmbientTab } from "./editor/useAmbientTab"
 import { useCameraHistory } from "./editor/useCameraHistory"
 import { useViewFlags } from "./editor/useViewFlags"
 import { AmbientViewOptions, CameraButtons, DrawTools, ToolHint, ViewerTabs } from "./editor/ViewerOverlays"
+import { HoverLinkProvider } from "../../components/HoverLinkProvider"
 
 /**
  * Editor d'un ambient: el plànol (parets, plànol de fons, mobles i blocs) i la vista 3D. Els
@@ -139,113 +140,115 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
   const toolDone = useCallback(() => setTool("select"), [])
 
   return (
-    <Flex direction="column" flex={1} minH={0} gap={2}>
-      {/* Desfer/refer a la barra superior (la mateixa que la dels mobles: «Ambients › nom»). */}
-      <TopBarActions>
-        <UndoRedo {...history} />
-      </TopBarActions>
+    <HoverLinkProvider>
+      <Flex direction="column" flex={1} minH={0} gap={2}>
+        {/* Desfer/refer a la barra superior (la mateixa que la dels mobles: «Ambients › nom»). */}
+        <TopBarActions>
+          <UndoRedo {...history} />
+        </TopBarActions>
 
-      <Workspace
-        ws={ws}
-        left={
-          <AmbientTree
-            ambientId={ambientId}
-            name={name}
-            amb={amb}
-            change={change}
-            selection={selection}
-            geos={geos}
-            names={names}
-            projects={projects}
-            groups={groups}
-            totalWallLength={summary.wallLength}
-            setTool={setTool}
-            onSelectAmbient={() => (select(null), ws.setMobilePane("props"), setTool("select"))}
-            onAddMoble={() => setPicker(true)}
-            onAddObject={() => setObjPicker(true)}
-            onOpenProject={onOpenProject}
-          />
-        }
-        right={
-          // Una selecció nova, un inspector nou: les finestres de tria que s'hi havien obert es tanquen (com a l'editor de mobles).
-          <SelectionInspector
-            key={JSON.stringify(selection.sel)}
-            name={name}
-            amb={amb}
-            change={change}
-            selection={selection}
-            actions={actions}
-            geos={geos}
-            names={names}
-            projects={projects}
-            materials={simMaterials}
-            groups={groups}
-            summary={summary}
-            wallDefaults={wallDefaults}
-            onWallDefaults={setWallDefaults}
-            onResize={resizeLinked}
-            onOpenProject={onOpenProject}
-            onImportPlan={() => void importPlan()}
-            onCalibrate={() => (setTab("plan"), setTool("calibrate"))}
-          />
-        }
-        // Sense pestanya «Assistent» (per decisió de l'usuari, 2026-10-13): l'assistent personal és al menú principal
-        // i fa servir aquest ambient pel `assistantHub`.
-        center={(chrome) => (
-          // Centre: plànol o 3D, amb la barra d'eines flotant (com Figma) i els botons de plegar.
-          <Box order={{ base: 0, md: 2 }} flex={{ md: 1 }} minW={0} minH={{ base: "56vh", md: 0 }} h={{ base: "56vh", md: "full" }} position="relative">
-          {tab === "plan" ? (
-            <PlanCanvas
-              ambient={shownAmb}
+        <Workspace
+          ws={ws}
+          left={
+            <AmbientTree
+              ambientId={ambientId}
+              name={name}
+              amb={amb}
+              change={change}
+              selection={selection}
               geos={geos}
               names={names}
-              selection={sel}
-              selectedIds={selIds}
-              onPickItem={pickItem}
-              onPickWall={pickWall}
-              selectedWallIds={selWallIds}
-              onSelect={select}
-              tool={tool}
-              onToolDone={toolDone}
-              onChange={changeShown}
-              wallDefaults={wallDefaults}
-              onCalibrate={(a, b) => setCalib({ a, b })}
-              fitSignal={fit}
-              show={{ grid: flags.showGrid, dims: flags.showDims, labels: flags.showLabels, detail: flags.showDetail, snap: flags.snapOn, plan: flags.showPlan }}
-              onFramedChange={setPlanFramed}
+              projects={projects}
+              groups={groups}
+              totalWallLength={summary.wallLength}
+              setTool={setTool}
+              onSelectAmbient={() => (select(null), ws.setMobilePane("props"), setTool("select"))}
+              onAddMoble={() => setPicker(true)}
+              onAddObject={() => setObjPicker(true)}
+              onOpenProject={onOpenProject}
             />
-          ) : (
-            // Fons del 3D (el visor és transparent): el mateix gris que el plànol.
-            <Box position="absolute" inset={0} rounded="md" overflow="hidden" borderWidth="1px" bg="bg.subtle">
-              <Ambient3D ambient={shownAmb} geos={geos} materials={settings.materials} onSceneAccess={onSceneAccess} fitSignal={fit} eyeSignal={eye} selectedIds={selIds} onSelect={(id) => (id ? void pickItem(id) : select(null))} onPick={pickItem} onChange={changeShown} snap={flags.snapOn} dollhouse={flags.dollhouse} shadows={flags.shadows} ceiling={flags.ceiling} roof={flags.roofOn} onPoseChange={setPose} initialCamera={camera.cameraRef.current} onCameraChange={camera.saveCamera} cameraLocked={camera.camLocked} cameraGoto={camera.camGoto} />
+          }
+          right={
+            // Una selecció nova, un inspector nou: les finestres de tria que s'hi havien obert es tanquen (com a l'editor de mobles).
+            <SelectionInspector
+              key={JSON.stringify(selection.sel)}
+              name={name}
+              amb={amb}
+              change={change}
+              selection={selection}
+              actions={actions}
+              geos={geos}
+              names={names}
+              projects={projects}
+              materials={simMaterials}
+              groups={groups}
+              summary={summary}
+              wallDefaults={wallDefaults}
+              onWallDefaults={setWallDefaults}
+              onResize={resizeLinked}
+              onOpenProject={onOpenProject}
+              onImportPlan={() => void importPlan()}
+              onCalibrate={() => (setTab("plan"), setTool("calibrate"))}
+            />
+          }
+          // Sense pestanya «Assistent» (per decisió de l'usuari, 2026-10-13): l'assistent personal és al menú principal
+          // i fa servir aquest ambient pel `assistantHub`.
+          center={(chrome) => (
+            // Centre: plànol o 3D, amb la barra d'eines flotant (com Figma) i els botons de plegar.
+            <Box order={{ base: 0, md: 2 }} flex={{ md: 1 }} minW={0} minH={{ base: "56vh", md: 0 }} h={{ base: "56vh", md: "full" }} position="relative">
+            {tab === "plan" ? (
+              <PlanCanvas
+                ambient={shownAmb}
+                geos={geos}
+                names={names}
+                selection={sel}
+                selectedIds={selIds}
+                onPickItem={pickItem}
+                onPickWall={pickWall}
+                selectedWallIds={selWallIds}
+                onSelect={select}
+                tool={tool}
+                onToolDone={toolDone}
+                onChange={changeShown}
+                wallDefaults={wallDefaults}
+                onCalibrate={(a, b) => setCalib({ a, b })}
+                fitSignal={fit}
+                show={{ grid: flags.showGrid, dims: flags.showDims, labels: flags.showLabels, detail: flags.showDetail, snap: flags.snapOn, plan: flags.showPlan }}
+                onFramedChange={setPlanFramed}
+              />
+            ) : (
+              // Fons del 3D (el visor és transparent): el mateix gris que el plànol.
+              <Box position="absolute" inset={0} rounded="md" overflow="hidden" borderWidth="1px" bg="bg.subtle">
+                <Ambient3D ambient={shownAmb} geos={geos} materials={settings.materials} onSceneAccess={onSceneAccess} fitSignal={fit} eyeSignal={eye} selectedIds={selIds} onSelect={(id) => (id ? void pickItem(id) : select(null))} onPick={pickItem} onChange={changeShown} snap={flags.snapOn} dollhouse={flags.dollhouse} shadows={flags.shadows} ceiling={flags.ceiling} roof={flags.roofOn} onPoseChange={setPose} initialCamera={camera.cameraRef.current} onCameraChange={camera.saveCamera} cameraLocked={camera.camLocked} cameraGoto={camera.camGoto} />
+              </Box>
+            )}
+              {chrome}
+            <ViewerTabs tab={tab} onTab={setTab} />
+            {tab === "plan" && <DrawTools tool={tool} onTool={setTool} />}
+            {tab === "3d" && <CameraButtons locked={camera.camLocked} onToggleLock={() => camera.setCamLocked((v) => !v)} canGoBack={!!camera.camBack} onBack={camera.cameraBack} />}
+            <AmbientViewOptions
+              tab={tab}
+              flags={flags}
+              planFramed={planFramed}
+              pose={pose}
+              hasPlan={!!amb.plan}
+              hasRoof={!!amb.roof}
+              onFit={() => setFit((n) => n + 1)}
+              onEye={() => setEye((n) => n + 1)}
+              onTab={setTab}
+              onRender={startRender}
+            />
+            {tab === "plan" && tool !== "select" && <ToolHint tool={tool} />}
             </Box>
           )}
-            {chrome}
-          <ViewerTabs tab={tab} onTab={setTab} />
-          {tab === "plan" && <DrawTools tool={tool} onTool={setTool} />}
-          {tab === "3d" && <CameraButtons locked={camera.camLocked} onToggleLock={() => camera.setCamLocked((v) => !v)} canGoBack={!!camera.camBack} onBack={camera.cameraBack} />}
-          <AmbientViewOptions
-            tab={tab}
-            flags={flags}
-            planFramed={planFramed}
-            pose={pose}
-            hasPlan={!!amb.plan}
-            hasRoof={!!amb.roof}
-            onFit={() => setFit((n) => n + 1)}
-            onEye={() => setEye((n) => n + 1)}
-            onTab={setTab}
-            onRender={startRender}
-          />
-          {tab === "plan" && tool !== "select" && <ToolHint tool={tool} />}
-          </Box>
-        )}
-      />
+        />
 
-      {/* Afegir un moble o un objecte: la mateixa galeria de la pàgina (Historial · Projectes · Catàleg) en una finestra. */}
-      <AmbientPicker what="moble" open={picker} onClose={() => setPicker(false)} ambientId={ambientId} ambientName={name} projects={projects} onAdd={(p) => (addMoble(p), setPicker(false))} onCreate={(c, n) => createAndAdd(c, n, "moble")} />
-      <AmbientPicker what="object" open={objPicker} onClose={() => setObjPicker(false)} ambientId={ambientId} ambientName={name} projects={projects} onAdd={(p) => (addMoble(p), setObjPicker(false))} onCreate={(c, n) => createAndAdd(c, n, "object")} />
+        {/* Afegir un moble o un objecte: la mateixa galeria de la pàgina (Historial · Projectes · Catàleg) en una finestra. */}
+        <AmbientPicker what="moble" open={picker} onClose={() => setPicker(false)} ambientId={ambientId} ambientName={name} projects={projects} onAdd={(p) => (addMoble(p), setPicker(false))} onCreate={(c, n) => createAndAdd(c, n, "moble")} />
+        <AmbientPicker what="object" open={objPicker} onClose={() => setObjPicker(false)} ambientId={ambientId} ambientName={name} projects={projects} onAdd={(p) => (addMoble(p), setObjPicker(false))} onCreate={(c, n) => createAndAdd(c, n, "object")} />
 
-      <CalibrateDialog open={calib !== null} measured={calib ? Math.hypot(calib.b[0] - calib.a[0], calib.b[1] - calib.a[1]) : 0} onClose={() => (setCalib(null), setTool("select"))} onApply={applyCalibration} />
-    </Flex>
+        <CalibrateDialog open={calib !== null} measured={calib ? Math.hypot(calib.b[0] - calib.a[0], calib.b[1] - calib.a[1]) : 0} onClose={() => (setCalib(null), setTool("select"))} onApply={applyCalibration} />
+      </Flex>
+    </HoverLinkProvider>
   )
 }

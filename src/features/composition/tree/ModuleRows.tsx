@@ -3,6 +3,7 @@ import { createElement } from "react"
 import { LuArrowLeft, LuArrowRight, LuChevronDown, LuCornerDownLeft, LuCornerDownRight, LuChevronRight, LuClipboardPaste, LuCopy, LuGroup, LuRefrigerator, LuTrash2, LuUngroup } from "react-icons/lu"
 import { APPLIANCE_LABELS, addCorner, pasteModuleProps, groupMulti, insertItemsCopy, nicheAppliance, groupNames, newGroupName, removeModule, rowOf, ungroupMulti, type Module, type Zone } from "../../../core/model"
 import { toaster } from "../../../components/ui/toaster"
+import { hoverKey, zoneHoverKey } from "../../../components/hoverLink"
 import { TreeRow, TreeRowMenu } from "../../../components/TreeRow"
 import { zoneIcon } from "../zoneIcons"
 import { zoneLabel } from "../zoneLabel"
@@ -93,6 +94,7 @@ export function ModuleRows({ tree, openId, toggle }: { tree: TreeCtx; openId: st
               selected={(selection.kind === "module" && selection.id === m.id) || inMultiSel("module", m.id)}
               highlighted={selection.kind === "group" && selection.id === m.group}
               onClick={() => onSelect({ kind: "module", id: m.id })}
+              hoverKey={hoverKey("module", m.id)}
               dnd={dnd.dnd("module", m.id)}
               flags={flagsOf("modules", m)}
               menu={
@@ -214,7 +216,7 @@ function ZoneRows({
   const icon = createElement(zoneIcon(zone, { root }))
   return (
     <>
-      <TreeRow depth={depth} icon={icon} label={zoneLabel(zone, { root })} selected={selected} onClick={() => onSelect({ kind: "zone", moduleId, zoneId: zone.id })} muted />
+      <TreeRow depth={depth} icon={icon} label={zoneLabel(zone, { root })} selected={selected} onClick={() => onSelect({ kind: "zone", moduleId, zoneId: zone.id })} hoverKey={zoneHoverKey(moduleId, zone.id)} muted />
       {zone.split?.children.map((c) => (
         <ZoneRows key={c.id} zone={c} depth={depth + 1} moduleId={moduleId} selection={selection} onSelect={onSelect} />
       ))}

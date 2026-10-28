@@ -12,7 +12,16 @@ import { S } from "./constants"
  * la memòria de `models3d` (`userData.sharedModel`): no s'alliberen mai aquí (`dispose={null}`). `shift`: desplaçament
  * en viu mentre s'arrossega (m).
  */
-export function ModelMesh({ m, selected, shift, onSelect, materials }: { m: ModelObject; selected: boolean; shift?: [number, number, number]; onSelect?: (id: string) => void; materials?: MaterialPref[] }) {
+export function ModelMesh({ m, selected, shift, onSelect, materials, hovered = false, onHover }: {
+  m: ModelObject
+  selected: boolean
+  shift?: [number, number, number]
+  onSelect?: (id: string) => void
+  materials?: MaterialPref[]
+  /** Ratolí a sobre, aquí o a la seva fila de l'arbre (`useHoverLink`): contorn prim. */
+  hovered?: boolean
+  onHover?: (on: boolean) => void
+}) {
   const [loaded, setLoaded] = useState(0)
   useEffect(() => onModelsLoaded(() => setLoaded((v) => v + 1)), [])
   const { id, name, src, x, y, z, w, h, d, rot, material } = m
@@ -20,7 +29,6 @@ export function ModelMesh({ m, selected, shift, onSelect, materials }: { m: Mode
   const obj = useMemo(() => modelInstance({ id, name, src, x, y, z, w, h, d, rot, ...(material ? { material } : {}) }, materials), [id, name, src, x, y, z, w, h, d, rot, material, materials, loaded])
   // El material propi (de Preferències) és de la instància: s'allibera quan se'n fa una altra.
   useEffect(() => () => void (obj && disposeModelInstance(obj)), [obj])
-  const [hover, setHover] = useState(false)
   const cursor = useViewerCursor()
   if (!obj) return null
   return (
@@ -36,15 +44,15 @@ export function ModelMesh({ m, selected, shift, onSelect, materials }: { m: Mode
         onPointerOver={onSelect ? (e: ThreeEvent<PointerEvent>) => {
           e.stopPropagation()
           cursor.hover("pointer")
-          if (e.pointerType === "mouse") setHover(true)
+          if (e.pointerType === "mouse") onHover?.(true)
         } : undefined}
         onPointerOut={onSelect ? () => {
-          setHover(false)
+          onHover?.(false)
           cursor.hover(null)
         } : undefined}
       />
       {/* Seleccionat: contorn gruixut; ratolí a sobre: prim (com els objectes). */}
-      {(selected || hover) && (
+      {(selected || hovered) && (
         <group position={[(x + w / 2) * S, (y + h / 2) * S, (z + d / 2) * S]}>
           <BoxFrame w={(w + 4) * S} h={(h + 4) * S} d={(d + 4) * S} strong={selected} />
         </group>
