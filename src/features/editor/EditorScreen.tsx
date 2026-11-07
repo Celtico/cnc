@@ -17,7 +17,8 @@ import { compositionEdits, hardwareCommands } from "./editorCommands"
 import { EditorInspector } from "./EditorInspector"
 import { EditorLeftPanel } from "./EditorLeftPanel"
 import { ModelingRibbon } from "./ModelingRibbon"
-import { ModelingTree } from "../modeling/ModelingTree"
+import { modulePieces, ModelingTree } from "../modeling/ModelingTree"
+import { PieceInspector } from "../modeling/PieceInspector"
 import { EditorViewport } from "./EditorViewport"
 import { framePose, warningTarget } from "./warningTarget"
 import { openFolds } from "../../components/foldOpen"
@@ -136,6 +137,9 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   // Botó dret al 3D (com Figma, per decisió de l'usuari, 2026-10-28): les propietats del que hi ha sota el ratolí en una
   // finestra al seu costat, per canviar-les allà mateix. És el mateix inspector del panell (no una còpia de camps).
   const [propsAt, setPropsAt] = useState<{ x: number; y: number } | null>(null)
+  // Modelatge: la peça d'un moble triada a l'arbre (com al Taulell); a la dreta, les seves propietats en lloc de les del moble.
+  const [piece, setPiece] = useState<string | null>(null)
+  const pieceSel = project.modeling && piece && selection.kind === "module" && module?.id === selection.id ? modulePieces(build?.panels ?? [], moduleIndex).find((x) => x.panel.id === piece) : undefined
   // Una selecció nova, un inspector nou: les finestres de tria (material, ferratge) que s'hi havien obert es tanquen
   // (no són modals: si no, la tria aniria a parar al que s'ha seleccionat després). `popup`: el de la finestra del botó
   // dret (sense els controls de la Foto, que són del panell).
@@ -190,7 +194,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           onSelect={(s) => pick(s, true)}
           tree={
         // A Modelatge, l'arbre del Taulell: mobles, peces i mecanitzats (cel, 2026-11-07).
-        project.modeling ? <ModelingTree comp={comp} build={build} selection={selection} onSelect={(s) => pick(s, true)} /> : <StructureTree
+        project.modeling ? <ModelingTree comp={comp} build={build} selection={selection} onSelect={(s) => pick(s, true)} piece={piece} setPiece={setPiece} /> : <StructureTree
           name={name}
           comp={comp}
           selection={selection}
@@ -203,7 +207,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         />
         }
         right={
-          inspector(false)
+          pieceSel ? <PieceInspector panel={pieceSel.panel} code={pieceSel.code} moduleName={module?.name ?? ""} onEditModule={() => setPiece(null)} /> : inspector(false)
         }
         // Mobles i objectes: el mateix xat amb les eines de cada tipus (un objecte només té peces lliures). Els `lliure`
         // d'abans (flat-pack que es fabrica) no en tenen.

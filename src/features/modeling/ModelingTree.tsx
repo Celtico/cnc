@@ -28,15 +28,19 @@ export function machiningRows(p: Panel): { key: string; label: string; icon: Tau
   return [...rows.entries()].map(([key, r]) => ({ key, icon: r.icon, label: r.n > 1 ? `${r.label} · ${r.n}` : r.label }))
 }
 
+/** Les peces d'un moble a l'arbre (sense els aparells) i el seu número del Taulell: moble.peça («1.01»). */
+export function modulePieces(panels: Panel[], index: number): { panel: Panel; code: string }[] {
+  return panels.filter((p) => p.module === index + 1 && p.role !== "hardware").map((panel, k) => ({ panel, code: `${index + 1}.${String(k + 1).padStart(2, "0")}` }))
+}
+
 /**
  * L'arbre de Modelatge, com el del Taulell (cel, 2026-11-07: «l'estructura d'aquell arbre, fes-la igual»): cada moble (amb
  * la seva mida) i, desplegat, les seves peces numerades (moble.peça: «1.01 Lateral esquerre») amb els mecanitzats a sota;
  * després, les peces soltes («S.01»). Clicar un moble o una de les seves peces tria el moble (les opcions, a la dreta);
- * clicar una peça solta, la peça.
+ * clicar una peça solta, la peça. La peça triada d'un moble (`piece`) la mostra `PieceInspector` a la dreta.
  */
-export function ModelingTree({ comp, build, selection, onSelect }: { comp: Composition; build: CompositionBuild | undefined; selection: Selection; onSelect: (s: Selection) => void }) {
+export function ModelingTree({ comp, build, selection, onSelect, piece, setPiece }: { comp: Composition; build: CompositionBuild | undefined; selection: Selection; onSelect: (s: Selection) => void; piece: string | null; setPiece: (id: string | null) => void }) {
   const [open, setOpen] = useState<Set<string>>(() => new Set(comp.modules.slice(0, 1).map((m) => m.id)))
-  const [piece, setPiece] = useState<string | null>(null)
   const link = useHoverLink()
   const toggle = (id: string) =>
     setOpen((s) => {
@@ -54,7 +58,7 @@ export function ModelingTree({ comp, build, selection, onSelect }: { comp: Compo
       </Text>
     )
 
-  const pieceRow = (p: Panel, code: string, sel: boolean, onClick: () => void, hover: string) => (
+  const pieceRow = (p: Panel, code: string, sel: boolean, onClick: () => void, hover?: string) => (
     <Box key={p.id}>
       <Row level={1} icon="panel" selected={sel} onClick={onClick} hover={hover} link={link}>
         <Code>{code}</Code>
@@ -71,7 +75,7 @@ export function ModelingTree({ comp, build, selection, onSelect }: { comp: Compo
   return (
     <Box fontSize="sm" role="tree" aria-label="Arbre del model">
       {comp.modules.map((m, i) => {
-        const own = panels.filter((p) => p.module === i + 1 && p.role !== "hardware")
+        const own = modulePieces(panels, i)
         const isOpen = open.has(m.id)
         const sel = selection.kind === "module" && selection.id === m.id && !piece
         return (
@@ -94,11 +98,11 @@ export function ModelingTree({ comp, build, selection, onSelect }: { comp: Compo
               {m.name}
             </Row>
             {isOpen &&
-              own.map((p, k) =>
-                pieceRow(p, `${i + 1}.${String(k + 1).padStart(2, "0")}`, piece === p.id && selection.kind === "module" && selection.id === m.id, () => {
+              own.map(({ panel: p, code }) =>
+                pieceRow(p, code, piece === p.id && selection.kind === "module" && selection.id === m.id, () => {
                   setPiece(p.id)
                   onSelect({ kind: "module", id: m.id })
-                }, hoverKey("module", m.id)),
+                }),
               )}
           </Box>
         )
