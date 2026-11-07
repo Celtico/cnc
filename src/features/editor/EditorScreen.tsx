@@ -154,7 +154,16 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           if (r.opts) setFaceOpts(r.opts)
           if (r.message) toaster.create({ title: r.message, type: r.error ? "warning" : "success", duration: 2500 })
         }
-      : null
+      : project.modeling
+        ? // Sense eina, clicar una peça al 3D la tria (com al Taulell): la d'un moble, a l'arbre i a l'inspector de la peça.
+          ({ panel }) => {
+            if (panel.id.startsWith("part:")) return select({ kind: "part", id: panel.id.slice(5) })
+            const m = panel.module ? comp.modules[panel.module - 1] : undefined
+            if (!m) return
+            setPiece(panel.id)
+            select({ kind: "module", id: m.id })
+          }
+        : null
   // Els croquis al 3D (un pèl per sobre de la cara on són): els desats, el triat i el que s'està dibuixant.
   const sketchLines = useMemo<SketchLine[]>(() => {
     if (!project.modeling) return []
@@ -221,7 +230,13 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           onSelect={(s) => pick(s, true)}
           tree={
         // A Modelatge, l'arbre del Taulell: mobles, peces i mecanitzats (cel, 2026-11-07).
-        project.modeling ? <ModelingTree comp={comp} build={build} selection={selection} onSelect={(s) => pick(s, true)} piece={piece} setPiece={setPiece} sketchSel={faceOpts.selSketch} onSketch={(id) => setFaceOpts({ ...faceOpts, selSketch: id })} onRemoveSketch={(id) => setComp({ ...comp, sketches: (comp.sketches ?? []).filter((k) => k.id !== id) })} onPieceEdit={(moduleId, panelId, f) => setPieceEdit(setComp, moduleId, pieceLocalId(moduleId, panelId), f)} /> : <StructureTree
+        project.modeling ? <ModelingTree comp={comp} build={build} selection={selection} onSelect={(s) => pick(s, true)} piece={piece} setPiece={setPiece} sketchSel={faceOpts.selSketch} onSketch={(id) => setFaceOpts({ ...faceOpts, selSketch: id })} onRemoveSketch={(id) => setComp({ ...comp, sketches: (comp.sketches ?? []).filter((k) => k.id !== id) })} hiddenPieces={opts.viewer.hiddenPieces} onToggleHidden={(kind, id) => {
+          if (kind === "piece") {
+            const cur = opts.viewer.hiddenPieces ?? []
+            opts.setViewer({ hiddenPieces: cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id] })
+          } else if (kind === "module") setComp({ ...comp, modules: comp.modules.map((m) => (m.id === id ? { ...m, hidden: m.hidden ? undefined : true } : m)) })
+          else setComp({ ...comp, parts: (comp.parts ?? []).map((q) => (q.id === id ? { ...q, hidden: q.hidden ? undefined : true } : q)) })
+        }} onPieceEdit={(moduleId, panelId, f) => setPieceEdit(setComp, moduleId, pieceLocalId(moduleId, panelId), f)} /> : <StructureTree
           name={name}
           comp={comp}
           selection={selection}

@@ -42,7 +42,7 @@ export function useSceneData({
   module: Module | undefined
   moduleIndex: number
   moduleBuild: ModuleBuild | undefined
-  viewer: Pick<ViewerState, "opening" | "openOnlySelected">
+  viewer: Pick<ViewerState, "opening" | "openOnlySelected" | "hiddenPieces">
 }) {
   const panels = build?.panels ?? NO_PANELS
 
@@ -94,9 +94,10 @@ export function useSceneData({
   const shownPanels = useMemo(() => {
     const mods = comp.modules.filter((m) => m.hidden).map((m) => `${m.id}:`)
     const parts = (comp.parts ?? []).filter((q) => q.hidden).map((q) => `part:${q.id}`)
-    if (!mods.length && !parts.length) return viewerPanels
-    return viewerPanels.filter((p) => !mods.some((k) => p.id.startsWith(k)) && !parts.some((k) => p.id === k || p.id.startsWith(`${k}-`)))
-  }, [viewerPanels, comp])
+    const pieces = new Set(viewer.hiddenPieces ?? [])
+    if (!mods.length && !parts.length && !pieces.size) return viewerPanels
+    return viewerPanels.filter((p) => !pieces.has(p.id) && !mods.some((k) => p.id.startsWith(k)) && !parts.some((k) => p.id === k || p.id.startsWith(`${k}-`)))
+  }, [viewerPanels, comp, viewer.hiddenPieces])
 
   // Obertura: grups mòbils, els del compartiment seleccionat i les col·lisions.
   const groups = useMemo(() => movingGroups(panels), [panels])

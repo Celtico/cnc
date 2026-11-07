@@ -14,6 +14,8 @@ export interface ViewerState {
   hideFronts?: boolean
   /** Secció (la del Taulell): un pla d'escaire talla el moble i es veu una meitat (eix, posició en mm, quina meitat). */
   section?: { axis: 0 | 1 | 2; pos: number; flip: boolean } | null
+  /** Peces dels mobles amagades amb l'ull de l'arbre de Modelatge (ids de la composició): només no es dibuixen. */
+  hiddenPieces?: string[]
 }
 
 /** Part de baix d'Opcions de vista: obertura, opacitat, selecció i imatge (les vistes, a la barra de baix del 3D). */
