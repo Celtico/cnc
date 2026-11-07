@@ -1,6 +1,6 @@
 import type { FaceHit } from "../../components/viewer/facePick"
 import type { CompositionBuild } from "../../core/build/buildComposition"
-import { autoLimits, dynBox, FIT_NOUN, fitWalls, ORIENT_OF_AXIS, partWithBox, wallBoxes, moduleOrigins3, newId, panelAabb, refitParts, type Composition, type FreePart, type Hole, type Panel, type PartOrient, type Vec3, PART_AXES, partSize, circlePts, fromPlane, partBox, rectPts, toPlane, type Sketch } from "../../core/model"
+import { autoLimits, dynBox, FIT_NOUN, fitWalls, ORIENT_OF_AXIS, partWithBox, wallBoxes, moduleOrigins3, newId, panelAabb, refitParts, type Composition, type FreePart, type Hole, type Module, type Panel, type PartOrient, type Vec3, PART_AXES, partSize, circlePts, fromPlane, partBox, rectPts, toPlane, type Sketch } from "../../core/model"
 import type { Selection } from "../composition/StructureTree"
 import { pieceLocalId } from "./ModelingTree"
 
@@ -14,7 +14,14 @@ export interface FaceToolOpts {
   /** Tauler dinàmic: desplaçament des de la cara on es recolza. */
   dynOff: number
   /** Cara dinàmica: la cara triada (la peça lliure, l'eix i el costat: 0 el de baix, 1 el de dalt). */
-  facePick?: { part: string; a: number; s: 0 | 1 }
+  facePick?: { part?: string; module?: string; a: number; s: 0 | 1 }
+  /** Cara dinàmica (com el Taulell): estirar la peça (o el moble), desplaçar-la, o enganxar-la a una altra cara. */
+  faceMode: "pull" | "move" | "mate"
+  /** Enganxar: «contact» les cares es toquen, «flush» queden al mateix pla; la separació entre totes dues. */
+  mateMode: "contact" | "flush"
+  faceGap: number
+  /** Enganxar: la cara de la peça que es mou (el primer clic). */
+  mateFrom?: { part: string; a: number; s: 0 | 1 }
   /** Esbós: el croquis que s'està dibuixant (el pla i els punts clicats). */
   draft?: { a: number; level: number; dir: 1 | -1; pts: [number, number][] }
   /** Esbós: el croquis triat (el de l'Extrusió). */
@@ -78,7 +85,7 @@ export interface FaceToolOpts {
   pitch: number
   margin: number
 }
-export const DEFAULT_FACE_OPTS: FaceToolOpts = { fitOrient: "flat", fitGap: 0, dynOff: 0, sketchL: 600, sketchW: 400, sketchD: 300, dowM: "8x40", dowDist: true, dowD: 8, dowF: 12, dowE: 29, dowMargin: 50, dowPitch: 200, scrD: 4, scrL: 60, scrDist: true, scrHole: 4, scrMargin: 50, scrPitch: 300, cabiM: "12", cabiMargin: 50, cabiPitch: 300, cabiD: 15, cabiDepth: 11, cabiFirst: 3.6, cabiStep: 11.2, cabiAxis: 5, cabiSd: 5, grW: 4, grD: 8, grDir: "L", grOff: 0, rbW: 10, rbD: 10, T: 19, laserMode: "face", mat: "", setback: 1, d: 8, depth: 12, cd: 35, cdepth: 13, ld: 5, ldepth: 12, pitch: 32, margin: 37 }
+export const DEFAULT_FACE_OPTS: FaceToolOpts = { fitOrient: "flat", fitGap: 0, dynOff: 0, sketchL: 600, sketchW: 400, sketchD: 300, dowM: "8x40", dowDist: true, dowD: 8, dowF: 12, dowE: 29, dowMargin: 50, dowPitch: 200, scrD: 4, scrL: 60, scrDist: true, scrHole: 4, scrMargin: 50, scrPitch: 300, cabiM: "12", cabiMargin: 50, cabiPitch: 300, cabiD: 15, cabiDepth: 11, cabiFirst: 3.6, cabiStep: 11.2, cabiAxis: 5, cabiSd: 5, grW: 4, grD: 8, grDir: "L", grOff: 0, rbW: 10, rbD: 10, T: 19, laserMode: "face", faceMode: "pull", mateMode: "contact", faceGap: 0, mat: "", setback: 1, d: 8, depth: 12, cd: 35, cdepth: 13, ld: 5, ldepth: 12, pitch: 32, margin: 37 }
 
 /** Les clavilles del Taulell: diàmetre, llargada i fondàries a la cara i al cantell. */
 export const DOWELS = { "8x40": { d: 8, L: 40, f: 12, e: 29 }, "8x30": { d: 8, L: 30, f: 12, e: 19 }, "5x30": { d: 5, L: 30, f: 10, e: 21 } } as const
@@ -243,10 +250,41 @@ export function runFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition
   }
 
   if (tool === "face") {
-    if (!p.id.startsWith("part:")) return { message: "La mida de les peces d'un moble la porta el moble: canvia-la a les opcions del moble.", error: true }
     const a = [0, 1, 2].reduce((x, k) => (Math.abs(n[k]!) > Math.abs(n[x]!) ? k : x), 0)
-    const id = p.id.slice(5)
-    return { opts: { ...o, facePick: { part: id, a, s: n[a]! > 0 ? 1 : 0 } }, select: { kind: "part", id }, message: "" }
+    const side: 0 | 1 = n[a]! > 0 ? 1 : 0
+    if (Math.abs(n[a]!) < 0.99) return { message: "Clica una cara d'escaire (no una de biaixada).", error: true }
+    if (o.faceMode === "mate") {
+      const f = o.mateFrom
+      if (!f) {
+        if (!p.id.startsWith("part:")) return { message: "Clica la cara d'una peça solta (la que es mou).", error: true }
+        const id = p.id.slice(5)
+        return { opts: { ...o, mateFrom: { part: id, a, s: side } }, select: { kind: "part", id }, message: `${p.label}: ara clica la cara on s'ha d'enganxar.` }
+      }
+      const q = comp.parts?.find((x) => x.id === f.part)
+      if (!q) return { opts: { ...o, mateFrom: undefined }, message: "No trobo la peça.", error: true }
+      if (p.id === `part:${q.id}`) return { message: "Clica una cara d'una altra peça.", error: true }
+      if (a !== f.a) return { message: "Les dues cares han de ser paral·leles (gira la peça abans amb Girar).", error: true }
+      const contact = o.mateMode === "contact"
+      if (contact ? f.s === side : f.s !== side) return { message: contact ? "Per tocar-se, les cares s'han de mirar (gira la peça abans)." : "Per alinear-les, les cares han de mirar cap al mateix costat.", error: true }
+      const off: Vec3 = (q.module && moduleOrigins3(comp).get(q.module)) || [0, 0, 0]
+      const b = partBox(q)
+      const own = (f.s ? b.max[a]! : b.min[a]!) + off[a]!
+      const tb = panelAabb(p)
+      const level = (side ? tb.max[a]! : tb.min[a]!) + (side ? 1 : -1) * o.faceGap
+      const moved = movePart(q, a, level - own)
+      return { comp: { ...comp, parts: (comp.parts ?? []).map((x) => (x.id === q.id ? moved : x)) }, opts: { ...o, mateFrom: undefined }, select: { kind: "part", id: q.id }, message: `${q.name} enganxada a ${p.label}` }
+    }
+    if (p.id.startsWith("part:")) {
+      const id = p.id.slice(5)
+      return { opts: { ...o, facePick: { part: id, a, s: side } }, select: { kind: "part", id }, message: "" }
+    }
+    // Una cara d'un moble: si és de fora, en canvia la mida (estirar) o el mou (desplaçar), com al Taulell.
+    if (!host) return { message: "Clica una cara d'una peça.", error: true }
+    const idx = comp.modules.indexOf(host) + 1
+    const own = panels.filter((x) => x.module === idx && !x.id.startsWith("part:") && x.role !== "hardware").map(panelAabb)
+    const edge = side ? Math.max(...own.map((b) => b.max[a]!)) : Math.min(...own.map((b) => b.min[a]!))
+    if (o.faceMode === "pull" && Math.abs(edge - pt[a]!) > 1) return { message: "En un moble, estira una cara de fora (el lateral, el sostre, el darrere…): en canvia la mida.", error: true }
+    return { opts: { ...o, facePick: { module: host.id, a, s: side } }, select: { kind: "module", id: host.id }, message: "" }
   }
 
   if (tool === "dynpanel") {
@@ -376,6 +414,19 @@ export function resizePartFace(p: FreePart, a: number, s: 0 | 1, size: number): 
   const dim = a === ax.n ? { thickness: size } : a === ax.u ? { w: size } : { h: size }
   return { ...p, ...dim, fit: undefined, dyn: undefined, ...(s === 0 ? { [key]: r1(p[key] + old - size) } : {}) }
 }
+
+/** La peça lliure desplaçada `d` mm en l'eix `a` (deixa d'estar lligada a cares o a un buit). */
+export function movePart(p: FreePart, a: number, d: number): FreePart {
+  const key = (["x", "y", "z"] as const)[a]!
+  return { ...p, fit: undefined, dyn: undefined, [key]: r1(p[key] + d) }
+}
+
+/** La mida del moble en l'eix `a` (amplada, alçada, fondària) i el nom, per a la Cara dinàmica. */
+export const MODULE_DIM: [keyof Pick<Module["carcass"], "width" | "height" | "depth">, string][] = [
+  ["width", "Amplada del moble"],
+  ["height", "Alçada del moble"],
+  ["depth", "Fondària del moble"],
+]
 
 /** Desa el croquis que s'estava dibuixant amb aquests punts (en queda triat) o diu per què no. */
 export function finishSketch(comp: Composition, o: FaceToolOpts, pts: [number, number][], rect: boolean): FaceToolResult {

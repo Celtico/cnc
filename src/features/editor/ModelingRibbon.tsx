@@ -1,5 +1,5 @@
 import { Box, Button, Checkbox, Collapsible, HStack, SegmentGroup, Separator, Slider, Stack, Text } from "@chakra-ui/react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import { TopBarSlot } from "../../components/TopBar"
 import { toaster } from "../../components/ui/toaster"
 import { Tooltip } from "../../components/ui/tooltip"
@@ -12,7 +12,7 @@ import type { ViewerOptions } from "./useViewerOptions"
 import { TaulellIcon, type TaulellIconName } from "../modeling/TaulellIcon"
 import { FloatingWindow } from "../../components/FloatingWindow"
 import { NumRow } from "../../components/NumRow"
-import { DOWELS, FACE_TOOL_INFO, FACE_TOOL_LABEL, finishSketch, resizePartFace, type DowelSize, type FaceToolId, type FaceToolOpts } from "../modeling/faceTools"
+import { DOWELS, FACE_TOOL_INFO, FACE_TOOL_LABEL, finishSketch, MODULE_DIM, movePart, resizePartFace, type DowelSize, type FaceToolId, type FaceToolOpts } from "../modeling/faceTools"
 import { MaterialSelect } from "../settings/MaterialSelect"
 import { NouMobleDialog } from "../modeling/NouMobleDialog"
 
@@ -372,7 +372,7 @@ export function ModelingRibbon({
 
 /** Les opcions de l'eina activa, a la seva finestra flotant (com la finestreta d'opcions del Taulell). */
 function ToolOptions({ tool, o, set, comp, setComp, settings }: { tool: FaceToolId; o: FaceToolOpts; set: (o: FaceToolOpts) => void; comp: Composition; setComp: (c: Composition) => void; settings: Settings }) {
-  if (tool === "face") return <FaceSize o={o} comp={comp} setComp={setComp} />
+  if (tool === "face") return <FaceSize o={o} set={set} comp={comp} setComp={setComp} />
   if (tool === "rect" || tool === "poly" || tool === "circle") return <SketchOptions tool={tool} o={o} set={set} comp={comp} setComp={setComp} />
   const num = (k: NumKey, label: string, min = 0) => <NumRow key={k} maxW="110px" label={label} value={o[k]} min={min} max={3000} step={0.5} onChange={(v) => set({ ...o, [k]: v })} />
   const check = (k: "dowDist" | "scrDist", label: string) => (
@@ -534,21 +534,86 @@ function ArrayOptions({ isModule, onApply }: { isModule: boolean; onApply: (n: n
 }
 
 /** Cara dinàmica: la mida de la peça en la direcció de la cara clicada (la cara del davant es queda on és). */
-function FaceSize({ o, comp, setComp }: { o: FaceToolOpts; comp: Composition; setComp: (c: Composition) => void }) {
+function FaceSize({ o, set, comp, setComp }: { o: FaceToolOpts; set: (o: FaceToolOpts) => void; comp: Composition; setComp: (c: Composition) => void }) {
+  const [delta, setDelta] = useState(0)
+  const mode = o.faceMode
+  const modes = (
+    <SegmentGroup.Root size="xs" value={mode} onValueChange={(e) => e.value && set({ ...o, faceMode: e.value as FaceToolOpts["faceMode"], mateFrom: undefined, facePick: undefined })}>
+      <SegmentGroup.Indicator />
+      <SegmentGroup.Items items={[{ value: "pull", label: "Estirar" }, { value: "move", label: "Desplaçar" }, { value: "mate", label: "Enganxar" }]} />
+    </SegmentGroup.Root>
+  )
+  const note = (t: ReactNode) => (
+    <Text fontSize="sm" color="fg.muted">
+      {t}
+    </Text>
+  )
+  if (mode === "mate") {
+    const from = o.mateFrom && comp.parts?.find((q) => q.id === o.mateFrom!.part)
+    return (
+      <Stack gap={2}>
+        {modes}
+        <SegmentGroup.Root size="xs" value={o.mateMode} onValueChange={(e) => e.value && set({ ...o, mateMode: e.value as "contact" | "flush" })}>
+          <SegmentGroup.Indicator />
+          <SegmentGroup.Items items={[{ value: "contact", label: "De cara" }, { value: "flush", label: "Alineades" }]} />
+        </SegmentGroup.Root>
+        <NumRow maxW="110px" label="Separació" value={o.faceGap} min={-1000} max={1000} step={0.5} onChange={(v) => set({ ...o, faceGap: v })} />
+        {from && o.mateFrom
+          ? note(
+              <>
+                <b>1. {from.name}</b> · cara {SIDE_NAMES[o.mateFrom.a]![o.mateFrom.s].toLowerCase()}
+                <br />
+                2. Ara clica la cara on s'ha d'enganxar.
+              </>,
+            )
+          : note(
+              <>
+                1. Clica la cara de la peça que es mou. 2. Clica la cara on s'ha d'enganxar. <b>De cara</b>: es toquen. <b>Alineades</b>: queden al mateix pla.
+              </>,
+            )}
+      </Stack>
+    )
+  }
   const f = o.facePick
-  const p = f && comp.parts?.find((q) => q.id === f.part)
-  if (!f || !p) return <Text fontSize="sm">Clica una cara d'una peça.</Text>
+  const p = f?.part ? comp.parts?.find((q) => q.id === f.part) : undefined
+  const m = f?.module ? comp.modules.find((q) => q.id === f.module) : undefined
+  if (!f || (!p && !m))
+    return (
+      <Stack gap={2}>
+        {modes}
+        {note(mode === "pull" ? "Clica una cara per allargar o escurçar la peça. En un moble, una cara de fora en canvia la mida." : "Clica una cara per moure la peça (o el moble) en aquella direcció.")}
+      </Stack>
+    )
+  const sign = f.s ? 1 : -1
+  const dim = m ? MODULE_DIM[f.a]! : null
+  const apply = (d: number) => {
+    if (!d) return
+    if (p) {
+      const next = mode === "pull" ? resizePartFace(p, f.a, f.s, Math.max(1, partSize(p)[f.a]! + d)) : movePart(p, f.a, sign * d)
+      setComp({ ...comp, parts: (comp.parts ?? []).map((q) => (q.id === p.id ? next : q)) })
+    } else if (m && dim) {
+      // Estirar la cara esquerra: el moble creix cap a l'esquerra (la dreta es queda on és, si hi ha espai al davant).
+      if (mode === "pull") setComp({ ...comp, modules: comp.modules.map((q) => (q.id === m.id ? { ...q, carcass: { ...q.carcass, [dim[0]]: Math.max(100, q.carcass[dim[0]] + d) }, ...(f.a === 0 && !f.s ? { gapBefore: Math.max(0, (q.gapBefore ?? 0) - d) } : {}) } : q)) })
+      else if (f.a === 0) setComp({ ...comp, modules: comp.modules.map((q) => (q.id === m.id ? { ...q, gapBefore: Math.max(0, (q.gapBefore ?? 0) + sign * d) } : q)) })
+      else toaster.create({ title: "Un moble es mou de costat amb la cara dinàmica; amunt, avall i endavant, amb Desplaçar.", duration: 3000 })
+    }
+    setDelta(0)
+  }
   return (
-    <Stack gap={1}>
+    <Stack gap={2}>
+      {modes}
       <Text fontSize="sm">
-        <b>{p.name}</b> · cara {SIDE_NAMES[f.a]![f.s].toLowerCase()}
+        <b>{p ? p.name : m!.name}</b> · cara {SIDE_NAMES[f.a]![f.s].toLowerCase()}
+        {m && mode === "move" ? " (es mou sencer)" : ""}
       </Text>
-      <NumRow maxW="110px" label="Mida" value={partSize(p)[f.a]!} min={1} max={5000} step={1} onChange={(v) => setComp({ ...comp, parts: (comp.parts ?? []).map((q) => (q.id === p.id ? resizePartFace(q, f.a, f.s, v) : q)) })} />
-      {(p.fit || p.dyn) && (
-        <Text fontSize="xs" color="fg.muted">
-          Si la canvies, deixa d'estar lligada.
-        </Text>
-      )}
+      {mode === "pull" && p && <NumRow maxW="110px" label="Mida" value={partSize(p)[f.a]!} min={1} max={5000} step={1} onChange={(v) => setComp({ ...comp, parts: (comp.parts ?? []).map((q) => (q.id === p.id ? resizePartFace(q, f.a, f.s, v) : q)) })} />}
+      {mode === "pull" && m && dim && <NumRow maxW="110px" label={dim[1]} value={m.carcass[dim[0]]} min={100} max={3000} step={1} onChange={(v) => setComp({ ...comp, modules: comp.modules.map((q) => (q.id === m.id ? { ...q, carcass: { ...q.carcass, [dim[0]]: v } } : q)) })} />}
+      <NumRow maxW="110px" label={mode === "pull" ? "Estira" : "Desplaça"} value={delta} min={-5000} max={5000} step={1} onChange={setDelta} />
+      <Button size="xs" colorPalette="wood" onClick={() => apply(delta)}>
+        Aplica
+      </Button>
+      {note("Mesura positiva cap a fora de la cara.")}
+      {p && (p.fit || p.dyn) && note("Si la canvies, deixa d'estar lligada.")}
     </Stack>
   )
 }

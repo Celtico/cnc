@@ -84,3 +84,23 @@ describe("retall (només la peça triada)", () => {
     expect(cut(sides[1]!.id)).toBe(0)
   })
 })
+
+describe("cara dinàmica · enganxar", () => {
+  it("de cara: la peça solta va a tocar la cara clicada, amb la separació", () => {
+    const m = { ...emptyModule("m", "Moble"), gapBefore: 0 }
+    const part = { id: "q", name: "Peça", orient: "side" as const, w: 300, h: 300, thickness: 19, material: "M", x: m.carcass.width + 500, y: 100, z: 50 }
+    const comp: Composition = { modules: [m], references: [], parts: [part] }
+    const build = buildComposition(comp)
+    const pp = build.panels.find((p) => p.id === "part:q")!
+    const right = build.panels.filter((p) => p.role === "side").sort((a, b) => panelAabb(b).max[0] - panelAabb(a).max[0])[0]!
+    const pa = panelAabb(pp)
+    const ra = panelAabb(right)
+    const o = { ...DEFAULT_FACE_OPTS, faceMode: "mate" as const, faceGap: 2 }
+    const r1 = runFaceTool("face", o, comp, build, { panel: pp, point: [pa.min[0], 200, 100], normal: [-1, 0, 0] })
+    expect(r1.opts?.mateFrom).toBeTruthy()
+    const r2 = runFaceTool("face", r1.opts!, comp, build, { panel: right, point: [ra.max[0], 200, 100], normal: [1, 0, 0] })
+    expect(r2.error).toBeFalsy()
+    const moved = r2.comp!.parts!.find((p) => p.id === "q")!
+    expect(moved.x).toBeCloseTo(ra.max[0] + 2, 0)
+  })
+})
