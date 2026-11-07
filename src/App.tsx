@@ -3,7 +3,7 @@ import { Suspense, lazy, useCallback, useState } from "react"
 import { Toaster } from "./components/ui/toaster"
 import { ErrorBoundary } from "./components/ErrorBoundary"
 import { PanelSplit, SplitHandle } from "./components/PanelSplit"
-import { TopBar, TopBarActionsProvider } from "./components/TopBar"
+import { TopBar, TopBarActionsProvider, TopBarTabsProvider } from "./components/TopBar"
 import { SaveFileDialog } from "./features/file/SaveFileDialog"
 import type { ProjectsRequest } from "./features/projects/ProjectsScreen"
 import { AmbientTopBar } from "./features/ambients/AmbientTopBar"
@@ -48,6 +48,9 @@ export function App() {
   const [settingsPane] = useSessionString("mobles:settings-section")
   const settingsBackBar = screen === "settings" && inProject && settingsPane === null
   const [topActions, setTopActions] = useState<HTMLDivElement | null>(null)
+  // Al mig de la barra, un model de Modelatge hi posa les pestanyes de les eines (`TopBarTabs`).
+  const [topTabs, setTopTabs] = useState<HTMLDivElement | null>(null)
+  const modelTabs = nav.isModel && screen === "editor"
   const [saveOpen, setSaveOpen] = useState(false)
 
   // Assistent personal: el calaix (muntat el primer cop que s'obre) i la navegació que fa servir (`assistantHub.ts`).
@@ -82,7 +85,7 @@ export function App() {
             onBack={nav.backToProjects}
             onSettings={() => go("settings")}
             actionsRef={setTopActions}
-            tabs={showTopBar && projectNav.length > 1 ? <ProjectTabs screen={screen} projectNav={projectNav} onGo={go} /> : undefined}
+            tabs={showTopBar && projectNav.length > 1 ? <ProjectTabs screen={screen} projectNav={projectNav} onGo={go} /> : modelTabs ? <Box ref={setTopTabs} display="flex" /> : undefined}
             menu={<ProjectMenu isObject={isObject} onSaveFile={() => (window.dispatchEvent(new Event("mobles:flush-save")), setSaveOpen(true))} />}
           />
         )}
@@ -111,6 +114,7 @@ export function App() {
           pb={{ base: "calc(76px + env(safe-area-inset-bottom, 0px))", md: screen === "editor" || screen === "ambient" ? 4 : 6 }}
         >
           <TopBarActionsProvider value={topActions}>
+          <TopBarTabsProvider value={modelTabs ? topTabs : null}>
             <Suspense
               fallback={
                 <Flex justify="center" py={16}>
@@ -132,6 +136,7 @@ export function App() {
               />
               </ErrorBoundary>
             </Suspense>
+          </TopBarTabsProvider>
           </TopBarActionsProvider>
         </Container>
       </Splitter.Panel>

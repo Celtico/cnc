@@ -16,6 +16,7 @@ import { useDebouncedSave } from "../../lib/useDebouncedSave"
 import { compositionEdits, hardwareCommands } from "./editorCommands"
 import { EditorInspector } from "./EditorInspector"
 import { EditorLeftPanel } from "./EditorLeftPanel"
+import { ModelingRibbon } from "./ModelingRibbon"
 import { EditorViewport } from "./EditorViewport"
 import { framePose, warningTarget } from "./warningTarget"
 import { openFolds } from "../../components/foldOpen"
@@ -165,16 +166,24 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     />
   )
 
+  const newModule = (id: string, n: string) => withMobleMaterials(applySettingsToModule(settings, kind === "taula" ? tableModule(id, n) : emptyModule(id, n)), comp.modules)
+  const partCenter = { x: Math.round(scene.size.width / 2), y: partsOnlyKind(kind) ? 0 : Math.round(scene.size.height / 2), z: partsOnlyKind(kind) ? 0 : Math.round(scene.size.depth + 50) }
+
   return (
     <HoverLinkProvider>
       <TopBarActions>
         <UndoRedo {...history} />
       </TopBarActions>
 
+      {/* Un model de Modelatge: la barra d'eines del Taulell, amb els nostres components (cel, 2026-11-07). */}
+      {project.modeling && (
+        <ModelingRibbon comp={comp} setComp={setComp} selection={selection} select={select} settings={settings} center={partCenter} newModule={newModule} />
+      )}
       <Workspace
         ws={ws}
         left={
         <EditorLeftPanel
+          catalog={!project.modeling}
           comp={comp}
           onChange={setComp}
           onSelect={(s) => pick(s, true)}
@@ -185,8 +194,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           selection={selection}
           onSelect={(s) => pick(s, true)}
           onChange={setComp}
-          newModule={(id, n) => withMobleMaterials(applySettingsToModule(settings, kind === "taula" ? tableModule(id, n) : emptyModule(id, n)), comp.modules)}
-          partCenter={{ x: Math.round(scene.size.width / 2), y: partsOnlyKind(kind) ? 0 : Math.round(scene.size.height / 2), z: partsOnlyKind(kind) ? 0 : Math.round(scene.size.depth + 50) }}
+          newModule={newModule}
+          partCenter={partCenter}
         />
           }
         />

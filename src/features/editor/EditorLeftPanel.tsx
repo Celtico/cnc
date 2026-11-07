@@ -13,13 +13,14 @@ const ONE_COL = { base: 1 }
  * Panell esquerre de l'editor (cel, 2026-11-07, com el Taulell): «Arbre» (l'estructura del moble) i «Catàleg» (la mateixa
  * galeria que «Afegir mòdul»: els teus mobles i models i tot el catàleg). Tocar una targeta del Catàleg en porta els mòduls
  * i les peces a aquest moble, igual que la finestra. Als objectes (que no porten mòduls) no hi ha Catàleg: només l'arbre.
+ * A Modelatge (`catalog` fals, cel 2026-11-07) només hi ha la pestanya «Arbre».
  */
-export function EditorLeftPanel({ tree, comp, onChange, onSelect }: { tree: ReactNode; comp: Composition; onChange: (c: Composition) => void; onSelect: (s: Selection) => void }) {
+export function EditorLeftPanel({ tree, comp, onChange, onSelect, catalog = true }: { tree: ReactNode; comp: Composition; onChange: (c: Composition) => void; onSelect: (s: Selection) => void; catalog?: boolean }) {
   if (compositionKind(comp) === "objecte") return tree
-  return <WithCatalog tree={tree} comp={comp} onChange={onChange} onSelect={onSelect} />
+  return <WithCatalog tree={tree} comp={comp} onChange={onChange} onSelect={onSelect} catalog={catalog} />
 }
 
-function WithCatalog({ tree, comp, onChange, onSelect }: { tree: ReactNode; comp: Composition; onChange: (c: Composition) => void; onSelect: (s: Selection) => void }) {
+function WithCatalog({ tree, comp, onChange, onSelect, catalog }: { tree: ReactNode; comp: Composition; onChange: (c: Composition) => void; onSelect: (s: Selection) => void; catalog: boolean }) {
   const [tab, setTab] = useState("tree")
   const pick = (c: Composition, n: string) => {
     pickInto(comp, c, n, onChange, onSelect)
@@ -32,18 +33,22 @@ function WithCatalog({ tree, comp, onChange, onSelect }: { tree: ReactNode; comp
         <Tabs.Trigger value="tree">
           <LuListTree /> Arbre
         </Tabs.Trigger>
-        <Tabs.Trigger value="catalog">
-          <LuLayoutGrid /> Catàleg
-        </Tabs.Trigger>
+        {catalog && (
+          <Tabs.Trigger value="catalog">
+            <LuLayoutGrid /> Catàleg
+          </Tabs.Trigger>
+        )}
       </Tabs.List>
       <Tabs.Content value="tree" pt={0}>
         {tree}
       </Tabs.Content>
-      <Tabs.Content value="catalog" pt={0}>
-        <GalleryColsContext.Provider value={ONE_COL}>
-          <NewMobleGallery storageKey="mobles:side-catalog" onCreate={pick} history={history} />
-        </GalleryColsContext.Provider>
-      </Tabs.Content>
+      {catalog && (
+        <Tabs.Content value="catalog" pt={0}>
+          <GalleryColsContext.Provider value={ONE_COL}>
+            <NewMobleGallery storageKey="mobles:side-catalog" onCreate={pick} history={history} />
+          </GalleryColsContext.Provider>
+        </Tabs.Content>
+      )}
     </Tabs.Root>
   )
 }

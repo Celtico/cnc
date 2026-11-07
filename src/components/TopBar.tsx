@@ -22,12 +22,22 @@ export function TopBarActions({ children }: { children: ReactNode }) {
   return target ? createPortal(children, target) : null
 }
 
+/** Pestanyes que una pàgina posa al mig de la barra (les eines de Modelatge, `ModelingRibbon`). */
+const TabsTarget = createContext<HTMLElement | null>(null)
+export function TopBarTabsProvider({ value, children }: { value: HTMLElement | null; children: ReactNode }) {
+  return <TabsTarget.Provider value={value}>{children}</TabsTarget.Provider>
+}
+export function TopBarTabs({ children }: { children: ReactNode }) {
+  const target = useContext(TabsTarget)
+  return target ? createPortal(children, target) : null
+}
+
 /** Barra del moble o l'objecte obert: el nom és el del projecte (i es reanomena a la base de dades). */
 export function TopBar({ projectId, rootLabel = "Mobles", ...rest }: { projectId: number; rootLabel?: string } & Omit<DocBarProps, "name" | "onRename" | "rootLabel" | "nameLabel">) {
   const project = useProject(projectId)
   const name = project?.name ?? ""
   // Els objectes s'editen amb el mateix editor: «Nom de l'objecte» (la barra diu «Objectes › …»).
-  return <DocBar {...rest} rootLabel={rootLabel} name={name} nameLabel={rootLabel === "Objectes" ? "Nom de l'objecte" : "Nom del moble"} onRename={(v) => void renameProject(projectId, v)} />
+  return <DocBar {...rest} rootLabel={rootLabel} name={name} nameLabel={rootLabel === "Objectes" ? "Nom de l'objecte" : rootLabel === "Modelatge" ? "Nom del model" : "Nom del moble"} onRename={(v) => void renameProject(projectId, v)} />
 }
 
 interface DocBarProps {

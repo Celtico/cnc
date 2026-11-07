@@ -50,9 +50,10 @@ export function useAppNavigation() {
   const inProject = projectId !== null
   // Un objecte (per als ambients) s'edita amb el mateix Editor, però no té peces, nesting ni export.
   const isObject = !!previewComposition && compositionKind(previewComposition) === "objecte"
-  const projectNav = isObject ? PROJECT_NAV.filter((n) => n.id === "editor") : PROJECT_NAV
-  // Un model de Modelatge és un moble com els altres (mateix editor i pestanyes), però és de l'apartat Modelatge.
+  // Un model de Modelatge és un moble com els altres (mateix editor), però és de l'apartat Modelatge i a la barra de dalt
+  // hi té les pestanyes de les eines en lloc de Peces, Nesting i Exportar (cel, 2026-11-07).
   const isModel = !!project?.modeling && project.id === projectId
+  const projectNav = isObject || isModel ? PROJECT_NAV.filter((n) => n.id === "editor") : PROJECT_NAV
   const rootScreen: Screen = isObject ? "objects" : isModel ? "modeling" : "projects"
   const rootEntry = isObject ? OBJECTS_ENTRY : isModel ? MODELING_ENTRY : PROJECTS_ENTRY
   useEffect(() => {
@@ -151,6 +152,7 @@ export function useAppNavigation() {
     setAmbientId,
     inProject,
     isObject,
+    isModel,
     projectNav,
     rootEntry,
     section,
