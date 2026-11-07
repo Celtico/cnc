@@ -4,6 +4,7 @@ import { DEFAULT_NEST_OPTIONS, NestOptionsSchema, type NestOptions } from "../co
 import type { Pt } from "../core/photo/homography"
 import type { ReferencePlane } from "../core/photo/camera"
 import type { Measure } from "../core/photo/measure"
+import type { PriceList } from "../core/pricelist/parse"
 
 /** Una mesura de la foto aplicada a un paràmetre del moble: es recorda per avisar si és estimada. */
 export interface AppliedMeasure {
@@ -182,6 +183,7 @@ class MoblesDB extends Dexie {
   hardwareAssets!: EntityTable<HardwareAsset, "id">
   chats!: EntityTable<ChatRow, "id">
   drafts!: EntityTable<DraftRow, "id">
+  priceLists!: EntityTable<PriceList, "id">
 
   constructor() {
     super("mobles-cnc")
@@ -236,6 +238,18 @@ class MoblesDB extends Dexie {
       hardwareAssets: "id, createdAt",
       chats: "id",
       drafts: "id",
+    })
+    // Tarifes de preus dels proveïdors (`db/priceLists.ts`).
+    this.version(9).stores({
+      projects: "++id, name, updatedAt",
+      photos: "++id, projectId",
+      settings: "id",
+      ambients: "++id, name, updatedAt",
+      models: "id, createdAt",
+      hardwareAssets: "id, createdAt",
+      chats: "id",
+      drafts: "id",
+      priceLists: "id, createdAt",
     })
   }
 }

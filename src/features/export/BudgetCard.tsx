@@ -1,6 +1,6 @@
-import { Box, Button, HStack, Input, Switch, Table, Text } from "@chakra-ui/react"
+import { Box, Button, HStack, IconButton, Input, Switch, Table, Text } from "@chakra-ui/react"
 import { useMemo, useState } from "react"
-import { LuCalculator, LuFileDown, LuFileText } from "react-icons/lu"
+import { LuBookOpen, LuCalculator, LuFileDown, LuFileText, LuSearch } from "react-icons/lu"
 import { fittingGroups } from "../../core/build/fittingOrders"
 import { kitGroups } from "../../core/build/kitOrders"
 import { lightGroups } from "../../core/build/lightOrders"
@@ -12,6 +12,7 @@ import type { PricesPref } from "../../core/model/settingsSchema"
 import type { Nesting } from "../../core/nesting/nest"
 import { fmtNum } from "../../lib/format"
 import { ExportCard } from "./ExportCard"
+import { PriceListsDialog, type PriceTarget } from "./PriceListsDialog"
 
 /** Un preu que es desa en sortir del camp (no a cada tecla: les preferències van a la base de dades). */
 function PriceInput({ value, onCommit, width = "84px", ariaLabel }: { value: number; onCommit: (v: number) => void; width?: string; ariaLabel: string }) {
@@ -74,15 +75,38 @@ export function BudgetCard({
   const setPrices = (next: PricesPref) => void save({ ...settings, prices: next })
   const setPrice = (key: BudgetKey, v: number) => setPrices(withPrice(prices, key, v))
   const missing = budget.rows.filter((r) => !r.price).length
+  const [tariffs, setTariffs] = useState<{ query: string; target: PriceTarget | null } | null>(null)
+  const [notes, setNotes] = useState<Record<string, string>>({})
+  /** Busca el preu d'una fila a les tarifes: la consulta surt del concepte (el material i el gruix, el nom del ferratge). */
+  const findPrice = (r: (typeof budget.rows)[number]) => {
+    const k = r.key
+    const query = k.kind === "material" ? `${k.material} ${fmtNum(k.thickness)}` : k.kind === "hardware" ? k.name : k.kind === "edge" ? "cantell" : r.concept.replace(/\(.*?\)/g, "").trim()
+    const board = k.kind === "material" ? nesting?.boards.find((b) => b.material === k.material && b.thickness === k.thickness) : undefined
+    setTariffs({
+      query,
+      target: {
+        concept: r.concept,
+        unit: r.unit,
+        boardArea: board ? (board.w * board.h) / 1e6 : null,
+        onPick: (price, note) => {
+          setPrice(k, price)
+          setNotes((n) => ({ ...n, [JSON.stringify(k)]: note }))
+        },
+      },
+    })
+  }
 
   return (
     <ExportCard
       icon={<LuCalculator />}
       title="Pressupost"
-      description="Les quantitats del projecte (m² de tauler per material i gruix, metres de cantell, de perfilat i de ranura, forats, buidats i els ferratges de la comanda) pels teus preus. Els preus es desen per a tots els projectes."
+      description="Les quantitats del projecte (m² de tauler per material i gruix, metres de cantell, de perfilat i de ranura, forats, buidats i els ferratges de la comanda) pels teus preus, escrits a mà o agafats de les tarifes en PDF dels proveïdors (la lupa de cada fila). Els preus es desen per a tots els projectes."
       files={`${base}-pressupost.pdf · ${base}-pressupost.csv`}
       action={
         <HStack gap={2} wrap="wrap">
+          <Button size="sm" variant="ghost" onClick={() => setTariffs({ query: "", target: null })}>
+            <LuBookOpen /> Tarifes
+          </Button>
           <Button variant="outline" disabled={!panels.length} onClick={() => download(new Blob([budgetPdf(budget, prices, { project }) as BlobPart], { type: "application/pdf" }), `${base}-pressupost.pdf`)}>
             <LuFileText /> PDF
           </Button>
@@ -124,13 +148,23 @@ export function BudgetCard({
           <Table.Body>
             {budget.rows.map((r) => (
               <Table.Row key={JSON.stringify(r.key)}>
-                <Table.Cell whiteSpace="normal">{r.concept}</Table.Cell>
+                <Table.Cell whiteSpace="normal">
+                  {r.concept}
+                  {notes[JSON.stringify(r.key)] && (
+                    <Text fontSize="xs" color="fg.muted">
+                      {notes[JSON.stringify(r.key)]}
+                    </Text>
+                  )}
+                </Table.Cell>
                 <Table.Cell textAlign="end" whiteSpace="nowrap">
                   {fmtNum(r.qty)} {r.unit}
                 </Table.Cell>
                 <Table.Cell textAlign="end">
                   <HStack justify="end" gap={1}>
                     <PriceInput ariaLabel={`Preu: ${r.concept}`} value={r.price} onCommit={(v) => setPrice(r.key, v)} />
+                    <IconButton size="2xs" variant="ghost" aria-label={`Busca el preu a les tarifes: ${r.concept}`} title="Busca el preu a les tarifes dels proveïdors" onClick={() => findPrice(r)}>
+                      <LuSearch />
+                    </IconButton>
                     <Text fontSize="xs" color="fg.subtle" minW="24px">
                       /{r.unit}
                     </Text>
@@ -166,6 +200,7 @@ export function BudgetCard({
           </HStack>
         </Box>
       </HStack>
+      <PriceListsDialog open={!!tariffs} onClose={() => setTariffs(null)} query={tariffs?.query ?? ""} target={tariffs?.target ?? null} />
     </ExportCard>
   )
 }
