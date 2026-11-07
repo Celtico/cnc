@@ -7,6 +7,7 @@ import { toCutList } from "../../core/cutlist/toCutList"
 import { cutListToCsv } from "../../core/export/csv"
 import { linearCsvRows } from "../../core/build/linearOrders"
 import { toDxf } from "../../core/export/dxf"
+import { drawingsPdf } from "../../core/export/drawingsPdf"
 import { labelsPdf, pieceLabels } from "../../core/export/labelsPdf"
 import { xcsZip } from "../../core/export/maestroXcs"
 import { toStepCad } from "../../core/export/step"
@@ -99,6 +100,12 @@ export function exportActions(c: ExportContext) {
     downloadBlob(new Blob([labelsPdf(list, { project: project.name, label: settings.label }) as BlobPart], { type: "application/pdf" }), `${base}-etiquetes.pdf`)
     toaster.create({ title: "Etiquetes generades", description: `${list.length} etiquetes de ${settings.label.w} × ${settings.label.h} mm`, type: "success" })
   }
+  const doDrawings = () => {
+    warnEstimated()
+    const d = drawingsPdf(panels, { project: project.name })
+    downloadBlob(new Blob([d.bytes as BlobPart], { type: "application/pdf" }), `${base}-planols.pdf`)
+    toaster.create({ title: "Plànols generats", description: `El moble i ${d.pieces} peces diferents (${d.pages} pàgines A4)`, type: "success" })
+  }
   const doCsv = () => downloadText(cutListToCsv(toCutList(panels), {}, linearCsvRows(build?.linearOrders ?? [])), `${base}-peces.csv`, "text/csv")
   const doJson = () =>
     downloadText(
@@ -130,5 +137,5 @@ export function exportActions(c: ExportContext) {
     }
   }
 
-  return { doStep, doTopsolidCsv, doDxf, doXcs, doLabels, doCsv, doJson, doGlb, doUsdz }
+  return { doStep, doTopsolidCsv, doDxf, doXcs, doLabels, doDrawings, doCsv, doJson, doGlb, doUsdz }
 }

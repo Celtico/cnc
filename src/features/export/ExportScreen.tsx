@@ -1,7 +1,7 @@
 import { Button, HStack, Switch, Text, VStack } from "@chakra-ui/react"
 import { useMemo, useState } from "react"
 import { usePersistentFlag } from "../../lib/usePersistentFlag"
-import { LuBoxes, LuCuboid, LuDownload, LuFileDown, LuFileJson, LuLayoutGrid, LuScissors, LuSettings2, LuTag } from "react-icons/lu"
+import { LuBoxes, LuCuboid, LuDownload, LuFileDown, LuFileJson, LuLayoutGrid, LuScissors, LuRuler, LuSettings2, LuTag } from "react-icons/lu"
 import { FoldItem } from "../../components/Fold"
 import { FormRow } from "../../components/FormRow"
 import { toaster } from "../../components/ui/toaster"
@@ -57,7 +57,7 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   // Composició il·legible: res a exportar (seria la caixa per defecte).
   if (unreadable) return <UnreadableAlert />
   const base = slugify(project.name)
-  const { doStep, doTopsolidCsv, doDxf, doXcs, doLabels, doCsv, doJson, doGlb, doUsdz } = exportActions({
+  const { doStep, doTopsolidCsv, doDxf, doXcs, doLabels, doDrawings, doCsv, doJson, doGlb, doUsdz } = exportActions({
     project,
     base,
     comp,
@@ -154,6 +154,18 @@ export function ExportScreen({ projectId }: { projectId: number }) {
         action={
           <Button variant="outline" onClick={doLabels} disabled={!panels.length}>
             <LuTag /> Descarregar etiquetes
+          </Button>
+        }
+      />
+
+      <ExportCard
+        icon={<LuRuler />}
+        title="Plànols acotats (PDF)"
+        description="Per al taller o el client, en A4 apaïsat: primer el moble (alçat, perfil i planta amb les mides generals i l'amplada de cada mòdul) i després una pàgina per peça diferent (les iguals, juntes amb totes les refs), amb el contorn, els cantells, els forats, les ranures i els talls, i la cota de cada forat des de la cantonada de baix a l'esquerra."
+        files={`${base}-planols.pdf`}
+        action={
+          <Button variant="outline" onClick={doDrawings} disabled={!panels.length}>
+            <LuRuler /> Descarregar plànols
           </Button>
         }
       />

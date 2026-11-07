@@ -14,6 +14,8 @@ interface TextOp {
   text: string
   font: PdfFont
   align: "left" | "center" | "right"
+  /** Girat 90° (es llegeix de baix a dalt), per a les cotes verticals. */
+  up: boolean
 }
 interface LineOp {
   kind: "line"
@@ -21,6 +23,17 @@ interface LineOp {
   width: number
   close: boolean
   dash?: number
+  /** Gris de l'interior (0 negre · 1 blanc) si és tancada; sense, només la línia. */
+  fill?: number
+}
+interface CircleOp {
+  kind: "circle"
+  x: number
+  y: number
+  r: number
+  width: number
+  dash?: number
+  fill?: number
 }
 interface RectOp {
   kind: "rect"
@@ -31,7 +44,7 @@ interface RectOp {
   width: number
   fill: number | null
 }
-type Op = TextOp | LineOp | RectOp
+type Op = TextOp | LineOp | RectOp | CircleOp
 
 const PT = 72 / 25.4
 
@@ -39,7 +52,7 @@ const PT = 72 / 25.4
 const AVG_EM: Record<PdfFont, number> = { regular: 0.52, bold: 0.56 }
 
 /** Amplada aproximada d'un text en mm, amb la mida de lletra en mm. */
-function textWidth(text: string, size: number, font: PdfFont = "regular"): number {
+export function textWidth(text: string, size: number, font: PdfFont = "regular"): number {
   let em = 0
   for (const ch of text) em += /[ .,:;·il1|'!()[\]]/.test(ch) ? 0.28 : /[mwMW@]/.test(ch) ? 0.83 : /[A-Z0-9]/.test(ch) ? 0.66 : AVG_EM[font]
   return em * size
@@ -59,14 +72,18 @@ export class PdfPage {
     this.w = w
     this.h = h
   }
-  text(x: number, y: number, text: string, opts: { size?: number; font?: PdfFont; align?: "left" | "center" | "right"; maxW?: number } = {}): this {
+  text(x: number, y: number, text: string, opts: { size?: number; font?: PdfFont; align?: "left" | "center" | "right"; maxW?: number; up?: boolean } = {}): this {
     const font = opts.font ?? "regular"
     const size = opts.maxW ? fitSize(text, opts.size ?? 3.5, opts.maxW, font) : (opts.size ?? 3.5)
-    this.ops.push({ kind: "text", x, y, size, text, font, align: opts.align ?? "left" })
+    this.ops.push({ kind: "text", x, y, size, text, font, align: opts.align ?? "left", up: !!opts.up })
     return this
   }
-  line(pts: [number, number][], opts: { width?: number; close?: boolean; dash?: number } = {}): this {
-    this.ops.push({ kind: "line", pts, width: opts.width ?? 0.2, close: !!opts.close, dash: opts.dash })
+  line(pts: [number, number][], opts: { width?: number; close?: boolean; dash?: number; fill?: number } = {}): this {
+    this.ops.push({ kind: "line", pts, width: opts.width ?? 0.2, close: !!opts.close || opts.fill !== undefined, dash: opts.dash, fill: opts.fill })
+    return this
+  }
+  circle(x: number, y: number, r: number, opts: { width?: number; dash?: number; fill?: number } = {}): this {
+    this.ops.push({ kind: "circle", x, y, r, width: opts.width ?? 0.2, dash: opts.dash, fill: opts.fill })
     return this
   }
   rect(x: number, y: number, w: number, h: number, opts: { width?: number; fill?: number | null } = {}): this {
@@ -110,11 +127,27 @@ function pageContent(p: PdfPage): string {
   for (const op of p.ops) {
     if (op.kind === "text") {
       const w = op.align === "left" ? 0 : textWidth(op.text, op.size, op.font) * (op.align === "center" ? 0.5 : 1)
-      out.push(`BT /${op.font === "bold" ? "F2" : "F1"} ${n(op.size * PT)} Tf ${X(op.x - w)} ${Y(op.y)} Td ${pdfString(op.text)} Tj ET`)
+      const font = `/${op.font === "bold" ? "F2" : "F1"} ${n(op.size * PT)} Tf`
+      if (op.up) out.push(`BT ${font} 0 1 -1 0 ${X(op.x)} ${Y(op.y + w)} Tm ${pdfString(op.text)} Tj ET`)
+      else out.push(`BT ${font} ${X(op.x - w)} ${Y(op.y)} Td ${pdfString(op.text)} Tj ET`)
     } else if (op.kind === "line") {
       if (op.pts.length < 2) continue
       const path = op.pts.map(([x, y], i) => `${X(x)} ${Y(y)} ${i ? "l" : "m"}`).join(" ")
-      out.push(`${n(op.width * PT)} w ${op.dash ? `[${n(op.dash * PT)}] 0 d` : "[] 0 d"} ${path} ${op.close ? "s" : "S"}`)
+      const stroke = `${n(op.width * PT)} w ${op.dash ? `[${n(op.dash * PT)}] 0 d` : "[] 0 d"}`
+      if (op.fill !== undefined) out.push(`${n(op.fill)} g ${stroke} ${path} ${op.width > 0 ? "b" : "f"} 0 g`)
+      else out.push(`${stroke} ${path} ${op.close ? "s" : "S"}`)
+    } else if (op.kind === "circle") {
+      // Quatre quarts de Bézier (k = 0,5523).
+      const k = 0.5523 * op.r
+      const { x, y, r } = op
+      const path =
+        `${X(x + r)} ${Y(y)} m ` +
+        `${X(x + r)} ${Y(y - k)} ${X(x + k)} ${Y(y - r)} ${X(x)} ${Y(y - r)} c ` +
+        `${X(x - k)} ${Y(y - r)} ${X(x - r)} ${Y(y - k)} ${X(x - r)} ${Y(y)} c ` +
+        `${X(x - r)} ${Y(y + k)} ${X(x - k)} ${Y(y + r)} ${X(x)} ${Y(y + r)} c ` +
+        `${X(x + k)} ${Y(y + r)} ${X(x + r)} ${Y(y + k)} ${X(x + r)} ${Y(y)} c`
+      const stroke = `${n(op.width * PT)} w ${op.dash ? `[${n(op.dash * PT)}] 0 d` : "[] 0 d"}`
+      out.push(op.fill !== undefined ? `${n(op.fill)} g ${stroke} ${path} ${op.width > 0 ? "b" : "f"} 0 g` : `${stroke} ${path} s`)
     } else {
       const r = `${X(op.x)} ${Y(op.y + op.h)} ${n(op.w * PT)} ${n(op.h * PT)} re`
       if (op.fill !== null) out.push(`${n(op.fill)} g ${r} f 0 g`)
