@@ -1,5 +1,5 @@
 import type { KitOrderLine } from "./drawerKit"
-import { activeRuns, compositionKind, freeX, withSupport, withNeighbourSides, withWallBacks, isSolidMaterial, moduleFrontFace, moduleRot, rotXZ, unrot, type ModuleRot, modelFootprint, modulePlacements, NO_EDGES, partsOnlyKind, partCutters, resolveParts, type Composition, type ModelObject, type Module, type Panel, type Vec3 } from "../model"
+import { activeRuns, applyPieceEdit, compositionKind, freeX, withSupport, withNeighbourSides, withWallBacks, isSolidMaterial, moduleFrontFace, moduleRot, rotXZ, unrot, type ModuleRot, modelFootprint, modulePlacements, NO_EDGES, partsOnlyKind, partCutters, resolveParts, type Composition, type ModelObject, type Module, type Panel, type Vec3 } from "../model"
 import { applyRefCuts, migrateCableHoles, refTouchesBox } from "./refCuts"
 import { columnRearLimits, columnWalls, isPillar, relayLegs } from "./columnWalls"
 import { clipHangingToRefs } from "./hangingCuts"
@@ -265,7 +265,8 @@ export function buildComposition(input: Composition): CompositionBuild {
     const inRow = !backOf.has(m.id) && !freeX(m)
     const turn = !rot ? undefined : inRow ? { rot, cx: m.carcass.width / 2, cz: moduleFrontFace(m) / 2 } : turnFrame(build.panels, rot)
     const place = placeIn(turn, x, y, z)
-    for (const p of build.panels) panels.push({ ...p, id: `${m.id}:${p.id}`, module: i + 1, placement: place(p.placement) })
+    // Els retocs a mà de la peça (`Module.pieceEdits`), per l'id de la peça dins del mòdul: es conserven en refer-lo.
+    for (const p of build.panels) panels.push({ ...applyPieceEdit(p, m.pieceEdits?.[p.id]), id: `${m.id}:${p.id}`, module: i + 1, placement: place(p.placement) })
     for (const p of build.extras) moduleExtras.push({ ...p, id: `${m.id}:${p.id}`, module: i + 1, placement: place(p.placement) })
     for (const k of build.hardwareKits) hardwareKits.push({ ...k, module: i + 1, moduleId: m.id })
     for (const k of build.lightKits) lightKits.push({ ...k, module: i + 1, moduleId: m.id })

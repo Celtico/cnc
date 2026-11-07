@@ -17,7 +17,7 @@ import { compositionEdits, hardwareCommands } from "./editorCommands"
 import { EditorInspector } from "./EditorInspector"
 import { EditorLeftPanel } from "./EditorLeftPanel"
 import { ModelingRibbon } from "./ModelingRibbon"
-import { modulePieces, ModelingTree } from "../modeling/ModelingTree"
+import { modulePieces, ModelingTree, pieceLocalId, setPieceEdit } from "../modeling/ModelingTree"
 import { PieceInspector } from "../modeling/PieceInspector"
 import { EditorViewport } from "./EditorViewport"
 import { framePose, warningTarget } from "./warningTarget"
@@ -194,7 +194,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           onSelect={(s) => pick(s, true)}
           tree={
         // A Modelatge, l'arbre del Taulell: mobles, peces i mecanitzats (cel, 2026-11-07).
-        project.modeling ? <ModelingTree comp={comp} build={build} selection={selection} onSelect={(s) => pick(s, true)} piece={piece} setPiece={setPiece} /> : <StructureTree
+        project.modeling ? <ModelingTree comp={comp} build={build} selection={selection} onSelect={(s) => pick(s, true)} piece={piece} setPiece={setPiece} onPieceEdit={(moduleId, panelId, f) => setPieceEdit(setComp, moduleId, pieceLocalId(moduleId, panelId), f)} /> : <StructureTree
           name={name}
           comp={comp}
           selection={selection}
@@ -207,7 +207,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         />
         }
         right={
-          pieceSel ? <PieceInspector panel={pieceSel.panel} code={pieceSel.code} moduleName={module?.name ?? ""} onEditModule={() => setPiece(null)} /> : inspector(false)
+          pieceSel ? <PieceInspector panel={pieceSel.panel} code={pieceSel.code} moduleName={module?.name ?? ""} onEditModule={() => setPiece(null)} materials={settings.materials} edit={module?.pieceEdits?.[pieceLocalId(module.id, pieceSel.panel.id)]} onEdit={(e) => module && setPieceEdit(setComp, module.id, pieceLocalId(module.id, pieceSel.panel.id), e)} /> : inspector(false)
         }
         // Mobles i objectes: el mateix xat amb les eines de cada tipus (un objecte només té peces lliures). Els `lliure`
         // d'abans (flat-pack que es fabrica) no en tenen.

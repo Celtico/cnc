@@ -2,7 +2,7 @@ import { Box, chakra, HStack, Text } from "@chakra-ui/react"
 import { useState, type ReactNode } from "react"
 import { hoverKey, useHoverLink } from "../../components/hoverLink"
 import type { CompositionBuild } from "../../core/build/buildComposition"
-import type { Composition, Panel } from "../../core/model"
+import { grooveKey, HAND_TAG, holeKey, isEmptyEdit, type Composition, type Panel, type PieceEdit } from "../../core/model"
 import type { Selection } from "../composition/StructureTree"
 import { TaulellIcon, type TaulellIconName } from "./TaulellIcon"
 
@@ -10,22 +10,67 @@ import { TaulellIcon, type TaulellIconName } from "./TaulellIcon"
 const HOLE_NAMES: Record<string, string> = { hinge: "Cassoleta", plate: "Placa de frontissa", system32: "Línia de forats", dowel: "Clavilla", leg: "Pota" }
 const mm = (v: number) => String(Math.round(v * 10) / 10).replace(".", ",")
 
+/** Una línia de mecanitzats: els del mòdul iguals van junts (`drop`, es treuen junts); els fets a mà, un a un (`hand`). */
+export interface MachiningRow {
+  key: string
+  label: string
+  icon: TaulellIconName
+  drop?: string
+  hand?: { kind: "holes" | "grooves"; i: number }
+}
+
 /** Els mecanitzats d'una peça, agrupats com els llista el Taulell: «Perforació Ø8×12 · 6», «Ranura 8×8». */
-export function machiningRows(p: Panel): { key: string; label: string; icon: TaulellIconName }[] {
-  const rows = new Map<string, { label: string; icon: TaulellIconName; n: number }>()
-  const add = (key: string, label: string, icon: TaulellIconName) => {
+export function machiningRows(p: Panel): MachiningRow[] {
+  const rows = new Map<string, MachiningRow & { n: number }>()
+  const add = (key: string, label: string, icon: TaulellIconName, extra: Partial<MachiningRow>) => {
     const r = rows.get(key)
     if (r) r.n++
-    else rows.set(key, { label, icon, n: 1 })
+    else rows.set(key, { key, label, icon, n: 1, ...extra })
   }
+  let hh = 0
+  let hg = 0
   for (const h of p.holes) {
     const name = (h.tag && HOLE_NAMES[h.tag]) || "Perforació"
-    add(`h:${name}:${h.diameter}:${h.depth}`, `${name} Ø${mm(h.diameter)}×${mm(h.depth)}`, h.tag === "hinge" ? "cup" : h.tag === "system32" ? "line32" : h.tag === "dowel" ? "dowel" : "hole")
+    const icon: TaulellIconName = h.tag === "hinge" ? "cup" : h.tag === "system32" ? "line32" : h.tag === "dowel" ? "dowel" : "hole"
+    const label = `${name} Ø${mm(h.diameter)}×${mm(h.depth)}`
+    if (h.tag === HAND_TAG) add(`hand:h:${hh}`, `${label} · a mà`, icon, { hand: { kind: "holes", i: hh++ } })
+    else add(holeKey(h), label, icon, { drop: holeKey(h) })
   }
-  for (const g of p.grooves) add(`g:${Math.min(g.w, g.h)}:${g.depth}`, `Ranura ${mm(Math.min(g.w, g.h))}×${mm(g.depth)}`, "groove")
-  for (const k of p.pockets ?? []) add(`p:${k.depth}`, `Buidat ×${mm(k.depth)}`, "rebate")
-  for (const c of p.cutouts ?? []) add(`c:${c.kind}`, "Retall", "cut")
-  return [...rows.entries()].map(([key, r]) => ({ key, icon: r.icon, label: r.n > 1 ? `${r.label} · ${r.n}` : r.label }))
+  for (const g of p.grooves) {
+    const label = `Ranura ${mm(Math.min(g.w, g.h))}×${mm(g.depth)}`
+    if (g.tag === HAND_TAG) add(`hand:g:${hg}`, `${label} · a mà`, "groove", { hand: { kind: "grooves", i: hg++ } })
+    else add(grooveKey(g), label, "groove", { drop: grooveKey(g) })
+  }
+  for (const k of p.pockets ?? []) add(`p:${k.depth}`, `Buidat ×${mm(k.depth)}`, "rebate", {})
+  for (const c of p.cutouts ?? []) add(`c:${c.kind}`, "Retall", "cut", {})
+  return [...rows.values()].map(({ n, ...r }) => ({ ...r, label: n > 1 ? `${r.label} · ${n}` : r.label }))
+}
+
+/** El retoc sense aquesta línia de mecanitzats (els del mòdul es treuen; els fets a mà s'esborren). */
+export function withoutRow(e: PieceEdit | undefined, r: MachiningRow): PieceEdit {
+  const cur = e ?? {}
+  if (r.hand) return { ...cur, [r.hand.kind]: (cur[r.hand.kind] ?? []).filter((_, i) => i !== r.hand!.i) }
+  if (r.drop) return { ...cur, drop: [...new Set([...(cur.drop ?? []), r.drop])] }
+  return cur
+}
+
+/** L'id de la peça dins del mòdul (la clau dels retocs, `Module.pieceEdits`): el de la composició és «mòdul:peça». */
+export function pieceLocalId(moduleId: string, panelId: string): string {
+  return panelId.startsWith(`${moduleId}:`) ? panelId.slice(moduleId.length + 1) : panelId
+}
+
+/** Desa (o treu, amb `undefined`) el retoc d'una peça d'un mòdul; `e` pot ser una funció del retoc d'ara. */
+export function setPieceEdit(setComp: (f: (c: Composition) => Composition) => void, moduleId: string, localId: string, e: PieceEdit | undefined | ((cur: PieceEdit | undefined) => PieceEdit | undefined)) {
+  setComp((c) => ({
+    ...c,
+    modules: c.modules.map((m) => {
+      if (m.id !== moduleId) return m
+      const next = typeof e === "function" ? e(m.pieceEdits?.[localId]) : e
+      const { [localId]: _old, ...rest } = m.pieceEdits ?? {}
+      const all = next && !isEmptyEdit(next) ? { ...rest, [localId]: next } : rest
+      return { ...m, pieceEdits: Object.keys(all).length ? all : undefined }
+    }),
+  }))
 }
 
 /** Les peces d'un moble a l'arbre (sense els aparells) i el seu número del Taulell: moble.peça («1.01»). */
@@ -39,7 +84,7 @@ export function modulePieces(panels: Panel[], index: number): { panel: Panel; co
  * després, les peces soltes («S.01»). Clicar un moble o una de les seves peces tria el moble (les opcions, a la dreta);
  * clicar una peça solta, la peça. La peça triada d'un moble (`piece`) la mostra `PieceInspector` a la dreta.
  */
-export function ModelingTree({ comp, build, selection, onSelect, piece, setPiece }: { comp: Composition; build: CompositionBuild | undefined; selection: Selection; onSelect: (s: Selection) => void; piece: string | null; setPiece: (id: string | null) => void }) {
+export function ModelingTree({ comp, build, selection, onSelect, piece, setPiece, onPieceEdit }: { comp: Composition; build: CompositionBuild | undefined; selection: Selection; onSelect: (s: Selection) => void; piece: string | null; setPiece: (id: string | null) => void; onPieceEdit: (moduleId: string, panelId: string, f: (cur: PieceEdit | undefined) => PieceEdit) => void }) {
   const [open, setOpen] = useState<Set<string>>(() => new Set(comp.modules.slice(0, 1).map((m) => m.id)))
   const link = useHoverLink()
   const toggle = (id: string) =>
@@ -58,14 +103,14 @@ export function ModelingTree({ comp, build, selection, onSelect, piece, setPiece
       </Text>
     )
 
-  const pieceRow = (p: Panel, code: string, sel: boolean, onClick: () => void, hover?: string) => (
+  const pieceRow = (p: Panel, code: string, sel: boolean, onClick: () => void, hover?: string, moduleId?: string) => (
     <Box key={p.id}>
       <Row level={1} icon="panel" selected={sel} onClick={onClick} hover={hover} link={link}>
         <Code>{code}</Code>
         {p.label}
       </Row>
       {machiningRows(p).map((r) => (
-        <Row key={r.key} level={2} icon="feat" muted>
+        <Row key={r.key} level={2} icon="feat" muted onRemove={moduleId && (r.drop || r.hand) ? () => onPieceEdit(moduleId, p.id, (cur) => withoutRow(cur, r)) : undefined}>
           {r.label}
         </Row>
       ))}
@@ -102,7 +147,7 @@ export function ModelingTree({ comp, build, selection, onSelect, piece, setPiece
                 pieceRow(p, code, piece === p.id && selection.kind === "module" && selection.id === m.id, () => {
                   setPiece(p.id)
                   onSelect({ kind: "module", id: m.id })
-                }),
+                }, undefined, m.id),
               )}
           </Box>
         )
@@ -146,7 +191,9 @@ function Row({
   end,
   hover,
   link,
+  onRemove,
 }: {
+  onRemove?: () => void
   level: number
   icon: TaulellIconName
   children: ReactNode
@@ -200,6 +247,11 @@ function Row({
       <Box flex={1} minW={0} truncate>
         {children}
       </Box>
+      {onRemove && (
+        <chakra.button type="button" aria-label="Treure" title="Treure" color="fg.muted" px={1} _hover={{ color: "fg" }} onClick={(e) => (e.stopPropagation(), onRemove())}>
+          ✕
+        </chakra.button>
+      )}
       {end && (
         <Text as="span" fontFamily="mono" fontSize="xs" color="fg.muted" fontWeight="normal">
           {end}

@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { ProfileNodeSchema } from "./panel"
+import { PieceEditsSchema } from "./pieceEdits"
 import { VIEW_FLAGS } from "./viewFlags"
 import { HardwareItemObjectSchema, ModuleHardwareKitSchema, sanitizeImportedHardware, migrateModuleHardware, type HardwareItem } from "./hardware"
 import { repairAtomically } from "./repair"
@@ -562,6 +563,8 @@ export const ModuleSchema = z.object({
   ...VIEW_FLAGS,
   /** Grup (nom), el mateix espai de noms que el de les peces lliures i els models: es mouen, s'amaguen i es bloquegen junts. */
   group: z.string().optional(),
+  /** Retocs a mà de les seves peces, per l'id de la peça dins del mòdul (`pieceEdits.ts`): es conserven en refer el mòdul. */
+  pieceEdits: PieceEditsSchema.optional(),
   /**
    * **Tipus** (per decisió de l'usuari, 2026-10-15: «canviem Posició per tipus de moble»): Baix, Columna o Electrodomèstic
    * triats a mà; el Penjat és el de la base «wall». Sense, es dedueix (`moduleType`): electrodomèstic si el mòdul ho és,
