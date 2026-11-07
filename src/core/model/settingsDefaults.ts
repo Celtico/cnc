@@ -310,4 +310,5 @@ export const DEFAULT_SETTINGS: Settings = {
   machines: [],
   machiningRules: defaultMachineRules(),
   assistant: { model: DEFAULT_ASSISTANT_MODEL },
+  prices: { materials: [], edge: 0, profile: 0, groove: 0, hole: 0, pocket: 0, hardware: [], waste: 15, margin: 0, vat: 21, wholeSheets: false },
 }

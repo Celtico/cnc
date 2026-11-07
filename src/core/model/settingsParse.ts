@@ -139,6 +139,8 @@ export function parseSettings(raw: unknown): SettingsParse {
     machiningRules,
     // v26: additiu (sense, sense clau i el model per defecte); un model que ja no hi és torna al per defecte.
     assistant: section("assistant", AssistantPrefSchema, DEFAULT_SETTINGS.assistant, "Assistent IA"),
+    // v53: additiu (sense, els preus a 0 i la merma i l'IVA inicials).
+    prices: section("prices", SettingsSchema.shape.prices, DEFAULT_SETTINGS.prices, "Preus del pressupost"),
     // v49: les `optionPrefs` de la v48 (amagar opcions i per defecte propis) es treuen: no es llegeixen.
   }
   return { settings, problems, migrated: migrated || problems.length > 0, renames: v12.renames }

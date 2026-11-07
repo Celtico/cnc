@@ -9,11 +9,13 @@ import { dxfLayers } from "../../core/export/dxf"
 import { materialIssues } from "../../core/build/materialIssues"
 import { finishRgb, resolveFinish } from "../../components/viewer/textures"
 import { machineWithRules } from "../../core/model"
-import { slugify } from "../../lib/download"
+import { downloadBlob, slugify } from "../../lib/download"
+import { keepProject } from "../../db/db"
 import { ESTIMATED_WARNING, estimatedApplied } from "../photo/appliedState"
 import { useSettings } from "../settings/SettingsContext"
 import { useComposition, useCompositionBuild, useCompositionRead, useNesting, useProject } from "../useProject"
 import { UnreadableAlert } from "../../components/UnreadableAlert"
+import { BudgetCard } from "./BudgetCard"
 import { CamDialog } from "./CamDialog"
 import { ExportAlerts } from "./ExportAlerts"
 import { ExportCard } from "./ExportCard"
@@ -29,7 +31,7 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   const build = useCompositionBuild(comp)
   const panels = useMemo(() => build?.panels ?? [], [build])
   const nesting = useNesting(panels, project?.nesting)
-  const { settings } = useSettings()
+  const { settings, save } = useSettings()
   const [labels, setLabels] = useState(true)
   // DXF «3D»: gruix de cada peça i profunditat de cada mecanitzat com a Z i extrusió.
   const [dxf3d, setDxf3d] = usePersistentFlag("mobles:dxf-3d", true)
@@ -168,6 +170,20 @@ export function ExportScreen({ projectId }: { projectId: number }) {
             <LuRuler /> Descarregar plànols
           </Button>
         }
+      />
+
+      <BudgetCard
+        project={project.name}
+        base={base}
+        panels={panels}
+        build={build}
+        nesting={nesting}
+        settings={settings}
+        save={save}
+        download={(blob, name) => {
+          downloadBlob(blob, name)
+          void keepProject(project.id)
+        }}
       />
 
       <ExportCard

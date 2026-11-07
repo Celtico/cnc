@@ -71,6 +71,13 @@ export function renameMaterialInSettings(s: Settings, from: string, to: string):
     materials: s.materials.map((m) => (m.name === from ? { ...m, name: to } : m)),
     defaults: { ...s.defaults, material: r(s.defaults.material), backMaterial: r(s.defaults.backMaterial) },
     boards: { ...s.boards, sheets: s.boards.sheets.map((x) => (x.material === from ? { ...x, material: to } : x)) },
+    // El preu del pressupost segueix el material (si el nou ja en tenia, es queda el seu).
+    prices: {
+      ...s.prices,
+      materials: s.prices.materials
+        .filter((x) => !(x.material === from && s.prices.materials.some((y) => y.material === to && y.thickness === x.thickness)))
+        .map((x) => (x.material === from ? { ...x, material: to } : x)),
+    },
   }
 }
 

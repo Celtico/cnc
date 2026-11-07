@@ -70,8 +70,10 @@ const mm = z.number().finite()
  * v49: fora `optionPrefs` (per decisió de l'usuari, 2026-10-15: res de les opcions en cascada s'aplica a l'Editor fins que
  * no es tingui clar; Preferències › Opcions en cascada només dibuixa el registre). Es treu en llegir.
  * v52: «Roure massís» (`SOLID_WOOD_MATERIALS`, massís: no es canteja), additiu.
+ * v53: preus del pressupost (`prices`: €/m² per material i gruix, €/m de cantell, perfilat i ranura, €/forat, €/ferratge,
+ * merma, marge i IVA), additiu.
  */
-export const SETTINGS_VERSION = 52
+export const SETTINGS_VERSION = 53
 
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
@@ -378,6 +380,36 @@ const LabelPrefSchema = z.object({ w: mm.min(10).max(300), h: mm.min(10).max(300
 
 const DisplayPrefSchema = z.object({ unit: z.enum(["mm", "cm"]) })
 
+const euro = z.number().min(0).max(1e6)
+const pct = z.number().min(0).max(1000)
+/**
+ * Preus del pressupost (v53), els mateixos per a tots els projectes. Els materials i els ferratges van en llistes (els
+ * noms porten punts i barres). Sense preu, la fila surt a 0 perquè es vegi què falta.
+ */
+export const PricesPrefSchema = z.object({
+  /** €/m² de tauler, per material i gruix. */
+  materials: z.array(z.object({ material: z.string(), thickness: mm, price: euro })),
+  /** €/m de cantell folrat. */
+  edge: euro,
+  /** €/m de contorn tallat a la CNC (perfilat). */
+  profile: euro,
+  /** €/m de ranura. */
+  groove: euro,
+  /** €/forat. */
+  hole: euro,
+  /** €/buidat o tall passant. */
+  pocket: euro,
+  /** €/unitat de ferratge, pel nom de la comanda. */
+  hardware: z.array(z.object({ name: z.string(), price: euro })),
+  /** % de merma sobre els m² de les peces (si no es cobren taulers sencers). */
+  waste: pct,
+  margin: pct,
+  vat: pct,
+  /** Cobrar els taulers sencers del nesting en lloc dels m² de peces + merma. */
+  wholeSheets: z.boolean(),
+})
+export type PricesPref = z.infer<typeof PricesPrefSchema>
+
 /**
  * Models de l'assistent IA (docs/xat-ia.md, comprovats a la documentació de l'API el 2026-10-09): Sonnet per defecte
  * (més barat i ràpid), Opus per a les feines més difícils. Preus en $ per milió de tokens d'entrada / sortida.
@@ -427,5 +459,7 @@ export const SettingsSchema = z.object({
   machiningRules: MachineRulesSchema,
   /** Assistent IA (v26): clau de l'API i model. La clau no s'exporta (`settingsToJson`). */
   assistant: AssistantPrefSchema,
+  /** Preus del pressupost (v53). */
+  prices: PricesPrefSchema,
 })
 export type Settings = z.infer<typeof SettingsSchema>
