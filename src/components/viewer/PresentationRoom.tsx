@@ -94,3 +94,35 @@ export function PresentationRoom({ backZ, scene, materials = [], sideWalls }: { 
     </>
   )
 }
+
+/** Les parets no es poden clicar: els clics passen a les peces del darrere. */
+const noRay = () => null
+
+/**
+ * L'habitació a les vistes de treball (Modelatge › Espai › Habitació, com al Taulell): la paret del darrere i les dels
+ * costats, a ras del moble (`sideWalls`), clares i una mica transparents perquè no tapin res. A Presentació hi ha l'estança.
+ */
+export function GuideRoom({ backZ, sideWalls }: { backZ: number; sideWalls: { left?: number; right?: number } }) {
+  const H = 2.6
+  const D = 3
+  const mat = <meshStandardMaterial color="#e7e3dc" roughness={0.95} transparent opacity={0.55} depthWrite={false} side={2} />
+  return (
+    <group userData={{ room: "guide" }}>
+      <mesh position={[0, H / 2, backZ - 0.002]} raycast={noRay} renderOrder={-1}>
+        <planeGeometry args={[ROOM, H]} />
+        {mat}
+      </mesh>
+      {(["left", "right"] as const).map((side) => {
+        const x = sideWalls[side]
+        if (x === undefined) return null
+        const s = side === "left" ? 1 : -1
+        return (
+          <mesh key={side} position={[x - s * 0.002, H / 2, backZ + D / 2]} rotation-y={(s * Math.PI) / 2} raycast={noRay} renderOrder={-1}>
+            <planeGeometry args={[D, H]} />
+            {mat}
+          </mesh>
+        )
+      })}
+    </group>
+  )
+}

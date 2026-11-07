@@ -24,17 +24,31 @@ export interface FaceToolOpts {
   sketchW: number
   sketchD: number
   /** Unions (els valors del Taulell): clavilles, cargols i Cabineo. */
+  /** Clavilles: la mida (8×40, 8×30, 5×30) i si es reparteixen a tota la junta (si no, una on es clica). */
+  dowM: DowelSize
+  dowDist: boolean
   dowD: number
   dowF: number
   dowE: number
   dowMargin: number
   dowPitch: number
+  /** Cargols: diàmetre i llargada (el nom del cargol i l'avís si no passa del gruix), forat passant i repartiment. */
+  scrD: number
+  scrL: number
+  scrDist: boolean
   scrHole: number
   scrMargin: number
   scrPitch: number
   cabiM: "12" | "8"
   cabiMargin: number
   cabiPitch: number
+  /** Cabineo, les mides del mecanitzat (Taulell): butxaca Ø i fondària, 1r forat i pas des del cantell, eix i Ø del cargol. */
+  cabiD: number
+  cabiDepth: number
+  cabiFirst: number
+  cabiStep: number
+  cabiAxis: number
+  cabiSd: number
   /** Ranura i galze (els valors del Taulell). `grOff`: distància fixa al cantell més proper (0: on es clica). */
   grW: number
   grD: number
@@ -48,6 +62,10 @@ export interface FaceToolOpts {
   cutTarget?: string
   measureLine?: [Vec3, Vec3]
   T: number
+  /** Tauler dinàmic: el gruix és el que s'ha escrit (si no, el del moble on va). */
+  ownT?: boolean
+  /** Bloc, tauler dinàmic i prestatge: el material triat (buit: el del moble on va, o el de la peça clicada). */
+  mat: string
   setback: number
   d: number
   depth: number
@@ -58,7 +76,11 @@ export interface FaceToolOpts {
   pitch: number
   margin: number
 }
-export const DEFAULT_FACE_OPTS: FaceToolOpts = { fitOrient: "flat", fitGap: 0, dynOff: 0, sketchL: 600, sketchW: 400, sketchD: 300, dowD: 8, dowF: 12, dowE: 29, dowMargin: 50, dowPitch: 200, scrHole: 4, scrMargin: 50, scrPitch: 300, cabiM: "12", cabiMargin: 50, cabiPitch: 300, grW: 4, grD: 8, grDir: "L", grOff: 0, rbW: 10, rbD: 10, T: 19, setback: 1, d: 8, depth: 12, cd: 35, cdepth: 13, ld: 5, ldepth: 12, pitch: 32, margin: 37 }
+export const DEFAULT_FACE_OPTS: FaceToolOpts = { fitOrient: "flat", fitGap: 0, dynOff: 0, sketchL: 600, sketchW: 400, sketchD: 300, dowM: "8x40", dowDist: true, dowD: 8, dowF: 12, dowE: 29, dowMargin: 50, dowPitch: 200, scrD: 4, scrL: 60, scrDist: true, scrHole: 4, scrMargin: 50, scrPitch: 300, cabiM: "12", cabiMargin: 50, cabiPitch: 300, cabiD: 15, cabiDepth: 11, cabiFirst: 3.6, cabiStep: 11.2, cabiAxis: 5, cabiSd: 5, grW: 4, grD: 8, grDir: "L", grOff: 0, rbW: 10, rbD: 10, T: 19, mat: "", setback: 1, d: 8, depth: 12, cd: 35, cdepth: 13, ld: 5, ldepth: 12, pitch: 32, margin: 37 }
+
+/** Les clavilles del Taulell: diàmetre, llargada i fondàries a la cara i al cantell. */
+export const DOWELS = { "8x40": { d: 8, L: 40, f: 12, e: 29 }, "8x30": { d: 8, L: 30, f: 12, e: 19 }, "5x30": { d: 5, L: 30, f: 10, e: 21 } } as const
+export type DowelSize = keyof typeof DOWELS
 
 /** El nom de cada eina (el títol de la seva finestra d'opcions). */
 export const FACE_TOOL_LABEL: Record<FaceToolId, string> = { groove: "Ranura", rebate: "Galze", cut: "Retall", measure: "Mesurar", laser: "Làser", dowel: "Clavilles", screw: "Cargols", cabineo: "Cabineo", rect: "Rectangle", poly: "Polilínia", circle: "Cercle", face: "Cara dinàmica", dynpanel: "Tauler dinàmic", fitblock: "Bloc condicionat", shelf: "Prestatge", band: "Cantell", hole: "Perforació", cup: "Cassoleta", line32: "Línia 32" }
@@ -93,6 +115,8 @@ export interface FaceToolResult {
   opts?: FaceToolOpts
   message: string
   error?: boolean
+  /** El que es faria, per a la vista prèvia en verd (forats de les unions), en mm de la composició. */
+  ghost?: { min: Vec3; max: Vec3 }[]
 }
 
 const r1 = (v: number) => Math.round(v * 10) / 10
@@ -221,14 +245,14 @@ export function runFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition
     const seed = pt.map((v, i) => v + n[i]! * (2 + o.dynOff)) as Vec3
     const limits = autoLimits(wallBoxes(panels), seed, t, (id) => id === p.id)
     limits.push({ panel: p.id, a: t, s: n[t]! > 0 ? 0 : 1, off: o.dynOff })
-    const T = host?.carcass.thickness ?? o.T
+    const T = o.ownT ? o.T : (host?.carcass.thickness ?? o.T)
     const dyn = { t, limits }
     const boxes = new Map(panels.map((q) => [q.id, panelAabb(q)] as const))
     const b = dynBox(dyn, (id) => boxes.get(id), T)
     if (!b) return { message: "El tauler queda sense mida: clica una cara que tingui peces al costat.", error: true }
     const off: Vec3 = (host && moduleOrigins3(comp).get(host.id)) || [0, 0, 0]
     const base = uniqueName(comp, "Tauler dinàmic")
-    const part = partWithBox({ id: newId("p"), name: base, orient: ORIENT_OF_AXIS[t]!, w: 0, h: 0, thickness: T, material: host?.carcass.material ?? p.material, x: 0, y: 0, z: 0, ...(host ? { module: host.id } : {}), dyn }, b, off)
+    const part = partWithBox({ id: newId("p"), name: base, orient: ORIENT_OF_AXIS[t]!, w: 0, h: 0, thickness: T, material: o.mat || (host?.carcass.material ?? p.material), x: 0, y: 0, z: 0, ...(host ? { module: host.id } : {}), dyn }, b, off)
     return { comp: { ...comp, parts: [...(comp.parts ?? []), part] }, select: { kind: "part", id: part.id }, message: `${base}: ${r1(part.w)} × ${r1(part.h)} mm, lligat a ${limits.length} cares` }
   }
 
@@ -245,7 +269,7 @@ export function runFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition
       w: 10,
       h: 10,
       thickness: o.T,
-      material: host?.carcass.material ?? p.material,
+      material: o.mat || (host?.carcass.material ?? p.material),
       x: seed[0] - 5 - off[0],
       y: seed[1] - 5 - off[1],
       z: seed[2] - 5 - off[2],
@@ -292,7 +316,7 @@ export function runFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition
       w: r1(a === 0 ? len : z1 - z0),
       h: r1(a === 0 ? z1 - z0 : len),
       thickness: o.T,
-      material: host?.carcass.material ?? p.material,
+      material: o.mat || (host?.carcass.material ?? p.material),
       x: r1(min[0] - off[0]),
       y: r1(min[1] - off[1]),
       z: r1(min[2] - off[2]),
@@ -431,7 +455,8 @@ function jointTool(tool: "dowel" | "screw", o: FaceToolOpts, comp: Composition, 
   const lo = Math.max(p0!, q0!)
   const hi = Math.min(p1!, q1!)
   const at = dot(c, L)
-  const ss = edgeOn ? spread(lo, hi, tool === "dowel" ? o.dowMargin : o.scrMargin, tool === "dowel" ? o.dowPitch : o.scrPitch) : [at]
+  const dist = tool === "dowel" ? o.dowDist : o.scrDist
+  const ss = edgeOn && dist ? spread(lo, hi, tool === "dowel" ? o.dowMargin : o.scrMargin, tool === "dowel" ? o.dowPitch : o.scrPitch) : [at]
   if (!ss.length) return { message: "La junta és massa curta.", error: true }
   const pts = ss.map((s) => add3(c, L, s - at))
   if (tool === "screw") {
@@ -439,9 +464,11 @@ function jointTool(tool: "dowel" | "screw", o: FaceToolOpts, comp: Composition, 
       const [u, v] = toLocal(P, w)
       return { x: r1(u), y: r1(v), diameter: o.scrHole, depth: T, face: l.face as "A" | "B" }
     })
+    const ghost = pts.map((w) => rod(w, nW, 2, -o.scrL + 2, o.scrD))
     const next = addAll(comp, [[P, holes]])
-    if (!next) return { message: "De moment, les unions van a les peces dels mobles.", error: true }
-    return { comp: next, message: `${holes.length} × cargol a ${P.label} → ${R.label}` }
+    if (!next) return { message: "De moment, les unions van a les peces dels mobles.", error: true, ghost }
+    const warn = o.scrL <= T ? ` · el cargol (${o.scrL}) no passa del gruix (${r1(T)})` : ""
+    return { comp: next, ghost, message: `${holes.length} × Cargol ${o.scrD} × ${o.scrL} a ${P.label} → ${R.label}${warn}` }
   }
   const f = Math.min(o.dowF, r1(T - 4))
   const inner = faceTo(P, nW.map((v) => -v) as Vec3)
@@ -453,12 +480,13 @@ function jointTool(tool: "dowel" | "screw", o: FaceToolOpts, comp: Composition, 
     const [u, v] = toLocal(R, add3(w, nW, -T))
     return edgeHole(R, u, v, o.dowD, o.dowE)
   })
+  const ghost = pts.map((w) => rod(add3(w, nW, -T), nW, f, -o.dowE, o.dowD))
   const next = addAll(comp, [
     [P, ph],
     [R, rh],
   ])
-  if (!next) return { message: "De moment, les unions van a les peces dels mobles.", error: true }
-  return { comp: next, message: `${ph.length} × clavilla Ø${o.dowD} · ${P.label} → ${R.label}${f < o.dowF ? ` · fondària a la cara reduïda a ${f}` : ""}` }
+  if (!next) return { message: "De moment, les unions van a les peces dels mobles.", error: true, ghost }
+  return { comp: next, ghost, message: `${ph.length} × Clavilla ${o.dowM.replace("x", "×")} · ${P.label} → ${R.label}${f < o.dowF ? ` · fondària a la cara reduïda a ${f}` : ""}` }
 }
 
 /** Cabineo (port de `cabiPlan` del Taulell): tres buidats Ø15 encavalcats a la cara, a tocar del cantell, i el cargol a l'altra peça. */
@@ -493,23 +521,36 @@ function cabineoTool(o: FaceToolOpts, comp: Composition, panels: Panel[], hit: F
   const top = face === "A"
   const pockets: Hole[] = us.flatMap((u) =>
     [0, 1, 2].map((k) => {
-      const c = 3.6 + k * 11.2
+      const c = o.cabiFirst + k * o.cabiStep
       const [x, y] = alongU ? [u, eC + inward * c] : [eC + inward * c, u]
-      return { x: r1(x), y: r1(y), diameter: 15, depth: 11, face }
+      return { x: r1(x), y: r1(y), diameter: o.cabiD, depth: o.cabiDepth, face }
     }),
   )
   const out = sub(at(0, -1, 0), at(0, 0, 0))
   const qFace = faceTo(Q, out.map((v) => -v) as Vec3)
   const screws: Hole[] = us.map((u) => {
-    const [x, y] = toLocal(Q, at(u, 0, top ? T - 5 : 5))
-    return { x: r1(x), y: r1(y), diameter: 5, depth: o.cabiM === "12" ? 12 : 8, face: qFace }
+    const [x, y] = toLocal(Q, at(u, 0, top ? T - o.cabiAxis : o.cabiAxis))
+    return { x: r1(x), y: r1(y), diameter: o.cabiSd, depth: o.cabiM === "12" ? 12 : 8, face: qFace }
   })
+  const ghost = [
+    ...pockets.map((h) => rod(fromLocal(P, h.x, h.y, top ? T : 0), top ? P.placement.zAxis : (P.placement.zAxis.map((v) => -v) as Vec3), 0, -o.cabiDepth, o.cabiD)),
+    ...us.map((u) => rod(at(u, 0, top ? T - o.cabiAxis : o.cabiAxis), out, 0, o.cabiM === "12" ? 12 : 8, o.cabiSd)),
+  ]
   const next = addAll(comp, [
     [P, pockets],
     [Q, screws],
   ])
-  if (!next) return { message: "De moment, les unions van a les peces dels mobles.", error: true }
-  return { comp: next, message: `${us.length} × Cabineo ${o.cabiM}: ${P.label} amb ${Q.label}` }
+  if (!next) return { message: "De moment, les unions van a les peces dels mobles.", error: true, ghost }
+  return { comp: next, ghost, message: `${us.length} × Cabineo ${o.cabiM}: ${P.label} amb ${Q.label}` }
+}
+
+/** La caixa d'una barra de diàmetre `d` al llarg de `n` (de `a` a `b` mm des de `c`), per a la vista prèvia. */
+function rod(c: Vec3, n: Vec3, a: number, b: number, d: number): { min: Vec3; max: Vec3 } {
+  const p = add3(c, n, a)
+  const q = add3(c, n, b)
+  const min = [0, 1, 2].map((k) => Math.min(p[k]!, q[k]!) - (Math.abs(n[k]!) > 0.5 ? 0 : d / 2)) as Vec3
+  const max = [0, 1, 2].map((k) => Math.max(p[k]!, q[k]!) + (Math.abs(n[k]!) > 0.5 ? 0 : d / 2)) as Vec3
+  return { min, max }
 }
 
 /** On talla el raig (des de `o`, cap a `d`) la caixa, o null. */
@@ -530,7 +571,11 @@ function rayBox(o: Vec3, d: Vec3, b: { min: Vec3; max: Vec3 }): number | null {
 }
 
 /** La vista prèvia d'una eina amb el ratolí a sobre d'una cara (en verd, com al Taulell): la peça que sortiria o el croquis a mig fer. */
-export function previewFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition, build: CompositionBuild | undefined, hit: FaceHit): { box?: { min: Vec3; max: Vec3 }; pts?: Vec3[]; closed?: boolean } | null {
+export function previewFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition, build: CompositionBuild | undefined, hit: FaceHit): { box?: { min: Vec3; max: Vec3 }; boxes?: { min: Vec3; max: Vec3 }[]; pts?: Vec3[]; closed?: boolean } | null {
+  if (tool === "dowel" || tool === "screw" || tool === "cabineo") {
+    const r = runFaceTool(tool, o, comp, build, hit)
+    return r.ghost?.length ? { boxes: r.ghost } : null
+  }
   if (tool === "dynpanel" || tool === "fitblock" || tool === "shelf") {
     const r = runFaceTool(tool, o, comp, build, hit)
     const q = !r.error && r.comp?.parts?.[r.comp.parts.length - 1]

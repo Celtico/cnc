@@ -187,7 +187,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     const saved = (comp.sketches ?? []).map((k): SketchLine => ({ pts: k.pts.map(lift(k.a, k.level, k.dir)), closed: true, tone: k.id === faceOpts.selSketch ? "selected" : "sketch" }))
     const d = faceOpts.draft
     const m: SketchLine[] = faceOpts.measureLine ? [{ pts: faceOpts.measureLine, closed: false, tone: "selected" }] : faceOpts.measureFrom ? [{ pts: [faceOpts.measureFrom], closed: false, tone: "selected" }] : []
-    const pv: SketchLine[] = !preview ? [] : preview.box ? [{ pts: [], closed: false, tone: "draft", box: preview.box }] : preview.pts ? [{ pts: preview.pts, closed: !!preview.closed, tone: "draft" }] : []
+    const pv: SketchLine[] = !preview ? [] : preview.boxes ? preview.boxes.map((box) => ({ pts: [], closed: false, tone: "draft" as const, box })) : preview.box ? [{ pts: [], closed: false, tone: "draft", box: preview.box }] : preview.pts ? [{ pts: preview.pts, closed: !!preview.closed, tone: "draft" }] : []
     return [...saved, ...m, ...(d && !preview?.pts ? [{ pts: d.pts.map(lift(d.a, d.level, d.dir)), closed: false, tone: "draft" as const }] : []), ...pv]
   }, [project.modeling, comp.sketches, faceOpts.draft, faceOpts.selSketch, faceOpts.measureLine, faceOpts.measureFrom, preview])
   const pieceSel = project.modeling && piece && selection.kind === "module" && module?.id === selection.id ? modulePieces(build?.panels ?? [], moduleIndex).find((x) => x.panel.id === piece) : undefined

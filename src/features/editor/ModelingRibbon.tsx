@@ -1,9 +1,9 @@
-import { Box, Button, HStack, SegmentGroup, Separator, Stack, Text } from "@chakra-ui/react"
+import { Box, Button, Checkbox, Collapsible, HStack, SegmentGroup, Separator, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useState } from "react"
 import { TopBarSlot } from "../../components/TopBar"
 import { toaster } from "../../components/ui/toaster"
 import { Tooltip } from "../../components/ui/tooltip"
-import { circlePts, extrudeSketch, insertModuleCopy, mountModule, insertPartCopy, moduleRot, partSize, SIDE_NAMES, mountOf, newId, partBox, removeModule, reorientPart, type Composition, type FreePart, type Module, type PartOrient, type Settings } from "../../core/model"
+import { boardChoices, circlePts, extrudeSketch, insertModuleCopy, mountModule, insertPartCopy, moduleRot, partSize, SIDE_NAMES, mountOf, newId, partBox, removeModule, reorientPart, type Composition, type FreePart, type Module, type PartOrient, type Settings } from "../../core/model"
 import { freePartFor } from "../composition/addElements"
 import { ModulePicker, pickInto } from "../composition/ModulePicker"
 import type { Selection } from "../composition/StructureTree"
@@ -12,7 +12,8 @@ import type { ViewerOptions } from "./useViewerOptions"
 import { TaulellIcon, type TaulellIconName } from "../modeling/TaulellIcon"
 import { FloatingWindow } from "../../components/FloatingWindow"
 import { NumRow } from "../../components/NumRow"
-import { FACE_TOOL_INFO, FACE_TOOL_LABEL, finishSketch, resizePartFace, type FaceToolId, type FaceToolOpts } from "../modeling/faceTools"
+import { DOWELS, FACE_TOOL_INFO, FACE_TOOL_LABEL, finishSketch, resizePartFace, type DowelSize, type FaceToolId, type FaceToolOpts } from "../modeling/faceTools"
+import { MaterialSelect } from "../settings/MaterialSelect"
 
 /** Una eina de la barra (la icona i el nom del Taulell): `run` si ja la fem; sense, surt apagada amb «Aviat». */
 type Tool = { icon: TaulellIconName; label: string; hint?: string; run?: () => void; on?: boolean }
@@ -284,7 +285,7 @@ export function ModelingRibbon({
               <HStack gap={0.5}>
                 {tools.map((tool) => (
                   <Tooltip key={tool.label} content={tool.run ? (tool.hint ?? tool.label) : `${tool.hint ?? tool.label} Aviat.`}>
-                    <Button variant={tool.on ? "subtle" : "ghost"} aria-pressed={tool.on} size="sm" h="auto" py={1.5} px={1.5} flexDirection="column" gap={1} minW="64px" disabled={!tool.run} onClick={tool.run} aria-label={tool.label}>
+                    <Button variant={tool.on ? "subtle" : "ghost"} colorPalette={tool.on ? "wood" : undefined} aria-pressed={tool.on} size="sm" h="auto" py={1.5} px={1.5} flexDirection="column" gap={1} minW="64px" disabled={!tool.run} onClick={tool.run} aria-label={tool.label}>
                       <TaulellIcon name={tool.icon} size="22px" />
                       <Text fontSize="xs" fontWeight="normal" lineHeight="1.1" whiteSpace="nowrap">
                         {tool.label}
@@ -304,7 +305,7 @@ export function ModelingRibbon({
       <FloatingWindow id="modeling-tool-3" kind="picker" width={240} height={300} minSize={{ width: 200, height: 120 }} bodyProps={{ p: 3 }} open={!!faceTool} onClose={() => setFaceTool(null)} title={faceTool ? FACE_TOOL_LABEL[faceTool] : ""} initialFocus={false} closeHint="Acabar (Esc)">
         {faceTool && (
           <Stack gap={2}>
-            <ToolOptions tool={faceTool} o={faceOpts} set={setFaceOpts} comp={comp} setComp={setComp} />
+            <ToolOptions tool={faceTool} o={faceOpts} set={setFaceOpts} comp={comp} setComp={setComp} settings={settings} />
             <Text fontSize="xs" color="fg.muted">
               {FACE_TOOL_INFO[faceTool]}
             </Text>
@@ -353,29 +354,86 @@ export function ModelingRibbon({
 }
 
 /** Les opcions de l'eina activa, a la seva finestra flotant (com la finestreta d'opcions del Taulell). */
-function ToolOptions({ tool, o, set, comp, setComp }: { tool: FaceToolId; o: FaceToolOpts; set: (o: FaceToolOpts) => void; comp: Composition; setComp: (c: Composition) => void }) {
+function ToolOptions({ tool, o, set, comp, setComp, settings }: { tool: FaceToolId; o: FaceToolOpts; set: (o: FaceToolOpts) => void; comp: Composition; setComp: (c: Composition) => void; settings: Settings }) {
   if (tool === "face") return <FaceSize o={o} comp={comp} setComp={setComp} />
   if (tool === "rect" || tool === "poly" || tool === "circle") return <SketchOptions tool={tool} o={o} set={set} comp={comp} setComp={setComp} />
   const num = (k: NumKey, label: string, min = 0) => <NumRow key={k} maxW="110px" label={label} value={o[k]} min={min} max={3000} step={0.5} onChange={(v) => set({ ...o, [k]: v })} />
+  const check = (k: "dowDist" | "scrDist", label: string) => (
+    <Checkbox.Root key={k} size="sm" colorPalette="wood" checked={o[k]} onCheckedChange={(e) => set({ ...o, [k]: !!e.checked })}>
+      <Checkbox.HiddenInput />
+      <Checkbox.Control />
+      <Checkbox.Label>{label}</Checkbox.Label>
+    </Checkbox.Root>
+  )
+  // El material de la peça nova (com al Taulell: dins d'un moble, si no se'n tria cap, agafa el del moble).
+  const mat = <MaterialSelect key="mat" label="Material" materials={boardChoices(settings.materials)} value={o.mat} emptyLabel="Com el moble" onChange={(v) => set({ ...o, mat: v })} />
+  const presets = (items: [string, () => FaceToolOpts, boolean][]) => (
+    <HStack key="presets" gap={1} flexWrap="wrap">
+      {items.map(([l, f, on]) => (
+        <Button key={l} size="2xs" variant={on ? "subtle" : "outline"} colorPalette={on ? "wood" : undefined} onClick={() => set(f())}>
+          {l}
+        </Button>
+      ))}
+    </HStack>
+  )
   const rows =
     tool === "fitblock"
-      ? [num("T", "Gruix"), num("fitGap", "Folgança")]
+      ? [num("T", "Gruix"), mat, num("fitGap", "Folgança")]
       : tool === "dynpanel"
-        ? [num("dynOff", "Separació", -3000)]
+        ? [<NumRow key="T" maxW="110px" label="Gruix" value={o.T} min={1} max={200} step={0.5} onChange={(v) => set({ ...o, T: v, ownT: true })} />, mat, num("dynOff", "Desplaçament", -3000)]
         : tool === "shelf"
-          ? [num("T", "Gruix"), num("setback", "Retirada")]
+          ? [num("T", "Gruix"), mat, num("setback", "Retirada")]
           : tool === "hole"
-            ? [num("d", "Diàmetre"), num("depth", "Fondària")]
+            ? [
+                num("d", "Diàmetre"),
+                num("depth", "Fondària"),
+                presets(
+                  (
+                    [
+                      ["Ø5", 5, 12],
+                      ["Ø8", 8, 12],
+                      ["Ø8 cantell", 8, 30],
+                      ["Ø15", 15, 13],
+                    ] as const
+                  ).map(([l, d, depth]) => [l, () => ({ ...o, d, depth }), o.d === d && o.depth === depth]),
+                ),
+              ]
             : tool === "cup"
               ? [num("cd", "Diàmetre"), num("cdepth", "Fondària")]
               : tool === "line32"
                 ? [num("ld", "Diàmetre"), num("ldepth", "Fondària"), num("pitch", "Pas"), num("margin", "Marge")]
                 : tool === "dowel"
-                  ? [num("dowD", "Diàmetre"), num("dowF", "Fondària a la cara"), num("dowE", "Fondària al cantell"), num("dowMargin", "Marge als extrems"), num("dowPitch", "Pas màxim")]
+                  ? [
+                      presets((Object.keys(DOWELS) as DowelSize[]).map((k) => [k.replace("x", "×"), () => ({ ...o, dowM: k, dowD: DOWELS[k].d, dowF: DOWELS[k].f, dowE: DOWELS[k].e }), o.dowM === k])),
+                      num("dowF", "Fondària a la cara"),
+                      num("dowE", "Fondària al cantell"),
+                      check("dowDist", "Repartir a tota la junta"),
+                      ...(o.dowDist ? [num("dowMargin", "Marge als extrems"), num("dowPitch", "Pas màxim")] : []),
+                    ]
                   : tool === "screw"
-                    ? [num("scrHole", "Forat passant Ø"), num("scrMargin", "Marge als extrems"), num("scrPitch", "Pas màxim")]
+                    ? [num("scrD", "Cargol Ø"), num("scrL", "Llargada"), num("scrHole", "Forat passant Ø"), check("scrDist", "Repartir a tota la junta"), ...(o.scrDist ? [num("scrMargin", "Marge als extrems"), num("scrPitch", "Pas màxim")] : [])]
                     : tool === "cabineo"
-                      ? [num("cabiMargin", "Marge als extrems"), num("cabiPitch", "Pas màxim")]
+                      ? [
+                          num("cabiMargin", "Marge als extrems"),
+                          num("cabiPitch", "Pas màxim"),
+                          <Collapsible.Root key="cabi">
+                            <Collapsible.Trigger asChild>
+                              <Button size="2xs" variant="ghost" px={0}>
+                                Mides del mecanitzat
+                              </Button>
+                            </Collapsible.Trigger>
+                            <Collapsible.Content>
+                              <Stack gap={2} pt={1}>
+                                {num("cabiD", "Butxaca Ø")}
+                                {num("cabiDepth", "Butxaca prof.")}
+                                {num("cabiFirst", "1r forat des del cantell")}
+                                {num("cabiStep", "Entre forats")}
+                                {num("cabiAxis", "Eix del cargol des de la cara")}
+                                {num("cabiSd", "Cargol Ø")}
+                              </Stack>
+                            </Collapsible.Content>
+                          </Collapsible.Root>,
+                        ]
                       : tool === "groove"
                         ? [num("grW", "Amplada"), num("grD", "Profunditat"), num("grOff", "Distància al cantell")]
                         : tool === "rebate"

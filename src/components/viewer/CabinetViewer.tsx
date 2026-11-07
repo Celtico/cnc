@@ -1,6 +1,6 @@
 import { Canvas } from "@react-three/fiber"
 import { QUALITY } from "./renderQuality"
-import { PresentationRoom } from "./PresentationRoom"
+import { GuideRoom, PresentationRoom } from "./PresentationRoom"
 import { ModuleLegs } from "./Hardware"
 import { SceneAccess, StudioEnvironment, TextureRefresh } from "./SceneHelpers"
 import { Grid } from "@react-three/drei"
@@ -196,6 +196,7 @@ export function CabinetViewer({
       <TextureRefresh />
       <hemisphereLight intensity={(q.guides ? 0.55 : light.ambient) * 0.45} groundColor="#8a7a60" />
       {!q.guides && <PresentationRoom backZ={-size.depth * S * 0.5} scene={scene} materials={materials} sideWalls={sideWalls} />}
+      {q.guides && sideWalls && <GuideRoom backZ={-size.depth * S * 0.5} sideWalls={sideWalls} />}
       {/* bias i normalBias eviten les ratlles (shadow acne) de les cares que s'ombregen a si mateixes. */}
       <directionalLight
         key={q.shadowMap}
