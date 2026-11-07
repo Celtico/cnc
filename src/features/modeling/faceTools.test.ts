@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { buildComposition } from "../../core/build/buildComposition"
 import { emptyModule, panelAabb, type Composition } from "../../core/model"
-import { createRefPanel, DEFAULT_FACE_OPTS, runFaceTool } from "./faceTools"
+import { createRefPanel, DEFAULT_FACE_OPTS, runFaceTool, type FaceToolOpts } from "./faceTools"
 
 describe("tauler dinàmic (FreePart.dyn)", () => {
   const m = { ...emptyModule("m", "Moble"), gapBefore: 0 }
@@ -119,7 +119,7 @@ describe("tauler dinàmic · cares de referència i orientació", () => {
   const panelOf = (c: Composition) => panelAabb(buildComposition(c).panels.find((p) => p.id.startsWith("part:"))!)
 
   it("clicant els dos laterals i la base, fa un tauler horitzontal sobre la base", () => {
-    let o = { ...DEFAULT_FACE_OPTS, dynMode: "ref" as const }
+    let o: FaceToolOpts = { ...DEFAULT_FACE_OPTS, dynMode: "ref" }
     o = runFaceTool("dynpanel", o, comp, build, { panel: sides[0]!, point: [L.max[0], y, z], normal: [1, 0, 0] }).opts!
     o = runFaceTool("dynpanel", o, comp, build, { panel: sides[1]!, point: [R.min[0], y, z], normal: [-1, 0, 0] }).opts!
     o = runFaceTool("dynpanel", o, comp, build, { panel: base, point: [500, bb.max[1], z], normal: [0, 1, 0] }).opts!
