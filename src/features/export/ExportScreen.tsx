@@ -23,6 +23,7 @@ import { exportActions } from "./exportActions"
 import { MaestroCard } from "./MaestroCard"
 import { useMaestroPrograms } from "./useMaestroPrograms"
 import { useStepWarnings } from "./useStepWarnings"
+import { WoodwopCard } from "./WoodwopCard"
 
 export function ExportScreen({ projectId }: { projectId: number }) {
   const project = useProject(projectId)
@@ -88,6 +89,16 @@ export function ExportScreen({ projectId }: { projectId: number }) {
 
       {/* Vista CAM: els programes del zip dibuixats, per revisar-los abans d'enviar-los a la màquina. */}
       <CamDialog open={cam} onOpenChange={setCam} xcs={xcs} machine={machine} />
+
+      <WoodwopCard
+        project={project.name}
+        base={base}
+        panels={panels}
+        download={(blob, name) => {
+          downloadBlob(blob, name)
+          void keepProject(project.id)
+        }}
+      />
 
       <ExportCard
         icon={<LuCuboid />}
