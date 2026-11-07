@@ -7,6 +7,7 @@ import { toCutList } from "../../core/cutlist/toCutList"
 import { cutListToCsv } from "../../core/export/csv"
 import { linearCsvRows } from "../../core/build/linearOrders"
 import { toDxf } from "../../core/export/dxf"
+import { labelsPdf, pieceLabels } from "../../core/export/labelsPdf"
 import { xcsZip } from "../../core/export/maestroXcs"
 import { toStepCad } from "../../core/export/step"
 import { stepCadGroups } from "../../core/export/stepGroups"
@@ -92,6 +93,12 @@ export function exportActions(c: ExportContext) {
       type: xcs.warnings.length ? "warning" : "success",
     })
   }
+  const doLabels = () => {
+    warnEstimated()
+    const list = pieceLabels(panels, nesting)
+    downloadBlob(new Blob([labelsPdf(list, { project: project.name, label: settings.label }) as BlobPart], { type: "application/pdf" }), `${base}-etiquetes.pdf`)
+    toaster.create({ title: "Etiquetes generades", description: `${list.length} etiquetes de ${settings.label.w} × ${settings.label.h} mm`, type: "success" })
+  }
   const doCsv = () => downloadText(cutListToCsv(toCutList(panels), {}, linearCsvRows(build?.linearOrders ?? [])), `${base}-peces.csv`, "text/csv")
   const doJson = () =>
     downloadText(
@@ -123,5 +130,5 @@ export function exportActions(c: ExportContext) {
     }
   }
 
-  return { doStep, doTopsolidCsv, doDxf, doXcs, doCsv, doJson, doGlb, doUsdz }
+  return { doStep, doTopsolidCsv, doDxf, doXcs, doLabels, doCsv, doJson, doGlb, doUsdz }
 }

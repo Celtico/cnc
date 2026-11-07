@@ -1,7 +1,7 @@
 import { Button, HStack, Switch, Text, VStack } from "@chakra-ui/react"
 import { useMemo, useState } from "react"
 import { usePersistentFlag } from "../../lib/usePersistentFlag"
-import { LuBoxes, LuCuboid, LuDownload, LuFileDown, LuFileJson, LuLayoutGrid, LuScissors, LuSettings2 } from "react-icons/lu"
+import { LuBoxes, LuCuboid, LuDownload, LuFileDown, LuFileJson, LuLayoutGrid, LuScissors, LuSettings2, LuTag } from "react-icons/lu"
 import { FoldItem } from "../../components/Fold"
 import { FormRow } from "../../components/FormRow"
 import { toaster } from "../../components/ui/toaster"
@@ -57,7 +57,7 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   // Composició il·legible: res a exportar (seria la caixa per defecte).
   if (unreadable) return <UnreadableAlert />
   const base = slugify(project.name)
-  const { doStep, doTopsolidCsv, doDxf, doXcs, doCsv, doJson, doGlb, doUsdz } = exportActions({
+  const { doStep, doTopsolidCsv, doDxf, doXcs, doLabels, doCsv, doJson, doGlb, doUsdz } = exportActions({
     project,
     base,
     comp,
@@ -145,6 +145,18 @@ export function ExportScreen({ projectId }: { projectId: number }) {
           </Switch.Root>
         </FormRow>
       </ExportCard>
+
+      <ExportCard
+        icon={<LuTag />}
+        title="Etiquetes de peça (PDF)"
+        description={`Una etiqueta per peça, en l'ordre del nesting: la ref del taller (és el que identifica la peça, no la mida), el nom, les mides, el material, el mòdul, el tauler, els cantells en un esquema i la veta. Mida de Preferències › Etiqueta de peça (${settings.label.w} × ${settings.label.h} mm), una per pàgina per a la impressora d'etiquetes.`}
+        files={`${base}-etiquetes.pdf`}
+        action={
+          <Button variant="outline" onClick={doLabels} disabled={!panels.length}>
+            <LuTag /> Descarregar etiquetes
+          </Button>
+        }
+      />
 
       <ExportCard
         icon={<LuFileDown />}
