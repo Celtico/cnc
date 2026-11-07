@@ -1,5 +1,5 @@
-import { Box, Button, HStack, SegmentGroup, Separator, Text } from "@chakra-ui/react"
-import { useState } from "react"
+import { Box, Button, HStack, Input, SegmentGroup, Separator, Text } from "@chakra-ui/react"
+import { useEffect, useState } from "react"
 import { TopBarSlot } from "../../components/TopBar"
 import { Tooltip } from "../../components/ui/tooltip"
 import { insertModuleCopy, insertPartCopy, newId, removeModule, type Composition, type Module, type PartOrient, type Settings } from "../../core/model"
@@ -8,6 +8,7 @@ import type { Selection } from "../composition/StructureTree"
 import type { EditorCamera } from "./useEditorCamera"
 import type { ViewerOptions } from "./useViewerOptions"
 import { TaulellIcon, type TaulellIconName } from "../modeling/TaulellIcon"
+import { FACE_TOOL_INFO, type FaceToolId, type FaceToolOpts } from "../modeling/faceTools"
 
 /** Una eina de la barra (la icona i el nom del Taulell): `run` si ja la fem; sense, surt apagada amb «Aviat». */
 type Tool = { icon: TaulellIconName; label: string; hint?: string; run?: () => void; on?: boolean }
@@ -30,6 +31,10 @@ export function ModelingRibbon({
   newModule,
   opts,
   camera,
+  faceTool,
+  setFaceTool,
+  faceOpts,
+  setFaceOpts,
 }: {
   comp: Composition
   setComp: (c: Composition) => void
@@ -40,7 +45,20 @@ export function ModelingRibbon({
   newModule: (id: string, name: string) => Module
   opts: ViewerOptions
   camera: Pick<EditorCamera, "frameFrom">
+  faceTool: FaceToolId | null
+  setFaceTool: (t: FaceToolId | null) => void
+  faceOpts: FaceToolOpts
+  setFaceOpts: (o: FaceToolOpts) => void
 }) {
+  // Esc deixa l'eina (com al Taulell).
+  useEffect(() => {
+    if (!faceTool) return
+    const on = (e: KeyboardEvent) => e.key === "Escape" && setFaceTool(null)
+    window.addEventListener("keydown", on)
+    return () => window.removeEventListener("keydown", on)
+  }, [faceTool, setFaceTool])
+  /** Una eina de clicar cares: la deixa activa (un altre clic la treu). */
+  const faceToolBtn = (id: FaceToolId, icon: TaulellIconName, label: string): Tool => ({ icon, label, hint: FACE_TOOL_INFO[id], on: faceTool === id, run: () => setFaceTool(faceTool === id ? null : id) })
   const [tab, setTab] = useState("Inici")
   const addPart = (orient: PartOrient, name: string) => {
     const n = (comp.parts ?? []).filter((p) => p.name.startsWith(name)).length
@@ -154,18 +172,18 @@ export function ModelingRibbon({
             nouMoble,
             plantilles,
             { icon: "dynpanel", label: "Tauler dinàmic", hint: "Clica les cares que el limiten: el tauler les omple i les segueix." },
-            { icon: "fitblock", label: "Bloc condicionat", hint: "Clica una cara de dins d'un buit: la peça l'omple i el segueix." },
+            faceToolBtn("fitblock", "fitblock", "Bloc condicionat"),
             { icon: "panel", label: "Tauler", hint: "Un tauler solt.", run: () => addPart("front", "Tauler") },
-            { icon: "shelf", label: "Prestatge", hint: "Un prestatge solt.", run: () => addPart("flat", "Prestatge") },
+            faceToolBtn("shelf", "shelf", "Prestatge"),
           ],
         ],
-        ["Acabat", [{ icon: "band", label: "Cantell" }]],
+        ["Acabat", [faceToolBtn("band", "band", "Cantell")]],
       ],
     ],
     [
       "Mecanitzat",
       [
-        ["Perforacions", [{ icon: "hole", label: "Perforació" }, { icon: "cup", label: "Cassoleta" }, { icon: "line32", label: "Línia 32" }]],
+        ["Perforacions", [faceToolBtn("hole", "hole", "Perforació"), faceToolBtn("cup", "cup", "Cassoleta"), faceToolBtn("line32", "line32", "Línia 32")]],
         ["Fresats", [{ icon: "groove", label: "Ranura" }, { icon: "rebate", label: "Galze" }, { icon: "cut", label: "Retall" }]],
         ["Ferratges", [{ icon: "cabineo", label: "Cabineo" }, { icon: "screw", label: "Cargols" }, { icon: "dowel", label: "Clavilles" }]],
       ],
@@ -227,8 +245,53 @@ export function ModelingRibbon({
             </Box>
           </HStack>
         ))}
+        {faceTool && groups.some(([, ts]) => ts.some((t) => t.on)) && (
+          <HStack gap={3} align="center" ps={2} borderStartWidth="1px">
+            <ToolOptions tool={faceTool} o={faceOpts} set={setFaceOpts} />
+            <Text fontSize="xs" color="fg.muted" maxW="260px">
+              {FACE_TOOL_INFO[faceTool]} Esc per acabar.
+            </Text>
+          </HStack>
+        )}
       </HStack>
       </TopBarSlot>
     </>
   )
+}
+
+/** Les opcions de l'eina activa, a la dreta de la franja d'eines (com el panell d'opcions del Taulell). */
+function ToolOptions({ tool, o, set }: { tool: FaceToolId; o: FaceToolOpts; set: (o: FaceToolOpts) => void }) {
+  const num = (k: keyof FaceToolOpts, label: string) => (
+    <Box key={k}>
+      <Text fontSize="2xs" color="fg.muted">
+        {label}
+      </Text>
+      <Input
+        size="2xs"
+        w="56px"
+        type="number"
+        value={String(o[k])}
+        onChange={(e) => {
+          const v = Number(e.target.value)
+          if (Number.isFinite(v) && v >= 0) set({ ...o, [k]: v })
+        }}
+      />
+    </Box>
+  )
+  if (tool === "fitblock")
+    return (
+      <HStack gap={2} align="end">
+        <SegmentGroup.Root size="xs" value={o.fitOrient} onValueChange={(e) => e.value && set({ ...o, fitOrient: e.value as FaceToolOpts["fitOrient"] })}>
+          <SegmentGroup.Indicator />
+          <SegmentGroup.Items items={[{ value: "flat", label: "Prestatge" }, { value: "side", label: "Divisió" }, { value: "front", label: "De cara" }]} />
+        </SegmentGroup.Root>
+        {num("T", "Gruix")}
+        {num("fitGap", "Folgança")}
+      </HStack>
+    )
+  if (tool === "shelf") return <HStack gap={2}>{[num("T", "Gruix"), num("setback", "Retirada")]}</HStack>
+  if (tool === "hole") return <HStack gap={2}>{[num("d", "Ø"), num("depth", "Fondària")]}</HStack>
+  if (tool === "cup") return <HStack gap={2}>{[num("cd", "Ø"), num("cdepth", "Fondària")]}</HStack>
+  if (tool === "line32") return <HStack gap={2}>{[num("ld", "Ø"), num("ldepth", "Fondària"), num("pitch", "Pas"), num("margin", "Marge")]}</HStack>
+  return null
 }

@@ -7,7 +7,7 @@ import { Grid } from "@react-three/drei"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { ContactShadow } from "./ContactShadow"
 import { BoxFrame } from "./BoxFrame"
-import { NeutralToneMapping } from "three"
+import { NeutralToneMapping, type Vector3 } from "three"
 import { releaseModelGpu } from "./models3d"
 import { transformAt } from "./opening"
 import { S } from "./cabinet/constants"
@@ -25,6 +25,8 @@ import { CableMarks, HoverCursor, ZoneHighlight } from "./cabinet/Highlights"
 import { CameraRig } from "./cabinet/CameraRig"
 import { panelBox } from "../../core/build/geometry"
 import { hoverKey, hoverTarget, useHoverLink } from "../hoverLink"
+import { useFacePick } from "./facePick"
+import type { Panel } from "../../core/model"
 
 /** Anar a un avís: el contorn de les seves peces i la transparència de la resta. */
 const ALERT_COLOR = "#dc2626"
@@ -121,6 +123,12 @@ export function CabinetViewer({
   const ghostKey = (id: string) => (id.startsWith("part:") ? hoverKey("part", id.slice(5)) : hoverKey("ref", id))
   const [moduleDrag, setModuleDrag] = useState<{ index: number; dx: number; dy: number; dz: number; all: boolean } | null>(null)
   const { onFittingSelect, onPanelHover, onPanelClick } = usePanelHandlers({ onSelectModule, onSelectPart, onSelectHardware, modules, size, hoverAt }, link)
+  // Una eina de clicar cares activa (Modelatge, `facePick.ts`): el clic va a l'eina, amb el punt en mm i la normal.
+  const facePick = useFacePick()
+  const onFaceClick = useMemo(
+    () => (facePick ? (p: Panel, pt: Vector3, n?: Vector3) => n && facePick({ panel: p, point: [pt.x / S + size.width / 2, pt.y / S, pt.z / S + size.depth / 2], normal: [n.x, n.y, n.z] }) : undefined),
+    [facePick, size.width, size.depth],
+  )
   const { snapTargets, moduleBoxes, partBoxes, selectedPartBox, modelBoxes, selectedModelBox, setBox, selectedModel } = useObjectBoxes({ size, modules, parts, models, ghosts, selectedSet, selectedPartId, selectedModelId })
   // Un sol imant per a tot el que es mou amb el gizmo (per decisió de l'usuari, 2026-10-16: «uns s'enganxen ràpid i altres
   // no»): les vores i el mig dels mòduls, les peces lliures, els models i els objectes, menys els que es mouen, amb les
@@ -218,7 +226,7 @@ export function CabinetViewer({
                 pins={pinsOf.get(p.id)}
                 fixed={fixedOf.get(p.id)}
                 onHover={(isPart ? onSelectPart : onSelectModule) ? onPanelHover : undefined}
-                onClick={(isPart ? onSelectPart : onSelectModule) ? onPanelClick : undefined}
+                onClick={onFaceClick ?? ((isPart ? onSelectPart : onSelectModule) ? onPanelClick : undefined)}
                 selectedFitting={selectedHardwareId && p.fittings?.some((f) => f.placement === selectedHardwareId) ? selectedHardwareId : null}
                 onSelectFitting={onSelectHardware ? onFittingSelect : undefined}
               />

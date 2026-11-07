@@ -52,7 +52,7 @@ interface PanelMeshProps {
   materialMode: "material" | "role"
   materials: MaterialPref[]
   /** Clic a la peça, amb el punt tocat (coordenades del món, m). Estable: la peça va com a dada. */
-  onClick?: (panel: Panel, point: Vector3) => void
+  onClick?: (panel: Panel, point: Vector3, normal?: Vector3) => void
   /** El ferratge col·locat triat, si és d'aquesta peça (contorn). */
   selectedFitting?: string | null
   /** Clic a un ferratge col·locat (id del col·locat). Estable. */
@@ -164,7 +164,7 @@ export const PanelMesh = memo(function PanelMesh({
             // El clic que acaba un arrossegament (d'una fletxa o de la càmera) no selecciona.
             if (e.delta > 4) return
             e.stopPropagation()
-            onClick(panel, e.point)
+            onClick(panel, e.point, e.face ? e.face.normal.clone().transformDirection(e.object.matrixWorld) : undefined)
           } : undefined}
           onPointerOver={onHover ? (e: ThreeEvent<PointerEvent>) => {
             if (e.pointerType !== "mouse") return

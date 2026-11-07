@@ -1,5 +1,6 @@
 export * from "./panel"
 export * from "./pieceEdits"
+export * from "./fitBlock"
 export * from "./polygon"
 export * from "./pocketField"
 export * from "./meshShape"

@@ -1,5 +1,5 @@
 import type { KitOrderLine } from "./drawerKit"
-import { activeRuns, applyPieceEdit, compositionKind, freeX, withSupport, withNeighbourSides, withWallBacks, isSolidMaterial, moduleFrontFace, moduleRot, rotXZ, unrot, type ModuleRot, modelFootprint, modulePlacements, NO_EDGES, partsOnlyKind, partCutters, resolveParts, type Composition, type ModelObject, type Module, type Panel, type Vec3 } from "../model"
+import { activeRuns, applyPieceEdit, refitParts, compositionKind, freeX, withSupport, withNeighbourSides, withWallBacks, isSolidMaterial, moduleFrontFace, moduleRot, rotXZ, unrot, type ModuleRot, modelFootprint, modulePlacements, NO_EDGES, partsOnlyKind, partCutters, resolveParts, type Composition, type ModelObject, type Module, type Panel, type Vec3 } from "../model"
 import { applyRefCuts, migrateCableHoles, refTouchesBox } from "./refCuts"
 import { columnRearLimits, columnWalls, isPillar, relayLegs } from "./columnWalls"
 import { clipHangingToRefs } from "./hangingCuts"
@@ -215,7 +215,7 @@ export function buildComposition(input: Composition): CompositionBuild {
   // Primer la posició: cada mòdul de la fila, girat cap a la paret que té al darrere (`withWallBacks`).
   const migrated = withNeighbourSides(withSupport(migrateCableHoles(withWallBacks(input), panelBox)))
   // Objecte: les peces només es veuen (mai van al nesting ni fan encaixos).
-  const comp = compositionKind(migrated) === "objecte" ? { ...migrated, parts: migrated.parts?.map((p) => ({ ...p, nest: false, joinery: false })) } : migrated
+  let comp = compositionKind(migrated) === "objecte" ? { ...migrated, parts: migrated.parts?.map((p) => ({ ...p, nest: false, joinery: false })) } : migrated
   // Còpia: el mòdul de darrere de cada illa es recol·loca (`islands.ts`).
   const places = modulePlacements(comp).map((p) => ({ ...p }))
   const panels: Panel[] = []
@@ -329,6 +329,9 @@ export function buildComposition(input: Composition): CompositionBuild {
     warnings.push({ code: "island", message: "Illa: les dues files de mòduls es cargolen entre elles pel darrere (sense forats automàtics), amb els fronts enrasats; els panells de remat es fixen als laterals." })
 
   // Peces lliures, amb els encaixos entre elles: un «mòdul» més per a les refs del taller.
+  // Els blocs condicionats (`FreePart.fit`) s'ajusten als buits de les peces dels mòduls ja fetes.
+  const fitted = refitParts(comp, panels)
+  if (fitted !== (comp.parts ?? [])) comp = { ...comp, parts: fitted }
   const free = buildFreeParts(comp, onlyParts ? 1 : comp.modules.length + (runPieces ? 1 : 0) + (islands.some((i) => i.left || i.right) ? 1 : 0) + 1)
   panels.push(...free.panels)
   for (const w of free.warnings) warnings.push({ code: w.code ?? "layout", message: w.message, partId: w.partId })

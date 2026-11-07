@@ -48,6 +48,11 @@ export const FreePartSchema = z.object({
    * segueix quan es mou (el taulell de pedra de l'illa). Sense: a la composició.
    */
   module: z.string().optional(),
+  /**
+   * **Bloc condicionat** (el del Taulell): la peça omple el buit on és (entre les peces que l'envolten, menys la folgança
+   * `gap`) i es torna a ajustar si el moble canvia (`refitParts`). El gruix i l'orientació són els seus.
+   */
+  fit: z.object({ gap: mm.min(0).optional() }).optional(),
   /** Grup (nom): les peces del mateix grup es mouen juntes; a l'arbre surten plegades a sota. */
   group: z.string().optional(),
   /**

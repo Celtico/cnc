@@ -19,6 +19,8 @@ import { EditorLeftPanel } from "./EditorLeftPanel"
 import { ModelingRibbon } from "./ModelingRibbon"
 import { modulePieces, ModelingTree, pieceLocalId, setPieceEdit } from "../modeling/ModelingTree"
 import { PieceInspector } from "../modeling/PieceInspector"
+import { DEFAULT_FACE_OPTS, runFaceTool, type FaceToolId, type FaceToolOpts } from "../modeling/faceTools"
+import { FacePickContext, type FacePick } from "../../components/viewer/facePick"
 import { EditorViewport } from "./EditorViewport"
 import { framePose, warningTarget } from "./warningTarget"
 import { openFolds } from "../../components/foldOpen"
@@ -139,6 +141,18 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   const [propsAt, setPropsAt] = useState<{ x: number; y: number } | null>(null)
   // Modelatge: la peça d'un moble triada a l'arbre (com al Taulell); a la dreta, les seves propietats en lloc de les del moble.
   const [piece, setPiece] = useState<string | null>(null)
+  // Modelatge: l'eina de clicar cares activa (Bloc condicionat, Prestatge, Cantell, Perforació...) i les seves opcions.
+  const [faceTool, setFaceTool] = useState<FaceToolId | null>(null)
+  const [faceOpts, setFaceOpts] = useState<FaceToolOpts>(DEFAULT_FACE_OPTS)
+  const facePick: FacePick | null =
+    project.modeling && faceTool
+      ? (hit) => {
+          const r = runFaceTool(faceTool, faceOpts, comp, build, hit)
+          if (r.comp) setComp(r.comp)
+          if (r.select) select(r.select)
+          toaster.create({ title: r.message, type: r.error ? "warning" : "success", duration: 2500 })
+        }
+      : null
   const pieceSel = project.modeling && piece && selection.kind === "module" && module?.id === selection.id ? modulePieces(build?.panels ?? [], moduleIndex).find((x) => x.panel.id === piece) : undefined
   // Una selecció nova, un inspector nou: les finestres de tria (material, ferratge) que s'hi havien obert es tanquen
   // (no són modals: si no, la tria aniria a parar al que s'ha seleccionat després). `popup`: el de la finestra del botó
@@ -182,8 +196,9 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
 
       {/* Un model de Modelatge: la barra d'eines del Taulell, amb els nostres components (cel, 2026-11-07). */}
       {project.modeling && (
-        <ModelingRibbon comp={comp} setComp={setComp} selection={selection} select={select} settings={settings} center={partCenter} newModule={newModule} opts={opts} camera={camera} />
+        <ModelingRibbon comp={comp} setComp={setComp} selection={selection} select={select} settings={settings} center={partCenter} newModule={newModule} opts={opts} camera={camera} faceTool={faceTool} setFaceTool={setFaceTool} faceOpts={faceOpts} setFaceOpts={setFaceOpts} />
       )}
+      <FacePickContext.Provider value={facePick}>
       <Workspace
         ws={ws}
         left={
@@ -284,6 +299,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       <FloatingWindow id="editor-props" kind="picker" width={360} height={600} open={!!propsAt} at={propsAt ?? undefined} onClose={() => setPropsAt(null)} title="Propietats" initialFocus={false}>
         {inspector(true)}
       </FloatingWindow>
+    </FacePickContext.Provider>
     </HoverLinkProvider>
   )
 }
