@@ -220,7 +220,7 @@ export function ModelingRibbon({
       [
         ["Perforacions", [faceToolBtn("hole", "hole", "Perforació"), faceToolBtn("cup", "cup", "Cassoleta"), faceToolBtn("line32", "line32", "Línia 32")]],
         ["Fresats", [{ icon: "groove", label: "Ranura" }, { icon: "rebate", label: "Galze" }, { icon: "cut", label: "Retall" }]],
-        ["Ferratges", [{ icon: "cabineo", label: "Cabineo" }, { icon: "screw", label: "Cargols" }, { icon: "dowel", label: "Clavilles" }]],
+        ["Ferratges", [faceToolBtn("cabineo", "cabineo", "Cabineo"), faceToolBtn("screw", "screw", "Cargols"), faceToolBtn("dowel", "dowel", "Clavilles")]],
       ],
     ],
     [
@@ -338,13 +338,25 @@ function ToolOptions({ tool, o, set, comp, setComp }: { tool: FaceToolId; o: Fac
               ? [num("cd", "Diàmetre"), num("cdepth", "Fondària")]
               : tool === "line32"
                 ? [num("ld", "Diàmetre"), num("ldepth", "Fondària"), num("pitch", "Pas"), num("margin", "Marge")]
-                : []
+                : tool === "dowel"
+                  ? [num("dowD", "Diàmetre"), num("dowF", "Fondària a la cara"), num("dowE", "Fondària al cantell"), num("dowMargin", "Marge als extrems"), num("dowPitch", "Pas màxim")]
+                  : tool === "screw"
+                    ? [num("scrHole", "Forat passant Ø"), num("scrMargin", "Marge als extrems"), num("scrPitch", "Pas màxim")]
+                    : tool === "cabineo"
+                      ? [num("cabiMargin", "Marge als extrems"), num("cabiPitch", "Pas màxim")]
+                      : []
   return (
     <Stack gap={2}>
       {tool === "fitblock" && (
         <SegmentGroup.Root size="xs" value={o.fitOrient} onValueChange={(e) => e.value && set({ ...o, fitOrient: e.value as FaceToolOpts["fitOrient"] })}>
           <SegmentGroup.Indicator />
           <SegmentGroup.Items items={[{ value: "flat", label: "Prestatge" }, { value: "side", label: "Divisió" }, { value: "front", label: "De cara" }]} />
+        </SegmentGroup.Root>
+      )}
+      {tool === "cabineo" && (
+        <SegmentGroup.Root size="xs" value={o.cabiM} onValueChange={(e) => e.value && set({ ...o, cabiM: e.value as "12" | "8" })}>
+          <SegmentGroup.Indicator />
+          <SegmentGroup.Items items={[{ value: "12", label: "Cabineo 12" }, { value: "8", label: "Cabineo 8" }]} />
         </SegmentGroup.Root>
       )}
       {rows}
