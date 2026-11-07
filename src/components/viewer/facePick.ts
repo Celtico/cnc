@@ -15,3 +15,12 @@ export type FacePick = (hit: FaceHit) => void
 
 export const FacePickContext = createContext<FacePick | null>(null)
 export const useFacePick = () => useContext(FacePickContext)
+
+/** Una línia dels croquis de Modelatge al 3D (mm de la composició): els desats, el triat i el que s'està dibuixant. */
+export interface SketchLine {
+  pts: Vec3[]
+  closed: boolean
+  tone: "sketch" | "selected" | "draft"
+}
+export const SketchOverlayContext = createContext<SketchLine[]>([])
+export const useSketchOverlay = () => useContext(SketchOverlayContext)

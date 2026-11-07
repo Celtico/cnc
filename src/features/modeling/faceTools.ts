@@ -1,11 +1,11 @@
 import type { FaceHit } from "../../components/viewer/facePick"
 import type { CompositionBuild } from "../../core/build/buildComposition"
-import { autoLimits, dynBox, FIT_NOUN, fitWalls, ORIENT_OF_AXIS, partWithBox, wallBoxes, moduleOrigins3, newId, panelAabb, refitParts, type Composition, type FreePart, type Hole, type Panel, type PartOrient, type Vec3, PART_AXES, partSize } from "../../core/model"
+import { autoLimits, dynBox, FIT_NOUN, fitWalls, ORIENT_OF_AXIS, partWithBox, wallBoxes, moduleOrigins3, newId, panelAabb, refitParts, type Composition, type FreePart, type Hole, type Panel, type PartOrient, type Vec3, PART_AXES, partSize, circlePts, rectPts, toPlane, type Sketch } from "../../core/model"
 import type { Selection } from "../composition/StructureTree"
 import { pieceLocalId } from "./ModelingTree"
 
 /** Les eines del Taulell que es fan clicant una cara de la peça. */
-export type FaceToolId = "face" | "dynpanel" | "fitblock" | "shelf" | "band" | "hole" | "cup" | "line32"
+export type FaceToolId = "rect" | "poly" | "circle" | "face" | "dynpanel" | "fitblock" | "shelf" | "band" | "hole" | "cup" | "line32"
 
 /** Les opcions de les eines (les mateixes del Taulell, amb els seus valors per defecte). */
 export interface FaceToolOpts {
@@ -15,6 +15,14 @@ export interface FaceToolOpts {
   dynOff: number
   /** Cara dinàmica: la cara triada (la peça lliure, l'eix i el costat: 0 el de baix, 1 el de dalt). */
   facePick?: { part: string; a: number; s: 0 | 1 }
+  /** Esbós: el croquis que s'està dibuixant (el pla i els punts clicats). */
+  draft?: { a: number; level: number; dir: 1 | -1; pts: [number, number][] }
+  /** Esbós: el croquis triat (el de l'Extrusió). */
+  selSketch?: string
+  /** Esbós: les mides escrites del rectangle i el diàmetre del cercle. */
+  sketchL: number
+  sketchW: number
+  sketchD: number
   T: number
   setback: number
   d: number
@@ -26,13 +34,16 @@ export interface FaceToolOpts {
   pitch: number
   margin: number
 }
-export const DEFAULT_FACE_OPTS: FaceToolOpts = { fitOrient: "flat", fitGap: 0, dynOff: 0, T: 19, setback: 1, d: 8, depth: 12, cd: 35, cdepth: 13, ld: 5, ldepth: 12, pitch: 32, margin: 37 }
+export const DEFAULT_FACE_OPTS: FaceToolOpts = { fitOrient: "flat", fitGap: 0, dynOff: 0, sketchL: 600, sketchW: 400, sketchD: 300, T: 19, setback: 1, d: 8, depth: 12, cd: 35, cdepth: 13, ld: 5, ldepth: 12, pitch: 32, margin: 37 }
 
 /** El nom de cada eina (el títol de la seva finestra d'opcions). */
-export const FACE_TOOL_LABEL: Record<FaceToolId, string> = { face: "Cara dinàmica", dynpanel: "Tauler dinàmic", fitblock: "Bloc condicionat", shelf: "Prestatge", band: "Cantell", hole: "Perforació", cup: "Cassoleta", line32: "Línia 32" }
+export const FACE_TOOL_LABEL: Record<FaceToolId, string> = { rect: "Rectangle", poly: "Polilínia", circle: "Cercle", face: "Cara dinàmica", dynpanel: "Tauler dinàmic", fitblock: "Bloc condicionat", shelf: "Prestatge", band: "Cantell", hole: "Perforació", cup: "Cassoleta", line32: "Línia 32" }
 
 /** El que diu cada eina mentre és activa (els textos del Taulell). */
 export const FACE_TOOL_INFO: Record<FaceToolId, string> = {
+  rect: "Rectangle: clica una cara per al primer cantó i després l'altre cantó (o escriu les mides).",
+  poly: "Polilínia: clica els punts sobre una cara. Clica el primer punt o «Tanca» per acabar.",
+  circle: "Cercle: clica el centre sobre una cara i després un punt de la vora (o escriu el diàmetre).",
   face: "Cara dinàmica: clica una cara d'una peça i escriu la mida nova en aquella direcció (la cara del davant es queda on és).",
   dynpanel: "Tauler dinàmic: clica la cara on es recolza (per exemple la base). Surt el tauler fins a les cares del costat i les segueix si el moble canvia.",
   fitblock: "Bloc condicionat: clica una cara de dins del buit. La peça l'omple i el segueix.",
@@ -90,6 +101,21 @@ export function runFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition
   const { panel: p, point: pt, normal: n } = hit
   const panels = build?.panels ?? []
   const host = moduleOf(comp, p)
+
+  if (tool === "rect" || tool === "poly" || tool === "circle") {
+    const a = [0, 1, 2].reduce((x, k) => (Math.abs(n[k]!) > Math.abs(n[x]!) ? k : x), 0)
+    const d = o.draft
+    const q = toPlane(d?.a ?? a, pt)
+    if (!d) {
+      const draft = { a, level: r1(pt[a]!), dir: (n[a]! > 0 ? 1 : -1) as 1 | -1, pts: [q] }
+      return { opts: { ...o, draft }, message: "" }
+    }
+    if (tool === "rect") return finishSketch(comp, o, rectPts(d.pts[0]!, q), true)
+    if (tool === "circle") return finishSketch(comp, o, circlePts(d.pts[0]!, 2 * Math.hypot(q[0] - d.pts[0]![0], q[1] - d.pts[0]![1])), false)
+    const first = d.pts[0]!
+    if (d.pts.length >= 3 && Math.hypot(q[0] - first[0], q[1] - first[1]) < 15) return finishSketch(comp, o, d.pts, false)
+    return { opts: { ...o, draft: { ...d, pts: [...d.pts, q] } }, message: "" }
+  }
 
   if (tool === "face") {
     if (!p.id.startsWith("part:")) return { message: "La mida de les peces d'un moble la porta el moble: canvia-la a les opcions del moble.", error: true }
@@ -224,4 +250,17 @@ export function resizePartFace(p: FreePart, a: number, s: 0 | 1, size: number): 
   const old = partSize(p)[a]!
   const dim = a === ax.n ? { thickness: size } : a === ax.u ? { w: size } : { h: size }
   return { ...p, ...dim, fit: undefined, dyn: undefined, ...(s === 0 ? { [key]: r1(p[key] + old - size) } : {}) }
+}
+
+/** Desa el croquis que s'estava dibuixant amb aquests punts (en queda triat) o diu per què no. */
+export function finishSketch(comp: Composition, o: FaceToolOpts, pts: [number, number][], rect: boolean): FaceToolResult {
+  const d = o.draft
+  if (!d) return { message: "Clica una cara per començar el croquis.", error: true }
+  const us = pts.map((q) => q[0])
+  const vs = pts.map((q) => q[1])
+  if (pts.length < 3 || Math.max(...us) - Math.min(...us) < 1 || Math.max(...vs) - Math.min(...vs) < 1) return { message: "Mida massa petita.", error: true }
+  const fmt = (v: number) => String(r1(v)).replace(".", ",")
+  const name = rect ? `Rectangle ${fmt(Math.max(...us) - Math.min(...us))}×${fmt(Math.max(...vs) - Math.min(...vs))}` : pts.length === 48 ? `Cercle Ø${fmt(Math.max(...us) - Math.min(...us))}` : `Contorn ${pts.length} punts`
+  const sk: Sketch = { id: newId("s"), name, a: d.a, level: d.level, dir: d.dir, pts, ...(rect ? { rect: true } : {}) }
+  return { comp: { ...comp, sketches: [...(comp.sketches ?? []), sk] }, opts: { ...o, draft: undefined, selSketch: sk.id }, message: `${name}: fet. L'Extrusió en fa una peça.` }
 }

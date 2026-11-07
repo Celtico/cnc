@@ -6,6 +6,7 @@ import { flatten, profileToOutline, toNodes, type BPt } from "./polygon"
 import { CameraPoseSchema } from "./camera"
 import { VIEW_FLAGS } from "./viewFlags"
 import { FreePartSchema, JoinerySchema } from "./freePart"
+import { SketchSchema } from "./sketch"
 import { HardwarePlacementSchema } from "./hardware"
 import { ModuleSchema, PlinthSidesSchema } from "./moduleSchema"
 import { FloorSupportSchema } from "./supportSchema"
@@ -252,6 +253,8 @@ export const CompositionSchema = z.object({
   runs: z.array(RunSchema).optional(),
   /** Peces lliures (flat-pack, encaixos). Opcional. */
   parts: z.array(FreePartSchema).optional(),
+  /** Croquis de Modelatge (l'Esbós del Taulell): contorns per fer-ne peces amb l'Extrusió. Opcional. */
+  sketches: z.array(SketchSchema).optional(),
   /** Models 3D (`.glb`) que només es veuen. Opcional. */
   models: z.array(ModelObjectSchema).optional(),
   /** Encaixos de les peces lliures (joc, fresa, pestanyes). Sense: `DEFAULT_JOINERY`. */

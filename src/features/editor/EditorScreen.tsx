@@ -20,7 +20,8 @@ import { ModelingRibbon } from "./ModelingRibbon"
 import { modulePieces, ModelingTree, pieceLocalId, setPieceEdit } from "../modeling/ModelingTree"
 import { PieceInspector } from "../modeling/PieceInspector"
 import { DEFAULT_FACE_OPTS, runFaceTool, type FaceToolId, type FaceToolOpts } from "../modeling/faceTools"
-import { FacePickContext, type FacePick } from "../../components/viewer/facePick"
+import { FacePickContext, SketchOverlayContext, type FacePick, type SketchLine } from "../../components/viewer/facePick"
+import { fromPlane } from "../../core/model"
 import { EditorViewport } from "./EditorViewport"
 import { framePose, warningTarget } from "./warningTarget"
 import { openFolds } from "../../components/foldOpen"
@@ -154,6 +155,14 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           if (r.message) toaster.create({ title: r.message, type: r.error ? "warning" : "success", duration: 2500 })
         }
       : null
+  // Els croquis al 3D (un pèl per sobre de la cara on són): els desats, el triat i el que s'està dibuixant.
+  const sketchLines = useMemo<SketchLine[]>(() => {
+    if (!project.modeling) return []
+    const lift = (a: number, level: number, dir: number) => (q: [number, number]) => fromPlane(a, level + dir * 0.5, q)
+    const saved = (comp.sketches ?? []).map((k): SketchLine => ({ pts: k.pts.map(lift(k.a, k.level, k.dir)), closed: true, tone: k.id === faceOpts.selSketch ? "selected" : "sketch" }))
+    const d = faceOpts.draft
+    return d ? [...saved, { pts: d.pts.map(lift(d.a, d.level, d.dir)), closed: false, tone: "draft" }] : saved
+  }, [project.modeling, comp.sketches, faceOpts.draft, faceOpts.selSketch])
   const pieceSel = project.modeling && piece && selection.kind === "module" && module?.id === selection.id ? modulePieces(build?.panels ?? [], moduleIndex).find((x) => x.panel.id === piece) : undefined
   // Una selecció nova, un inspector nou: les finestres de tria (material, ferratge) que s'hi havien obert es tanquen
   // (no són modals: si no, la tria aniria a parar al que s'ha seleccionat després). `popup`: el de la finestra del botó
@@ -200,6 +209,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         <ModelingRibbon comp={comp} setComp={setComp} selection={selection} select={select} settings={settings} center={partCenter} newModule={newModule} opts={opts} camera={camera} faceTool={faceTool} setFaceTool={setFaceTool} faceOpts={faceOpts} setFaceOpts={setFaceOpts} />
       )}
       <FacePickContext.Provider value={facePick}>
+      <SketchOverlayContext.Provider value={sketchLines}>
       <Workspace
         ws={ws}
         left={
@@ -210,7 +220,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           onSelect={(s) => pick(s, true)}
           tree={
         // A Modelatge, l'arbre del Taulell: mobles, peces i mecanitzats (cel, 2026-11-07).
-        project.modeling ? <ModelingTree comp={comp} build={build} selection={selection} onSelect={(s) => pick(s, true)} piece={piece} setPiece={setPiece} onPieceEdit={(moduleId, panelId, f) => setPieceEdit(setComp, moduleId, pieceLocalId(moduleId, panelId), f)} /> : <StructureTree
+        project.modeling ? <ModelingTree comp={comp} build={build} selection={selection} onSelect={(s) => pick(s, true)} piece={piece} setPiece={setPiece} sketchSel={faceOpts.selSketch} onSketch={(id) => setFaceOpts({ ...faceOpts, selSketch: id })} onRemoveSketch={(id) => setComp({ ...comp, sketches: (comp.sketches ?? []).filter((k) => k.id !== id) })} onPieceEdit={(moduleId, panelId, f) => setPieceEdit(setComp, moduleId, pieceLocalId(moduleId, panelId), f)} /> : <StructureTree
           name={name}
           comp={comp}
           selection={selection}
@@ -300,6 +310,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       <FloatingWindow id="editor-props" kind="picker" width={360} height={600} open={!!propsAt} at={propsAt ?? undefined} onClose={() => setPropsAt(null)} title="Propietats" initialFocus={false}>
         {inspector(true)}
       </FloatingWindow>
+    </SketchOverlayContext.Provider>
     </FacePickContext.Provider>
     </HoverLinkProvider>
   )

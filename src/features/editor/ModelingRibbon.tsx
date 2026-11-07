@@ -3,7 +3,7 @@ import { useEffect, useState } from "react"
 import { TopBarSlot } from "../../components/TopBar"
 import { toaster } from "../../components/ui/toaster"
 import { Tooltip } from "../../components/ui/tooltip"
-import { insertModuleCopy, insertPartCopy, moduleRot, partSize, SIDE_NAMES, mountOf, newId, partBox, removeModule, reorientPart, type Composition, type FreePart, type Module, type PartOrient, type Settings } from "../../core/model"
+import { circlePts, extrudeSketch, insertModuleCopy, insertPartCopy, moduleRot, partSize, SIDE_NAMES, mountOf, newId, partBox, removeModule, reorientPart, type Composition, type FreePart, type Module, type PartOrient, type Settings } from "../../core/model"
 import { freePartFor } from "../composition/addElements"
 import type { Selection } from "../composition/StructureTree"
 import type { EditorCamera } from "./useEditorCamera"
@@ -11,7 +11,7 @@ import type { ViewerOptions } from "./useViewerOptions"
 import { TaulellIcon, type TaulellIconName } from "../modeling/TaulellIcon"
 import { FloatingWindow } from "../../components/FloatingWindow"
 import { NumRow } from "../../components/NumRow"
-import { FACE_TOOL_INFO, FACE_TOOL_LABEL, resizePartFace, type FaceToolId, type FaceToolOpts } from "../modeling/faceTools"
+import { FACE_TOOL_INFO, FACE_TOOL_LABEL, finishSketch, resizePartFace, type FaceToolId, type FaceToolOpts } from "../modeling/faceTools"
 
 /** Una eina de la barra (la icona i el nom del Taulell): `run` si ja la fem; sense, surt apagada amb «Aviat». */
 type Tool = { icon: TaulellIconName; label: string; hint?: string; run?: () => void; on?: boolean }
@@ -61,7 +61,7 @@ export function ModelingRibbon({
     return () => window.removeEventListener("keydown", on)
   }, [faceTool, setFaceTool])
   /** Una eina de clicar cares: la deixa activa (un altre clic la treu). */
-  const faceToolBtn = (id: FaceToolId, icon: TaulellIconName, label: string): Tool => ({ icon, label, hint: FACE_TOOL_INFO[id], on: faceTool === id, run: () => setFaceTool(faceTool === id ? null : id) })
+  const faceToolBtn = (id: FaceToolId, icon: TaulellIconName, label: string): Tool => ({ icon, label, hint: FACE_TOOL_INFO[id], on: faceTool === id, run: () => (setFaceOpts({ ...faceOpts, draft: undefined }), setFaceTool(faceTool === id ? null : id)) })
   const [tab, setTab] = useState("Inici")
   const addPart = (orient: PartOrient, name: string) => {
     const n = (comp.parts ?? []).filter((p) => p.name.startsWith(name)).length
@@ -112,6 +112,24 @@ export function ModelingRibbon({
         }
       : undefined
   const [arrayOpen, setArrayOpen] = useState(false)
+  const tauler: Tool = { icon: "panel", label: "Tauler", hint: "Un tauler solt.", run: () => addPart("front", "Tauler") }
+  // Extrusió: el croquis triat (a l'arbre o just dibuixat) passa a ser una peça lliure amb el gruix de l'eina.
+  const sketch = comp.sketches?.find((k) => k.id === faceOpts.selSketch)
+  const extrude: Tool = {
+    icon: "extrude",
+    label: "Extrusió",
+    hint: sketch ? `Fa una peça de ${faceOpts.T} mm amb «${sketch.name}».` : "Tria un croquis (a l'arbre) o dibuixa'n un.",
+    run: sketch
+      ? () => {
+          const base = freePartFor(comp, settings, "flat", center, "Peça")
+          const n = (comp.parts ?? []).filter((q) => q.name.startsWith("Peça")).length
+          const p = extrudeSketch(sketch, faceOpts.T, { id: base.id, name: `Peça ${n + 1}`, material: base.material })
+          setComp({ ...comp, parts: [...(comp.parts ?? []), p], sketches: (comp.sketches ?? []).filter((k) => k.id !== sketch.id) })
+          setFaceOpts({ ...faceOpts, selSketch: undefined })
+          select({ kind: "part", id: p.id })
+        }
+      : undefined,
+  }
   // Desplaçar: al nostre 3D, el moble o la peça seleccionada ja porta les fletxes per moure'l (s'imanten a les vores).
   const move: Tool = { icon: "move", label: "Desplaçar", hint: "Arrossega les fletxes del moble o la peça seleccionada (Alt: sense imant).", run: () => toaster.create({ title: part || module ? "Arrossega les fletxes del 3D per moure'l." : pickOne, duration: 2500 }) }
   const pickOne = "Selecciona un moble o una peça."
@@ -160,8 +178,8 @@ export function ModelingRibbon({
     [
       "Esbós",
       [
-        ["Croquis", [{ icon: "rect", label: "Rectangle" }, { icon: "poly", label: "Polilínia" }, { icon: "circle", label: "Cercle" }]],
-        ["Volum", [{ icon: "extrude", label: "Extrusió" }, { icon: "panel", label: "Tauler" }]],
+        ["Croquis", [faceToolBtn("rect", "rect", "Rectangle"), faceToolBtn("poly", "poly", "Polilínia"), faceToolBtn("circle", "circle", "Cercle")]],
+        ["Volum", [extrude, tauler]],
       ],
     ],
     [
@@ -190,7 +208,7 @@ export function ModelingRibbon({
             plantilles,
             faceToolBtn("dynpanel", "dynpanel", "Tauler dinàmic"),
             faceToolBtn("fitblock", "fitblock", "Bloc condicionat"),
-            { icon: "panel", label: "Tauler", hint: "Un tauler solt.", run: () => addPart("front", "Tauler") },
+            tauler,
             faceToolBtn("shelf", "shelf", "Prestatge"),
           ],
         ],
@@ -305,7 +323,8 @@ export function ModelingRibbon({
 /** Les opcions de l'eina activa, a la seva finestra flotant (com la finestreta d'opcions del Taulell). */
 function ToolOptions({ tool, o, set, comp, setComp }: { tool: FaceToolId; o: FaceToolOpts; set: (o: FaceToolOpts) => void; comp: Composition; setComp: (c: Composition) => void }) {
   if (tool === "face") return <FaceSize o={o} comp={comp} setComp={setComp} />
-  const num = (k: Exclude<keyof FaceToolOpts, "fitOrient" | "facePick">, label: string, min = 0) => <NumRow key={k} maxW="110px" label={label} value={o[k]} min={min} max={3000} step={0.5} onChange={(v) => set({ ...o, [k]: v })} />
+  if (tool === "rect" || tool === "poly" || tool === "circle") return <SketchOptions tool={tool} o={o} set={set} comp={comp} setComp={setComp} />
+  const num = (k: NumKey, label: string, min = 0) => <NumRow key={k} maxW="110px" label={label} value={o[k]} min={min} max={3000} step={0.5} onChange={(v) => set({ ...o, [k]: v })} />
   const rows =
     tool === "fitblock"
       ? [num("T", "Gruix"), num("fitGap", "Folgança")]
@@ -387,6 +406,54 @@ function FaceSize({ o, comp, setComp }: { o: FaceToolOpts; comp: Composition; se
         <Text fontSize="xs" color="fg.muted">
           Si la canvies, deixa d'estar lligada.
         </Text>
+      )}
+    </Stack>
+  )
+}
+
+type NumKey = { [K in keyof FaceToolOpts]-?: FaceToolOpts[K] extends number ? K : never }[keyof FaceToolOpts]
+
+/** Rectangle, Polilínia i Cercle: el que s'ha clicat, les mides per escriure i acabar el croquis. */
+function SketchOptions({ tool, o, set, comp, setComp }: { tool: "rect" | "poly" | "circle"; o: FaceToolOpts; set: (o: FaceToolOpts) => void; comp: Composition; setComp: (c: Composition) => void }) {
+  const d = o.draft
+  const done = (pts: [number, number][], rect: boolean) => {
+    const r = finishSketch(comp, o, pts, rect)
+    if (r.comp) setComp(r.comp)
+    if (r.opts) set(r.opts)
+    toaster.create({ title: r.message, type: r.error ? "warning" : "success", duration: 2500 })
+  }
+  const p0 = d?.pts[0]
+  return (
+    <Stack gap={2}>
+      <Text fontSize="sm">{!d ? (tool === "circle" ? "Clica el centre sobre una cara." : "Clica el primer punt sobre una cara.") : tool === "poly" ? `${d.pts.length} punts.` : tool === "circle" ? "Centre fixat." : "Primer cantó fixat."}</Text>
+      {tool === "rect" && (
+        <>
+          <NumRow maxW="110px" label="Llarg" value={o.sketchL} min={1} max={5000} step={1} onChange={(v) => set({ ...o, sketchL: v })} />
+          <NumRow maxW="110px" label="Ample" value={o.sketchW} min={1} max={5000} step={1} onChange={(v) => set({ ...o, sketchW: v })} />
+        </>
+      )}
+      {tool === "circle" && <NumRow maxW="110px" label="Diàmetre" value={o.sketchD} min={1} max={5000} step={1} onChange={(v) => set({ ...o, sketchD: v })} />}
+      {d && p0 && (
+        <HStack gap={2}>
+          {tool === "rect" && (
+            <Button size="xs" colorPalette="wood" onClick={() => done([p0, [p0[0] + o.sketchL, p0[1]], [p0[0] + o.sketchL, p0[1] + o.sketchW], [p0[0], p0[1] + o.sketchW]], true)}>
+              Aplica les mides
+            </Button>
+          )}
+          {tool === "circle" && (
+            <Button size="xs" colorPalette="wood" onClick={() => done(circlePts(p0, o.sketchD), false)}>
+              Aplica el diàmetre
+            </Button>
+          )}
+          {tool === "poly" && (
+            <Button size="xs" colorPalette="wood" disabled={d.pts.length < 3} onClick={() => done(d.pts, false)}>
+              Tanca
+            </Button>
+          )}
+          <Button size="xs" variant="ghost" onClick={() => set({ ...o, draft: d.pts.length > 1 && tool === "poly" ? { ...d, pts: d.pts.slice(0, -1) } : undefined })}>
+            {tool === "poly" && d.pts.length > 1 ? "Treu l'últim" : "Torna a començar"}
+          </Button>
+        </HStack>
       )}
     </Stack>
   )

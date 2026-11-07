@@ -84,7 +84,7 @@ export function modulePieces(panels: Panel[], index: number): { panel: Panel; co
  * després, les peces soltes («S.01»). Clicar un moble o una de les seves peces tria el moble (les opcions, a la dreta);
  * clicar una peça solta, la peça. La peça triada d'un moble (`piece`) la mostra `PieceInspector` a la dreta.
  */
-export function ModelingTree({ comp, build, selection, onSelect, piece, setPiece, onPieceEdit }: { comp: Composition; build: CompositionBuild | undefined; selection: Selection; onSelect: (s: Selection) => void; piece: string | null; setPiece: (id: string | null) => void; onPieceEdit: (moduleId: string, panelId: string, f: (cur: PieceEdit | undefined) => PieceEdit) => void }) {
+export function ModelingTree({ comp, build, selection, onSelect, piece, setPiece, sketchSel, onSketch, onRemoveSketch, onPieceEdit }: { comp: Composition; build: CompositionBuild | undefined; selection: Selection; onSelect: (s: Selection) => void; piece: string | null; setPiece: (id: string | null) => void; sketchSel?: string; onSketch: (id: string | undefined) => void; onRemoveSketch: (id: string) => void; onPieceEdit: (moduleId: string, panelId: string, f: (cur: PieceEdit | undefined) => PieceEdit) => void }) {
   const [open, setOpen] = useState<Set<string>>(() => new Set(comp.modules.slice(0, 1).map((m) => m.id)))
   const link = useHoverLink()
   const toggle = (id: string) =>
@@ -96,7 +96,8 @@ export function ModelingTree({ comp, build, selection, onSelect, piece, setPiece
     })
   const panels = build?.panels ?? []
   const free = comp.parts ?? []
-  if (!comp.modules.length && !free.length)
+  const sketches = comp.sketches ?? []
+  if (!comp.modules.length && !free.length && !sketches.length)
     return (
       <Text fontSize="sm" color="fg.muted" px={2} py={3}>
         El model és buit. Fes «Nou moble» a la barra d'eines.
@@ -165,6 +166,18 @@ export function ModelingTree({ comp, build, selection, onSelect, piece, setPiece
               onSelect({ kind: "part", id: part.id })
             }, hoverKey("part", part.id))
           })}
+        </>
+      )}
+      {sketches.length > 0 && (
+        <>
+          <Row level={0} icon="poly" strong>
+            Croquis ({sketches.length})
+          </Row>
+          {sketches.map((k) => (
+            <Row key={k.id} level={1} icon={k.rect ? "rect" : k.pts.length === 48 ? "circle" : "poly"} selected={sketchSel === k.id} onClick={() => onSketch(sketchSel === k.id ? undefined : k.id)} onRemove={() => onRemoveSketch(k.id)}>
+              {k.name}
+            </Row>
+          ))}
         </>
       )}
     </Box>
