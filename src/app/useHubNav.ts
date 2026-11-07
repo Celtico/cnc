@@ -8,7 +8,7 @@ export function useHubNav(nav: ReturnType<typeof useAppNavigation>) {
   const { section, screen, projectId, isObject, openProject, openAmbient, setProjectId, setAmbientId, setScreen } = nav
   const navNow = useRef<HubNav | null>(null)
   navNow.current = {
-    where: () => ({ section: { projects: "mobles", objects: "objectes", ambients: "ambients", settings: "preferencies" }[section], page: screen === "photo" ? "editor (foto)" : { cutlist: "peces", export: "exportar", projects: "llista de mobles", objects: "llista d'objectes", ambients: "llista d'ambients", ambient: "editor de l'ambient", settings: "preferencies" }[screen as string] ?? screen }),
+    where: () => ({ section: { projects: "mobles", objects: "objectes", ambients: "ambients", modeling: "modelatge", settings: "preferencies" }[section], page: screen === "photo" ? "editor (foto)" : { cutlist: "peces", export: "exportar", projects: "llista de mobles", objects: "llista d'objectes", ambients: "llista d'ambients", ambient: "editor de l'ambient", settings: "preferencies" }[screen as string] ?? screen }),
     openMoble: (id) => openProject(id),
     openAmbient: (id) => {
       setProjectId(null)

@@ -79,11 +79,15 @@ export function useAppNavigation() {
   }
   /** Apartat actiu al menú global: el del document obert o el de la pàgina. */
   const section: Section =
-    screen === "settings" ? "settings" : screen === "ambients" || screen === "ambient" ? "ambients" : inProject ? (isObject ? "objects" : "projects") : screen === "objects" ? "objects" : "projects"
+    screen === "settings" ? "settings" : screen === "modeling" ? "modeling" : screen === "ambients" || screen === "ambient" ? "ambients" : inProject ? (isObject ? "objects" : "projects") : screen === "objects" ? "objects" : "projects"
   /** Clic a un apartat: si ja hi ets dins d'un document, torna a la llista; si no, a l'últim obert. */
   const goSection = (id: string) => {
     if (id === "settings") return go("settings")
     if (id === "ambients") return section === "ambients" && screen === "ambient" ? closeAmbient() : goAmbients()
+    if (id === "modeling") {
+      setProjectId(null)
+      return setScreen("modeling")
+    }
     const kind = id === "objects" ? "objects" : "projects"
     if (section === kind && inProject && screen !== "settings") return backToProjects()
     goRoot(kind)
