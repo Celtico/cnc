@@ -25,24 +25,24 @@ export const MIN_SIZE = { width: 320, height: 240 }
  * On s'obre una finestra el primer cop (sense mida recordada). `width` i `height`: la mida que vol (`picker`: 380 × tota
  * l'alçada; `editor`: fins a 1200 × 820); sempre dins de la zona visible.
  */
-export function defaultWindowRect(kind: WindowKind, view: { width: number; height: number }, want: { width?: number; height?: number } = {}): WindowRect {
+export function defaultWindowRect(kind: WindowKind, view: { width: number; height: number }, want: { width?: number; height?: number } = {}, min: { width: number; height: number } = MIN_SIZE): WindowRect {
   const W = view.width
   const H = view.height
   if (kind === "picker") {
-    const width = Math.max(MIN_SIZE.width, Math.min(want.width ?? 380, W - 2 * EDGE))
-    const height = Math.max(MIN_SIZE.height, Math.min(want.height ?? H, H - 2 * EDGE))
+    const width = Math.max(min.width, Math.min(want.width ?? 380, W - 2 * EDGE))
+    const height = Math.max(min.height, Math.min(want.height ?? H, H - 2 * EDGE))
     return { x: Math.max(0, W - width - EDGE), y: EDGE, width, height }
   }
   // Prou gran per treballar-hi però no tant que no es pugui moure (sobra lloc al voltant).
-  const width = Math.max(MIN_SIZE.width, Math.min(want.width ?? 1000, Math.round((W - NAV) * 0.85)))
-  const height = Math.max(MIN_SIZE.height, Math.min(want.height ?? 760, Math.round(H * 0.85)))
+  const width = Math.max(min.width, Math.min(want.width ?? 1000, Math.round((W - NAV) * 0.85)))
+  const height = Math.max(min.height, Math.min(want.height ?? 760, Math.round(H * 0.85)))
   return { x: Math.max(0, NAV + Math.round((W - NAV - width) / 2)), y: Math.max(0, Math.round((H - height) / 2)), width, height }
 }
 
 /** Una mida recordada, dins de la finestra d'ara (s'ha pogut fer més petita): s'encongeix i es mou fins que hi cap. */
-export function fitWindowRect(r: WindowRect, view: { width: number; height: number }): WindowRect {
-  const width = Math.min(Math.max(r.width, MIN_SIZE.width), view.width)
-  const height = Math.min(Math.max(r.height, MIN_SIZE.height), view.height)
+export function fitWindowRect(r: WindowRect, view: { width: number; height: number }, min: { width: number; height: number } = MIN_SIZE): WindowRect {
+  const width = Math.min(Math.max(r.width, min.width), view.width)
+  const height = Math.min(Math.max(r.height, min.height), view.height)
   const x = Math.min(Math.max(0, r.x), Math.max(0, view.width - width))
   const y = Math.min(Math.max(0, r.y), Math.max(0, view.height - height))
   return { x, y, width, height }

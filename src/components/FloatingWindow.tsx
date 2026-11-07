@@ -46,8 +46,11 @@ export function FloatingWindow({
   contentRef,
   testId,
   at,
+  minSize = MIN_SIZE,
   children,
 }: {
+  /** La mida més petita (sense, la de totes: `MIN_SIZE`). Una finestreta d'opcions pot ser més petita. */
+  minSize?: { width: number; height: number }
   /** S'obre al costat d'aquest punt (px de la finestra del navegador), amb la mida recordada: les propietats del botó dret. */
   at?: { x: number; y: number }
   /** La mida i el lloc es recorden per id: totes les tries de material comparteixen el seu. */
@@ -81,7 +84,7 @@ export function FloatingWindow({
   children: ReactNode
 }) {
   const mobile = useBreakpointValue({ base: true, md: false }, { ssr: false }) ?? false
-  const [first] = useState(() => defaultWindowRect(kind, { width: window.innerWidth, height: window.innerHeight }, { width, height }))
+  const [first] = useState(() => defaultWindowRect(kind, { width: window.innerWidth, height: window.innerHeight }, { width, height }, minSize))
   const rect = useRef<WindowRect>(first)
   const stageRef = useRef<Stage>("default")
   const inner = useRef<HTMLDivElement | null>(null)
@@ -101,7 +104,7 @@ export function FloatingWindow({
     onOpenChange: (e) => !e.open && close(),
     defaultSize: { width: first.width, height: first.height },
     defaultPosition: { x: first.x, y: first.y },
-    minSize: MIN_SIZE,
+    minSize,
     // Pot sortir en part de la finestra del navegador (una de gran no es podia moure); en deixar-la anar, la barra de
     // títol sempre queda a l'abast (`keepGrabbable`).
     allowOverflow: true,
@@ -154,7 +157,7 @@ export function FloatingWindow({
     returnTo.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     setOverModal(!!document.querySelector(MODAL_OPEN))
     const view = { width: window.innerWidth, height: window.innerHeight }
-    const r = fitWindowRect(nextTo(readWindowRect(id) ?? defaultWindowRect(kind, view, { width, height }), at), view)
+    const r = fitWindowRect(nextTo(readWindowRect(id) ?? defaultWindowRect(kind, view, { width, height }, minSize), at), view, minSize)
     rect.current = r
     panel.setSize({ width: r.width, height: r.height })
     panel.setPosition({ x: r.x, y: r.y })
@@ -189,7 +192,7 @@ export function FloatingWindow({
   const atKey = at ? `${at.x},${at.y}` : ""
   useEffect(() => {
     if (!open || !at || justOpened.current || mobile) return
-    const r = fitWindowRect(nextTo(rect.current, at), { width: window.innerWidth, height: window.innerHeight })
+    const r = fitWindowRect(nextTo(rect.current, at), { width: window.innerWidth, height: window.innerHeight }, minSize)
     rect.current = r
     panel.setPosition({ x: r.x, y: r.y })
     // eslint-disable-next-line react-hooks/exhaustive-deps -- només quan canvia el punt; `panel` és nou a cada render

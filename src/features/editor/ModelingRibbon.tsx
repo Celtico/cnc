@@ -249,9 +249,9 @@ export function ModelingRibbon({
         ))}
       </HStack>
       </TopBarSlot>
-      <FloatingWindow id="modeling-tool" kind="picker" width={290} height={340} open={!!faceTool} onClose={() => setFaceTool(null)} title={faceTool ? FACE_TOOL_LABEL[faceTool] : ""} initialFocus={false} closeHint="Acabar (Esc)">
+      <FloatingWindow key={faceTool ?? ""} id={`modeling-tool-${faceTool ?? ""}`} kind="picker" width={240} height={faceTool === "line32" ? 400 : faceTool === "fitblock" || faceTool === "shelf" || faceTool === "hole" || faceTool === "cup" ? 300 : 240} minSize={{ width: 200, height: 120 }} bodyProps={{ p: 3 }} open={!!faceTool} onClose={() => setFaceTool(null)} title={faceTool ? FACE_TOOL_LABEL[faceTool] : ""} initialFocus={false} closeHint="Acabar (Esc)">
         {faceTool && (
-          <Stack gap={3}>
+          <Stack gap={2}>
             <ToolOptions tool={faceTool} o={faceOpts} set={setFaceOpts} />
             <Text fontSize="xs" color="fg.muted">
               {FACE_TOOL_INFO[faceTool]}
@@ -265,7 +265,7 @@ export function ModelingRibbon({
 
 /** Les opcions de l'eina activa, a la seva finestra flotant (com la finestreta d'opcions del Taulell). */
 function ToolOptions({ tool, o, set }: { tool: FaceToolId; o: FaceToolOpts; set: (o: FaceToolOpts) => void }) {
-  const num = (k: Exclude<keyof FaceToolOpts, "fitOrient">, label: string, min = 0) => <NumRow key={k} label={label} value={o[k]} min={min} max={3000} step={0.5} onChange={(v) => set({ ...o, [k]: v })} />
+  const num = (k: Exclude<keyof FaceToolOpts, "fitOrient">, label: string, min = 0) => <NumRow key={k} maxW="110px" label={label} value={o[k]} min={min} max={3000} step={0.5} onChange={(v) => set({ ...o, [k]: v })} />
   const rows =
     tool === "fitblock"
       ? [num("T", "Gruix"), num("fitGap", "Folgança")]
