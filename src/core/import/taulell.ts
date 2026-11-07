@@ -11,7 +11,7 @@ import { HAFELE_LEGS } from "../model/hafele/hafeleLegs"
  */
 
 /** Un moble paramètric del Taulell (`CABDEF`): els camps que es passen (o que es diuen quan encara no es poden passar). */
-interface TaulellCab {
+export interface TaulellCab {
   id: number | string
   name?: string
   W: number
@@ -49,6 +49,10 @@ interface TaulellCab {
   railV?: string
   /** Trencajunt: base, tapa i divisions, aquests mm enrere del davant dels laterals. */
   tj?: number
+  /** Reculat dels prestatges (mm enrere del davant). */
+  ss?: number
+  /** Tipus de material del fons i sòcol unit amb el del costat (el cnc ja uneix els sòcols que es toquen). */
+  plinthJoin?: boolean
   /** Girat (graus). */
   rot?: number
   sink?: string
@@ -194,7 +198,7 @@ function drawerLayout(c: TaulellCab, frontH: number): { hs: number[]; fill: bool
 
 /** El contingut d'una columna: calaixos a baix i porta amb prestatges a dalt, com el Taulell (`cabLayout`). */
 function columnZone(c: TaulellCab, k: number, cols: number, colW: number, frontH: number): Zone {
-  const shelves = c.shelves ? { shelves: { n: c.shelves, adjustable: c.s32 !== false } } : {}
+  const shelves = c.shelves ? { shelves: { n: c.shelves, adjustable: c.s32 !== false, ...(c.ss !== undefined ? { setback: Math.max(0, Math.min(300, c.ss)) } : {}) } } : {}
   // Dues portes si la columna (amb la meitat de cada divisió) passa de 620 mm; una sola, frontissa cap a fora.
   const door: Zone["front"] = { kind: "door", mode: colW > 620 ? "double" : "single", hinge: k < cols / 2 ? "left" : "right" }
   const { hs, fill } = drawerLayout(c, frontH)
@@ -222,7 +226,7 @@ function topOf(c: TaulellCab): Module["carcass"]["top"] {
 }
 
 /** Un moble paramètric del Taulell → un mòdul del cnc (la «fórmula»): cada opció del Taulell, a la seva opció del cnc. */
-function moduleOfCab(c: TaulellCab, mat: (key: string | undefined) => string, gapBefore: number, warn: (s: string) => void): Module {
+export function moduleOfCab(c: TaulellCab, mat: (key: string | undefined) => string, gapBefore: number, warn: (s: string) => void): Module {
   const name = c.name || "Mòdul"
   const pl = c.pl ?? 0
   const legs = c.feet === "axilo" ? pl : 0

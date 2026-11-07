@@ -14,6 +14,7 @@ import { FloatingWindow } from "../../components/FloatingWindow"
 import { NumRow } from "../../components/NumRow"
 import { DOWELS, FACE_TOOL_INFO, FACE_TOOL_LABEL, finishSketch, resizePartFace, type DowelSize, type FaceToolId, type FaceToolOpts } from "../modeling/faceTools"
 import { MaterialSelect } from "../settings/MaterialSelect"
+import { NouMobleDialog } from "../modeling/NouMobleDialog"
 
 /** Una eina de la barra (la icona i el nom del Taulell): `run` si ja la fem; sense, surt apagada amb «Aviat». */
 type Tool = { icon: TaulellIconName; label: string; hint?: string; run?: () => void; on?: boolean }
@@ -76,6 +77,8 @@ export function ModelingRibbon({
     setComp({ ...comp, modules: [...comp.modules, { ...m, gapBefore: 0 }] })
     select({ kind: "module", id: m.id })
   }
+  // Nou moble: el formulari del Taulell (recorda les últimes opcions).
+  const [wizard, setWizard] = useState(false)
   const part = selection.kind === "part" ? comp.parts?.find((p) => p.id === selection.id) : undefined
   const module = selection.kind === "module" ? comp.modules.find((m) => m.id === selection.id) : undefined
   const copy = part
@@ -137,7 +140,7 @@ export function ModelingRibbon({
   const pickOne = "Selecciona un moble o una peça."
   const settingsPage = () => window.dispatchEvent(new Event("mobles:open-settings"))
 
-  const nouMoble: Tool = { icon: "cabinet", label: "Nou moble", hint: "Un moble nou dins del model, amb totes les opcions del mòdul.", run: addModule }
+  const nouMoble: Tool = { icon: "cabinet", label: "Nou moble", hint: "Un moble nou amb les opcions del Taulell (mides, calaixos, potes, sostre, fons…). Recorda les de l'últim.", on: wizard, run: () => setWizard(true) }
   const [picking, setPicking] = useState(false)
   const plantilles: Tool = { icon: "tpl", label: "Plantilles", hint: "Afegeix un moble de la galeria (o un en blanc).", on: picking, run: () => setPicking(true) }
   const plana: Tool = { icon: "flat", label: "Plana", hint: "Cada tipus de peça d'un color.", on: opts.roleColors, run: () => opts.setRoleColors(!opts.roleColors) }
@@ -312,6 +315,18 @@ export function ModelingRibbon({
           </Stack>
         )}
       </FloatingWindow>
+      <NouMobleDialog
+        open={wizard}
+        onClose={() => setWizard(false)}
+        settings={settings}
+        count={comp.modules.length}
+        onCreate={(m, warnings) => {
+          setWizard(false)
+          setComp({ ...comp, modules: [...comp.modules, m] })
+          select({ kind: "module", id: m.id })
+          if (warnings.length) toaster.create({ title: "Moble fet", description: warnings.join(" "), duration: 8000 })
+        }}
+      />
       <ModulePicker
         open={picking}
         onClose={() => setPicking(false)}
