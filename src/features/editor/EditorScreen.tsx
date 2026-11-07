@@ -150,7 +150,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           const r = runFaceTool(faceTool, faceOpts, comp, build, hit)
           if (r.comp) setComp(r.comp)
           if (r.select) select(r.select)
-          toaster.create({ title: r.message, type: r.error ? "warning" : "success", duration: 2500 })
+          if (r.opts) setFaceOpts(r.opts)
+          if (r.message) toaster.create({ title: r.message, type: r.error ? "warning" : "success", duration: 2500 })
         }
       : null
   const pieceSel = project.modeling && piece && selection.kind === "module" && module?.id === selection.id ? modulePieces(build?.panels ?? [], moduleIndex).find((x) => x.panel.id === piece) : undefined

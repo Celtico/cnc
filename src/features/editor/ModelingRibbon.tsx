@@ -1,8 +1,9 @@
 import { Box, Button, HStack, SegmentGroup, Separator, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useState } from "react"
 import { TopBarSlot } from "../../components/TopBar"
+import { toaster } from "../../components/ui/toaster"
 import { Tooltip } from "../../components/ui/tooltip"
-import { insertModuleCopy, insertPartCopy, newId, removeModule, type Composition, type Module, type PartOrient, type Settings } from "../../core/model"
+import { insertModuleCopy, insertPartCopy, moduleRot, partSize, SIDE_NAMES, mountOf, newId, partBox, removeModule, reorientPart, type Composition, type FreePart, type Module, type PartOrient, type Settings } from "../../core/model"
 import { freePartFor } from "../composition/addElements"
 import type { Selection } from "../composition/StructureTree"
 import type { EditorCamera } from "./useEditorCamera"
@@ -10,7 +11,7 @@ import type { ViewerOptions } from "./useViewerOptions"
 import { TaulellIcon, type TaulellIconName } from "../modeling/TaulellIcon"
 import { FloatingWindow } from "../../components/FloatingWindow"
 import { NumRow } from "../../components/NumRow"
-import { FACE_TOOL_INFO, FACE_TOOL_LABEL, type FaceToolId, type FaceToolOpts } from "../modeling/faceTools"
+import { FACE_TOOL_INFO, FACE_TOOL_LABEL, resizePartFace, type FaceToolId, type FaceToolOpts } from "../modeling/faceTools"
 
 /** Una eina de la barra (la icona i el nom del Taulell): `run` si ja la fem; sense, surt apagada amb «Aviat». */
 type Tool = { icon: TaulellIconName; label: string; hint?: string; run?: () => void; on?: boolean }
@@ -99,6 +100,20 @@ export function ModelingRibbon({
           select({ kind: "moble" })
         }
       : undefined
+  // Girar (el Taulell gira amb anells; aquí, de 90 en 90 al voltant del vertical: les peces i els mobles van a escaire).
+  const rotate = part
+    ? () => setComp({ ...comp, parts: (comp.parts ?? []).map((q) => (q.id === part.id ? turnPart(q) : q)) })
+    : module
+      ? () => {
+          const order = mountOf(module) === "floor" ? [0, 90, 180, 270] : [0, 90, 270]
+          const next = order[(order.indexOf(moduleRot(module) ?? 0) + 1) % order.length]!
+          const { turned: _t, rot: _r, ...rest } = module
+          setComp({ ...comp, modules: comp.modules.map((m) => (m.id === module.id ? (next ? { ...rest, rot: next as 90 | 180 | 270 } : rest) : m)) })
+        }
+      : undefined
+  const [arrayOpen, setArrayOpen] = useState(false)
+  // Desplaçar: al nostre 3D, el moble o la peça seleccionada ja porta les fletxes per moure'l (s'imanten a les vores).
+  const move: Tool = { icon: "move", label: "Desplaçar", hint: "Arrossega les fletxes del moble o la peça seleccionada (Alt: sense imant).", run: () => toaster.create({ title: part || module ? "Arrossega les fletxes del 3D per moure'l." : pickOne, duration: 2500 }) }
   const pickOne = "Selecciona un moble o una peça."
   const settingsPage = () => window.dispatchEvent(new Event("mobles:open-settings"))
 
@@ -138,7 +153,7 @@ export function ModelingRibbon({
       "Espai",
       [
         ["Habitació", [{ icon: "room", label: "Habitació" }]],
-        ["Col·locar", [{ icon: "wallplace", label: "A la paret" }, { icon: "rotcab", label: "Gira 90°" }, { icon: "move", label: "Desplaçar" }]],
+        ["Col·locar", [{ icon: "wallplace", label: "A la paret" }, { icon: "rotcab", label: "Gira 90°", hint: rotate ? "Gira 90° el moble o la peça seleccionada." : pickOne, run: rotate }, move]],
         ["Mobles", [nouMoble, plantilles]],
       ],
     ],
@@ -155,11 +170,11 @@ export function ModelingRibbon({
         [
           "Transformar",
           [
-            { icon: "face", label: "Cara dinàmica" },
-            { icon: "move", label: "Desplaçar" },
-            { icon: "rotate", label: "Girar" },
+            faceToolBtn("face", "face", "Cara dinàmica"),
+            move,
+            { icon: "rotate", label: "Girar", hint: rotate ? "Gira 90° el moble o la peça seleccionada (vist de dalt)." : pickOne, run: rotate },
             { icon: "copy", label: "Copiar", hint: copy ? "Copia el moble o la peça seleccionada." : pickOne, run: copy },
-            { icon: "array", label: "Matriu" },
+            { icon: "array", label: "Matriu", hint: part || module ? "Còpies en filera de la peça o el moble seleccionat." : pickOne, on: arrayOpen, run: part || module ? () => setArrayOpen(!arrayOpen) : undefined },
           ],
         ],
         ["Edició", [{ icon: "del", label: "Esborrar", hint: remove ? "Esborra el moble o la peça seleccionada." : pickOne, run: remove }]],
@@ -252,20 +267,45 @@ export function ModelingRibbon({
       <FloatingWindow id="modeling-tool-3" kind="picker" width={240} height={300} minSize={{ width: 200, height: 120 }} bodyProps={{ p: 3 }} open={!!faceTool} onClose={() => setFaceTool(null)} title={faceTool ? FACE_TOOL_LABEL[faceTool] : ""} initialFocus={false} closeHint="Acabar (Esc)">
         {faceTool && (
           <Stack gap={2}>
-            <ToolOptions tool={faceTool} o={faceOpts} set={setFaceOpts} />
+            <ToolOptions tool={faceTool} o={faceOpts} set={setFaceOpts} comp={comp} setComp={setComp} />
             <Text fontSize="xs" color="fg.muted">
               {FACE_TOOL_INFO[faceTool]}
             </Text>
           </Stack>
         )}
       </FloatingWindow>
+      <FloatingWindow id="modeling-array" kind="picker" width={240} height={300} minSize={{ width: 200, height: 120 }} bodyProps={{ p: 3 }} open={arrayOpen && !!(part || module)} onClose={() => setArrayOpen(false)} title="Matriu" initialFocus={false}>
+        <ArrayOptions
+          isModule={!part}
+          onApply={(n, gap, axis) => {
+            if (part) {
+              const s = partBox(part)
+              const step = s.max[axis]! - s.min[axis]! + gap
+              const key = (["x", "y", "z"] as const)[axis]
+              const copies: FreePart[] = Array.from({ length: n }, (_, k) => ({ ...structuredClone(part), dyn: undefined, id: newId("p"), name: `${part.name} ${k + 2}`, [key]: part[key] + step * (k + 1) }))
+              setComp({ ...comp, parts: [...(comp.parts ?? []), ...copies] })
+            } else if (module) {
+              let c = comp
+              let after = module.id
+              for (let k = 0; k < n; k++) {
+                const r = insertModuleCopy(c, module, after)
+                c = r.comp
+                after = r.id
+              }
+              setComp(c)
+            }
+            setArrayOpen(false)
+          }}
+        />
+      </FloatingWindow>
     </>
   )
 }
 
 /** Les opcions de l'eina activa, a la seva finestra flotant (com la finestreta d'opcions del Taulell). */
-function ToolOptions({ tool, o, set }: { tool: FaceToolId; o: FaceToolOpts; set: (o: FaceToolOpts) => void }) {
-  const num = (k: Exclude<keyof FaceToolOpts, "fitOrient">, label: string, min = 0) => <NumRow key={k} maxW="110px" label={label} value={o[k]} min={min} max={3000} step={0.5} onChange={(v) => set({ ...o, [k]: v })} />
+function ToolOptions({ tool, o, set, comp, setComp }: { tool: FaceToolId; o: FaceToolOpts; set: (o: FaceToolOpts) => void; comp: Composition; setComp: (c: Composition) => void }) {
+  if (tool === "face") return <FaceSize o={o} comp={comp} setComp={setComp} />
+  const num = (k: Exclude<keyof FaceToolOpts, "fitOrient" | "facePick">, label: string, min = 0) => <NumRow key={k} maxW="110px" label={label} value={o[k]} min={min} max={3000} step={0.5} onChange={(v) => set({ ...o, [k]: v })} />
   const rows =
     tool === "fitblock"
       ? [num("T", "Gruix"), num("fitGap", "Folgança")]
@@ -290,6 +330,64 @@ function ToolOptions({ tool, o, set }: { tool: FaceToolId; o: FaceToolOpts; set:
       )}
       {rows}
       {tool === "band" && <Text fontSize="sm">Sense opcions: clica a prop del cantell.</Text>}
+    </Stack>
+  )
+}
+
+/** Gira 90° una peça lliure al voltant del vertical, pel seu centre: de cara ↔ de costat; estirada, l'amplada i la fondària es canvien. */
+function turnPart(p: FreePart): FreePart {
+  if (p.orient === "front") return reorientPart(p, "side")
+  if (p.orient === "side") return reorientPart(p, "front")
+  const b = partBox(p)
+  const cx = (b.min[0] + b.max[0]) / 2
+  const cz = (b.min[2] + b.max[2]) / 2
+  return { ...p, w: p.h, h: p.w, x: Math.round(cx - p.h / 2), z: Math.round(cz - p.w / 2) }
+}
+
+/** La finestra de la Matriu (com la del Taulell): quantes còpies, a quina separació i en quina direcció. */
+function ArrayOptions({ isModule, onApply }: { isModule: boolean; onApply: (n: number, gap: number, axis: 0 | 1 | 2) => void }) {
+  const [n, setN] = useState(3)
+  const [gap, setGap] = useState(0)
+  const [axis, setAxis] = useState<0 | 1 | 2>(0)
+  return (
+    <Stack gap={2}>
+      <NumRow maxW="110px" label="Còpies" value={n} min={1} max={50} step={1} onChange={setN} />
+      {isModule ? (
+        <Text fontSize="xs" color="fg.muted">
+          Els mobles van l'un al costat de l'altre, a la fila.
+        </Text>
+      ) : (
+        <>
+          <SegmentGroup.Root size="xs" value={String(axis)} onValueChange={(e) => e.value && setAxis(Number(e.value) as 0 | 1 | 2)}>
+            <SegmentGroup.Indicator />
+            <SegmentGroup.Items items={[{ value: "0", label: "De costat" }, { value: "1", label: "Amunt" }, { value: "2", label: "Endavant" }]} />
+          </SegmentGroup.Root>
+          <NumRow maxW="110px" label="Separació" value={gap} min={-3000} max={3000} step={1} onChange={setGap} />
+        </>
+      )}
+      <Button size="xs" colorPalette="wood" alignSelf="start" onClick={() => onApply(n, gap, axis)}>
+        Fes les còpies
+      </Button>
+    </Stack>
+  )
+}
+
+/** Cara dinàmica: la mida de la peça en la direcció de la cara clicada (la cara del davant es queda on és). */
+function FaceSize({ o, comp, setComp }: { o: FaceToolOpts; comp: Composition; setComp: (c: Composition) => void }) {
+  const f = o.facePick
+  const p = f && comp.parts?.find((q) => q.id === f.part)
+  if (!f || !p) return <Text fontSize="sm">Clica una cara d'una peça.</Text>
+  return (
+    <Stack gap={1}>
+      <Text fontSize="sm">
+        <b>{p.name}</b> · cara {SIDE_NAMES[f.a]![f.s].toLowerCase()}
+      </Text>
+      <NumRow maxW="110px" label="Mida" value={partSize(p)[f.a]!} min={1} max={5000} step={1} onChange={(v) => setComp({ ...comp, parts: (comp.parts ?? []).map((q) => (q.id === p.id ? resizePartFace(q, f.a, f.s, v) : q)) })} />
+      {(p.fit || p.dyn) && (
+        <Text fontSize="xs" color="fg.muted">
+          Si la canvies, deixa d'estar lligada.
+        </Text>
+      )}
     </Stack>
   )
 }

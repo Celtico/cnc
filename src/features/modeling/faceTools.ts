@@ -1,11 +1,11 @@
 import type { FaceHit } from "../../components/viewer/facePick"
 import type { CompositionBuild } from "../../core/build/buildComposition"
-import { autoLimits, dynBox, FIT_NOUN, fitWalls, ORIENT_OF_AXIS, partWithBox, wallBoxes, moduleOrigins3, newId, panelAabb, refitParts, type Composition, type FreePart, type Hole, type Panel, type PartOrient, type Vec3 } from "../../core/model"
+import { autoLimits, dynBox, FIT_NOUN, fitWalls, ORIENT_OF_AXIS, partWithBox, wallBoxes, moduleOrigins3, newId, panelAabb, refitParts, type Composition, type FreePart, type Hole, type Panel, type PartOrient, type Vec3, PART_AXES, partSize } from "../../core/model"
 import type { Selection } from "../composition/StructureTree"
 import { pieceLocalId } from "./ModelingTree"
 
 /** Les eines del Taulell que es fan clicant una cara de la peça. */
-export type FaceToolId = "dynpanel" | "fitblock" | "shelf" | "band" | "hole" | "cup" | "line32"
+export type FaceToolId = "face" | "dynpanel" | "fitblock" | "shelf" | "band" | "hole" | "cup" | "line32"
 
 /** Les opcions de les eines (les mateixes del Taulell, amb els seus valors per defecte). */
 export interface FaceToolOpts {
@@ -13,6 +13,8 @@ export interface FaceToolOpts {
   fitGap: number
   /** Tauler dinàmic: desplaçament des de la cara on es recolza. */
   dynOff: number
+  /** Cara dinàmica: la cara triada (la peça lliure, l'eix i el costat: 0 el de baix, 1 el de dalt). */
+  facePick?: { part: string; a: number; s: 0 | 1 }
   T: number
   setback: number
   d: number
@@ -27,10 +29,11 @@ export interface FaceToolOpts {
 export const DEFAULT_FACE_OPTS: FaceToolOpts = { fitOrient: "flat", fitGap: 0, dynOff: 0, T: 19, setback: 1, d: 8, depth: 12, cd: 35, cdepth: 13, ld: 5, ldepth: 12, pitch: 32, margin: 37 }
 
 /** El nom de cada eina (el títol de la seva finestra d'opcions). */
-export const FACE_TOOL_LABEL: Record<FaceToolId, string> = { dynpanel: "Tauler dinàmic", fitblock: "Bloc condicionat", shelf: "Prestatge", band: "Cantell", hole: "Perforació", cup: "Cassoleta", line32: "Línia 32" }
+export const FACE_TOOL_LABEL: Record<FaceToolId, string> = { face: "Cara dinàmica", dynpanel: "Tauler dinàmic", fitblock: "Bloc condicionat", shelf: "Prestatge", band: "Cantell", hole: "Perforació", cup: "Cassoleta", line32: "Línia 32" }
 
 /** El que diu cada eina mentre és activa (els textos del Taulell). */
 export const FACE_TOOL_INFO: Record<FaceToolId, string> = {
+  face: "Cara dinàmica: clica una cara d'una peça i escriu la mida nova en aquella direcció (la cara del davant es queda on és).",
   dynpanel: "Tauler dinàmic: clica la cara on es recolza (per exemple la base). Surt el tauler fins a les cares del costat i les segueix si el moble canvia.",
   fitblock: "Bloc condicionat: clica una cara de dins del buit. La peça l'omple i el segueix.",
   shelf: "Prestatge: clica la cara interior d'un lateral.",
@@ -43,6 +46,8 @@ export const FACE_TOOL_INFO: Record<FaceToolId, string> = {
 export interface FaceToolResult {
   comp?: Composition
   select?: Selection
+  /** Opcions noves de l'eina (la cara triada de la Cara dinàmica). */
+  opts?: FaceToolOpts
   message: string
   error?: boolean
 }
@@ -85,6 +90,13 @@ export function runFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition
   const { panel: p, point: pt, normal: n } = hit
   const panels = build?.panels ?? []
   const host = moduleOf(comp, p)
+
+  if (tool === "face") {
+    if (!p.id.startsWith("part:")) return { message: "La mida de les peces d'un moble la porta el moble: canvia-la a les opcions del moble.", error: true }
+    const a = [0, 1, 2].reduce((x, k) => (Math.abs(n[k]!) > Math.abs(n[x]!) ? k : x), 0)
+    const id = p.id.slice(5)
+    return { opts: { ...o, facePick: { part: id, a, s: n[a]! > 0 ? 1 : 0 } }, select: { kind: "part", id }, message: "" }
+  }
 
   if (tool === "dynpanel") {
     const t = [0, 1, 2].reduce((x, k) => (Math.abs(n[k]!) > Math.abs(n[x]!) ? k : x), 0)
@@ -203,4 +215,13 @@ export function runFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition
   if (!next) return { message: "De moment, els mecanitzats a mà van a les peces dels mobles.", error: true }
   const what = tool === "hole" ? `Perforació Ø${o.d}×${o.depth}` : tool === "cup" ? `Cassoleta Ø${o.cd}×${o.cdepth}` : `Línia de ${holes.length} forats Ø${o.ld}`
   return { comp: next, message: `${p.label}: ${what}` }
+}
+
+/** La peça amb la mida `size` en l'eix `a`, movent la cara `s` (l'altra es queda). Deixa de ser lligada (bloc o tauler dinàmic). */
+export function resizePartFace(p: FreePart, a: number, s: 0 | 1, size: number): FreePart {
+  const ax = PART_AXES[p.orient]
+  const key = (["x", "y", "z"] as const)[a]!
+  const old = partSize(p)[a]!
+  const dim = a === ax.n ? { thickness: size } : a === ax.u ? { w: size } : { h: size }
+  return { ...p, ...dim, fit: undefined, dyn: undefined, ...(s === 0 ? { [key]: r1(p[key] + old - size) } : {}) }
 }

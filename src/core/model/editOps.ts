@@ -230,7 +230,8 @@ export function reorderRef(comp: Composition, id: string, targetId: string, afte
  * moble (enganxada en un altre), queda solta.
  */
 export function insertPartCopy(comp: Composition, src: FreePart): { comp: Composition; id: string } {
-  const { module: mod, ...rest } = structuredClone(src)
+  // Un tauler dinàmic copiat es queda fix: si no, tornaria a les mateixes cares (a sobre de l'original).
+  const { module: mod, dyn: _dyn, ...rest } = structuredClone(src)
   const keep = !!mod && comp.modules.some((m) => m.id === mod)
   const copy: FreePart = { ...rest, ...(keep ? { module: mod } : {}), id: newId("p"), name: src.name.endsWith("(còpia)") ? src.name : `${src.name} (còpia)`, x: src.x + partSize(src)[0] + 20 }
   return { comp: { ...comp, parts: [...(comp.parts ?? []), copy] }, id: copy.id }
