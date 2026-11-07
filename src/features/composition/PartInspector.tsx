@@ -66,6 +66,8 @@ import {
   type FreePart,
   type Joinery,
   type PartOrient,
+  type Panel,
+  SIDE_NAMES,
 } from "../../core/model"
 import { JOINT_LABEL, type PartJoint } from "../../core/build/freeParts"
 import { NumRow } from "../../components/NumRow"
@@ -92,7 +94,7 @@ const GRAIN: IconOption<"u" | "v" | "none">[] = [
 ]
 
 /** Propietats d'una peça lliure: orientació, material, mides, forma, posició i encaixos. */
-export function PartInspector({ comp, id, joints, onChange }: { comp: Composition; id: string; joints: PartJoint[]; onChange: (c: Composition) => void }) {
+export function PartInspector({ comp, id, joints, panels, onChange }: { comp: Composition; id: string; joints: PartJoint[]; panels?: Panel[]; onChange: (c: Composition) => void }) {
   const { settings } = useSettings()
   const [editing, setEditing] = useState(false)
   const p = comp.parts?.find((x) => x.id === id)
@@ -336,6 +338,32 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
               }}
             />
           </FormRow>
+        </FoldItem>
+      )}
+      {(p.fit || p.dyn) && (
+        <FoldItem optionId="part.link" id="part-link" title="Lligada" icon={LuLink} badge={p.fit ? "Bloc condicionat" : "Tauler dinàmic"} badgePalette="wood">
+          <Text fontSize="xs" color="fg.muted">
+            {p.fit ? "Omple el buit on és i es torna a ajustar si el moble canvia." : "S'enganxa a aquestes cares i es recalcula si es mouen. El desplaçament va cap a dins del tauler."}
+          </Text>
+          {p.fit && <NumRow optionId="part.link" label="Folgança" value={p.fit.gap ?? 0} min={0} max={50} step={0.5} onChange={(gap) => update({ fit: { gap } })} />}
+          {p.dyn?.limits.map((L, i) => {
+            const ref = L.panel.startsWith("part:") ? comp.parts?.find((q) => `part:${q.id}` === L.panel)?.name : panels?.find((q) => q.id === L.panel)?.label
+            return (
+              <NumRow
+                key={i}
+                optionId="part.link"
+                label={`${SIDE_NAMES[L.a]![L.s]} · ${ref ?? "cara perduda"}`}
+                value={L.off}
+                min={-3000}
+                max={3000}
+                step={0.5}
+                onChange={(off) => update({ dyn: { ...p.dyn!, limits: p.dyn!.limits.map((x, k) => (k === i ? { ...x, off } : x)) } })}
+              />
+            )
+          })}
+          <Button size="xs" variant="outline" alignSelf="start" onClick={() => update({ fit: undefined, dyn: undefined })}>
+            Deixa-la fixa
+          </Button>
         </FoldItem>
       )}
       <FoldItem optionId="part.position" id="part-position" title="Posició" icon={LuMove}>

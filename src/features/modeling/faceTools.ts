@@ -1,16 +1,18 @@
 import type { FaceHit } from "../../components/viewer/facePick"
 import type { CompositionBuild } from "../../core/build/buildComposition"
-import { FIT_NOUN, fitWalls, moduleOrigins3, newId, panelAabb, refitParts, type Composition, type FreePart, type Hole, type Panel, type PartOrient, type Vec3 } from "../../core/model"
+import { autoLimits, dynBox, FIT_NOUN, fitWalls, ORIENT_OF_AXIS, partWithBox, wallBoxes, moduleOrigins3, newId, panelAabb, refitParts, type Composition, type FreePart, type Hole, type Panel, type PartOrient, type Vec3 } from "../../core/model"
 import type { Selection } from "../composition/StructureTree"
 import { pieceLocalId } from "./ModelingTree"
 
 /** Les eines del Taulell que es fan clicant una cara de la peça. */
-export type FaceToolId = "fitblock" | "shelf" | "band" | "hole" | "cup" | "line32"
+export type FaceToolId = "dynpanel" | "fitblock" | "shelf" | "band" | "hole" | "cup" | "line32"
 
 /** Les opcions de les eines (les mateixes del Taulell, amb els seus valors per defecte). */
 export interface FaceToolOpts {
   fitOrient: PartOrient
   fitGap: number
+  /** Tauler dinàmic: desplaçament des de la cara on es recolza. */
+  dynOff: number
   T: number
   setback: number
   d: number
@@ -22,10 +24,14 @@ export interface FaceToolOpts {
   pitch: number
   margin: number
 }
-export const DEFAULT_FACE_OPTS: FaceToolOpts = { fitOrient: "flat", fitGap: 0, T: 19, setback: 1, d: 8, depth: 12, cd: 35, cdepth: 13, ld: 5, ldepth: 12, pitch: 32, margin: 37 }
+export const DEFAULT_FACE_OPTS: FaceToolOpts = { fitOrient: "flat", fitGap: 0, dynOff: 0, T: 19, setback: 1, d: 8, depth: 12, cd: 35, cdepth: 13, ld: 5, ldepth: 12, pitch: 32, margin: 37 }
+
+/** El nom de cada eina (el títol de la seva finestra d'opcions). */
+export const FACE_TOOL_LABEL: Record<FaceToolId, string> = { dynpanel: "Tauler dinàmic", fitblock: "Bloc condicionat", shelf: "Prestatge", band: "Cantell", hole: "Perforació", cup: "Cassoleta", line32: "Línia 32" }
 
 /** El que diu cada eina mentre és activa (els textos del Taulell). */
 export const FACE_TOOL_INFO: Record<FaceToolId, string> = {
+  dynpanel: "Tauler dinàmic: clica la cara on es recolza (per exemple la base). Surt el tauler fins a les cares del costat i les segueix si el moble canvia.",
   fitblock: "Bloc condicionat: clica una cara de dins del buit. La peça l'omple i el segueix.",
   shelf: "Prestatge: clica la cara interior d'un lateral.",
   band: "Cantell: clica a prop del cantell de la peça per posar-lo o treure'l.",
@@ -79,6 +85,22 @@ export function runFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition
   const { panel: p, point: pt, normal: n } = hit
   const panels = build?.panels ?? []
   const host = moduleOf(comp, p)
+
+  if (tool === "dynpanel") {
+    const t = [0, 1, 2].reduce((x, k) => (Math.abs(n[k]!) > Math.abs(n[x]!) ? k : x), 0)
+    const seed = pt.map((v, i) => v + n[i]! * (2 + o.dynOff)) as Vec3
+    const limits = autoLimits(wallBoxes(panels), seed, t, (id) => id === p.id)
+    limits.push({ panel: p.id, a: t, s: n[t]! > 0 ? 0 : 1, off: o.dynOff })
+    const T = host?.carcass.thickness ?? o.T
+    const dyn = { t, limits }
+    const boxes = new Map(panels.map((q) => [q.id, panelAabb(q)] as const))
+    const b = dynBox(dyn, (id) => boxes.get(id), T)
+    if (!b) return { message: "El tauler queda sense mida: clica una cara que tingui peces al costat.", error: true }
+    const off: Vec3 = (host && moduleOrigins3(comp).get(host.id)) || [0, 0, 0]
+    const base = uniqueName(comp, "Tauler dinàmic")
+    const part = partWithBox({ id: newId("p"), name: base, orient: ORIENT_OF_AXIS[t]!, w: 0, h: 0, thickness: T, material: host?.carcass.material ?? p.material, x: 0, y: 0, z: 0, ...(host ? { module: host.id } : {}), dyn }, b, off)
+    return { comp: { ...comp, parts: [...(comp.parts ?? []), part] }, select: { kind: "part", id: part.id }, message: `${base}: ${r1(part.w)} × ${r1(part.h)} mm, lligat a ${limits.length} cares` }
+  }
 
   if (tool === "fitblock") {
     const ax = { flat: 1, side: 0, front: 2 }[o.fitOrient]

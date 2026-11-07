@@ -53,6 +53,17 @@ export const FreePartSchema = z.object({
    * `gap`) i es torna a ajustar si el moble canvia (`refitParts`). El gruix i l'orientació són els seus.
    */
   fit: z.object({ gap: mm.min(0).optional() }).optional(),
+  /**
+   * **Tauler dinàmic** (el del Taulell): la mida i la posició les donen les cares de les peces on s'enganxa (`limits`: la peça
+   * de la composició, l'eix, si és el límit de baix `s: 0` o de dalt `s: 1`, i el desplaçament). `t` és l'eix del gruix. Es
+   * recalcula si el moble canvia (`refitParts`).
+   */
+  dyn: z
+    .object({
+      t: z.number().int().min(0).max(2),
+      limits: z.array(z.object({ panel: z.string(), a: z.number().int().min(0).max(2), s: z.union([z.literal(0), z.literal(1)]), off: z.number() })),
+    })
+    .optional(),
   /** Grup (nom): les peces del mateix grup es mouen juntes; a l'arbre surten plegades a sota. */
   group: z.string().optional(),
   /**

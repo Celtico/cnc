@@ -146,7 +146,7 @@ export function EditorInspector({
         />
       ) : selection.kind === "part" ? (
         <Stack gap={0}>
-          <PartInspector comp={comp} id={selection.id} joints={build?.joints ?? []} onChange={setComp} />
+          <PartInspector comp={comp} id={selection.id} joints={build?.joints ?? []} panels={build?.panels} onChange={setComp} />
           {/* Ferratges col·locats a mà que ja porta la peça (ja no se n'afegeixen: treure ≠ esborrar). */}
           {(!partsOnlyKind(kind) || kind === "lliure") && scopePlacements(comp, { kind: "part", partId: selection.id }).length > 0 ? (
             <FoldItem optionId="part.hardware" id="part-hardware" title="Ferratges" icon={LuWrench} badge={scopePlacements(comp, { kind: "part", partId: selection.id }).length || undefined}>

@@ -135,6 +135,7 @@ export const PART = group("part", "Peça lliure", { icon: "part", code: UI.inspe
   }),
   section("part.group", "Grup", { icon: "group", code: UI.part, control: "choice", defaultText: "Sense grup" }),
   section("part.attach", "Enganxada", { icon: "attach", code: UI.part, control: "choice", showIf: "Moble amb mòduls", defaultText: "Res" }),
+  section("part.link", "Lligada", { icon: "attach", code: UI.part, showIf: "Bloc condicionat o tauler dinàmic (Modelatge)", defaultText: "No" }),
   section("part.position", "Posició", { icon: "position", code: UI.part, control: "number", hideable: false, why: STRUCTURAL }),
   section("part.joinery", "Encaixos (tot el moble)", { icon: "joinery", code: UI.part, showIf: "De CNC i amb Encaixos", note: "Les mateixes files que Moble › Encaixos (mateixos ids: amagar-les allà les amaga aquí).", issue: JOINERY_ISSUE }),
   section("part.hardware", "Ferratges", { icon: "hardware", code: UI.inspector, showIf: "La peça ja porta ferratges col·locats a mà (no se n'afegeixen)" }),

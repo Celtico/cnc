@@ -1,4 +1,4 @@
-import { Box, Button, HStack, Input, SegmentGroup, Separator, Text } from "@chakra-ui/react"
+import { Box, Button, HStack, SegmentGroup, Separator, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useState } from "react"
 import { TopBarSlot } from "../../components/TopBar"
 import { Tooltip } from "../../components/ui/tooltip"
@@ -8,7 +8,9 @@ import type { Selection } from "../composition/StructureTree"
 import type { EditorCamera } from "./useEditorCamera"
 import type { ViewerOptions } from "./useViewerOptions"
 import { TaulellIcon, type TaulellIconName } from "../modeling/TaulellIcon"
-import { FACE_TOOL_INFO, type FaceToolId, type FaceToolOpts } from "../modeling/faceTools"
+import { FloatingWindow } from "../../components/FloatingWindow"
+import { NumRow } from "../../components/NumRow"
+import { FACE_TOOL_INFO, FACE_TOOL_LABEL, type FaceToolId, type FaceToolOpts } from "../modeling/faceTools"
 
 /** Una eina de la barra (la icona i el nom del Taulell): `run` si ja la fem; sense, surt apagada amb «Aviat». */
 type Tool = { icon: TaulellIconName; label: string; hint?: string; run?: () => void; on?: boolean }
@@ -107,7 +109,7 @@ export function ModelingRibbon({
       "Inici",
       [
         ["Moble", [nouMoble, plantilles]],
-        ["Taulers", [{ icon: "dynpanel", label: "Tauler dinàmic" }]],
+        ["Taulers", [faceToolBtn("dynpanel", "dynpanel", "Tauler dinàmic")]],
         ["Mesura", [{ icon: "laser", label: "Làser" }]],
         [
           "Vista",
@@ -171,7 +173,7 @@ export function ModelingRibbon({
           [
             nouMoble,
             plantilles,
-            { icon: "dynpanel", label: "Tauler dinàmic", hint: "Clica les cares que el limiten: el tauler les omple i les segueix." },
+            faceToolBtn("dynpanel", "dynpanel", "Tauler dinàmic"),
             faceToolBtn("fitblock", "fitblock", "Bloc condicionat"),
             { icon: "panel", label: "Tauler", hint: "Un tauler solt.", run: () => addPart("front", "Tauler") },
             faceToolBtn("shelf", "shelf", "Prestatge"),
@@ -245,53 +247,49 @@ export function ModelingRibbon({
             </Box>
           </HStack>
         ))}
-        {faceTool && groups.some(([, ts]) => ts.some((t) => t.on)) && (
-          <HStack gap={3} align="center" ps={2} borderStartWidth="1px">
-            <ToolOptions tool={faceTool} o={faceOpts} set={setFaceOpts} />
-            <Text fontSize="xs" color="fg.muted" maxW="260px">
-              {FACE_TOOL_INFO[faceTool]} Esc per acabar.
-            </Text>
-          </HStack>
-        )}
       </HStack>
       </TopBarSlot>
+      <FloatingWindow id="modeling-tool" kind="picker" width={290} height={340} open={!!faceTool} onClose={() => setFaceTool(null)} title={faceTool ? FACE_TOOL_LABEL[faceTool] : ""} initialFocus={false} closeHint="Acabar (Esc)">
+        {faceTool && (
+          <Stack gap={3}>
+            <ToolOptions tool={faceTool} o={faceOpts} set={setFaceOpts} />
+            <Text fontSize="xs" color="fg.muted">
+              {FACE_TOOL_INFO[faceTool]}
+            </Text>
+          </Stack>
+        )}
+      </FloatingWindow>
     </>
   )
 }
 
-/** Les opcions de l'eina activa, a la dreta de la franja d'eines (com el panell d'opcions del Taulell). */
+/** Les opcions de l'eina activa, a la seva finestra flotant (com la finestreta d'opcions del Taulell). */
 function ToolOptions({ tool, o, set }: { tool: FaceToolId; o: FaceToolOpts; set: (o: FaceToolOpts) => void }) {
-  const num = (k: keyof FaceToolOpts, label: string) => (
-    <Box key={k}>
-      <Text fontSize="2xs" color="fg.muted">
-        {label}
-      </Text>
-      <Input
-        size="2xs"
-        w="56px"
-        type="number"
-        value={String(o[k])}
-        onChange={(e) => {
-          const v = Number(e.target.value)
-          if (Number.isFinite(v) && v >= 0) set({ ...o, [k]: v })
-        }}
-      />
-    </Box>
-  )
-  if (tool === "fitblock")
-    return (
-      <HStack gap={2} align="end">
+  const num = (k: Exclude<keyof FaceToolOpts, "fitOrient">, label: string, min = 0) => <NumRow key={k} label={label} value={o[k]} min={min} max={3000} step={0.5} onChange={(v) => set({ ...o, [k]: v })} />
+  const rows =
+    tool === "fitblock"
+      ? [num("T", "Gruix"), num("fitGap", "Folgança")]
+      : tool === "dynpanel"
+        ? [num("dynOff", "Separació", -3000)]
+        : tool === "shelf"
+          ? [num("T", "Gruix"), num("setback", "Retirada")]
+          : tool === "hole"
+            ? [num("d", "Diàmetre"), num("depth", "Fondària")]
+            : tool === "cup"
+              ? [num("cd", "Diàmetre"), num("cdepth", "Fondària")]
+              : tool === "line32"
+                ? [num("ld", "Diàmetre"), num("ldepth", "Fondària"), num("pitch", "Pas"), num("margin", "Marge")]
+                : []
+  return (
+    <Stack gap={2}>
+      {tool === "fitblock" && (
         <SegmentGroup.Root size="xs" value={o.fitOrient} onValueChange={(e) => e.value && set({ ...o, fitOrient: e.value as FaceToolOpts["fitOrient"] })}>
           <SegmentGroup.Indicator />
           <SegmentGroup.Items items={[{ value: "flat", label: "Prestatge" }, { value: "side", label: "Divisió" }, { value: "front", label: "De cara" }]} />
         </SegmentGroup.Root>
-        {num("T", "Gruix")}
-        {num("fitGap", "Folgança")}
-      </HStack>
-    )
-  if (tool === "shelf") return <HStack gap={2}>{[num("T", "Gruix"), num("setback", "Retirada")]}</HStack>
-  if (tool === "hole") return <HStack gap={2}>{[num("d", "Ø"), num("depth", "Fondària")]}</HStack>
-  if (tool === "cup") return <HStack gap={2}>{[num("cd", "Ø"), num("cdepth", "Fondària")]}</HStack>
-  if (tool === "line32") return <HStack gap={2}>{[num("ld", "Ø"), num("ldepth", "Fondària"), num("pitch", "Pas"), num("margin", "Marge")]}</HStack>
-  return null
+      )}
+      {rows}
+      {tool === "band" && <Text fontSize="sm">Sense opcions: clica a prop del cantell.</Text>}
+    </Stack>
+  )
 }
