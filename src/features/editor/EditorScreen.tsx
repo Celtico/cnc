@@ -17,6 +17,7 @@ import { compositionEdits, hardwareCommands } from "./editorCommands"
 import { EditorInspector } from "./EditorInspector"
 import { EditorLeftPanel } from "./EditorLeftPanel"
 import { ModelingRibbon } from "./ModelingRibbon"
+import { ModelingTree } from "../modeling/ModelingTree"
 import { EditorViewport } from "./EditorViewport"
 import { framePose, warningTarget } from "./warningTarget"
 import { openFolds } from "../../components/foldOpen"
@@ -177,7 +178,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
 
       {/* Un model de Modelatge: la barra d'eines del Taulell, amb els nostres components (cel, 2026-11-07). */}
       {project.modeling && (
-        <ModelingRibbon comp={comp} setComp={setComp} selection={selection} select={select} settings={settings} center={partCenter} newModule={newModule} />
+        <ModelingRibbon comp={comp} setComp={setComp} selection={selection} select={select} settings={settings} center={partCenter} newModule={newModule} opts={opts} camera={camera} />
       )}
       <Workspace
         ws={ws}
@@ -188,7 +189,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           onChange={setComp}
           onSelect={(s) => pick(s, true)}
           tree={
-        <StructureTree
+        // A Modelatge, l'arbre del Taulell: mobles, peces i mecanitzats (cel, 2026-11-07).
+        project.modeling ? <ModelingTree comp={comp} build={build} selection={selection} onSelect={(s) => pick(s, true)} /> : <StructureTree
           name={name}
           comp={comp}
           selection={selection}
@@ -211,8 +213,9 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           <EditorViewport
             opts={opts}
             shownPanels={scene.shownPanels}
-            chrome={chrome}
-            tabs={kind !== "objecte"}
+            // A Modelatge, els botons del visor són a la barra d'eines (Inici › Vista i Visualització), com al Taulell.
+            chrome={project.modeling ? null : chrome}
+            tabs={kind !== "objecte" && !project.modeling}
             photo={
               <PhotoScreen
                 projectId={projectId}
@@ -259,7 +262,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
               />
             }
             toolbar={
-              <ViewerToolbar
+              project.modeling ? null : <ViewerToolbar
                 opts={opts}
                 camera={camera}
                 name={name}

@@ -3,7 +3,7 @@ import { Suspense, lazy, useCallback, useState } from "react"
 import { Toaster } from "./components/ui/toaster"
 import { ErrorBoundary } from "./components/ErrorBoundary"
 import { PanelSplit, SplitHandle } from "./components/PanelSplit"
-import { TopBar, TopBarActionsProvider, TopBarTabsProvider } from "./components/TopBar"
+import { TopBar, TopBarActionsProvider, TopBarSlotsProvider } from "./components/TopBar"
 import { SaveFileDialog } from "./features/file/SaveFileDialog"
 import type { ProjectsRequest } from "./features/projects/ProjectsScreen"
 import { AmbientTopBar } from "./features/ambients/AmbientTopBar"
@@ -30,6 +30,8 @@ const GlobalAssistant = lazy(() => import("./features/assistant/GlobalAssistant"
 // El Render de tota l'app (`renderHost.ts`): es carrega el primer cop que s'obre i es queda muntat.
 const RenderHost = lazy(() => import("./components/viewer/render/RenderHost").then((m) => ({ default: m.RenderHost })))
 
+const NO_SLOTS = { tabs: null, tools: null }
+
 export function App() {
   const renderHost = useRenderHost()
   useTemplateMigration()
@@ -48,8 +50,9 @@ export function App() {
   const [settingsPane] = useSessionString("mobles:settings-section")
   const settingsBackBar = screen === "settings" && inProject && settingsPane === null
   const [topActions, setTopActions] = useState<HTMLDivElement | null>(null)
-  // Al mig de la barra, un model de Modelatge hi posa les pestanyes de les eines (`TopBarTabs`).
+  // Un model de Modelatge hi posa les pestanyes de les eines (al mig de la barra) i les eines, en una franja a sota (`TopBarSlot`).
   const [topTabs, setTopTabs] = useState<HTMLDivElement | null>(null)
+  const [topTools, setTopTools] = useState<HTMLDivElement | null>(null)
   const modelTabs = nav.isModel && screen === "editor"
   const [saveOpen, setSaveOpen] = useState(false)
 
@@ -89,6 +92,7 @@ export function App() {
             menu={<ProjectMenu isObject={isObject} onSaveFile={() => (window.dispatchEvent(new Event("mobles:flush-save")), setSaveOpen(true))} />}
           />
         )}
+        {showTopBar && modelTabs && <Box ref={setTopTools} px={{ base: 2, md: 4 }} py={1} borderBottomWidth="1px" bg="bg.panel" flexShrink={0} />}
         {showTopBar && projectNav.length > 1 && (
           <Box display={{ base: "block", md: "none" }} borderBottomWidth="1px" bg="bg.panel" position="sticky" top="calc(52px + env(safe-area-inset-top, 0px))" zIndex="sticky">
             <MobileProjectTabs screen={screen} projectNav={projectNav} onGo={go} />
@@ -114,7 +118,7 @@ export function App() {
           pb={{ base: "calc(76px + env(safe-area-inset-bottom, 0px))", md: screen === "editor" || screen === "ambient" ? 4 : 6 }}
         >
           <TopBarActionsProvider value={topActions}>
-          <TopBarTabsProvider value={modelTabs ? topTabs : null}>
+          <TopBarSlotsProvider value={modelTabs ? { tabs: topTabs, tools: topTools } : NO_SLOTS}>
             <Suspense
               fallback={
                 <Flex justify="center" py={16}>
@@ -136,7 +140,7 @@ export function App() {
               />
               </ErrorBoundary>
             </Suspense>
-          </TopBarTabsProvider>
+          </TopBarSlotsProvider>
           </TopBarActionsProvider>
         </Container>
       </Splitter.Panel>

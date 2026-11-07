@@ -22,13 +22,17 @@ export function TopBarActions({ children }: { children: ReactNode }) {
   return target ? createPortal(children, target) : null
 }
 
-/** Pestanyes que una pàgina posa al mig de la barra (les eines de Modelatge, `ModelingRibbon`). */
-const TabsTarget = createContext<HTMLElement | null>(null)
-export function TopBarTabsProvider({ value, children }: { value: HTMLElement | null; children: ReactNode }) {
-  return <TabsTarget.Provider value={value}>{children}</TabsTarget.Provider>
+/**
+ * Llocs de la barra on una pàgina pot posar coses (les eines de Modelatge, `ModelingRibbon`): `tabs`, al mig de la barra;
+ * `tools`, una franja a sota de la barra, del mateix gris i amb la mateixa vora.
+ */
+type BarSlots = { tabs: HTMLElement | null; tools: HTMLElement | null }
+const SlotsTarget = createContext<BarSlots>({ tabs: null, tools: null })
+export function TopBarSlotsProvider({ value, children }: { value: BarSlots; children: ReactNode }) {
+  return <SlotsTarget.Provider value={value}>{children}</SlotsTarget.Provider>
 }
-export function TopBarTabs({ children }: { children: ReactNode }) {
-  const target = useContext(TabsTarget)
+export function TopBarSlot({ slot, children }: { slot: keyof BarSlots; children: ReactNode }) {
+  const target = useContext(SlotsTarget)[slot]
   return target ? createPortal(children, target) : null
 }
 
