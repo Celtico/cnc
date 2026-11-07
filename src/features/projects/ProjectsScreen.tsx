@@ -42,15 +42,17 @@ const PAGES = {
     shows: isMoble,
     extra: {},
     storage: "projects",
+    catalog: true,
     copyTo: "Copiar a Modelatge",
   },
   modelatge: {
     title: "Modelatge",
-    description: "Els mòduls que fas a mà, peça a peça: comença en blanc o des d'un moble del catàleg, o obre un projecte del Taulell (.taulell). A Mobles, «Afegir mòdul» hi porta els mòduls d'un model.",
+    description: "Els mobles que modeles a mà, peça a peça, amb les eines del Taulell. Comença en blanc o obre un projecte del Taulell (.taulell).",
     noun: ["model", "models"] as [string, string],
     shows: isModel,
     extra: { modeling: true },
     storage: "modeling",
+    catalog: false,
     copyTo: "Copiar a Mobles",
   },
 } as const
@@ -115,6 +117,7 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone, page: pa
       <NewMobleGallery
         onCreate={(c, n) => void handleCreate(c, n)}
         storageKey={`mobles:gallery-${page.storage}`}
+        catalog={page.catalog}
         // El botó principal al costat del cercador (com a Ambients i Objectes) i «Obrir fitxer» a la mateixa fila.
         // «Nou moble» demana el tipus (per decisió de l'usuari, 2026-10-20: «triar si és de cuina o és un moble normal»): el
         // normal té el suport a cada mòdul; la cuina, un per a tots (Moble › Cuina). Es crea en blanc.

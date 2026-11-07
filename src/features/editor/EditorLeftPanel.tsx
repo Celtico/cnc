@@ -1,7 +1,7 @@
 import { Tabs } from "@chakra-ui/react"
 import { useState, type ReactNode } from "react"
 import { LuLayoutGrid, LuListTree } from "react-icons/lu"
-import type { Composition } from "../../core/model"
+import { compositionKind, type Composition } from "../../core/model"
 import { pickInto, useMobleHistory } from "../composition/ModulePicker"
 import type { Selection } from "../composition/StructureTree"
 import { GalleryColsContext } from "../projects/galleryGrid"
@@ -12,9 +12,14 @@ const ONE_COL = { base: 1 }
 /**
  * Panell esquerre de l'editor (cel, 2026-11-07, com el Taulell): «Arbre» (l'estructura del moble) i «Catàleg» (la mateixa
  * galeria que «Afegir mòdul»: els teus mobles i models i tot el catàleg). Tocar una targeta del Catàleg en porta els mòduls
- * i les peces a aquest moble, igual que la finestra.
+ * i les peces a aquest moble, igual que la finestra. Als objectes (que no porten mòduls) no hi ha Catàleg: només l'arbre.
  */
 export function EditorLeftPanel({ tree, comp, onChange, onSelect }: { tree: ReactNode; comp: Composition; onChange: (c: Composition) => void; onSelect: (s: Selection) => void }) {
+  if (compositionKind(comp) === "objecte") return tree
+  return <WithCatalog tree={tree} comp={comp} onChange={onChange} onSelect={onSelect} />
+}
+
+function WithCatalog({ tree, comp, onChange, onSelect }: { tree: ReactNode; comp: Composition; onChange: (c: Composition) => void; onSelect: (s: Selection) => void }) {
   const [tab, setTab] = useState("tree")
   const pick = (c: Composition, n: string) => {
     pickInto(comp, c, n, onChange, onSelect)

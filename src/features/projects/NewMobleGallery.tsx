@@ -23,7 +23,10 @@ export function NewMobleGallery({
   storageKey = "mobles:gallery",
   add,
   extra,
+  catalog = true,
 }: {
+  /** Amb el catàleg de mobles (Catàleg, Llistons, Col·leccions…); sense (Modelatge), només l'Historial i els Projectes. */
+  catalog?: boolean
   onCreate: (composition: Composition, name: string) => void
   /** Botó principal al costat del cercador («Nou moble»); la finestra dels ambients no en porta. */
   add?: { label: string; onClick?: () => void; menu?: ReactNode }
@@ -83,7 +86,7 @@ export function NewMobleGallery({
   const [openTests, setOpenTests] = useSessionList(`${storageKey}-tests`)
   const hist = history(matches, !!q)
   // Amb cerca, s'obren les seccions que tenen resultats.
-  const found = [...(hist.projects?.count ? ["projects"] : []), ...(hist.count ? ["history"] : []), ...(storeCount ? ["store"] : []), ...(slicedCount ? ["sliced"] : []), ...(collectionsCount ? ["collections"] : []), ...(combosCount ? ["combos"] : []), ...(shapesCount ? ["shapes"] : []), ...(joinedCount ? ["joined"] : []), ...(testsCount ? ["tests"] : [])]
+  const found = [...(hist.projects?.count ? ["projects"] : []), ...(hist.count ? ["history"] : []), ...(!catalog ? [] : [...(storeCount ? ["store"] : []), ...(slicedCount ? ["sliced"] : []), ...(collectionsCount ? ["collections"] : []), ...(combosCount ? ["combos"] : []), ...(shapesCount ? ["shapes"] : []), ...(joinedCount ? ["joined"] : []), ...(testsCount ? ["tests"] : [])])]
   // Una plantilla instanciada a partir d'ara pren la folgança de les peces de dins de Preferències (com un mòdul nou).
   const { settings } = useSettings()
   const pick = (t: Template) => onCreate(withZonePlinths(withInnerClearance({ ...t.make(), kind: t.kind }, settings.gaps.innerClearance, settings.gaps.grooveClearance)), t.name)
@@ -110,6 +113,7 @@ export function NewMobleGallery({
           </FoldItem>
         )}
 
+        {catalog && (<>
         <CatalogSection
           value="store"
           description="Plantilles per a botigues de mobles: tres dissenys per a cada tipus de moble, amb estil, materials, colors, públic i preu orientatiu."
@@ -184,6 +188,7 @@ export function NewMobleGallery({
           onOpenChange={setOpenTests}
           onCreate={pick}
         />
+        </>)}
       </FoldGroup>
 
     </Stack>
