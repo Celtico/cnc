@@ -121,7 +121,8 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone, page: pa
         // El botó principal al costat del cercador (com a Ambients i Objectes) i «Obrir fitxer» a la mateixa fila.
         // «Nou moble» demana el tipus (per decisió de l'usuari, 2026-10-20: «triar si és de cuina o és un moble normal»): el
         // normal té el suport a cada mòdul; la cuina, un per a tots (Moble › Cuina). Es crea en blanc.
-        add={{
+        // A Modelatge no es pregunta (cel, 2026-11-07: normal o cuina és cosa dels mobles): el model nou surt en blanc.
+        add={pageKey === "modelatge" ? { label: `Nou ${page.noun[0]}`, onClick: () => void handleCreate(blankMoble("moble"), "Model nou") } : {
           label: `Nou ${page.noun[0]}`,
           menu: NEW_MOBLE_TYPES.map((t) => {
             const k = KINDS.find((x) => x.value === t.kind)!
