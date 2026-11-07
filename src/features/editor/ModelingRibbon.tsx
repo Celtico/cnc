@@ -3,7 +3,7 @@ import { useEffect, useState } from "react"
 import { TopBarSlot } from "../../components/TopBar"
 import { toaster } from "../../components/ui/toaster"
 import { Tooltip } from "../../components/ui/tooltip"
-import { circlePts, extrudeSketch, insertModuleCopy, insertPartCopy, moduleRot, partSize, SIDE_NAMES, mountOf, newId, partBox, removeModule, reorientPart, type Composition, type FreePart, type Module, type PartOrient, type Settings } from "../../core/model"
+import { circlePts, extrudeSketch, insertModuleCopy, mountModule, insertPartCopy, moduleRot, partSize, SIDE_NAMES, mountOf, newId, partBox, removeModule, reorientPart, type Composition, type FreePart, type Module, type PartOrient, type Settings } from "../../core/model"
 import { freePartFor } from "../composition/addElements"
 import type { Selection } from "../composition/StructureTree"
 import type { EditorCamera } from "./useEditorCamera"
@@ -173,8 +173,22 @@ export function ModelingRibbon({
     [
       "Espai",
       [
-        ["Habitació", [{ icon: "room", label: "Habitació" }]],
-        ["Col·locar", [{ icon: "wallplace", label: "A la paret" }, { icon: "rotcab", label: "Gira 90°", hint: rotate ? "Gira 90° el moble o la peça seleccionada." : pickOne, run: rotate }, move]],
+        [
+          "Habitació",
+          [
+            {
+              icon: "room",
+              label: "Habitació",
+              hint: "Posa o treu les parets dels costats de l'habitació (la del fons hi és sempre).",
+              on: !!(comp.scene?.leftWall && comp.scene?.rightWall),
+              run: () => {
+                const on = !(comp.scene?.leftWall && comp.scene?.rightWall)
+                setComp({ ...comp, scene: { ...comp.scene, leftWall: on || undefined, rightWall: on || undefined } })
+              },
+            },
+          ],
+        ],
+        ["Col·locar", [{ icon: "wallplace", label: "A la paret", hint: module ? "Arramba el moble a la paret que té al darrere (gira'l abans per posar-lo a una paret del costat)." : "Selecciona un moble.", run: module ? () => setComp(mountModule(comp, module.id, "wall", 0)) : undefined }, { icon: "rotcab", label: "Gira 90°", hint: rotate ? "Gira 90° el moble o la peça seleccionada." : pickOne, run: rotate }, move]],
         ["Mobles", [nouMoble, plantilles]],
       ],
     ],
