@@ -5,7 +5,7 @@ import type { Selection } from "../composition/StructureTree"
 import { pieceLocalId } from "./ModelingTree"
 
 /** Les eines del Taulell que es fan clicant una cara de la peça. */
-export type FaceToolId = "measure" | "laser" | "dowel" | "screw" | "cabineo" | "rect" | "poly" | "circle" | "face" | "dynpanel" | "fitblock" | "shelf" | "band" | "hole" | "cup" | "line32"
+export type FaceToolId = "groove" | "rebate" | "cut" | "measure" | "laser" | "dowel" | "screw" | "cabineo" | "rect" | "poly" | "circle" | "face" | "dynpanel" | "fitblock" | "shelf" | "band" | "hole" | "cup" | "line32"
 
 /** Les opcions de les eines (les mateixes del Taulell, amb els seus valors per defecte). */
 export interface FaceToolOpts {
@@ -35,6 +35,13 @@ export interface FaceToolOpts {
   cabiM: "12" | "8"
   cabiMargin: number
   cabiPitch: number
+  /** Ranura i galze (els valors del Taulell). `grOff`: distància fixa al cantell més proper (0: on es clica). */
+  grW: number
+  grD: number
+  grDir: "L" | "A"
+  grOff: number
+  rbW: number
+  rbD: number
   /** Mesurar i Làser: el primer punt clicat i l'última mesura (es veu com una línia al 3D). */
   measureFrom?: Vec3
   measureLine?: [Vec3, Vec3]
@@ -49,13 +56,16 @@ export interface FaceToolOpts {
   pitch: number
   margin: number
 }
-export const DEFAULT_FACE_OPTS: FaceToolOpts = { fitOrient: "flat", fitGap: 0, dynOff: 0, sketchL: 600, sketchW: 400, sketchD: 300, dowD: 8, dowF: 12, dowE: 29, dowMargin: 50, dowPitch: 200, scrHole: 4, scrMargin: 50, scrPitch: 300, cabiM: "12", cabiMargin: 50, cabiPitch: 300, T: 19, setback: 1, d: 8, depth: 12, cd: 35, cdepth: 13, ld: 5, ldepth: 12, pitch: 32, margin: 37 }
+export const DEFAULT_FACE_OPTS: FaceToolOpts = { fitOrient: "flat", fitGap: 0, dynOff: 0, sketchL: 600, sketchW: 400, sketchD: 300, dowD: 8, dowF: 12, dowE: 29, dowMargin: 50, dowPitch: 200, scrHole: 4, scrMargin: 50, scrPitch: 300, cabiM: "12", cabiMargin: 50, cabiPitch: 300, grW: 4, grD: 8, grDir: "L", grOff: 0, rbW: 10, rbD: 10, T: 19, setback: 1, d: 8, depth: 12, cd: 35, cdepth: 13, ld: 5, ldepth: 12, pitch: 32, margin: 37 }
 
 /** El nom de cada eina (el títol de la seva finestra d'opcions). */
-export const FACE_TOOL_LABEL: Record<FaceToolId, string> = { measure: "Mesurar", laser: "Làser", dowel: "Clavilles", screw: "Cargols", cabineo: "Cabineo", rect: "Rectangle", poly: "Polilínia", circle: "Cercle", face: "Cara dinàmica", dynpanel: "Tauler dinàmic", fitblock: "Bloc condicionat", shelf: "Prestatge", band: "Cantell", hole: "Perforació", cup: "Cassoleta", line32: "Línia 32" }
+export const FACE_TOOL_LABEL: Record<FaceToolId, string> = { groove: "Ranura", rebate: "Galze", cut: "Retall", measure: "Mesurar", laser: "Làser", dowel: "Clavilles", screw: "Cargols", cabineo: "Cabineo", rect: "Rectangle", poly: "Polilínia", circle: "Cercle", face: "Cara dinàmica", dynpanel: "Tauler dinàmic", fitblock: "Bloc condicionat", shelf: "Prestatge", band: "Cantell", hole: "Perforació", cup: "Cassoleta", line32: "Línia 32" }
 
 /** El que diu cada eina mentre és activa (els textos del Taulell). */
 export const FACE_TOOL_INFO: Record<FaceToolId, string> = {
+  groove: "Ranura: clica una cara principal on va la ranura (de punta a punta de la peça).",
+  rebate: "Galze: clica una cara principal a prop del cantell.",
+  cut: "Retall: clica la peça solta que retalla. Passa a ser un tall: buida totes les peces que travessa.",
   measure: "Mesurar: clica el primer punt i després el segon.",
   laser: "Làser: clica una cara i mesura fins a la peça del davant.",
   dowel: "Clavilles: clica la cara de fora del tauler on darrere hi ha el cantell de l'altra peça.",
@@ -122,6 +132,44 @@ export function runFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition
   const panels = build?.panels ?? []
   const host = moduleOf(comp, p)
 
+  if (tool === "cut") {
+    if (!p.id.startsWith("part:")) return { message: "Clica la peça solta que ha de fer de tall (no una peça d'un moble).", error: true }
+    const id = p.id.slice(5)
+    const q = comp.parts?.find((x) => x.id === id)
+    if (!q) return { message: "No trobo la peça.", error: true }
+    const on = q.effect !== "cut"
+    return { comp: { ...comp, parts: (comp.parts ?? []).map((x) => (x.id === id ? { ...x, effect: on ? ("cut" as const) : undefined } : x)) }, select: { kind: "part", id }, message: on ? `${q.name}: ara retalla les peces que travessa` : `${q.name}: torna a ser una peça` }
+  }
+  if (tool === "groove" || tool === "rebate") {
+    const l = local(p, pt, n)
+    if (l.face === "edge") return { message: "Tria una cara principal, no un cantell.", error: true }
+    const m = moduleOf(comp, p)
+    if (!m) return { message: "De moment, els mecanitzats a mà van a les peces dels mobles.", error: true }
+    let g: { x: number; y: number; w: number; h: number }
+    if (tool === "groove") {
+      const alongU = (o.grDir === "L") === p.length >= p.width
+      const w = o.grW
+      const c0 = alongU ? l.v : l.u
+      const hi = alongU ? p.width : p.length
+      const c = o.grOff > 0 ? (c0 <= hi - c0 ? o.grOff + w / 2 : hi - o.grOff - w / 2) : c0
+      g = alongU ? { x: 0, y: r1(c - w / 2), w: p.length, h: w } : { x: r1(c - w / 2), y: 0, w, h: p.width }
+    } else {
+      const ds = [l.u, p.length - l.u, l.v, p.width - l.v]
+      const i = ds.indexOf(Math.min(...ds))
+      const w = o.rbW
+      g = [
+        { x: 0, y: 0, w, h: p.width },
+        { x: p.length - w, y: 0, w, h: p.width },
+        { x: 0, y: 0, w: p.length, h: w },
+        { x: 0, y: p.width - w, w: p.length, h: w },
+      ][i]!
+    }
+    const depth = Math.min(tool === "groove" ? o.grD : o.rbD, p.thickness - 1)
+    const id = pieceLocalId(m.id, p.id)
+    const cur = m.pieceEdits?.[id] ?? {}
+    const next = { ...comp, modules: comp.modules.map((x) => (x.id !== m.id ? x : { ...x, pieceEdits: { ...x.pieceEdits, [id]: { ...cur, grooves: [...(cur.grooves ?? []), { ...g, depth, face: l.face as "A" | "B" }] } } })) }
+    return { comp: next, message: `${p.label}: ${tool === "groove" ? `ranura ${o.grW}×${depth}` : `galze ${o.rbW}×${depth}`}` }
+  }
   if (tool === "measure") {
     if (!o.measureFrom) return { opts: { ...o, measureFrom: pt, measureLine: undefined }, message: "" }
     const d = sub(pt, o.measureFrom)

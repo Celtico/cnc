@@ -5,6 +5,7 @@ import { toaster } from "../../components/ui/toaster"
 import { Tooltip } from "../../components/ui/tooltip"
 import { circlePts, extrudeSketch, insertModuleCopy, mountModule, insertPartCopy, moduleRot, partSize, SIDE_NAMES, mountOf, newId, partBox, removeModule, reorientPart, type Composition, type FreePart, type Module, type PartOrient, type Settings } from "../../core/model"
 import { freePartFor } from "../composition/addElements"
+import { ModulePicker, pickInto } from "../composition/ModulePicker"
 import type { Selection } from "../composition/StructureTree"
 import type { EditorCamera } from "./useEditorCamera"
 import type { ViewerOptions } from "./useViewerOptions"
@@ -136,7 +137,8 @@ export function ModelingRibbon({
   const settingsPage = () => window.dispatchEvent(new Event("mobles:open-settings"))
 
   const nouMoble: Tool = { icon: "cabinet", label: "Nou moble", hint: "Un moble nou dins del model, amb totes les opcions del mòdul.", run: addModule }
-  const plantilles: Tool = { icon: "tpl", label: "Plantilles" }
+  const [picking, setPicking] = useState(false)
+  const plantilles: Tool = { icon: "tpl", label: "Plantilles", hint: "Afegeix un moble de la galeria (o un en blanc).", on: picking, run: () => setPicking(true) }
   const plana: Tool = { icon: "flat", label: "Plana", hint: "Cada tipus de peça d'un color.", on: opts.roleColors, run: () => opts.setRoleColors(!opts.roleColors) }
   const interior: Tool = { icon: "interior", label: "Interior", hint: "Amaga les portes i els frontals per veure l'interior.", on: !!opts.viewer.hideFronts, run: () => opts.setViewer({ hideFronts: !opts.viewer.hideFronts }) }
   const seccio: Tool = { icon: "section", label: "Secció", hint: "Talla el model amb un pla i en mostra una meitat.", on: !!opts.viewer.section, run: () => opts.setViewer({ section: opts.viewer.section ? null : { axis: 0, pos: Math.round(center.x), flip: false } }) }
@@ -236,7 +238,7 @@ export function ModelingRibbon({
       "Mecanitzat",
       [
         ["Perforacions", [faceToolBtn("hole", "hole", "Perforació"), faceToolBtn("cup", "cup", "Cassoleta"), faceToolBtn("line32", "line32", "Línia 32")]],
-        ["Fresats", [{ icon: "groove", label: "Ranura" }, { icon: "rebate", label: "Galze" }, { icon: "cut", label: "Retall" }]],
+        ["Fresats", [faceToolBtn("groove", "groove", "Ranura"), faceToolBtn("rebate", "rebate", "Galze"), faceToolBtn("cut", "cut", "Retall")]],
         ["Ferratges", [faceToolBtn("cabineo", "cabineo", "Cabineo"), faceToolBtn("screw", "screw", "Cargols"), faceToolBtn("dowel", "dowel", "Clavilles")]],
       ],
     ],
@@ -309,6 +311,16 @@ export function ModelingRibbon({
           </Stack>
         )}
       </FloatingWindow>
+      <ModulePicker
+        open={picking}
+        onClose={() => setPicking(false)}
+        mobleName={comp.modules[0]?.name ?? "Moble"}
+        onBlank={() => (setPicking(false), addModule())}
+        onPick={(c, n) => {
+          setPicking(false)
+          pickInto(comp, c, n, setComp, select)
+        }}
+      />
       <FloatingWindow id="modeling-section" kind="picker" width={240} height={260} minSize={{ width: 200, height: 120 }} bodyProps={{ p: 3 }} open={!!opts.viewer.section} onClose={() => opts.setViewer({ section: null })} title="Secció" initialFocus={false}>
         {opts.viewer.section && <SectionOptions s={opts.viewer.section} center={center} set={(section) => opts.setViewer({ section })} />}
       </FloatingWindow>
@@ -364,13 +376,23 @@ function ToolOptions({ tool, o, set, comp, setComp }: { tool: FaceToolId; o: Fac
                     ? [num("scrHole", "Forat passant Ø"), num("scrMargin", "Marge als extrems"), num("scrPitch", "Pas màxim")]
                     : tool === "cabineo"
                       ? [num("cabiMargin", "Marge als extrems"), num("cabiPitch", "Pas màxim")]
-                      : []
+                      : tool === "groove"
+                        ? [num("grW", "Amplada"), num("grD", "Profunditat"), num("grOff", "Distància al cantell")]
+                        : tool === "rebate"
+                          ? [num("rbW", "Amplada"), num("rbD", "Profunditat")]
+                          : []
   return (
     <Stack gap={2}>
       {tool === "fitblock" && (
         <SegmentGroup.Root size="xs" value={o.fitOrient} onValueChange={(e) => e.value && set({ ...o, fitOrient: e.value as FaceToolOpts["fitOrient"] })}>
           <SegmentGroup.Indicator />
           <SegmentGroup.Items items={[{ value: "flat", label: "Prestatge" }, { value: "side", label: "Divisió" }, { value: "front", label: "De cara" }]} />
+        </SegmentGroup.Root>
+      )}
+      {tool === "groove" && (
+        <SegmentGroup.Root size="xs" value={o.grDir} onValueChange={(e) => e.value && set({ ...o, grDir: e.value as "L" | "A" })}>
+          <SegmentGroup.Indicator />
+          <SegmentGroup.Items items={[{ value: "L", label: "Al llarg" }, { value: "A", label: "A l'ample" }]} />
         </SegmentGroup.Root>
       )}
       {tool === "cabineo" && (
