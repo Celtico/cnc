@@ -59,6 +59,7 @@ export function applyRefCuts(panels: Panel[], refs: RefObject[], boxOf: (p: Pane
     if (o.effect !== "cut") continue
     const sec = refSection(o)
     for (const p of panels) {
+      if (o.cutOnly && !o.cutOnly.includes(p.id)) continue
       const b = boxOf(p)
       // Forma lliure (l'editor de malla): el que se'n pot fresar des de la cara per on entra, en qualsevol peça que toqui.
       if (o.shape === "mesh" || o.shape === "image") {

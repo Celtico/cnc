@@ -34,6 +34,8 @@ export const RefObjectSchema = z.object({
    * forat passant a cada peça que travessa (tubs, endolls, passacables…).
    */
   effect: z.enum(["obstacle", "cut"]).optional(),
+  /** Amb `effect: "cut"`: només talla aquestes peces (ids de la composició); sense, totes les que travessa (el Retall del Taulell). */
+  cutOnly: z.array(z.string()).optional(),
   /**
    * Caixa (per defecte), cilindre, perfil 2D extrudit, **forma lliure** (`mesh`: la caixa de control suavitzada, l'editor de
    * malla) o **relleu d'una imatge** (`image`), dins de la caixa w × h × d.

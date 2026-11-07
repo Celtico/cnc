@@ -25,7 +25,7 @@ import { CableMarks, HoverCursor, ZoneHighlight } from "./cabinet/Highlights"
 import { CameraRig } from "./cabinet/CameraRig"
 import { panelBox } from "../../core/build/geometry"
 import { hoverKey, hoverTarget, useHoverLink } from "../hoverLink"
-import { useFacePick, useSketchOverlay } from "./facePick"
+import { useFaceHover, useFacePick, useSketchOverlay } from "./facePick"
 import { SketchLines } from "./cabinet/SketchLines"
 import { SectionClip } from "./cabinet/SectionClip"
 import type { Panel } from "../../core/model"
@@ -130,6 +130,14 @@ export function CabinetViewer({
   // Una eina de clicar cares activa (Modelatge, `facePick.ts`): el clic va a l'eina, amb el punt en mm i la normal.
   const facePick = useFacePick()
   const sketchLines = useSketchOverlay()
+  const faceHover = useFaceHover()
+  const onFaceHover = useMemo(
+    () =>
+      faceHover
+        ? (p: Panel, on: boolean, pt?: Vector3, n?: Vector3) => faceHover(on && pt && n ? { panel: p, point: [pt.x / S + size.width / 2, pt.y / S, pt.z / S + size.depth / 2], normal: [n.x, n.y, n.z] } : null)
+        : undefined,
+    [faceHover, size.width, size.depth],
+  )
   const onFaceClick = useMemo(
     () => (facePick ? (p: Panel, pt: Vector3, n?: Vector3) => n && facePick({ panel: p, point: [pt.x / S + size.width / 2, pt.y / S, pt.z / S + size.depth / 2], normal: [n.x, n.y, n.z] }) : undefined),
     [facePick, size.width, size.depth],
@@ -232,7 +240,7 @@ export function CabinetViewer({
                 hardware={hardware}
                 pins={pinsOf.get(p.id)}
                 fixed={fixedOf.get(p.id)}
-                onHover={(isPart ? onSelectPart : onSelectModule) ? onPanelHover : undefined}
+                onHover={onFaceHover ?? ((isPart ? onSelectPart : onSelectModule) ? onPanelHover : undefined)}
                 onClick={onFaceClick ?? ((isPart ? onSelectPart : onSelectModule) ? onPanelClick : undefined)}
                 selectedFitting={selectedHardwareId && p.fittings?.some((f) => f.placement === selectedHardwareId) ? selectedHardwareId : null}
                 onSelectFitting={onSelectHardware ? onFittingSelect : undefined}

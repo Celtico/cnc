@@ -1,6 +1,6 @@
 import type { FaceHit } from "../../components/viewer/facePick"
 import type { CompositionBuild } from "../../core/build/buildComposition"
-import { autoLimits, dynBox, FIT_NOUN, fitWalls, ORIENT_OF_AXIS, partWithBox, wallBoxes, moduleOrigins3, newId, panelAabb, refitParts, type Composition, type FreePart, type Hole, type Panel, type PartOrient, type Vec3, PART_AXES, partSize, circlePts, rectPts, toPlane, type Sketch } from "../../core/model"
+import { autoLimits, dynBox, FIT_NOUN, fitWalls, ORIENT_OF_AXIS, partWithBox, wallBoxes, moduleOrigins3, newId, panelAabb, refitParts, type Composition, type FreePart, type Hole, type Panel, type PartOrient, type Vec3, PART_AXES, partSize, circlePts, fromPlane, partBox, rectPts, toPlane, type Sketch } from "../../core/model"
 import type { Selection } from "../composition/StructureTree"
 import { pieceLocalId } from "./ModelingTree"
 
@@ -44,6 +44,8 @@ export interface FaceToolOpts {
   rbD: number
   /** Mesurar i Làser: el primer punt clicat i l'última mesura (es veu com una línia al 3D). */
   measureFrom?: Vec3
+  /** Retall: la peça que s'ha de retallar (la primera clicada). */
+  cutTarget?: string
   measureLine?: [Vec3, Vec3]
   T: number
   setback: number
@@ -65,7 +67,7 @@ export const FACE_TOOL_LABEL: Record<FaceToolId, string> = { groove: "Ranura", r
 export const FACE_TOOL_INFO: Record<FaceToolId, string> = {
   groove: "Ranura: clica una cara principal on va la ranura (de punta a punta de la peça).",
   rebate: "Galze: clica una cara principal a prop del cantell.",
-  cut: "Retall: clica la peça solta que retalla. Passa a ser un tall: buida totes les peces que travessa.",
+  cut: "Retall: clica la peça que s'ha de retallar i després la peça solta que la retalla (fa de tall només en aquella).",
   measure: "Mesurar: clica el primer punt i després el segon.",
   laser: "Làser: clica una cara i mesura fins a la peça del davant.",
   dowel: "Clavilles: clica la cara de fora del tauler on darrere hi ha el cantell de l'altra peça.",
@@ -133,12 +135,15 @@ export function runFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition
   const host = moduleOf(comp, p)
 
   if (tool === "cut") {
-    if (!p.id.startsWith("part:")) return { message: "Clica la peça solta que ha de fer de tall (no una peça d'un moble).", error: true }
+    if (!o.cutTarget) return { opts: { ...o, cutTarget: p.id }, message: `Peça a retallar: ${p.label}. Ara clica la peça solta que la retalla.` }
+    if (!p.id.startsWith("part:")) return { message: "La peça que retalla ha de ser una peça solta (no una d'un moble).", error: true }
+    if (p.id === o.cutTarget) return { message: "Clica una altra peça: la que fa el retall.", error: true }
     const id = p.id.slice(5)
     const q = comp.parts?.find((x) => x.id === id)
     if (!q) return { message: "No trobo la peça.", error: true }
-    const on = q.effect !== "cut"
-    return { comp: { ...comp, parts: (comp.parts ?? []).map((x) => (x.id === id ? { ...x, effect: on ? ("cut" as const) : undefined } : x)) }, select: { kind: "part", id }, message: on ? `${q.name}: ara retalla les peces que travessa` : `${q.name}: torna a ser una peça` }
+    const target = panels.find((x) => x.id === o.cutTarget)
+    const only = [...new Set([...(q.effect === "cut" ? (q.cutOnly ?? []) : []), o.cutTarget])]
+    return { comp: { ...comp, parts: (comp.parts ?? []).map((x) => (x.id === id ? { ...x, effect: "cut" as const, cutOnly: only } : x)) }, opts: { ...o, cutTarget: undefined }, select: { kind: "part", id }, message: `${q.name} retalla ${target?.label ?? "la peça"}` }
   }
   if (tool === "groove" || tool === "rebate") {
     const l = local(p, pt, n)
@@ -522,4 +527,25 @@ function rayBox(o: Vec3, d: Vec3, b: { min: Vec3; max: Vec3 }): number | null {
     t1 = Math.min(t1, Math.max(a, c))
   }
   return t1 >= t0 && t1 > 0 ? Math.max(0, t0) : null
+}
+
+/** La vista prèvia d'una eina amb el ratolí a sobre d'una cara (en verd, com al Taulell): la peça que sortiria o el croquis a mig fer. */
+export function previewFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition, build: CompositionBuild | undefined, hit: FaceHit): { box?: { min: Vec3; max: Vec3 }; pts?: Vec3[]; closed?: boolean } | null {
+  if (tool === "dynpanel" || tool === "fitblock" || tool === "shelf") {
+    const r = runFaceTool(tool, o, comp, build, hit)
+    const q = !r.error && r.comp?.parts?.[r.comp.parts.length - 1]
+    if (!q) return null
+    const off: Vec3 = (q.module && moduleOrigins3(comp).get(q.module)) || [0, 0, 0]
+    const b = partBox(q)
+    return { box: { min: b.min.map((v, k) => v + off[k]!) as Vec3, max: b.max.map((v, k) => v + off[k]!) as Vec3 } }
+  }
+  const d = o.draft
+  if ((tool === "rect" || tool === "circle" || tool === "poly") && d) {
+    const q = toPlane(d.a, hit.point)
+    const lift = (x: [number, number]) => fromPlane(d.a, d.level + d.dir * 0.5, x)
+    if (tool === "rect") return { pts: rectPts(d.pts[0]!, q).map(lift), closed: true }
+    if (tool === "circle") return { pts: circlePts(d.pts[0]!, 2 * Math.hypot(q[0] - d.pts[0]![0], q[1] - d.pts[0]![1])).map(lift), closed: true }
+    return { pts: [...d.pts, q].map(lift), closed: false }
+  }
+  return null
 }

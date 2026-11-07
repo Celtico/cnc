@@ -61,3 +61,26 @@ describe("unions (clavilles, cargols, Cabineo)", () => {
     expect(pockets.every((h) => h.diameter === 15)).toBe(true)
   })
 })
+
+describe("retall (només la peça triada)", () => {
+  it("la peça solta talla la peça clicada primer i no les altres que travessa", () => {
+    const m = { ...emptyModule("m", "Moble"), gapBefore: 0 }
+    const base0: Composition = { modules: [m], references: [] }
+    const b0 = buildComposition(base0)
+    const sides = b0.panels.filter((p) => p.role === "side")
+    const box = sides.map(panelAabb)
+    // Una barra que travessa els dos laterals, a mitja alçada.
+    const bar = { id: "c", name: "Tub", orient: "front" as const, w: box[1]!.max[0] - box[0]!.min[0] + 40, h: 40, thickness: 40, material: "Melamina blanca", x: box[0]!.min[0] - 20, y: 400, z: 200 }
+    const comp: Composition = { ...base0, parts: [bar] }
+    const build = buildComposition(comp)
+    const target = build.panels.find((p) => p.id === sides[0]!.id)!
+    const barPanel = build.panels.find((p) => p.id === "part:c")!
+    const a = runFaceTool("cut", DEFAULT_FACE_OPTS, comp, build, { panel: target, point: [0, 0, 0], normal: [1, 0, 0] })
+    const r = runFaceTool("cut", a.opts!, comp, build, { panel: barPanel, point: [0, 0, 0], normal: [0, 0, 1] })
+    expect(r.error, r.message).toBeFalsy()
+    const out = buildComposition(r.comp!).panels
+    const cut = (id: string) => { const p = out.find((x) => x.id === id)!; return (p.cutouts?.length ?? 0) + (p.outline ? 1 : 0) + (p.pockets?.length ?? 0) }
+    expect(cut(sides[0]!.id)).toBeGreaterThan(0)
+    expect(cut(sides[1]!.id)).toBe(0)
+  })
+})

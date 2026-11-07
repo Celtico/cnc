@@ -71,6 +71,8 @@ export const FreePartSchema = z.object({
    * travessa en la direcció del seu gruix, amb la seva forma (com els objectes que tallen).
    */
   effect: z.literal("cut").optional(),
+  /** Amb «Talla»: només talla aquestes peces (ids de la composició, el Retall del Taulell); sense, totes les que travessa. */
+  cutOnly: z.array(z.string()).optional(),
   /** Que talla sense travessar: radi del fons del buidat (una pica; `RefObject.round`). */
   round: z.number().positive().optional(),
   /**

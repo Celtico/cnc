@@ -62,7 +62,7 @@ export function ModelingRibbon({
     return () => window.removeEventListener("keydown", on)
   }, [faceTool, setFaceTool])
   /** Una eina de clicar cares: la deixa activa (un altre clic la treu). */
-  const faceToolBtn = (id: FaceToolId, icon: TaulellIconName, label: string): Tool => ({ icon, label, hint: FACE_TOOL_INFO[id], on: faceTool === id, run: () => (setFaceOpts({ ...faceOpts, draft: undefined }), setFaceTool(faceTool === id ? null : id)) })
+  const faceToolBtn = (id: FaceToolId, icon: TaulellIconName, label: string): Tool => ({ icon, label, hint: FACE_TOOL_INFO[id], on: faceTool === id, run: () => (setFaceOpts({ ...faceOpts, draft: undefined, cutTarget: undefined, measureFrom: undefined }), setFaceTool(faceTool === id ? null : id)) })
   const [tab, setTab] = useState("Inici")
   const addPart = (orient: PartOrient, name: string) => {
     const n = (comp.parts ?? []).filter((p) => p.name.startsWith(name)).length
@@ -488,7 +488,7 @@ function SketchOptions({ tool, o, set, comp, setComp }: { tool: "rect" | "poly" 
       )}
       {tool === "circle" && <NumRow maxW="110px" label="Diàmetre" value={o.sketchD} min={1} max={5000} step={1} onChange={(v) => set({ ...o, sketchD: v })} />}
       {d && p0 && (
-        <HStack gap={2}>
+        <HStack gap={2} flexWrap="wrap">
           {tool === "rect" && (
             <Button size="xs" colorPalette="wood" onClick={() => done([p0, [p0[0] + o.sketchL, p0[1]], [p0[0] + o.sketchL, p0[1] + o.sketchW], [p0[0], p0[1] + o.sketchW]], true)}>
               Aplica les mides

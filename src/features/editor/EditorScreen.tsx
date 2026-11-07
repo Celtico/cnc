@@ -19,8 +19,8 @@ import { EditorLeftPanel } from "./EditorLeftPanel"
 import { ModelingRibbon } from "./ModelingRibbon"
 import { modulePieces, ModelingTree, pieceLocalId, setPieceEdit } from "../modeling/ModelingTree"
 import { PieceInspector } from "../modeling/PieceInspector"
-import { DEFAULT_FACE_OPTS, runFaceTool, type FaceToolId, type FaceToolOpts } from "../modeling/faceTools"
-import { FacePickContext, SketchOverlayContext, type FacePick, type SketchLine } from "../../components/viewer/facePick"
+import { DEFAULT_FACE_OPTS, previewFaceTool, runFaceTool, type FaceToolId, type FaceToolOpts } from "../modeling/faceTools"
+import { FaceHoverContext, FacePickContext, SketchOverlayContext, type FaceHit, type FaceHover, type FacePick, type SketchLine } from "../../components/viewer/facePick"
 import { fromPlane } from "../../core/model"
 import { EditorViewport } from "./EditorViewport"
 import { framePose, warningTarget } from "./warningTarget"
@@ -164,6 +164,22 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             select({ kind: "module", id: m.id })
           }
         : null
+  // La vista prèvia (en verd) de l'eina amb el ratolí a sobre d'una cara; es torna a calcular com a molt un cop per fotograma.
+  const [hoverHit, setHoverHit] = useState<FaceHit | null>(null)
+  const faceHover: FaceHover | null = useMemo(() => {
+    if (!project.modeling || !faceTool) return null
+    let raf = 0
+    let last: FaceHit | null = null
+    return (h) => {
+      last = h
+      if (raf) return
+      raf = requestAnimationFrame(() => {
+        raf = 0
+        setHoverHit(last)
+      })
+    }
+  }, [project.modeling, faceTool])
+  const preview = useMemo(() => (faceTool && hoverHit ? previewFaceTool(faceTool, faceOpts, comp, build, hoverHit) : null), [faceTool, faceOpts, comp, build, hoverHit])
   // Els croquis al 3D (un pèl per sobre de la cara on són): els desats, el triat i el que s'està dibuixant.
   const sketchLines = useMemo<SketchLine[]>(() => {
     if (!project.modeling) return []
@@ -171,8 +187,9 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     const saved = (comp.sketches ?? []).map((k): SketchLine => ({ pts: k.pts.map(lift(k.a, k.level, k.dir)), closed: true, tone: k.id === faceOpts.selSketch ? "selected" : "sketch" }))
     const d = faceOpts.draft
     const m: SketchLine[] = faceOpts.measureLine ? [{ pts: faceOpts.measureLine, closed: false, tone: "selected" }] : faceOpts.measureFrom ? [{ pts: [faceOpts.measureFrom], closed: false, tone: "selected" }] : []
-    return [...saved, ...m, ...(d ? [{ pts: d.pts.map(lift(d.a, d.level, d.dir)), closed: false, tone: "draft" as const }] : [])]
-  }, [project.modeling, comp.sketches, faceOpts.draft, faceOpts.selSketch, faceOpts.measureLine, faceOpts.measureFrom])
+    const pv: SketchLine[] = !preview ? [] : preview.box ? [{ pts: [], closed: false, tone: "draft", box: preview.box }] : preview.pts ? [{ pts: preview.pts, closed: !!preview.closed, tone: "draft" }] : []
+    return [...saved, ...m, ...(d && !preview?.pts ? [{ pts: d.pts.map(lift(d.a, d.level, d.dir)), closed: false, tone: "draft" as const }] : []), ...pv]
+  }, [project.modeling, comp.sketches, faceOpts.draft, faceOpts.selSketch, faceOpts.measureLine, faceOpts.measureFrom, preview])
   const pieceSel = project.modeling && piece && selection.kind === "module" && module?.id === selection.id ? modulePieces(build?.panels ?? [], moduleIndex).find((x) => x.panel.id === piece) : undefined
   // Una selecció nova, un inspector nou: les finestres de tria (material, ferratge) que s'hi havien obert es tanquen
   // (no són modals: si no, la tria aniria a parar al que s'ha seleccionat després). `popup`: el de la finestra del botó
@@ -219,6 +236,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         <ModelingRibbon comp={comp} setComp={setComp} selection={selection} select={select} settings={settings} center={partCenter} newModule={newModule} opts={opts} camera={camera} faceTool={faceTool} setFaceTool={setFaceTool} faceOpts={faceOpts} setFaceOpts={setFaceOpts} />
       )}
       <FacePickContext.Provider value={facePick}>
+      <FaceHoverContext.Provider value={faceHover}>
       <SketchOverlayContext.Provider value={sketchLines}>
       <Workspace
         ws={ws}
@@ -327,6 +345,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         {inspector(true)}
       </FloatingWindow>
     </SketchOverlayContext.Provider>
+    </FaceHoverContext.Provider>
     </FacePickContext.Provider>
     </HoverLinkProvider>
   )
