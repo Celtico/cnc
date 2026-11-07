@@ -1,6 +1,6 @@
 import type { ThreeEvent } from "@react-three/fiber"
 import { Edges } from "@react-three/drei"
-import { memo, useEffect, useMemo, useRef } from "react"
+import { memo, useContext, useEffect, useMemo, useRef } from "react"
 import { Matrix4, Vector3, type Group, type Material } from "three"
 import type { HwSolid } from "../../../core/build/hardwareSolids"
 import type { Hole, MaterialPref, Panel } from "../../../core/model"
@@ -10,6 +10,8 @@ import { cutoutMaterials, panelMaterials, panelVisualKey, visualPanel } from "..
 import { PanelFittings, PanelHardware } from "../Hardware"
 import { disposeMaterial } from "../textures"
 import { EXPLODE_MM, S } from "./constants"
+import { panelBox } from "../../../core/build/geometry"
+import { SECTION_CAP_MAT, SectionCapContext, noRaycast } from "./SectionClip"
 import { HoleMarks, PROPOSED_MAT } from "./HoleMarks"
 import { useExplode } from "./anim"
 
@@ -148,6 +150,13 @@ export const PanelMesh = memo(function PanelMesh({
   const L = vpanel.length * S
   const W = vpanel.width * S
   const T = vpanel.thickness * S
+  const sec = useContext(SectionCapContext)
+  // La cara tallada només a les peces que el pla travessa (les altres, amb fils o transparents, no s'han de pintar).
+  const cap = useMemo(() => {
+    if (!sec) return false
+    const b = panelBox(panel)
+    return b.min[sec.axis]! < sec.pos && b.max[sec.axis]! > sec.pos
+  }, [sec, panel])
 
   return (
     <group ref={group}>
@@ -182,6 +191,11 @@ export const PanelMesh = memo(function PanelMesh({
           {!cut && <boxGeometry args={[L, W, T]} />}
           {edges && <Edges color={wire ? "#2b2418" : dimmed || see !== undefined ? "#a08a6a" : "#6b5a3e"} threshold={15} {...(edgeGeo ? { geometry: edgeGeo } : {})} />}
         </mesh>
+        {cap && (
+          <mesh position={cut ? [0, 0, 0] : [L / 2, W / 2, T / 2]} geometry={cut ?? undefined} material={SECTION_CAP_MAT} raycast={noRaycast}>
+            {!cut && <boxGeometry args={[L, W, T]} />}
+          </mesh>
+        )}
         {showHoles && vpanel.holes.length > 0 && (proposedTags?.length ? (
           <>
             <HoleMarks holes={vpanel.holes.filter((h) => !h.tag || !proposedTags.includes(h.tag))} thickness={T} />

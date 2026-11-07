@@ -51,7 +51,7 @@ export interface CabinetViewerProps {
   /** Totes les peces en filferro (com les vistes d'escaire). */
   wireAll?: boolean
   /** Un pla de secció (mm de la composició): es veu la meitat de sota del pla (`flip`: la de sobre). */
-  section?: { axis: 0 | 1 | 2; pos: number; flip: boolean } | null
+  section?: { axis: 0 | 1 | 2; pos: number; flip: boolean; paint?: boolean } | null
   /** Obertura de portes i calaixos, 0..1. */
   opening?: number
   /** Si hi és, només s'obren aquests grups (ids de `movingGroups`). */

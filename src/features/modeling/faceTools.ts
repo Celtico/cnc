@@ -56,6 +56,8 @@ export interface FaceToolOpts {
   grOff: number
   rbW: number
   rbD: number
+  /** Làser: «face» cara a cara (el raig fins a la peça del davant) o «axis» eix a eix (centres de forats o mig del gruix). */
+  laserMode: "face" | "axis"
   /** Mesurar i Làser: el primer punt clicat i l'última mesura (es veu com una línia al 3D). */
   measureFrom?: Vec3
   /** Retall: la peça que s'ha de retallar (la primera clicada). */
@@ -76,7 +78,7 @@ export interface FaceToolOpts {
   pitch: number
   margin: number
 }
-export const DEFAULT_FACE_OPTS: FaceToolOpts = { fitOrient: "flat", fitGap: 0, dynOff: 0, sketchL: 600, sketchW: 400, sketchD: 300, dowM: "8x40", dowDist: true, dowD: 8, dowF: 12, dowE: 29, dowMargin: 50, dowPitch: 200, scrD: 4, scrL: 60, scrDist: true, scrHole: 4, scrMargin: 50, scrPitch: 300, cabiM: "12", cabiMargin: 50, cabiPitch: 300, cabiD: 15, cabiDepth: 11, cabiFirst: 3.6, cabiStep: 11.2, cabiAxis: 5, cabiSd: 5, grW: 4, grD: 8, grDir: "L", grOff: 0, rbW: 10, rbD: 10, T: 19, mat: "", setback: 1, d: 8, depth: 12, cd: 35, cdepth: 13, ld: 5, ldepth: 12, pitch: 32, margin: 37 }
+export const DEFAULT_FACE_OPTS: FaceToolOpts = { fitOrient: "flat", fitGap: 0, dynOff: 0, sketchL: 600, sketchW: 400, sketchD: 300, dowM: "8x40", dowDist: true, dowD: 8, dowF: 12, dowE: 29, dowMargin: 50, dowPitch: 200, scrD: 4, scrL: 60, scrDist: true, scrHole: 4, scrMargin: 50, scrPitch: 300, cabiM: "12", cabiMargin: 50, cabiPitch: 300, cabiD: 15, cabiDepth: 11, cabiFirst: 3.6, cabiStep: 11.2, cabiAxis: 5, cabiSd: 5, grW: 4, grD: 8, grDir: "L", grOff: 0, rbW: 10, rbD: 10, T: 19, laserMode: "face", mat: "", setback: 1, d: 8, depth: 12, cd: 35, cdepth: 13, ld: 5, ldepth: 12, pitch: 32, margin: 37 }
 
 /** Les clavilles del Taulell: diàmetre, llargada i fondàries a la cara i al cantell. */
 export const DOWELS = { "8x40": { d: 8, L: 40, f: 12, e: 29 }, "8x30": { d: 8, L: 30, f: 12, e: 19 }, "5x30": { d: 5, L: 30, f: 10, e: 21 } } as const
@@ -204,6 +206,13 @@ export function runFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition
     const d = sub(pt, o.measureFrom)
     const fmt = (v: number) => String(r1(Math.abs(v))).replace(".", ",")
     return { opts: { ...o, measureFrom: undefined, measureLine: [o.measureFrom, pt] }, message: `Distància: ${fmt(Math.hypot(...d))} mm (X ${fmt(d[0])} · Y ${fmt(d[1])} · Z ${fmt(d[2])})` }
+  }
+  if (tool === "laser" && o.laserMode === "axis") {
+    const q = axisPoint(p, pt, n)
+    if (!o.measureFrom) return { opts: { ...o, measureFrom: q.at, measureLine: undefined }, message: `Primer eix: ${q.what}. Clica el segon.` }
+    const d = sub(q.at, o.measureFrom)
+    const fmt = (v: number) => String(r1(Math.abs(v))).replace(".", ",")
+    return { opts: { ...o, measureFrom: undefined, measureLine: [o.measureFrom, q.at] }, message: `Eix a eix: ${fmt(Math.hypot(...d))} mm (X ${fmt(d[0])} · Y ${fmt(d[1])} · Z ${fmt(d[2])})` }
   }
   if (tool === "laser") {
     let best = Infinity
@@ -544,6 +553,17 @@ function cabineoTool(o: FaceToolOpts, comp: Composition, panels: Panel[], hit: F
   return { comp: next, ghost, message: `${us.length} × Cabineo ${o.cabiM}: ${P.label} amb ${Q.label}` }
 }
 
+/** Làser eix a eix: el centre del forat clicat (si n'hi ha un a sota del ratolí) o el mig del gruix de la peça. */
+function axisPoint(P: Panel, pt: Vec3, n: Vec3): { at: Vec3; what: string } {
+  const l = local(P, pt, n)
+  if (l.face !== "edge") {
+    const h = P.holes.find((x) => (x.face ?? "A") === l.face && Math.hypot(x.x - l.u, x.y - l.v) <= x.diameter / 2 + 3)
+    if (h) return { at: fromLocal(P, h.x, h.y, P.thickness / 2), what: `forat Ø${h.diameter} de ${P.label}` }
+    return { at: fromLocal(P, l.u, l.v, P.thickness / 2), what: `mig del gruix de ${P.label}` }
+  }
+  return { at: pt, what: `cantell de ${P.label}` }
+}
+
 /** La caixa d'una barra de diàmetre `d` al llarg de `n` (de `a` a `b` mm des de `c`), per a la vista prèvia. */
 function rod(c: Vec3, n: Vec3, a: number, b: number, d: number): { min: Vec3; max: Vec3 } {
   const p = add3(c, n, a)
@@ -575,6 +595,11 @@ export function previewFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composi
   if (tool === "dowel" || tool === "screw" || tool === "cabineo") {
     const r = runFaceTool(tool, o, comp, build, hit)
     return r.ghost?.length ? { boxes: r.ghost } : null
+  }
+  if (tool === "laser" || tool === "measure") {
+    const r = runFaceTool(tool, { ...o, measureFrom: tool === "measure" ? o.measureFrom : o.laserMode === "axis" ? o.measureFrom : undefined }, comp, build, hit)
+    const line = r.opts?.measureLine
+    return line && (tool === "laser" ? o.laserMode === "face" || !!o.measureFrom : !!o.measureFrom) ? { pts: line, closed: false } : null
   }
   if (tool === "dynpanel" || tool === "fitblock" || tool === "shelf") {
     const r = runFaceTool(tool, o, comp, build, hit)

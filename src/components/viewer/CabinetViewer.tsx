@@ -27,7 +27,7 @@ import { panelBox } from "../../core/build/geometry"
 import { hoverKey, hoverTarget, useHoverLink } from "../hoverLink"
 import { useFaceHover, useFacePick, useSketchOverlay } from "./facePick"
 import { SketchLines } from "./cabinet/SketchLines"
-import { SectionClip } from "./cabinet/SectionClip"
+import { SectionCapContext, SectionClip } from "./cabinet/SectionClip"
 import type { Panel } from "../../core/model"
 
 /** Anar a un avís: el contorn de les seves peces i la transparència de la resta. */
@@ -108,6 +108,8 @@ export function CabinetViewer({
     const at = (x: number) => (x - size.width * 0.5) * S
     return { ...(leftWall ? { left: at(x0) } : {}), ...(rightWall ? { right: at(x1) } : {}) }
   }, [leftWall, rightWall, panels, size.width])
+  // «Pinta la cara tallada»: el pla, perquè només les peces que travessa pintin el tall.
+  const sectionCap = useMemo(() => (section?.paint ? { axis: section.axis, pos: section.pos } : null), [section?.paint, section?.axis, section?.pos])
   const selected = modules?.find((m) => m.id === selectedModuleId)
   const selectedIndex = selected?.index
   // Vistes Davant · Darrere · Esquerra · Dreta · Dalt (per decisió de l'usuari, 2026-10-14: «sense perspectiva i amb
@@ -210,6 +212,7 @@ export function CabinetViewer({
       />
       <directionalLight position={[-3, 2, -2]} intensity={0.35} />
 
+      <SectionCapContext.Provider value={sectionCap}>
       <group position={[-size.width * S * 0.5, 0, -size.depth * S * 0.5]}>
         {sketchLines.length > 0 && <SketchLines lines={sketchLines} />}
         <SectionClip section={section} offset={[size.width / 2, 0, size.depth / 2]} />
@@ -361,6 +364,7 @@ export function CabinetViewer({
           />
         )}
       </group>
+      </SectionCapContext.Provider>
 
       <group visible={q.guides}>
         <Grid position={[0, -0.001, 0]} args={[10, 10]} cellSize={0.1} sectionSize={0.5} cellColor={gridCell} sectionColor={gridSection} fadeDistance={6} infiniteGrid />

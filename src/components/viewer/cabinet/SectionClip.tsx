@@ -1,7 +1,14 @@
 import { useThree } from "@react-three/fiber"
-import { useEffect } from "react"
-import { Plane, Vector3 } from "three"
+import { createContext, useEffect } from "react"
+import { BackSide, MeshBasicMaterial, Plane, Vector3 } from "three"
 import { S } from "./constants"
+
+/** «Pinta la cara tallada» (Taulell): amb la secció, l'interior de cada peça es veu d'un color pla pel tall. */
+export const SectionCapContext = createContext<{ axis: 0 | 1 | 2; pos: number } | null>(null)
+/** El color de la cara tallada: les cares de darrere de les peces, que només es veuen pel tall. */
+export const SECTION_CAP_MAT = new MeshBasicMaterial({ color: "#d9773b", side: BackSide })
+/** La cara tallada no es pot clicar: el clic va a la peça. */
+export const noRaycast = () => null
 
 /**
  * El pla de secció (el del Taulell): retalla tot el que hi ha a l'escena per un pla d'escaire. `section.pos` en mm de la

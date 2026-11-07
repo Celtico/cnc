@@ -13,7 +13,7 @@ export interface ViewerState {
   /** Interior (el del Taulell): sense portes ni frontals, per veure el que hi ha dins. */
   hideFronts?: boolean
   /** Secció (la del Taulell): un pla d'escaire talla el moble i es veu una meitat (eix, posició en mm, quina meitat). */
-  section?: { axis: 0 | 1 | 2; pos: number; flip: boolean } | null
+  section?: { axis: 0 | 1 | 2; pos: number; flip: boolean; paint?: boolean } | null
   /** Peces dels mobles amagades amb l'ull de l'arbre de Modelatge (ids de la composició): només no es dibuixen. */
   hiddenPieces?: string[]
 }

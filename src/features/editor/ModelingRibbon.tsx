@@ -1,4 +1,4 @@
-import { Box, Button, Checkbox, Collapsible, HStack, SegmentGroup, Separator, Stack, Text } from "@chakra-ui/react"
+import { Box, Button, Checkbox, Collapsible, HStack, SegmentGroup, Separator, Slider, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useState } from "react"
 import { TopBarSlot } from "../../components/TopBar"
 import { toaster } from "../../components/ui/toaster"
@@ -145,7 +145,7 @@ export function ModelingRibbon({
   const plantilles: Tool = { icon: "tpl", label: "Plantilles", hint: "Afegeix un moble de la galeria (o un en blanc).", on: picking, run: () => setPicking(true) }
   const plana: Tool = { icon: "flat", label: "Plana", hint: "Cada tipus de peça d'un color.", on: opts.roleColors, run: () => opts.setRoleColors(!opts.roleColors) }
   const interior: Tool = { icon: "interior", label: "Interior", hint: "Amaga les portes i els frontals per veure l'interior.", on: !!opts.viewer.hideFronts, run: () => opts.setViewer({ hideFronts: !opts.viewer.hideFronts }) }
-  const seccio: Tool = { icon: "section", label: "Secció", hint: "Talla el model amb un pla i en mostra una meitat.", on: !!opts.viewer.section, run: () => opts.setViewer({ section: opts.viewer.section ? null : { axis: 0, pos: Math.round(center.x), flip: false } }) }
+  const seccio: Tool = { icon: "section", label: "Secció", hint: "Talla el model amb un pla i en mostra una meitat.", on: !!opts.viewer.section, run: () => opts.setViewer({ section: opts.viewer.section ? null : { axis: 0, pos: Math.round(center.x), flip: false, paint: true } }) }
   const TABS: [string, Group[]][] = [
     [
       "Inici",
@@ -309,9 +309,11 @@ export function ModelingRibbon({
         {faceTool && (
           <Stack gap={2}>
             <ToolOptions tool={faceTool} o={faceOpts} set={setFaceOpts} comp={comp} setComp={setComp} settings={settings} />
-            <Text fontSize="xs" color="fg.muted">
-              {FACE_TOOL_INFO[faceTool]}
-            </Text>
+            {faceTool !== "laser" && (
+              <Text fontSize="xs" color="fg.muted">
+                {FACE_TOOL_INFO[faceTool]}
+              </Text>
+            )}
           </Stack>
         )}
       </FloatingWindow>
@@ -338,7 +340,7 @@ export function ModelingRibbon({
         }}
       />
       <FloatingWindow id="modeling-section" kind="picker" width={240} height={260} minSize={{ width: 200, height: 120 }} bodyProps={{ p: 3 }} open={!!opts.viewer.section} onClose={() => opts.setViewer({ section: null })} title="Secció" initialFocus={false}>
-        {opts.viewer.section && <SectionOptions s={opts.viewer.section} center={center} set={(section) => opts.setViewer({ section })} />}
+        {opts.viewer.section && <SectionOptions s={opts.viewer.section} center={center} set={(section) => opts.setViewer({ section })} look={(x) => camera.frameFrom(x.axis === 1 ? "top" : x.axis === 0 ? (x.flip ? "left" : "right") : x.flip ? "back" : "front")} />}
       </FloatingWindow>
       <FloatingWindow id="modeling-array" kind="picker" width={240} height={300} minSize={{ width: 200, height: 120 }} bodyProps={{ p: 3 }} open={arrayOpen && !!(part || module)} onClose={() => setArrayOpen(false)} title="Matriu" initialFocus={false}>
         <ArrayOptions
@@ -461,6 +463,19 @@ function ToolOptions({ tool, o, set, comp, setComp, settings }: { tool: FaceTool
           <SegmentGroup.Indicator />
           <SegmentGroup.Items items={[{ value: "flat", label: "Prestatge" }, { value: "side", label: "Divisió" }, { value: "front", label: "De cara" }]} />
         </SegmentGroup.Root>
+      )}
+      {tool === "laser" && (
+        <>
+          <SegmentGroup.Root size="xs" value={o.laserMode} onValueChange={(e) => e.value && set({ ...o, laserMode: e.value as "face" | "axis", measureFrom: undefined, measureLine: undefined })}>
+            <SegmentGroup.Indicator />
+            <SegmentGroup.Items items={[{ value: "face", label: "Cara a cara" }, { value: "axis", label: "Eix a eix" }]} />
+          </SegmentGroup.Root>
+          <Text fontSize="sm" color="fg.muted">
+            {o.laserMode === "axis"
+              ? "Clica el primer eix i després el segon: un forat (el seu centre) o un tauler (el mig del gruix). Et dona la distància i les diferències en X, Y i Z."
+              : "Apunta a una cara de dins del moble (un lateral, la base, el fons…): el raig surt recte fins a la peça del davant i et diu la distància. Clica per deixar-la fixada; torna a clicar per mesurar una altra cosa."}
+          </Text>
+        </>
       )}
       {tool === "groove" && (
         <SegmentGroup.Root size="xs" value={o.grDir} onValueChange={(e) => e.value && set({ ...o, grDir: e.value as "L" | "A" })}>
@@ -586,18 +601,44 @@ function SketchOptions({ tool, o, set, comp, setComp }: { tool: "rect" | "poly" 
   )
 }
 
-/** La finestra de la Secció (com la del Taulell): el pla (X, Y o Z), on és i quina meitat es veu. */
-function SectionOptions({ s, center, set }: { s: { axis: 0 | 1 | 2; pos: number; flip: boolean }; center: { x: number; y: number; z: number }; set: (s: { axis: 0 | 1 | 2; pos: number; flip: boolean }) => void }) {
+type Section = { axis: 0 | 1 | 2; pos: number; flip: boolean; paint?: boolean }
+/** La finestra de la Secció (com la del Taulell): el pla (X, Z o Y), on és (lliscant i posició exacta), girar-la, pintar la cara tallada i mirar-la de cara. */
+function SectionOptions({ s, center, set, look }: { s: Section; center: { x: number; y: number; z: number }; set: (s: Section) => void; look: (s: Section) => void }) {
   const mid = [center.x, center.y, center.z]
+  const max = Math.max(10, Math.round(2 * mid[s.axis]!))
   return (
-    <Stack gap={2}>
-      <SegmentGroup.Root size="xs" value={String(s.axis)} onValueChange={(e) => e.value && set({ ...s, axis: Number(e.value) as 0 | 1 | 2, pos: Math.round(mid[Number(e.value)]!) })}>
-        <SegmentGroup.Indicator />
-        <SegmentGroup.Items items={[{ value: "0", label: "Pla X" }, { value: "1", label: "Pla Y" }, { value: "2", label: "Pla Z" }]} />
-      </SegmentGroup.Root>
-      <NumRow maxW="110px" label={["De costat", "Alçada", "Fondària"][s.axis]!} value={s.pos} min={-10000} max={30000} step={10} onChange={(pos) => set({ ...s, pos })} />
-      <Button size="xs" variant="outline" alignSelf="start" onClick={() => set({ ...s, flip: !s.flip })}>
-        ⇄ Mostra l'altra meitat
+    <Stack gap={2.5}>
+      <HStack gap={1}>
+        <SegmentGroup.Root size="xs" value={String(s.axis)} onValueChange={(e) => e.value && set({ ...s, axis: Number(e.value) as 0 | 1 | 2, pos: Math.round(mid[Number(e.value)]!) })}>
+          <SegmentGroup.Indicator />
+          <SegmentGroup.Items items={[{ value: "0", label: "Pla X" }, { value: "2", label: "Pla Z" }, { value: "1", label: "Pla Y" }]} />
+        </SegmentGroup.Root>
+        <Button size="2xs" variant="outline" onClick={() => set({ ...s, flip: !s.flip })} title="Mostra l'altra meitat">
+          ⇄ Gira
+        </Button>
+      </HStack>
+      <Box>
+        <HStack justify="space-between" fontSize="sm">
+          <Text>{["De costat (X)", "Alçada (Y)", "Fondària (Z)"][s.axis]}</Text>
+          <Text fontFamily="mono">{s.pos} mm</Text>
+        </HStack>
+        <Slider.Root size="sm" colorPalette="wood" min={0} max={max} step={1} value={[Math.min(max, Math.max(0, s.pos))]} onValueChange={(e) => set({ ...s, pos: e.value[0]! })}>
+          <Slider.Control>
+            <Slider.Track>
+              <Slider.Range />
+            </Slider.Track>
+            <Slider.Thumbs />
+          </Slider.Control>
+        </Slider.Root>
+      </Box>
+      <NumRow maxW="110px" label="Posició exacta" value={s.pos} min={-10000} max={30000} step={1} onChange={(pos) => set({ ...s, pos })} />
+      <Checkbox.Root size="sm" colorPalette="wood" checked={!!s.paint} onCheckedChange={(e) => set({ ...s, paint: !!e.checked || undefined })}>
+        <Checkbox.HiddenInput />
+        <Checkbox.Control />
+        <Checkbox.Label>Pinta la cara tallada</Checkbox.Label>
+      </Checkbox.Root>
+      <Button size="xs" variant="outline" onClick={() => look(s)}>
+        Mira la secció de cara
       </Button>
     </Stack>
   )
