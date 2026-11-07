@@ -1,12 +1,12 @@
 import { Menu } from "@chakra-ui/react"
-import { LuCopy, LuFolderInput, LuSave, LuTrash2 } from "react-icons/lu"
+import { LuCopy, LuCopyPlus, LuFolderInput, LuSave, LuTrash2 } from "react-icons/lu"
 import { ActionsMenu } from "../../components/ActionsMenu"
 
 /**
  * Menú ⋯ d'una targeta de document (Mobles, Objectes, Ambients): el mateix text, icones i ordre a totes les galeries.
  * Només surten les accions que es passen.
  */
-export function CardMenu({ name, onSaveFile, onDuplicate, duplicateLabel = "Duplicar", onMove, onDelete }: { name: string; onSaveFile?: () => void; onDuplicate?: () => void; /** P. ex. «Duplicar (per a un client)…» als ambients. */ duplicateLabel?: string; onMove?: () => void; onDelete?: () => void }) {
+export function CardMenu({ name, onSaveFile, onDuplicate, duplicateLabel = "Duplicar", copyTo, onMove, onDelete }: { name: string; onSaveFile?: () => void; onDuplicate?: () => void; /** P. ex. «Duplicar (per a un client)…» als ambients. */ duplicateLabel?: string; /** Una còpia a l'altra pàgina de mobles (Mobles ↔ Modelatge). */ copyTo?: { label: string; onClick: () => void }; onMove?: () => void; onDelete?: () => void }) {
   return (
     <ActionsMenu label={`Accions de «${name}»`}>
       {onSaveFile && (
@@ -17,6 +17,11 @@ export function CardMenu({ name, onSaveFile, onDuplicate, duplicateLabel = "Dupl
       {onDuplicate && (
         <Menu.Item value="dup" onClick={onDuplicate}>
           <LuCopy /> {duplicateLabel}
+        </Menu.Item>
+      )}
+      {copyTo && (
+        <Menu.Item value="copy-to" onClick={copyTo.onClick}>
+          <LuCopyPlus /> {copyTo.label}
         </Menu.Item>
       )}
       {onMove && (

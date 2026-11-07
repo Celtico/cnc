@@ -22,6 +22,7 @@ export function ProjectCard({
   onDelete,
   onSaveFile,
   onMove,
+  copyTo,
   onAdd,
   ambients = [],
   currentAmbient,
@@ -33,6 +34,8 @@ export function ProjectCard({
   onSaveFile?: () => void
   /** Moure a un grup (carpeta) de l'historial. */
   onMove?: () => void
+  /** Una còpia a l'altra pàgina de mobles (Mobles ↔ Modelatge). */
+  copyTo?: { label: string; onClick: () => void }
   onAdd?: () => void
   /** Ambients on hi ha aquest moble. */
   ambients?: { id: number; name: string }[]
@@ -123,9 +126,9 @@ export function ProjectCard({
             <LuPlus /> {here ? "Afegir-ne un altre" : "Afegir"}
           </Button>
         ) : (
-          (onSaveFile || onDuplicate || onDelete || onMove) && (
+          (onSaveFile || onDuplicate || onDelete || onMove || copyTo) && (
             // Les accions del document en un menú ⋯, el mateix a totes les galeries.
-            <CardMenu name={project.name} onSaveFile={onSaveFile} onDuplicate={onDuplicate} onMove={onMove} onDelete={onDelete} />
+            <CardMenu name={project.name} onSaveFile={onSaveFile} onDuplicate={onDuplicate} copyTo={copyTo} onMove={onMove} onDelete={onDelete} />
           )
         )}
         </>

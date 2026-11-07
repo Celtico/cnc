@@ -42,6 +42,7 @@ const PAGES = {
     shows: isMoble,
     extra: {},
     storage: "projects",
+    copyTo: "Copiar a Modelatge",
   },
   modelatge: {
     title: "Modelatge",
@@ -50,6 +51,7 @@ const PAGES = {
     shows: isModel,
     extra: { modeling: true },
     storage: "modeling",
+    copyTo: "Copiar a Mobles",
   },
 } as const
 
@@ -83,6 +85,15 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone, page: pa
   const handleDuplicate = async (id: number) => {
     const newId = await duplicateProject(id)
     if (newId !== undefined) toaster.create({ title: `${cap(page.noun[0])} duplicat`, type: "success" })
+  }
+
+  // Mobles ↔ Modelatge: una còpia a l'altra pàgina, que s'obre (cel, 2026-11-07: «obrir al Modelatge un moble que ja s'ha fet»).
+  const handleCopyTo = async (id: number) => {
+    const copy = await duplicateProject(id)
+    if (copy === undefined) return
+    await db.projects.update(copy, { modeling: pageKey === "mobles" ? true : undefined })
+    toaster.create({ title: pageKey === "mobles" ? "Copiat a Modelatge" : "Copiat a Mobles", type: "success" })
+    onOpen(copy)
   }
 
   const confirmDelete = async () => {
@@ -165,6 +176,7 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone, page: pa
                   onDelete={() => setToDelete(p)}
                   onSaveFile={() => setToSave(p)}
                   onMove={() => setToMove(p)}
+                  copyTo={{ label: page.copyTo, onClick: () => void handleCopyTo(p.id) }}
                   ambients={membership.get(p.id)}
                 />
               )}
