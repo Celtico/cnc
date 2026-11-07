@@ -87,6 +87,11 @@ export interface Project {
   photo?: PhotoCalibration
   /** Grup (carpeta) de l'historial, per ordenar-los. */
   folder?: string
+  /**
+   * Fet a Modelatge (cel, 2026-11-07): un moble com els altres (mateix model, mateix editor i mateixes sortides) que es
+   * llista a Modelatge en lloc de Mobles. Des de Mobles s'hi arriba amb «Afegir mòdul» (els seus mòduls passen al moble).
+   */
+  modeling?: boolean
   /** S'ha modificat després de crear-lo (a l'editor o a l'ambient): esborrar-lo perdria els canvis. */
   edited?: boolean
   /**

@@ -62,3 +62,31 @@ describe("ordre de la divisió", () => {
     expect(yOf("drawerFront")).toBeLessThan(yOf("door"))
   })
 })
+
+describe("el «Buc bàsic» del Taulell", () => {
+  // La plantilla de fàbrica del Taulell (FACTORY_PRESETS «buc»).
+  const buc = { id: 0, name: "Buc bàsic", D: 560, H: 860, W: 1000, back: "inside", bdep: 8, bset: 49, cm: "mel", cols: 1, dm: "mel", doors: false, drawerH: 181, drawers: 0, feet: "axilo", plinth: false, pl: 100, railV: "none", railW: 200, s32: true, shelves: 0, t: 19, tb: 19, topT: "front", pos: [0, 0, 0] as [number, number, number] }
+  const r = fromTaulell({ cabs: [buc], parts: [], sketches: [], hw: [{ kind: "cabineo" }, { kind: "cabineo" }, { kind: "screw" }] }, () => "Melamina blanca")
+  const m = r.composition.modules[0]!
+
+  it("potes AXILO (de la biblioteca), fons per dins retirat i tapa amb només el travesser de davant", () => {
+    expect(m.carcass.height).toBe(760)
+    expect(m.carcass.base).toMatchObject({ kind: "legs", height: 100, hardware: { id: "leg-hafele-axilo78-screw-moble" } })
+    expect(m.carcass.base.kind === "legs" && m.carcass.base.plinth).toBeFalsy()
+    expect(m.carcass).toMatchObject({ back: "inset", backInsetSetback: 49, backThickness: 19, top: { kind: "rails", width: 200, back: false } })
+  })
+
+  it("el cnc el construeix com el Taulell: travesser de davant de 200 i el fons fins a dalt", () => {
+    const ps = buildComposition(r.composition).panels
+    const rail = ps.find((p) => p.id.endsWith(":top-front"))
+    expect(rail).toBeDefined()
+    expect(rail!.width).toBe(200)
+    expect(ps.some((p) => p.id.endsWith(":top") || p.id.endsWith(":top-back"))).toBe(false)
+    const back = ps.find((p) => p.role === "back")!
+    expect(back.width).toBeCloseTo(760 - 19, 0)
+  })
+
+  it("diu el que encara no passa (les unions del Taulell)", () => {
+    expect(r.warnings.join(" ")).toContain("2 × Cabineo, 1 × cargols")
+  })
+})

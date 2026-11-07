@@ -8,7 +8,7 @@ import { useState } from "react"
 import { ProfileEditor } from "./ProfileEditor"
 import { PRESETS, matchPreset } from "./profilePresets"
 import { LuCircle, LuPencilRuler, LuRectangleHorizontal, LuSquircle } from "react-icons/lu"
-import { LuGrid3X3, LuPanelBottom, LuPanelLeft, LuPanelRight, LuPanelTop, LuSquareDashed, LuSquare, LuSquareDashedBottom, LuSquareSquare, LuSquareStack, LuTriangleRight, LuWind } from "react-icons/lu"
+import { LuGrid3X3, LuPanelBottom, LuPanelLeft, LuPanelRight, LuPanelTop, LuRows2, LuSquareDashed, LuSquare, LuSquareDashedBottom, LuSquareSquare, LuSquareStack, LuTriangleRight, LuWind } from "react-icons/lu"
 import { RxBorderBottom, RxBorderLeft, RxBorderRight, RxBorderSplit, RxBorderTop } from "react-icons/rx"
 import { useSettings } from "../settings/SettingsContext"
 import { MaterialSelect } from "../settings/MaterialSelect"
@@ -22,7 +22,7 @@ import { BACK_LABEL, BACK_OPTIONS } from "./backOptions"
 
 type CarcassSection = "dims" | "structure"
 
-const TOP_LABEL: Record<Top["kind"], string> = { full: "Sencera", ventSlot: "Ranura d'aire", grille: "Reixeta", none: "Sense tapa" }
+const TOP_LABEL: Record<Top["kind"], string> = { full: "Sencera", ventSlot: "Ranura d'aire", grille: "Reixeta", rails: "Travessers", none: "Sense tapa" }
 
 /**
  * Formulari de la carcassa del mòdul seleccionat, per seccions (l'inspector en fa una secció plegable per a cadascuna):
@@ -71,15 +71,28 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
                       { value: "full", label: "Sencera", icon: LuPanelTop },
                       { value: "ventSlot", label: "Ranura d'aire", icon: LuWind, hint: "Amb ranura d'aire al darrere" },
                       { value: "grille", label: "Reixeta", icon: LuGrid3X3, hint: "Amb reixeta" },
+                      { value: "rails", label: "Travessers", icon: LuRows2, hint: "Un travesser al davant i un al darrere (o només el del davant)" },
                       { value: "none", label: "Sense tapa", icon: LuSquareDashed },
                     ]}
                     onChange={(k) => {
-                      const top: Top = k === "ventSlot" ? { kind: "ventSlot", gap: 60 } : k === "grille" ? { kind: "grille", pattern: DEFAULT_GRILLE } : { kind: k }
+                      const top: Top = k === "ventSlot" ? { kind: "ventSlot", gap: 60 } : k === "grille" ? { kind: "grille", pattern: DEFAULT_GRILLE } : k === "rails" ? { kind: "rails", width: 100, back: true } : { kind: k }
                       set({ top })
                     }}
                   />
                 </FormRow>}
                 {vc.top.kind === "ventSlot" && c.top.kind === "ventSlot" && <NumRow optionId="module.carcass.ventGap" label="Ranura d'aire" value={c.top.gap} min={20} max={200} step={5} onChange={(gap) => set({ top: { kind: "ventSlot", gap } })} />}
+                {vc.top.kind === "rails" && c.top.kind === "rails" && (
+                  <>
+                    <NumRow optionId="module.carcass.railWidth" label="Amplada dels travessers" value={c.top.width} min={30} max={600} step={5} onChange={(width) => set({ top: { ...(c.top as Extract<Top, { kind: "rails" }>), width } })} />
+                    <FormRow optionId="module.carcass.railBack" label="Travesser de darrere" help="Sense, el fons encastat puja fins a dalt.">
+                      <Switch.Root size="sm" pt="6px" checked={c.top.back} onCheckedChange={(e) => set({ top: { ...(c.top as Extract<Top, { kind: "rails" }>), back: e.checked } })}>
+                        <Switch.HiddenInput />
+                        <Switch.Control />
+                        <Switch.Label fontSize="sm">Sí</Switch.Label>
+                      </Switch.Root>
+                    </FormRow>
+                  </>
+                )}
                 {/* La reixeta de la tapa: el mateix patró que el front reixeta (va fixa a la caixa: sense muntatge). */}
                 {vc.top.kind === "grille" && c.top.kind === "grille" && <GrillePatternFields pattern={c.top.pattern} onChange={(pattern) => set({ top: { kind: "grille", pattern } })} ids={{ pattern: "module.carcass.grille.pattern", holes: "module.carcass.grille.holes", slots: "module.carcass.grille.slots", margin: "module.carcass.grille.margin" }} />}
 

@@ -1,13 +1,13 @@
 import { Stack } from "@chakra-ui/react"
 import { useRef, useState } from "react"
 import { LuBox } from "react-icons/lu"
-import { addCompositionModules, compositionKind, partsOnlyKind, newId, newModelObject, type Composition, type MultiItem, type Module } from "../../core/model"
+import { compositionKind, partsOnlyKind, newId, newModelObject, type Composition, type MultiItem, type Module } from "../../core/model"
 import { NameDialog } from "../../components/NameDialog"
 import { defaultElementName, freePartFor, refFor, type AddKind } from "./addElements"
 import { useSettings } from "../settings/SettingsContext"
 import { TreeRow, TreeSection } from "../../components/TreeRow"
 import { ModelImportDialog, type ModelImportHandle } from "./ModelImportDialog"
-import { ModulePicker } from "./ModulePicker"
+import { ModulePicker, pickInto } from "./ModulePicker"
 import type { ModelChoice } from "./useModelAssets"
 import { useModuleAccordion, useOpenGroups } from "./tree/useTreeExpansion"
 import { useTreeDnd } from "./tree/useTreeDnd"
@@ -149,10 +149,7 @@ export function StructureTree({
         }}
         onPick={(c, n) => {
           setPicking(false)
-          const r = addCompositionModules(comp, c, n)
-          onChange(r.comp)
-          const first = r.items[0]
-          if (first) onSelect(r.items.length > 1 ? { kind: "multi", items: r.items } : first.kind === "module" ? { kind: "module", id: first.id } : first.kind === "part" ? { kind: "part", id: first.id } : { kind: "model", id: first.id })
+          pickInto(comp, c, n, onChange, onSelect)
         }}
       />
       {!onlyParts && <TreeSection onAdd={() => setPicking(true)} addLabel="Afegir mòdul">Mòduls</TreeSection>}

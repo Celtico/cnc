@@ -113,6 +113,12 @@ export const TopSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("ventSlot"), gap: mm.positive() }),
   z.object({ kind: z.literal("grille"), pattern: GrillePatternSchema }),
   z.object({ kind: z.literal("none") }),
+  /**
+   * Travessers (cel, 2026-11-07, la tapa del «Buc bàsic» del Taulell i dels mobles d'aigüera): en lloc de la tapa sencera,
+   * una tira al davant i, amb `back`, una altra al darrere, de `width` mm de fondària; entre totes dues, obert. Sense el
+   * de darrere, el fons encastat puja fins a dalt.
+   */
+  z.object({ kind: z.literal("rails"), width: mm.min(30).max(600), back: z.boolean() }),
 ])
 export type Top = z.infer<typeof TopSchema>
 

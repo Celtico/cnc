@@ -5,7 +5,7 @@ import { FoldGroup, FoldItem } from "../../components/Fold"
 import { useMemo } from "react"
 import { withDefaultMaterials, type ComboCategory, type Template } from "../../core/model"
 import { useSettings } from "../settings/SettingsContext"
-import { GALLERY_COLS } from "./galleryGrid"
+import { useGalleryCols } from "./galleryGrid"
 import { TemplateCard } from "./TemplateCard"
 
 /**
@@ -35,6 +35,7 @@ export function CombosSection({
   icon?: IconType
   description?: string
 }) {
+  const cols = useGalleryCols()
   // Amb el tauler i el fons de Preferències (`withDefaultMaterials`): l'id de la miniatura els porta, perquè canviï amb ells.
   const { settings } = useSettings()
   const d = settings.defaults
@@ -63,7 +64,7 @@ export function CombosSection({
                 <Text fontSize="xs" color="fg.muted" px="var(--gallery-px, 0)">
                   {c.description}
                 </Text>
-                <SimpleGrid columns={GALLERY_COLS} gap={3}>
+                <SimpleGrid columns={cols} gap={3}>
                   {c.items.map((t) => {
                     const own = c.kickers?.[t.id]
                     if (own) return <TemplateCard key={t.id} t={t} kicker={own} onPick={onCreate} />

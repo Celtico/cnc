@@ -15,6 +15,7 @@ import { UndoRedo } from "../../components/UndoRedo"
 import { useDebouncedSave } from "../../lib/useDebouncedSave"
 import { compositionEdits, hardwareCommands } from "./editorCommands"
 import { EditorInspector } from "./EditorInspector"
+import { EditorLeftPanel } from "./EditorLeftPanel"
 import { EditorViewport } from "./EditorViewport"
 import { framePose, warningTarget } from "./warningTarget"
 import { openFolds } from "../../components/foldOpen"
@@ -173,6 +174,11 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       <Workspace
         ws={ws}
         left={
+        <EditorLeftPanel
+          comp={comp}
+          onChange={setComp}
+          onSelect={(s) => pick(s, true)}
+          tree={
         <StructureTree
           name={name}
           comp={comp}
@@ -181,6 +187,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           onChange={setComp}
           newModule={(id, n) => withMobleMaterials(applySettingsToModule(settings, kind === "taula" ? tableModule(id, n) : emptyModule(id, n)), comp.modules)}
           partCenter={{ x: Math.round(scene.size.width / 2), y: partsOnlyKind(kind) ? 0 : Math.round(scene.size.height / 2), z: partsOnlyKind(kind) ? 0 : Math.round(scene.size.depth + 50) }}
+        />
+          }
         />
         }
         right={

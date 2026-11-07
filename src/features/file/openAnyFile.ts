@@ -1,6 +1,8 @@
 import { fileKind } from "../../core/file/ambientFile"
 import type { Settings } from "../../core/model"
-import { db } from "../../db/db"
+import { fromTaulell, isTaulellDoc, taulellMaterial, type TaulellDoc } from "../../core/import/taulell"
+import { uniqueName } from "../../core/file/mobleFile"
+import { createProject, db } from "../../db/db"
 import { isObject } from "../objects/isObject"
 import { openAmbientData } from "./ambientIo"
 import { openMobleData } from "./mobleIo"
@@ -23,6 +25,8 @@ export async function openAnyFile(text: string, settings: Settings, saveSettings
   } catch {
     return { ok: false, error: "Aquest fitxer no és un moble ni un ambient (no és un JSON vàlid)." }
   }
+  // Un projecte del Taulell 3D (.taulell): els seus mobles passen a mòduls nostres i les peces rectes, a peces lliures.
+  if (isTaulellDoc(raw)) return openTaulell(raw, settings)
   const kind = fileKind(raw)
   if (kind === "ambient") {
     const res = await openAmbientData(raw, settings, saveSettings)
@@ -44,4 +48,14 @@ export function openedNote(opened: Exclude<OpenedFile, { ok: false }>, page: "mo
 /** Obre l'ambient (l'escolta `App`: `mobles:open-ambient`), des d'una pàgina que no és la d'Ambients. */
 export function showAmbient(id: number): void {
   window.dispatchEvent(new CustomEvent("mobles:open-ambient", { detail: id }))
+}
+
+/** Un `.taulell` (el projecte del Taulell 3D) → un moble nou: `fromTaulell`, amb els materials de les preferències pel nom. */
+async function openTaulell(doc: TaulellDoc, settings: Settings): Promise<OpenedFile> {
+  const names = settings.materials.map((m) => m.name)
+  const r = fromTaulell(doc, (k) => taulellMaterial(k, names, settings.defaults.material))
+  const existing = (await db.projects.toArray()).map((p) => p.name)
+  const name = uniqueName(r.name, existing)
+  const projectId = await createProject(name, undefined, { composition: r.composition })
+  return { ok: true, kind: "moble", projectId, name, warnings: r.warnings }
 }

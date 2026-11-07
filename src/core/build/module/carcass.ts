@@ -157,13 +157,47 @@ export class CarcassBuilder extends HollowWallsBuilder {
     const ext = d.mitreFronts && (isBottom ? d.mitreBottom : d.mitreTop) ? t : 0
     let width = d.sideDepth + ext + (onTop ? 2 * ov : 0)
     let zRear = d.sideZ0 - (onTop ? ov : 0)
-    let cutouts: Cutout[] | undefined
     if (!isBottom && c.top.kind === "ventSlot") {
       width = d.sideDepth - c.top.gap
       zRear = d.sideZ0 + c.top.gap
     }
+    // Tapa amb travessers (com els mobles d'aigüera, o el «Buc bàsic» del Taulell, cel 2026-11-07): dues tires de la tapa,
+    // la de davant i (si n'hi ha) la de darrere, de l'amplada triada; entre totes dues, obert.
+    const rails = !isBottom && c.top.kind === "rails" ? c.top : null
+    const rw = rails ? Math.min(rails.width, rails.back ? width / 2 : width) : 0
+    const strips = rails
+      ? [
+          { id: `${id}-front`, name: "Travesser davant", zRear: zRear + width - rw, width: rw, rear: false },
+          ...(rails.back ? [{ id: `${id}-back`, name: "Travesser darrere", zRear, width: rw, rear: true }] : []),
+        ]
+      : [{ id, name: isBottom ? "Base" : "Sostre", zRear, width, rear: true }]
+    for (const strip of strips) this.buildHorizontalStrip({ isBottom, strip, span, px0, length, ov, onTop, ext, atL, atR, mitreL, mitreR, cut })
+  }
+
+  /** Una peça de la base o de la tapa (la tapa amb travessers en fa dues): la peça, la ranura del fons, la reixeta i les espigues. */
+  private buildHorizontalStrip(o: {
+    isBottom: boolean
+    strip: { id: string; name: string; zRear: number; width: number; rear: boolean }
+    span: [number, number]
+    px0: number
+    length: number
+    ov: number
+    onTop: boolean
+    ext: number
+    atL: boolean
+    atR: boolean
+    mitreL: boolean
+    mitreR: boolean
+    cut: ("left" | "right")[]
+  }): void {
+    const { m, d } = this
+    const c = m.carcass
+    const { t, interior } = d
+    const { isBottom, span, px0, length, ov, onTop, ext, atL, atR, mitreL, mitreR, cut } = o
+    let cutouts: Cutout[] | undefined
+    const { id, zRear, width, rear } = o.strip
     const grooves: Panel["grooves"] = []
-    if (c.back === "groove" && !(c.top.kind === "ventSlot" && !isBottom)) {
+    if (rear && c.back === "groove" && !(c.top.kind === "ventSlot" && !isBottom)) {
       // Si la peça passa per sobre d'un lateral (inglet, tauler de taula), el fons hi entra
       // també la fondària de la ranura del lateral: la ranura s'allarga g per aquell costat.
       const g = c.grooveDepth
@@ -188,14 +222,15 @@ export class CarcassBuilder extends HollowWallsBuilder {
       ...this.basePanel(
         id,
         isBottom ? "baix" : "dalt",
-        isBottom ? "Base" : "Sostre",
-        which,
+        o.strip.name,
+        isBottom ? "bottom" : "top",
         length,
         width,
         t,
         c.material,
         "x",
-        onTop ? edges("top", "bottom", "left", "right") : edges(...(ext ? [] : [isBottom ? ("bottom" as const) : ("top" as const)]), ...this.rearEdge(isBottom ? "top" : "bottom"), ...cut),
+        // El travesser de davant: el cantell de darrere també es veu (dóna a l'obertura de dalt).
+        onTop ? edges("top", "bottom", "left", "right") : edges(...(ext ? [] : [isBottom ? ("bottom" as const) : ("top" as const)]), ...(rear ? this.rearEdge(isBottom ? "top" : "bottom") : (["bottom"] as const)), ...cut),
         pl,
       ),
       grooves,
@@ -235,7 +270,7 @@ export class CarcassBuilder extends HollowWallsBuilder {
       if (!(atL && near(xFace, interior.x0)) && !(atR && near(xFace, interior.x1))) continue
       if (yMid < v.yB || yMid > v.yT) continue
       // Sobre la fondària real de la peça (la tapa amb ranura d'aire és més curta).
-      const zs = threeAlong(zRear, d.D, this.hw.dowel.endOffset)
+      const zs = threeAlong(zRear, Math.min(d.D, zRear + width), this.hw.dowel.endOffset)
       dowelJoint(panel, v.panel, zs.map((z): Vec3 => [xFace, yMid, z]), this.hw.dowel, this.hw.dowel.tag)
     }
   }
@@ -288,11 +323,13 @@ export class CarcassBuilder extends HollowWallsBuilder {
           ...(c.sides.left ? [] : (["left"] as const)),
           ...(c.sides.right ? [] : (["right"] as const)),
           ...(d.hasBase ? [] : (["bottom"] as const)),
-          ...(!d.hasTop || (slot !== null && slot > 0) ? (["top"] as const) : []),
+          ...(!d.hasTop || (slot !== null && slot > 0) || (c.top.kind === "rails" && !c.top.back) ? (["top"] as const) : []),
         )
       : { ...NO_EDGES }
+    // Tapa amb només el travesser de davant: el fons encastat puja fins a dalt (com al Taulell).
+    const yT = c.top.kind === "rails" && !c.top.back ? d.H : interior.y1
     const pieces = this.addBack(
-      this.basePanel("back", "trassera", "Fons", "back", interior.x1 - interior.x0, interior.y1 - interior.y0, d.tb, c.backMaterial, visible ? "y" : "none", eb, placement([interior.x0, interior.y0, z0], X, Y, Z, neg(Z))),
+      this.basePanel("back", "trassera", "Fons", "back", interior.x1 - interior.x0, yT - interior.y0, d.tb, c.backMaterial, visible ? "y" : "none", eb, placement([interior.x0, interior.y0, z0], X, Y, Z, neg(Z))),
     )
     // Tot el fons és d'altres zones (sense fons o amb el seu): res a unir.
     const back = pieces[0]

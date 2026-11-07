@@ -6,7 +6,7 @@ import { ConfirmDialog } from "../../components/ConfirmDialog"
 import { ActionsMenu } from "../../components/ActionsMenu"
 import { IconAction } from "../../components/IconAction"
 import { FoldGroup, FoldItem } from "../../components/Fold"
-import { GALLERY_COLS, groupByFolder } from "./galleryGrid"
+import { useGalleryCols, groupByFolder } from "./galleryGrid"
 
 /**
  * Graella amb grups (carpetes), la mateixa a l'historial de Mobles, Objectes i Ambients i a «Les
@@ -53,6 +53,7 @@ export function FolderedGrid<T>({
   onRenameFolder?: (from: string, to: string) => void
   onUngroup?: (name: string) => void
 }) {
+  const cols = useGalleryCols()
   const grouped = groupByFolder(items, folderOf)
   const folders = show === "loose" ? [] : grouped.folders
   const loose = show === "folders" ? [] : grouped.loose
@@ -190,7 +191,7 @@ export function FolderedGrid<T>({
                 )
               }
             >
-              <SimpleGrid columns={GALLERY_COLS} gap={3}>
+              <SimpleGrid columns={cols} gap={3}>
                 {list.map(cell)}
               </SimpleGrid>
             </FoldItem>
@@ -199,7 +200,7 @@ export function FolderedGrid<T>({
       )}
       {loose.length > 0 && (
         // Dins d'una secció de galeria (sense marge), el marge de la secció (`--gallery-px`, layout.css).
-        <SimpleGrid columns={GALLERY_COLS} gap={3} p="var(--gallery-px, 0)">
+        <SimpleGrid columns={cols} gap={3} p="var(--gallery-px, 0)">
           {loose.map(cell)}
         </SimpleGrid>
       )}

@@ -62,8 +62,6 @@ export default defineConfig({
         // Fallbacks JS de Draco/Basis (de model-viewer, ~0,9 MB): el visor AR no els fa servir mai.
         globIgnores: ["splash/**", "assets/draco_*", "assets/basis_*"],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
-        // Modelatge: el Taulell 3D (`public/taulell/`) és una pàgina a part dins d'un iframe; no es pot servir l'app.
-        navigateFallbackDenylist: [/^\/taulell\//],
         // Textures de foto (~14 MB) i pesos d'OIDN: no es precachegen; es desen el primer cop que es fan servir.
         runtimeCaching: [
           // WASM de Draco i Basis (`src/pwaWasmCache.ts`).

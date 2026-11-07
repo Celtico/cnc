@@ -22,9 +22,12 @@ export const CARCASS = group("module.carcass", "Caixa", { icon: "carcass", code:
       { value: "full", label: "Sencera", reveals: ["module.carcass.tableTop"] },
       { value: "ventSlot", label: "Ranura d'aire", reveals: ["module.carcass.ventGap"] },
       { value: "grille", label: "Reixeta", reveals: ["module.carcass.grille.pattern", "module.carcass.grille.holes", "module.carcass.grille.slots", "module.carcass.grille.margin"] },
+      { value: "rails", label: "Travessers", reveals: ["module.carcass.railWidth", "module.carcass.railBack"] },
       { value: "none", label: "Sense tapa" },
     ],
   }, [
+    field("module.carcass.railWidth", "Amplada dels travessers", { code: UI.carcass, control: "number", showIf: "Tapa = Travessers", default: 100, note: "cel, 2026-11-07: la tapa del «Buc bàsic» del Taulell i dels mobles d'aigüera." }),
+    field("module.carcass.railBack", "Travesser de darrere", { code: UI.carcass, control: "switch", showIf: "Tapa = Travessers", default: true, choices: [{ value: "on", label: "Sí" }], note: "Sense, el fons encastat puja fins a dalt." }),
     field("module.carcass.ventGap", "Ranura d'aire", { code: UI.carcass, control: "number", showIf: "Tapa = Ranura d'aire", default: 60 }),
     field("module.carcass.grille.pattern", "Patró", { code: UI.carcass, control: "choice", showIf: "Tapa = Reixeta", default: "slotsV", choices: [{ value: "slotsV", label: "Ranures verticals", reveals: ["module.carcass.grille.slots"] }, { value: "slotsH", label: "Ranures horitzontals", reveals: ["module.carcass.grille.slots"] }, { value: "holes", label: "Forats al tresbolillo", reveals: ["module.carcass.grille.holes"] }], note: "El mateix component que el front reixeta (`GrillePatternFields`); la tapa va fixa: sense muntatge." }),
     field("module.carcass.grille.slots", "Ranura · Separació", { code: UI.carcass, control: "number", showIf: "Patró de ranures", default: 8 }),

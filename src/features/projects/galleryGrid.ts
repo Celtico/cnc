@@ -1,5 +1,11 @@
+import { createContext, useContext } from "react"
+
 /** Columnes de totes les graelles de la pàgina Mobles (historial i plantilles): la mateixa mida de targeta. */
 export const GALLERY_COLS = { base: 2, md: 3, lg: 4, "2xl": 5 }
+
+/** Columnes de les graelles de galeria: les de la pàgina, o les d'un panell estret (el Catàleg de l'editor, una sola). */
+export const GalleryColsContext = createContext<typeof GALLERY_COLS | { base: number }>(GALLERY_COLS)
+export const useGalleryCols = () => useContext(GalleryColsContext)
 
 /** Per cercar sense accents ni majúscules. */
 export const fold = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()

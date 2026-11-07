@@ -7,7 +7,7 @@ import { showAmbient } from "../features/file/openAnyFile"
 import { usePersistentNumber } from "../lib/usePersistentNumber"
 import { isObject as projectIsObject } from "../features/objects/isObject"
 import { useProject } from "../features/useProject"
-import { OBJECTS_ENTRY, PROJECT_NAV, PROJECTS_ENTRY, type Screen, type Section } from "./nav"
+import { MODELING_ENTRY, OBJECTS_ENTRY, PROJECT_NAV, PROJECTS_ENTRY, type Screen, type Section } from "./nav"
 import { AMBIENT_KEY, readStoredId, STORAGE_KEY, useStoredId } from "./storedId"
 import { useDraftCleanup } from "./useDraftCleanup"
 
@@ -51,22 +51,24 @@ export function useAppNavigation() {
   // Un objecte (per als ambients) s'edita amb el mateix Editor, però no té peces, nesting ni export.
   const isObject = !!previewComposition && compositionKind(previewComposition) === "objecte"
   const projectNav = isObject ? PROJECT_NAV.filter((n) => n.id === "editor") : PROJECT_NAV
-  const rootScreen: Screen = isObject ? "objects" : "projects"
-  const rootEntry = isObject ? OBJECTS_ENTRY : PROJECTS_ENTRY
+  // Un model de Modelatge és un moble com els altres (mateix editor i pestanyes), però és de l'apartat Modelatge.
+  const isModel = !!project?.modeling && project.id === projectId
+  const rootScreen: Screen = isObject ? "objects" : isModel ? "modeling" : "projects"
+  const rootEntry = isObject ? OBJECTS_ENTRY : isModel ? MODELING_ENTRY : PROJECTS_ENTRY
   useEffect(() => {
     // Només quan el projecte carregat és el que hi ha obert (si no, en canviar d'un objecte a un
     // moble es recordava el moble com a «últim objecte» i Objectes obria un moble).
     if (projectId === null || !previewComposition || project?.id !== projectId) return
     if (isObject) setLastObject(projectId)
-    else setLastMoble(projectId)
-  }, [projectId, project?.id, previewComposition, isObject, setLastMoble, setLastObject])
+    else if (!isModel) setLastMoble(projectId)
+  }, [projectId, project?.id, previewComposition, isObject, isModel, setLastMoble, setLastObject])
   /** Mobles / Objectes del menú: l'últim obert (si encara existeix) o la llista. */
   const goRoot = (kind: "projects" | "objects") => {
     const id = kind === "objects" ? lastObject : lastMoble
     if (id > 0)
       void db.projects.get(id).then((p) => {
         // Només si encara existeix i és del mateix apartat (objecte o moble).
-        if (p && projectIsObject(p) === (kind === "objects")) openProject(id)
+        if (p && projectIsObject(p) === (kind === "objects") && !p.modeling) openProject(id)
         else {
           setProjectId(null)
           setScreen(kind)
@@ -79,12 +81,13 @@ export function useAppNavigation() {
   }
   /** Apartat actiu al menú global: el del document obert o el de la pàgina. */
   const section: Section =
-    screen === "settings" ? "settings" : screen === "modeling" ? "modeling" : screen === "ambients" || screen === "ambient" ? "ambients" : inProject ? (isObject ? "objects" : "projects") : screen === "objects" ? "objects" : "projects"
+    screen === "settings" ? "settings" : screen === "modeling" ? "modeling" : screen === "ambients" || screen === "ambient" ? "ambients" : inProject ? (isObject ? "objects" : isModel ? "modeling" : "projects") : screen === "objects" ? "objects" : "projects"
   /** Clic a un apartat: si ja hi ets dins d'un document, torna a la llista; si no, a l'últim obert. */
   const goSection = (id: string) => {
     if (id === "settings") return go("settings")
     if (id === "ambients") return section === "ambients" && screen === "ambient" ? closeAmbient() : goAmbients()
     if (id === "modeling") {
+      if (section === "modeling" && inProject && screen !== "settings") return backToProjects()
       setProjectId(null)
       return setScreen("modeling")
     }
@@ -100,7 +103,7 @@ export function useAppNavigation() {
   const backToProjects = () => {
     // Com «Ambients ›»: tornar a la llista deixa de recordar-lo.
     if (isObject) setLastObject(0)
-    else setLastMoble(0)
+    else if (!isModel) setLastMoble(0)
     setProjectId(null)
     setScreen(rootScreen)
   }

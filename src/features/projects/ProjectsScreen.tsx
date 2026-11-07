@@ -6,7 +6,7 @@ import { showAmbient } from "../file/openAnyFile"
 import { uniqueName } from "../../core/file/mobleFile"
 import { NewMobleGallery } from "./NewMobleGallery"
 import { ProjectCard } from "./ProjectCard"
-import { isObject } from "../objects/isObject"
+import { isModel, isMoble } from "../modeling/isModel"
 import { useAmbientMembership } from "../ambients/useAmbientMembership"
 import type { Composition } from "../../core/model"
 import { ClearHistory } from "./ClearHistory"
@@ -29,7 +29,32 @@ const NEW_MOBLE_TYPES = [
 /** Acció demanada des del menú de l'esquerra (Obrir fitxer); `n` la fa única. */
 export type ProjectsRequest = { kind: "open"; n: number } | null
 
-export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOpen: (id: number) => void; request?: ProjectsRequest; onRequestDone?: () => void }) {
+/**
+ * Les dues pàgines d'inici que fan mobles: Mobles i Modelatge (cel, 2026-11-07: «l'inici com tenim tots»). Són la mateixa
+ * pàgina (Nou, Historial, Projectes, catàleg i Obrir fitxer) i els mobles s'obren al mateix editor; els de Modelatge
+ * porten `Project.modeling` i només surten aquí.
+ */
+const PAGES = {
+  mobles: {
+    title: "Mobles",
+    description: "Els mobles que dissenyes i fabriques: comença en blanc, des del catàleg o des d'una col·lecció i continua'l a l'editor. A l'historial hi tens els que ja has fet; el cercador busca a tot arreu (nom, tipus, estil, material, color).",
+    noun: ["moble", "mobles"] as [string, string],
+    shows: isMoble,
+    extra: {},
+    storage: "projects",
+  },
+  modelatge: {
+    title: "Modelatge",
+    description: "Els mòduls que fas a mà, peça a peça: comença en blanc o des d'un moble del catàleg, o obre un projecte del Taulell (.taulell). A Mobles, «Afegir mòdul» hi porta els mòduls d'un model.",
+    noun: ["model", "models"] as [string, string],
+    shows: isModel,
+    extra: { modeling: true },
+    storage: "modeling",
+  },
+} as const
+
+export function ProjectsScreen({ onOpen, request = null, onRequestDone, page: pageKey = "mobles" }: { onOpen: (id: number) => void; request?: ProjectsRequest; onRequestDone?: () => void; page?: keyof typeof PAGES }) {
+  const page = PAGES[pageKey]
   const projects = useProjects()
   const membership = useAmbientMembership()
   const [toDelete, setToDelete] = useState<Project | null>(null)
@@ -51,13 +76,13 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
   const handleCreate = async (composition: Composition, name: string) => {
     const existing = (await db.projects.toArray()).map((p) => p.name)
     // Esborrany: si no s'hi canvia res, no queda a l'Historial (`Project.draft`).
-    const id = await createProject(uniqueName(name, existing), undefined, { composition, draft: true })
+    const id = await createProject(uniqueName(name, existing), undefined, { composition, draft: true, ...page.extra })
     onOpen(id)
   }
 
   const handleDuplicate = async (id: number) => {
     const newId = await duplicateProject(id)
-    if (newId !== undefined) toaster.create({ title: "Moble duplicat", type: "success" })
+    if (newId !== undefined) toaster.create({ title: `${cap(page.noun[0])} duplicat`, type: "success" })
   }
 
   const confirmDelete = async () => {
@@ -72,17 +97,18 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
     <VStack align="stretch" gap={5}>
       {/* Accions de l'apartat a la seva capçalera (no al menú global), com a les apps professionals. */}
       <PageHeader
-        title="Mobles"
-        description="Els mobles que dissenyes i fabriques: comença en blanc, des del catàleg o des d'una col·lecció i continua'l a l'editor. A l'historial hi tens els que ja has fet; el cercador busca a tot arreu (nom, tipus, estil, material, color)."
+        title={page.title}
+        description={page.description}
       />
 
       <NewMobleGallery
         onCreate={(c, n) => void handleCreate(c, n)}
+        storageKey={`mobles:gallery-${page.storage}`}
         // El botó principal al costat del cercador (com a Ambients i Objectes) i «Obrir fitxer» a la mateixa fila.
         // «Nou moble» demana el tipus (per decisió de l'usuari, 2026-10-20: «triar si és de cuina o és un moble normal»): el
         // normal té el suport a cada mòdul; la cuina, un per a tots (Moble › Cuina). Es crea en blanc.
         add={{
-          label: "Nou moble",
+          label: `Nou ${page.noun[0]}`,
           menu: NEW_MOBLE_TYPES.map((t) => {
             const k = KINDS.find((x) => x.value === t.kind)!
             return (
@@ -99,9 +125,10 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
           }),
         }}
         // Un .moble (també les plantilles exportades abans) s'obre sempre com a moble; un objecte o un .ambient, com el que són.
-        extra={<OpenFileButton page="moble" inputRef={fileInput} onOpened={(o) => (o.kind === "ambient" ? showAmbient(o.ambientId) : onOpen(o.projectId))} />}
+        // A Modelatge, el moble obert (també un .taulell) hi queda com a model.
+        extra={<OpenFileButton page="moble" inputRef={fileInput} onOpened={(o) => (o.kind === "ambient" ? showAmbient(o.ambientId) : o.kind === "moble" && pageKey === "modelatge" ? void db.projects.update(o.projectId, { modeling: true }).then(() => onOpen(o.projectId)) : onOpen(o.projectId))} />}
         history={(matches, searching) => {
-          const shown = (projects ?? []).filter((p) => !isObject(p) && (!searching || matches(projectSearchText(p))))
+          const shown = (projects ?? []).filter((p) => page.shows(p) && (!searching || matches(projectSearchText(p))))
           // Historial = el que és de pas (sense grup); el que es desa en un grup passa a Projectes.
           const loose = shown.filter((p) => !p.folder)
           const grouped = shown.filter((p) => p.folder)
@@ -112,11 +139,11 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
               items={list}
               folderOf={(p) => p.folder}
               keyOf={(p) => p.id}
-              storageKey="mobles:folders-projects"
+              storageKey={`mobles:folders-${page.storage}`}
               toolbar={toolbar}
               selection={{
-                noun: ["moble", "mobles"],
-                folders: [...new Set((projects ?? []).filter((p) => !isObject(p) && p.folder).map((p) => p.folder!))].sort(),
+                noun: page.noun,
+                folders: [...new Set((projects ?? []).filter((p) => page.shows(p) && p.folder).map((p) => p.folder!))].sort(),
                 onMove: (ids, f) => void setProjectsFolder(ids as number[], f),
                 onDelete: async (ids) => {
                   // Els que són en algun ambient es conserven (si no, l'ambient perdria el moble).
@@ -129,7 +156,7 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
               searching={searching}
               // Tot el grup, no només el que es veu amb la cerca (també els objectes del mateix client).
               onRenameFolder={(from, to) => void setProjectsFolder((projects ?? []).filter((p) => p.folder === from).map((p) => p.id), to)}
-              onUngroup={(name) => void setProjectsFolder((projects ?? []).filter((p) => !isObject(p) && p.folder === name).map((p) => p.id), undefined)}
+              onUngroup={(name) => void setProjectsFolder((projects ?? []).filter((p) => page.shows(p) && p.folder === name).map((p) => p.id), undefined)}
               render={(p) => (
                 <ProjectCard
                   project={p}
@@ -148,7 +175,7 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
             node:
               loose.length === 0 ? (
                 <Text fontSize="sm" color="fg.muted">
-                  {shown.length ? "L'historial és buit: el que tens és a Projectes." : projects?.length ? "Cap moble no coincideix amb la cerca." : "Encara no tens cap moble: comença en blanc o des del catàleg."}
+                  {shown.length ? "L'historial és buit: el que tens és a Projectes." : projects?.some(page.shows) ? `Cap ${page.noun[0]} no coincideix amb la cerca.` : `Encara no tens cap ${page.noun[0]}: comença en blanc o des del catàleg.`}
                 </Text>
               ) : (
                 grid(
@@ -157,7 +184,7 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
                   <ClearHistory
                     count={free.length}
                     kept={loose.length - free.length}
-                    noun={["moble", "mobles"]}
+                    noun={page.noun}
                     keptNote="Es conserven els {n} que són en algun ambient. Els dels Projectes no es toquen."
                     edited={free.filter(isEdited).map((p) => p.name)}
                     onConfirm={async () => {
@@ -177,7 +204,7 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
                 grid("folders", grouped)
               ) : (
                 <Text fontSize="sm" color="fg.muted">
-                  Encara no n'hi ha cap. A l'Historial, «Grup nou» o el menú ⋯ d'un moble › «Moure a un grup…» (p. ex. el nom d'un client): el que hi desis queda aquí i «Esborrar» de l'Historial no el toca.
+                  Encara no n'hi ha cap. A l'Historial, «Grup nou» o el menú ⋯ d'un {page.noun[0]} › «Moure a un grup…» (p. ex. el nom d'un client): el que hi desis queda aquí i «Esborrar» de l'Historial no el toca.
                 </Text>
               ),
             },
@@ -189,7 +216,7 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
       <MoveToFolderDialog
         open={toMove !== null}
         what={toMove?.name ?? ""}
-        folders={[...new Set((projects ?? []).filter((p) => !isObject(p) && p.folder).map((p) => p.folder!))].sort()}
+        folders={[...new Set((projects ?? []).filter((p) => page.shows(p) && p.folder).map((p) => p.folder!))].sort()}
         current={toMove?.folder}
         onPick={(f) => toMove && void setProjectsFolder([toMove.id], f)}
         onClose={() => setToMove(null)}
@@ -205,3 +232,5 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
     </VStack>
   )
 }
+
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)

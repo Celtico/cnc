@@ -19,7 +19,7 @@ export const PROJECTS_ENTRY: NavEntry = { id: "projects", label: "Mobles", icon:
 export const OBJECTS_ENTRY: NavEntry = { id: "objects", label: "Objectes", icon: LuSofa }
 const AMBIENTS_ENTRY: NavEntry = { id: "ambients", label: "Ambients", icon: LuHouse }
 /** Modelatge (cel, 2026-11-07): el Taulell 3D dins del cnc, per dissenyar mòduls a mà i portar-los a Mobles. */
-const MODELING_ENTRY: NavEntry = { id: "modeling", label: "Modelatge", icon: LuShapes }
+export const MODELING_ENTRY: NavEntry = { id: "modeling", label: "Modelatge", icon: LuShapes }
 export const SETTINGS_ENTRY: NavEntry = { id: "settings", label: "Preferències", icon: LuSettings }
 /** Apartats del menú global (barra lateral); Preferències va a baix de tot. */
 export const GLOBAL_NAV: NavEntry[] = [PROJECTS_ENTRY, AMBIENTS_ENTRY, OBJECTS_ENTRY, MODELING_ENTRY]

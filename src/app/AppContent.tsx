@@ -12,7 +12,6 @@ const NestingScreen = lazy(() => import("../features/nesting/NestingScreen").the
 const ExportScreen = lazy(() => import("../features/export/ExportScreen").then((m) => ({ default: m.ExportScreen })))
 const PhotoScreen = lazy(() => import("../features/photo/PhotoScreen").then((m) => ({ default: m.PhotoScreen })))
 const SettingsScreen = lazy(() => import("../features/settings/SettingsScreen").then((m) => ({ default: m.SettingsScreen })))
-const ModelingScreen = lazy(() => import("../features/modeling/ModelingScreen").then((m) => ({ default: m.ModelingScreen })))
 const AmbientEditor = lazy(() => import("../features/ambients/AmbientEditor").then((m) => ({ default: m.AmbientEditor })))
 
 /** La pàgina d'ara (la llista, l'editor del moble o de l'ambient, Peces, Nesting, Exportar, Preferències…). */
@@ -42,7 +41,7 @@ export function AppContent({
   ) : screen === "ambient" && ambientId !== null ? (
     <AmbientEditor ambientId={ambientId} onOpenProject={onOpenProject} />
   ) : screen === "modeling" ? (
-    <ModelingScreen onOpen={onOpenProject} />
+    <ProjectsScreen key="modelatge" page="modelatge" onOpen={onOpenProject} />
   ) : screen === "settings" ? (
     <SettingsScreen previewComposition={previewComposition} />
   ) : screen === "projects" || screen === "ambient" || projectId === null ? (

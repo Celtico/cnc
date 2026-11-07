@@ -9,7 +9,7 @@ import { openAnyFile, openedNote, type OpenedFile } from "./openAnyFile"
 
 /**
  * «Obrir fitxer» (`LuFolderOpen`) de les galeries Mobles · Objectes · Ambients, a l'`extra` del `SearchBar`: obre un
- * `.moble` o un `.ambient` com el que és (`openAnyFile`) i, si no és de la pàgina (`page`), ho diu al missatge.
+ * `.moble`, un `.ambient` o un `.taulell` com el que és (`openAnyFile`) i, si no és de la pàgina (`page`), ho diu al missatge.
  * `inputRef`: per obrir el selector des de fora.
  */
 export function OpenFileButton({ page, onOpened, inputRef }: { page: "moble" | "objecte" | "ambient"; onOpened: (opened: Exclude<OpenedFile, { ok: false }>) => void; inputRef?: RefObject<HTMLInputElement | null> }) {
@@ -35,7 +35,7 @@ export function OpenFileButton({ page, onOpened, inputRef }: { page: "moble" | "
   }
   return (
     <>
-      <input ref={input} type="file" accept={fileAccept(".moble,.ambient,.json,application/json")} hidden onChange={(e) => void open(e.target.files?.[0])} />
+      <input ref={input} type="file" accept={fileAccept(".moble,.ambient,.taulell,.json,application/json")} hidden onChange={(e) => void open(e.target.files?.[0])} />
       <Tooltip content="Obrir fitxer">
         <IconButton size="sm" variant="outline" flexShrink={0} aria-label="Obrir fitxer" onClick={() => input.current?.click()}>
           <LuFolderOpen />

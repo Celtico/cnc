@@ -3,7 +3,7 @@ import { useState } from "react"
 import { LuExternalLink, LuLibrary, LuPlus } from "react-icons/lu"
 import type { CollectionPiece, FurnitureCollection, Grade, PieceStudy } from "../../core/model"
 import { FoldGroup, FoldItem } from "../../components/Fold"
-import { GALLERY_COLS } from "./galleryGrid"
+import { useGalleryCols } from "./galleryGrid"
 import { TemplateCard } from "./TemplateCard"
 
 /** Files de la fitxa d'estudi, en l'ordre dels criteris de la biblioteca. */
@@ -159,6 +159,7 @@ export function CollectionsSection({
   onOpenChange: (v: string[]) => void
   onCreate: (p: CollectionPiece) => void
 }) {
+  const cols = useGalleryCols()
   const [sheet, setSheet] = useState<CollectionPiece | null>(null)
   const shown = collections.filter((c) => c.pieces.length > 0)
   return (
@@ -172,7 +173,7 @@ export function CollectionsSection({
             {shown.map((c) => (
               <FoldItem key={c.id} id={c.id} title={c.name} count={c.pieces.length}>
                 {!searching && <CollectionIntro c={c} />}
-                <SimpleGrid columns={GALLERY_COLS} gap={3}>
+                <SimpleGrid columns={cols} gap={3}>
                   {c.pieces.map((p) => (
                     <TemplateCard key={p.id} t={p} kicker={p.type} title={p.name.replace(`${p.type} `, "")} onPick={() => setSheet(p)} />
                   ))}

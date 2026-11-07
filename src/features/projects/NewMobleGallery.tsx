@@ -7,12 +7,10 @@ import { useSettings } from "../settings/SettingsContext"
 import { kindLabel } from "./kindLabel"
 import { TemplateCard } from "./TemplateCard"
 import { FoldGroup, FoldItem } from "../../components/Fold"
-import { GALLERY_COLS, fold, searchKey, useSessionList } from "./galleryGrid"
+import { useGalleryCols, fold, searchKey, useSessionList } from "./galleryGrid"
 import { CatalogSection } from "./CatalogSection"
 import { CollectionsSection } from "./CollectionsSection"
 import { CombosSection } from "./CombosSection"
-
-const COLS = GALLERY_COLS
 
 /**
  * Pàgina de Mobles, com l'inici de Figma o Google Docs: cercador i acordions (tots tancats en
@@ -36,6 +34,7 @@ export function NewMobleGallery({
   /** Clau de sessió dels acordions oberts (la pàgina Mobles i la finestra dels ambients, per separat). */
   storageKey?: string
 }) {
+  const cols = useGalleryCols()
   // Sense filtre de tipus: el cercador també troba pel tipus («cuina», «armari», «taula»…).
   // Cercador de tota la pàgina: historial, projectes, catàleg i col·leccions (sense accents).
   const [query, setQuery] = useState("")
@@ -123,7 +122,7 @@ export function NewMobleGallery({
             count: c.types.reduce((m, ty) => m + ty.items.length, 0),
             // Una sola graella per categoria (com les altres); el tipus va a la targeta.
             content: (
-              <SimpleGrid columns={COLS} gap={3}>
+              <SimpleGrid columns={cols} gap={3}>
                 {c.types.flatMap((ty) => ty.items.map((t) => <TemplateCard key={t.id} t={t} kicker={ty.name} title={t.name.replace(`${ty.name} `, "")} onPick={pick} />))}
               </SimpleGrid>
             ),
@@ -142,7 +141,7 @@ export function NewMobleGallery({
             label: c.name,
             count: c.items.length,
             content: (
-              <SimpleGrid columns={COLS} gap={3}>
+              <SimpleGrid columns={cols} gap={3}>
                 {c.items.map((t) => (
                   <TemplateCard key={t.id} t={t} onPick={pick} />
                 ))}
