@@ -249,7 +249,7 @@ export function ModelingRibbon({
         ))}
       </HStack>
       </TopBarSlot>
-      <FloatingWindow key={faceTool ?? ""} id={`modeling-tool-${faceTool ?? ""}`} kind="picker" width={240} height={faceTool === "line32" ? 400 : faceTool === "fitblock" || faceTool === "shelf" || faceTool === "hole" || faceTool === "cup" ? 300 : 240} minSize={{ width: 200, height: 120 }} bodyProps={{ p: 3 }} open={!!faceTool} onClose={() => setFaceTool(null)} title={faceTool ? FACE_TOOL_LABEL[faceTool] : ""} initialFocus={false} closeHint="Acabar (Esc)">
+      <FloatingWindow id="modeling-tool-3" kind="picker" width={240} height={300} minSize={{ width: 200, height: 120 }} bodyProps={{ p: 3 }} open={!!faceTool} onClose={() => setFaceTool(null)} title={faceTool ? FACE_TOOL_LABEL[faceTool] : ""} initialFocus={false} closeHint="Acabar (Esc)">
         {faceTool && (
           <Stack gap={2}>
             <ToolOptions tool={faceTool} o={faceOpts} set={setFaceOpts} />
