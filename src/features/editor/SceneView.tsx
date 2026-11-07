@@ -1,4 +1,5 @@
 import { CabinetViewer } from "../../components/viewer/CabinetViewer"
+import { FRONT_ROLES } from "../../core/model"
 import type { SceneGetter } from "../../components/viewer/render/RenderDialog"
 import { anchorRef, groupItems, makeRoomForRef, moveAllBy, moveModuleBy, moveMultiBy, refBlocksRow, type Composition, type Module, type Settings } from "../../core/model"
 import { toaster } from "../../components/ui/toaster"
@@ -72,7 +73,7 @@ export function SceneView({
   return (
     <CabinetViewer
       sceneFinish={comp.scene}
-      panels={shownPanels}
+      panels={viewer.hideFronts ? shownPanels.filter((p) => !FRONT_ROLES.has(p.role)) : shownPanels}
       size={frameSize}
       exploded={exploded}
       // A la vista explosionada i amb les peces translúcides els forats i les ranures sempre es veuen.
@@ -84,6 +85,8 @@ export function SceneView({
       hoverAt={hoverKeyAt}
       ghosts={ghosts}
       viewDir={viewDir}
+      wireAll={viewer.wire}
+      section={viewer.section}
       opening={viewer.opening}
       openOnly={openOnly}
       materialMode={viewerState.materialMode}

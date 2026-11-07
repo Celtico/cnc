@@ -161,8 +161,9 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     const lift = (a: number, level: number, dir: number) => (q: [number, number]) => fromPlane(a, level + dir * 0.5, q)
     const saved = (comp.sketches ?? []).map((k): SketchLine => ({ pts: k.pts.map(lift(k.a, k.level, k.dir)), closed: true, tone: k.id === faceOpts.selSketch ? "selected" : "sketch" }))
     const d = faceOpts.draft
-    return d ? [...saved, { pts: d.pts.map(lift(d.a, d.level, d.dir)), closed: false, tone: "draft" }] : saved
-  }, [project.modeling, comp.sketches, faceOpts.draft, faceOpts.selSketch])
+    const m: SketchLine[] = faceOpts.measureLine ? [{ pts: faceOpts.measureLine, closed: false, tone: "selected" }] : faceOpts.measureFrom ? [{ pts: [faceOpts.measureFrom], closed: false, tone: "selected" }] : []
+    return [...saved, ...m, ...(d ? [{ pts: d.pts.map(lift(d.a, d.level, d.dir)), closed: false, tone: "draft" as const }] : [])]
+  }, [project.modeling, comp.sketches, faceOpts.draft, faceOpts.selSketch, faceOpts.measureLine, faceOpts.measureFrom])
   const pieceSel = project.modeling && piece && selection.kind === "module" && module?.id === selection.id ? modulePieces(build?.panels ?? [], moduleIndex).find((x) => x.panel.id === piece) : undefined
   // Una selecció nova, un inspector nou: les finestres de tria (material, ferratge) que s'hi havien obert es tanquen
   // (no són modals: si no, la tria aniria a parar al que s'ha seleccionat després). `popup`: el de la finestra del botó

@@ -8,6 +8,12 @@ export interface ViewerState {
   opacity: number
   openOnlySelected: boolean
   materialMode: "material" | "role"
+  /** Filferro (el del Taulell): només els cantells de les peces. */
+  wire?: boolean
+  /** Interior (el del Taulell): sense portes ni frontals, per veure el que hi ha dins. */
+  hideFronts?: boolean
+  /** Secció (la del Taulell): un pla d'escaire talla el moble i es veu una meitat (eix, posició en mm, quina meitat). */
+  section?: { axis: 0 | 1 | 2; pos: number; flip: boolean } | null
 }
 
 /** Part de baix d'Opcions de vista: obertura, opacitat, selecció i imatge (les vistes, a la barra de baix del 3D). */

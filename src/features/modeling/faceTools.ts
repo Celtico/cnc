@@ -5,7 +5,7 @@ import type { Selection } from "../composition/StructureTree"
 import { pieceLocalId } from "./ModelingTree"
 
 /** Les eines del Taulell que es fan clicant una cara de la peça. */
-export type FaceToolId = "dowel" | "screw" | "cabineo" | "rect" | "poly" | "circle" | "face" | "dynpanel" | "fitblock" | "shelf" | "band" | "hole" | "cup" | "line32"
+export type FaceToolId = "measure" | "laser" | "dowel" | "screw" | "cabineo" | "rect" | "poly" | "circle" | "face" | "dynpanel" | "fitblock" | "shelf" | "band" | "hole" | "cup" | "line32"
 
 /** Les opcions de les eines (les mateixes del Taulell, amb els seus valors per defecte). */
 export interface FaceToolOpts {
@@ -35,6 +35,9 @@ export interface FaceToolOpts {
   cabiM: "12" | "8"
   cabiMargin: number
   cabiPitch: number
+  /** Mesurar i Làser: el primer punt clicat i l'última mesura (es veu com una línia al 3D). */
+  measureFrom?: Vec3
+  measureLine?: [Vec3, Vec3]
   T: number
   setback: number
   d: number
@@ -49,10 +52,12 @@ export interface FaceToolOpts {
 export const DEFAULT_FACE_OPTS: FaceToolOpts = { fitOrient: "flat", fitGap: 0, dynOff: 0, sketchL: 600, sketchW: 400, sketchD: 300, dowD: 8, dowF: 12, dowE: 29, dowMargin: 50, dowPitch: 200, scrHole: 4, scrMargin: 50, scrPitch: 300, cabiM: "12", cabiMargin: 50, cabiPitch: 300, T: 19, setback: 1, d: 8, depth: 12, cd: 35, cdepth: 13, ld: 5, ldepth: 12, pitch: 32, margin: 37 }
 
 /** El nom de cada eina (el títol de la seva finestra d'opcions). */
-export const FACE_TOOL_LABEL: Record<FaceToolId, string> = { dowel: "Clavilles", screw: "Cargols", cabineo: "Cabineo", rect: "Rectangle", poly: "Polilínia", circle: "Cercle", face: "Cara dinàmica", dynpanel: "Tauler dinàmic", fitblock: "Bloc condicionat", shelf: "Prestatge", band: "Cantell", hole: "Perforació", cup: "Cassoleta", line32: "Línia 32" }
+export const FACE_TOOL_LABEL: Record<FaceToolId, string> = { measure: "Mesurar", laser: "Làser", dowel: "Clavilles", screw: "Cargols", cabineo: "Cabineo", rect: "Rectangle", poly: "Polilínia", circle: "Cercle", face: "Cara dinàmica", dynpanel: "Tauler dinàmic", fitblock: "Bloc condicionat", shelf: "Prestatge", band: "Cantell", hole: "Perforació", cup: "Cassoleta", line32: "Línia 32" }
 
 /** El que diu cada eina mentre és activa (els textos del Taulell). */
 export const FACE_TOOL_INFO: Record<FaceToolId, string> = {
+  measure: "Mesurar: clica el primer punt i després el segon.",
+  laser: "Làser: clica una cara i mesura fins a la peça del davant.",
   dowel: "Clavilles: clica la cara de fora del tauler on darrere hi ha el cantell de l'altra peça.",
   screw: "Cargols: clica la cara per on entra el cargol (p. ex. la cara de fora del lateral). Es centra al cantell de la peça de darrere.",
   cabineo: "Cabineo: clica la cara del tauler que porta el connector, a prop del cantell que toca l'altra peça.",
@@ -117,6 +122,22 @@ export function runFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition
   const panels = build?.panels ?? []
   const host = moduleOf(comp, p)
 
+  if (tool === "measure") {
+    if (!o.measureFrom) return { opts: { ...o, measureFrom: pt, measureLine: undefined }, message: "" }
+    const d = sub(pt, o.measureFrom)
+    const fmt = (v: number) => String(r1(Math.abs(v))).replace(".", ",")
+    return { opts: { ...o, measureFrom: undefined, measureLine: [o.measureFrom, pt] }, message: `Distància: ${fmt(Math.hypot(...d))} mm (X ${fmt(d[0])} · Y ${fmt(d[1])} · Z ${fmt(d[2])})` }
+  }
+  if (tool === "laser") {
+    let best = Infinity
+    for (const q of panels) {
+      if (q.id === p.id || q.role === "hardware") continue
+      const t = rayBox(pt, n, panelAabb(q))
+      if (t !== null && t > 0.1 && t < best) best = t
+    }
+    if (!isFinite(best)) return { message: "Davant d'aquesta cara no hi ha cap peça.", error: true }
+    return { opts: { ...o, measureLine: [pt, add3(pt, n, best)] }, message: `Làser: ${String(r1(best)).replace(".", ",")} mm fins a la peça del davant` }
+  }
   if (tool === "dowel" || tool === "screw") return jointTool(tool, o, comp, panels, hit)
   if (tool === "cabineo") return cabineoTool(o, comp, panels, hit)
 
@@ -436,4 +457,21 @@ function cabineoTool(o: FaceToolOpts, comp: Composition, panels: Panel[], hit: F
   ])
   if (!next) return { message: "De moment, les unions van a les peces dels mobles.", error: true }
   return { comp: next, message: `${us.length} × Cabineo ${o.cabiM}: ${P.label} amb ${Q.label}` }
+}
+
+/** On talla el raig (des de `o`, cap a `d`) la caixa, o null. */
+function rayBox(o: Vec3, d: Vec3, b: { min: Vec3; max: Vec3 }): number | null {
+  let t0 = -Infinity
+  let t1 = Infinity
+  for (let k = 0; k < 3; k++) {
+    if (Math.abs(d[k]!) < 1e-9) {
+      if (o[k]! < b.min[k]! || o[k]! > b.max[k]!) return null
+      continue
+    }
+    const a = (b.min[k]! - o[k]!) / d[k]!
+    const c = (b.max[k]! - o[k]!) / d[k]!
+    t0 = Math.max(t0, Math.min(a, c))
+    t1 = Math.min(t1, Math.max(a, c))
+  }
+  return t1 >= t0 && t1 > 0 ? Math.max(0, t0) : null
 }

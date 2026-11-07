@@ -27,6 +27,7 @@ import { panelBox } from "../../core/build/geometry"
 import { hoverKey, hoverTarget, useHoverLink } from "../hoverLink"
 import { useFacePick, useSketchOverlay } from "./facePick"
 import { SketchLines } from "./cabinet/SketchLines"
+import { SectionClip } from "./cabinet/SectionClip"
 import type { Panel } from "../../core/model"
 
 /** Anar a un avís: el contorn de les seves peces i la transparència de la resta. */
@@ -49,6 +50,8 @@ export function CabinetViewer({
   onSelectModule,
   ghosts,
   viewDir = null,
+  wireAll = false,
+  section = null,
   opening = 0,
   openOnly = null,
   materialMode = "material",
@@ -110,7 +113,7 @@ export function CabinetViewer({
   // Vistes Davant · Darrere · Esquerra · Dreta · Dalt (per decisió de l'usuari, 2026-10-14: «sense perspectiva i amb
   // fils, per poder moure la peça seleccionada»): càmera ortogràfica (`CameraRig`) i el moble en línies, les peces gairebé
   // transparents amb el perfil i els forats a la vista. «Enquadrar» torna al 3/4 en perspectiva.
-  const wire = viewDir !== null
+  const wire = viewDir !== null || wireAll
   const holesShown = showHoles || wire
   const holesDrawn = holesShown || hardware
   const { groupOf, panelKeys, pinsOf, fixedOf } = usePanelVisuals(panels, holesDrawn, hardware)
@@ -200,6 +203,7 @@ export function CabinetViewer({
 
       <group position={[-size.width * S * 0.5, 0, -size.depth * S * 0.5]}>
         {sketchLines.length > 0 && <SketchLines lines={sketchLines} />}
+        <SectionClip section={section} offset={[size.width / 2, 0, size.depth / 2]} />
         {panels.map((p) => {
           const g = groupOf.get(p.id)
           const active = !!g && (!openOnly || openOnly.has(g.id))

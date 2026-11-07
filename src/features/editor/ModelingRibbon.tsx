@@ -137,13 +137,16 @@ export function ModelingRibbon({
 
   const nouMoble: Tool = { icon: "cabinet", label: "Nou moble", hint: "Un moble nou dins del model, amb totes les opcions del mòdul.", run: addModule }
   const plantilles: Tool = { icon: "tpl", label: "Plantilles" }
+  const plana: Tool = { icon: "flat", label: "Plana", hint: "Cada tipus de peça d'un color.", on: opts.roleColors, run: () => opts.setRoleColors(!opts.roleColors) }
+  const interior: Tool = { icon: "interior", label: "Interior", hint: "Amaga les portes i els frontals per veure l'interior.", on: !!opts.viewer.hideFronts, run: () => opts.setViewer({ hideFronts: !opts.viewer.hideFronts }) }
+  const seccio: Tool = { icon: "section", label: "Secció", hint: "Talla el model amb un pla i en mostra una meitat.", on: !!opts.viewer.section, run: () => opts.setViewer({ section: opts.viewer.section ? null : { axis: 0, pos: Math.round(center.x), flip: false } }) }
   const TABS: [string, Group[]][] = [
     [
       "Inici",
       [
         ["Moble", [nouMoble, plantilles]],
         ["Taulers", [faceToolBtn("dynpanel", "dynpanel", "Tauler dinàmic")]],
-        ["Mesura", [{ icon: "laser", label: "Làser" }]],
+        ["Mesura", [faceToolBtn("laser", "laser", "Làser")]],
         [
           "Vista",
           [
@@ -157,12 +160,12 @@ export function ModelingRibbon({
         [
           "Visualització",
           [
-            { icon: "dsh", label: "Ombrejat", hint: "Les peces opaques, amb el seu material.", on: opts.viewer.opacity === 1 && !opts.roleColors, run: () => (opts.setRoleColors(false), opts.setViewer({ opacity: 1 })) },
-            { icon: "dwire", label: "Filferro" },
-            { icon: "dxray", label: "Transparent", hint: "Les peces translúcides, per veure'n l'interior.", on: opts.viewer.opacity < 1, run: () => opts.setViewer({ opacity: opts.viewer.opacity < 1 ? 1 : 0.35 }) },
-            { icon: "flat", label: "Plana", hint: "Cada tipus de peça d'un color.", on: opts.roleColors, run: () => opts.setRoleColors(!opts.roleColors) },
-            { icon: "interior", label: "Interior" },
-            { icon: "section", label: "Secció" },
+            { icon: "dsh", label: "Ombrejat", hint: "Les peces opaques, amb el seu material.", on: opts.viewer.opacity === 1 && !opts.roleColors && !opts.viewer.wire, run: () => (opts.setRoleColors(false), opts.setViewer({ opacity: 1, wire: false })) },
+            { icon: "dwire", label: "Filferro", hint: "Només els cantells de les peces.", on: !!opts.viewer.wire, run: () => opts.setViewer({ wire: !opts.viewer.wire }) },
+            { icon: "dxray", label: "Transparent", hint: "Les peces translúcides, per veure'n l'interior.", on: opts.viewer.opacity < 1, run: () => opts.setViewer({ opacity: opts.viewer.opacity < 1 ? 1 : 0.35, wire: false }) },
+            plana,
+            interior,
+            seccio,
           ],
         ],
       ],
@@ -226,7 +229,7 @@ export function ModelingRibbon({
     [
       "Eines",
       [
-        ["Anàlisi", [{ icon: "laser", label: "Làser" }, { icon: "measure", label: "Mesurar" }, { icon: "dimclr", label: "Esborra cotes" }, { icon: "flat", label: "Plana" }, { icon: "interior", label: "Interior" }, { icon: "section", label: "Secció" }]],
+        ["Anàlisi", [faceToolBtn("laser", "laser", "Làser"), faceToolBtn("measure", "measure", "Mesurar"), { icon: "dimclr", label: "Esborra cotes", hint: "Treu la mesura del 3D.", run: faceOpts.measureLine || faceOpts.measureFrom ? () => setFaceOpts({ ...faceOpts, measureLine: undefined, measureFrom: undefined }) : undefined }, plana, interior, seccio]],
         [
           "Taller",
           [
@@ -291,6 +294,9 @@ export function ModelingRibbon({
             </Text>
           </Stack>
         )}
+      </FloatingWindow>
+      <FloatingWindow id="modeling-section" kind="picker" width={240} height={260} minSize={{ width: 200, height: 120 }} bodyProps={{ p: 3 }} open={!!opts.viewer.section} onClose={() => opts.setViewer({ section: null })} title="Secció" initialFocus={false}>
+        {opts.viewer.section && <SectionOptions s={opts.viewer.section} center={center} set={(section) => opts.setViewer({ section })} />}
       </FloatingWindow>
       <FloatingWindow id="modeling-array" kind="picker" width={240} height={300} minSize={{ width: 200, height: 120 }} bodyProps={{ p: 3 }} open={arrayOpen && !!(part || module)} onClose={() => setArrayOpen(false)} title="Matriu" initialFocus={false}>
         <ArrayOptions
@@ -467,6 +473,23 @@ function SketchOptions({ tool, o, set, comp, setComp }: { tool: "rect" | "poly" 
           </Button>
         </HStack>
       )}
+    </Stack>
+  )
+}
+
+/** La finestra de la Secció (com la del Taulell): el pla (X, Y o Z), on és i quina meitat es veu. */
+function SectionOptions({ s, center, set }: { s: { axis: 0 | 1 | 2; pos: number; flip: boolean }; center: { x: number; y: number; z: number }; set: (s: { axis: 0 | 1 | 2; pos: number; flip: boolean }) => void }) {
+  const mid = [center.x, center.y, center.z]
+  return (
+    <Stack gap={2}>
+      <SegmentGroup.Root size="xs" value={String(s.axis)} onValueChange={(e) => e.value && set({ ...s, axis: Number(e.value) as 0 | 1 | 2, pos: Math.round(mid[Number(e.value)]!) })}>
+        <SegmentGroup.Indicator />
+        <SegmentGroup.Items items={[{ value: "0", label: "Pla X" }, { value: "1", label: "Pla Y" }, { value: "2", label: "Pla Z" }]} />
+      </SegmentGroup.Root>
+      <NumRow maxW="110px" label={["De costat", "Alçada", "Fondària"][s.axis]!} value={s.pos} min={-10000} max={30000} step={10} onChange={(pos) => set({ ...s, pos })} />
+      <Button size="xs" variant="outline" alignSelf="start" onClick={() => set({ ...s, flip: !s.flip })}>
+        ⇄ Mostra l'altra meitat
+      </Button>
     </Stack>
   )
 }

@@ -22,7 +22,7 @@ const FIT_AX: Record<PartOrient, { n: number; u: number; v: number }> = {
 export const FIT_NOUN: Record<PartOrient, string> = { flat: "Prestatge", side: "Divisió", front: "Travesser" }
 
 /** Els fronts no fan de paret del buit (al Taulell, «Porta» i «Frontal»). */
-const FRONT_ROLES = new Set<PanelRole>(["door", "drawerFront", "flap", "grille", "hatch", "panel"])
+export const FRONT_ROLES = new Set<PanelRole>(["door", "drawerFront", "flap", "grille", "hatch", "panel"])
 
 /** La caixa (alineada amb els eixos) d'una peça construïda, en mm de la composició. */
 export function panelAabb(p: Panel): Box {
