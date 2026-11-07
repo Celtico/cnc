@@ -62,6 +62,8 @@ export const FreePartSchema = z.object({
     .object({
       t: z.number().int().min(0).max(2),
       limits: z.array(z.object({ panel: z.string(), a: z.number().int().min(0).max(2), s: z.union([z.literal(0), z.literal(1)]), off: z.number() })),
+      /** Sense cap cara en el gruix (un tauler de costat o de cara entre dues cares): on és el centre, des del mig de les peces de referència. */
+      mid: z.number().optional(),
     })
     .optional(),
   /** Grup (nom): les peces del mateix grup es mouen juntes; a l'arbre surten plegades a sota. */

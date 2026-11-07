@@ -7,12 +7,13 @@ import { boardChoices, circlePts, extrudeSketch, insertModuleCopy, mountModule, 
 import { freePartFor } from "../composition/addElements"
 import { ModulePicker, pickInto } from "../composition/ModulePicker"
 import type { Selection } from "../composition/StructureTree"
+import type { CompositionBuild } from "../../core/build/buildComposition"
 import type { EditorCamera } from "./useEditorCamera"
 import type { ViewerOptions } from "./useViewerOptions"
 import { TaulellIcon, type TaulellIconName } from "../modeling/TaulellIcon"
 import { FloatingWindow } from "../../components/FloatingWindow"
 import { NumRow } from "../../components/NumRow"
-import { DOWELS, FACE_TOOL_INFO, FACE_TOOL_LABEL, finishSketch, MODULE_DIM, movePart, resizePartFace, type DowelSize, type FaceToolId, type FaceToolOpts } from "../modeling/faceTools"
+import { createRefPanel, DOWELS, FACE_TOOL_INFO, FACE_TOOL_LABEL, finishSketch, MODULE_DIM, movePart, resizePartFace, type DowelSize, type FaceToolId, type FaceToolOpts } from "../modeling/faceTools"
 import { MaterialSelect } from "../settings/MaterialSelect"
 import { NouMobleDialog } from "../modeling/NouMobleDialog"
 
@@ -41,6 +42,7 @@ export function ModelingRibbon({
   setFaceTool,
   faceOpts,
   setFaceOpts,
+  build,
 }: {
   comp: Composition
   setComp: (c: Composition) => void
@@ -55,6 +57,7 @@ export function ModelingRibbon({
   setFaceTool: (t: FaceToolId | null) => void
   faceOpts: FaceToolOpts
   setFaceOpts: (o: FaceToolOpts) => void
+  build?: CompositionBuild
 }) {
   // Esc deixa l'eina (com al Taulell).
   useEffect(() => {
@@ -308,7 +311,7 @@ export function ModelingRibbon({
       <FloatingWindow id="modeling-tool-3" kind="picker" width={240} height={300} minSize={{ width: 200, height: 120 }} bodyProps={{ p: 3 }} open={!!faceTool} onClose={() => setFaceTool(null)} title={faceTool ? FACE_TOOL_LABEL[faceTool] : ""} initialFocus={false} closeHint="Acabar (Esc)">
         {faceTool && (
           <Stack gap={2}>
-            <ToolOptions tool={faceTool} o={faceOpts} set={setFaceOpts} comp={comp} setComp={setComp} settings={settings} />
+            <ToolOptions tool={faceTool} o={faceOpts} set={setFaceOpts} comp={comp} setComp={setComp} settings={settings} build={build} selection={selection} select={select} done={() => setFaceTool(null)} />
             {faceTool !== "laser" && (
               <Text fontSize="xs" color="fg.muted">
                 {FACE_TOOL_INFO[faceTool]}
@@ -371,7 +374,8 @@ export function ModelingRibbon({
 }
 
 /** Les opcions de l'eina activa, a la seva finestra flotant (com la finestreta d'opcions del Taulell). */
-function ToolOptions({ tool, o, set, comp, setComp, settings }: { tool: FaceToolId; o: FaceToolOpts; set: (o: FaceToolOpts) => void; comp: Composition; setComp: (c: Composition) => void; settings: Settings }) {
+function ToolOptions({ tool, o, set, comp, setComp, settings, build, selection, select, done }: { tool: FaceToolId; o: FaceToolOpts; set: (o: FaceToolOpts) => void; comp: Composition; setComp: (c: Composition) => void; settings: Settings; build?: CompositionBuild; selection: Selection; select: (s: Selection) => void; done: () => void }) {
+  if (tool === "dynpanel") return <DynPanelOptions o={o} set={set} comp={comp} setComp={setComp} settings={settings} build={build} selection={selection} select={select} done={done} />
   if (tool === "face") return <FaceSize o={o} set={set} comp={comp} setComp={setComp} />
   if (tool === "rect" || tool === "poly" || tool === "circle") return <SketchOptions tool={tool} o={o} set={set} comp={comp} setComp={setComp} />
   const num = (k: NumKey, label: string, min = 0) => <NumRow key={k} maxW="110px" label={label} value={o[k]} min={min} max={3000} step={0.5} onChange={(v) => set({ ...o, [k]: v })} />
@@ -396,9 +400,7 @@ function ToolOptions({ tool, o, set, comp, setComp, settings }: { tool: FaceTool
   const rows =
     tool === "fitblock"
       ? [num("T", "Gruix"), mat, num("fitGap", "Folgança")]
-      : tool === "dynpanel"
-        ? [<NumRow key="T" maxW="110px" label="Gruix" value={o.T} min={1} max={200} step={0.5} onChange={(v) => set({ ...o, T: v, ownT: true })} />, mat, num("dynOff", "Desplaçament", -3000)]
-        : tool === "shelf"
+      : tool === "shelf"
           ? [num("T", "Gruix"), mat, num("setback", "Retirada")]
           : tool === "hole"
             ? [
@@ -705,6 +707,149 @@ function SectionOptions({ s, center, set, look }: { s: Section; center: { x: num
       <Button size="xs" variant="outline" onClick={() => look(s)}>
         Mira la secció de cara
       </Button>
+    </Stack>
+  )
+}
+
+/**
+ * La finestra del Tauler dinàmic (com la del Taulell): «Dinàmic» (clica la cara on es recolza) o «Cares de referència»
+ * (clica les cares que el limiten, una a una, i «Crea el tauler»), l'orientació, el gruix i el desplaçament. Amb un tauler
+ * dinàmic triat, s'edita: el gruix, el desplaçament de cada cara, Fet, Esborra o Deixa'l fix.
+ */
+function DynPanelOptions({ o, set, comp, setComp, settings, build, selection, select, done }: { o: FaceToolOpts; set: (o: FaceToolOpts) => void; comp: Composition; setComp: (c: Composition) => void; settings: Settings; build?: CompositionBuild; selection: Selection; select: (s: Selection) => void; done: () => void }) {
+  const editing = selection.kind === "part" ? comp.parts?.find((q) => q.id === selection.id && q.dyn) : undefined
+  const label = (id: string) => build?.panels.find((q) => q.id === id)?.label ?? "Cara perduda"
+  const note = (t: ReactNode) => (
+    <Text fontSize="sm" color="fg.muted">
+      {t}
+    </Text>
+  )
+  const mat = <MaterialSelect label="Material" materials={boardChoices(settings.materials)} value={o.mat} emptyLabel="Com el moble" onChange={(v) => set({ ...o, mat: v })} />
+  const thick = <NumRow maxW="110px" label="Gruix" value={o.T} min={1} max={200} step={0.5} onChange={(v) => set({ ...o, T: v, ownT: true })} />
+  const orient = (withAuto: string) => (
+    <HStack gap={1} flexWrap="wrap">
+      {(
+        [
+          [1, "Horitzontal"],
+          [0, "De costat"],
+          [2, "De cara"],
+          ["auto", withAuto],
+        ] as const
+      ).map(([k, l]) => (
+        <Button key={l} size="2xs" variant={o.dynOrient === k ? "subtle" : "outline"} colorPalette={o.dynOrient === k ? "wood" : undefined} onClick={() => set({ ...o, dynOrient: k })}>
+          {l}
+        </Button>
+      ))}
+    </HStack>
+  )
+  if (editing?.dyn) {
+    const d = editing.dyn
+    const put = (dyn: NonNullable<FreePart["dyn"]> | undefined, extra: Partial<FreePart> = {}) => setComp({ ...comp, parts: (comp.parts ?? []).map((q) => (q.id === editing.id ? { ...q, dyn, ...extra } : q)) })
+    return (
+      <Stack gap={2}>
+        <Text fontSize="sm" fontWeight="semibold">
+          Editant {editing.name}
+        </Text>
+        <NumRow maxW="110px" label="Gruix" value={editing.thickness} min={1} max={200} step={0.5} onChange={(v) => put(d, { thickness: v })} />
+        {d.limits.map((L, i) => (
+          <NumRow
+            key={i}
+            maxW="110px"
+            label={`${SIDE_NAMES[L.a]![L.s]} · ${label(L.panel)}`}
+            value={L.off}
+            min={-3000}
+            max={3000}
+            step={0.5}
+            onChange={(v) => put({ ...d, limits: d.limits.map((x, k) => (k === i ? { ...x, off: v } : x)) })}
+          />
+        ))}
+        <Box bg="bg.muted" rounded="md" px={2.5} py={1.5} fontFamily="mono" fontSize="sm">
+          {editing.w} × {editing.h} × {editing.thickness} mm
+        </Box>
+        {note("S'enganxa a aquestes cares i es recalcula si es mouen. El desplaçament és cap a dins.")}
+        <HStack gap={1.5} flexWrap="wrap">
+          <Button size="xs" colorPalette="wood" onClick={() => (select({ kind: "moble" }), done())}>
+            Fet
+          </Button>
+          <Button size="xs" variant="outline" onClick={() => put(undefined)}>
+            Deixa'l fix
+          </Button>
+          <Button size="xs" variant="outline" colorPalette="red" onClick={() => (setComp({ ...comp, parts: (comp.parts ?? []).filter((q) => q.id !== editing.id) }), select({ kind: "moble" }))}>
+            Esborra
+          </Button>
+        </HStack>
+      </Stack>
+    )
+  }
+  const modes = (
+    <SegmentGroup.Root size="xs" value={o.dynMode} onValueChange={(e) => e.value && set({ ...o, dynMode: e.value as "auto" | "ref", refLimits: undefined, refSeed: undefined })}>
+      <SegmentGroup.Indicator />
+      <SegmentGroup.Items items={[{ value: "auto", label: "Dinàmic" }, { value: "ref", label: "Cares de referència" }]} />
+    </SegmentGroup.Root>
+  )
+  if (o.dynMode === "ref") {
+    const refs = o.refLimits ?? []
+    return (
+      <Stack gap={2}>
+        {modes}
+        {!refs.length ? (
+          note(
+            <>
+              <b>1.</b> Clica les cares que limiten el tauler (laterals, fons, sostre…), una a una. <b>2.</b> Tria l'orientació. <b>3.</b> «Crea el tauler». Torna a clicar una cara per treure-la.
+            </>,
+          )
+        ) : (
+          <Stack gap={0.5} fontSize="sm">
+            {refs.map((L, i) => (
+              <HStack key={i} gap={2}>
+                <Text fontWeight="semibold" minW="64px">
+                  {SIDE_NAMES[L.a]![L.s]}
+                </Text>
+                <Text color="fg.muted" truncate>
+                  {label(L.panel)}
+                </Text>
+              </HStack>
+            ))}
+          </Stack>
+        )}
+        <Text fontSize="xs" color="fg.muted">
+          Orientació
+        </Text>
+        {orient("Auto")}
+        {thick}
+        {mat}
+        <HStack gap={1.5}>
+          <Button
+            size="xs"
+            colorPalette="wood"
+            disabled={refs.length < 2}
+            onClick={() => {
+              const r = createRefPanel(o, comp, build)
+              if (r.comp) setComp(r.comp)
+              if (r.opts) set(r.opts)
+              if (r.select) select(r.select)
+              toaster.create({ title: r.message, type: r.error ? "warning" : "success", duration: 2500 })
+            }}
+          >
+            Crea el tauler
+          </Button>
+          {refs.length > 0 && (
+            <Button size="xs" variant="ghost" onClick={() => set({ ...o, refLimits: undefined, refSeed: undefined })}>
+              Torna a començar
+            </Button>
+          )}
+        </HStack>
+      </Stack>
+    )
+  }
+  return (
+    <Stack gap={2}>
+      {modes}
+      {note("Mou el ratolí per dins del moble: el tauler surt en verd. Clica la cara on es recolza (per exemple la base): s'hi posa i s'estén fins a les cares del costat. Per editar-ne un de fet, selecciona'l.")}
+      {orient("Com la cara")}
+      {thick}
+      <NumRow maxW="110px" label="Desplaçament" value={o.dynOff} min={-3000} max={3000} step={0.5} onChange={(v) => set({ ...o, dynOff: v })} />
+      {mat}
     </Stack>
   )
 }

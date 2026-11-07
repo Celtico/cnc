@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { buildComposition } from "../../core/build/buildComposition"
 import { emptyModule, panelAabb, type Composition } from "../../core/model"
-import { DEFAULT_FACE_OPTS, runFaceTool } from "./faceTools"
+import { createRefPanel, DEFAULT_FACE_OPTS, runFaceTool } from "./faceTools"
 
 describe("tauler dinàmic (FreePart.dyn)", () => {
   const m = { ...emptyModule("m", "Moble"), gapBefore: 0 }
@@ -102,5 +102,41 @@ describe("cara dinàmica · enganxar", () => {
     expect(r2.error).toBeFalsy()
     const moved = r2.comp!.parts!.find((p) => p.id === "q")!
     expect(moved.x).toBeCloseTo(ra.max[0] + 2, 0)
+  })
+})
+
+describe("tauler dinàmic · cares de referència i orientació", () => {
+  const m = { ...emptyModule("m", "Moble"), gapBefore: 0 }
+  const comp: Composition = { modules: [m], references: [] }
+  const build = buildComposition(comp)
+  const t = m.carcass.thickness
+  const sides = build.panels.filter((p) => p.role === "side").sort((a, b) => panelAabb(a).min[0] - panelAabb(b).min[0])
+  const base = build.panels.find((p) => p.role === "bottom")!
+  const bb = panelAabb(base)
+  const [L, R] = sides.map(panelAabb) as [ReturnType<typeof panelAabb>, ReturnType<typeof panelAabb>]
+  const y = bb.max[1] + 200
+  const z = (bb.min[2] + bb.max[2]) / 2
+  const panelOf = (c: Composition) => panelAabb(buildComposition(c).panels.find((p) => p.id.startsWith("part:"))!)
+
+  it("clicant els dos laterals i la base, fa un tauler horitzontal sobre la base", () => {
+    let o = { ...DEFAULT_FACE_OPTS, dynMode: "ref" as const }
+    o = runFaceTool("dynpanel", o, comp, build, { panel: sides[0]!, point: [L.max[0], y, z], normal: [1, 0, 0] }).opts!
+    o = runFaceTool("dynpanel", o, comp, build, { panel: sides[1]!, point: [R.min[0], y, z], normal: [-1, 0, 0] }).opts!
+    o = runFaceTool("dynpanel", o, comp, build, { panel: base, point: [500, bb.max[1], z], normal: [0, 1, 0] }).opts!
+    expect(o.refLimits).toHaveLength(3)
+    const r = createRefPanel(o, comp, build)
+    expect(r.error).toBeFalsy()
+    const a = panelOf(r.comp!)
+    expect(a.max[0] - a.min[0]).toBeCloseTo(m.carcass.width - 2 * t, 0)
+    expect(a.min[1]).toBeCloseTo(bb.max[1], 0)
+  })
+
+  it("de costat sobre la base: una divisió que passa pel punt clicat", () => {
+    const x = 400
+    const r = runFaceTool("dynpanel", { ...DEFAULT_FACE_OPTS, dynOrient: 0 }, comp, build, { panel: base, point: [x, bb.max[1], z], normal: [0, 1, 0] })
+    expect(r.error).toBeFalsy()
+    const a = panelOf(r.comp!)
+    expect((a.min[0] + a.max[0]) / 2).toBeCloseTo(x, 0)
+    expect(a.min[1]).toBeCloseTo(bb.max[1], 0)
   })
 })

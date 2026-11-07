@@ -233,7 +233,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
 
       {/* Un model de Modelatge: la barra d'eines del Taulell, amb els nostres components (cel, 2026-11-07). */}
       {project.modeling && (
-        <ModelingRibbon comp={comp} setComp={setComp} selection={selection} select={select} settings={settings} center={partCenter} newModule={newModule} opts={opts} camera={camera} faceTool={faceTool} setFaceTool={setFaceTool} faceOpts={faceOpts} setFaceOpts={setFaceOpts} />
+        <ModelingRibbon build={build} comp={comp} setComp={setComp} selection={selection} select={select} settings={settings} center={partCenter} newModule={newModule} opts={opts} camera={camera} faceTool={faceTool} setFaceTool={setFaceTool} faceOpts={faceOpts} setFaceOpts={setFaceOpts} />
       )}
       <FacePickContext.Provider value={facePick}>
       <FaceHoverContext.Provider value={faceHover}>

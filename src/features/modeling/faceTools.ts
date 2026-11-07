@@ -1,6 +1,6 @@
 import type { FaceHit } from "../../components/viewer/facePick"
 import type { CompositionBuild } from "../../core/build/buildComposition"
-import { autoLimits, dynBox, FIT_NOUN, fitWalls, ORIENT_OF_AXIS, partWithBox, wallBoxes, moduleOrigins3, newId, panelAabb, refitParts, type Composition, type FreePart, type Hole, type Module, type Panel, type PartOrient, type Vec3, PART_AXES, partSize, circlePts, fromPlane, partBox, rectPts, toPlane, type Sketch } from "../../core/model"
+import { autoLimits, dynBox, SIDE_NAMES, type DynLimit, FIT_NOUN, fitWalls, ORIENT_OF_AXIS, partWithBox, wallBoxes, moduleOrigins3, newId, panelAabb, refitParts, type Composition, type FreePart, type Hole, type Module, type Panel, type PartOrient, type Vec3, PART_AXES, partSize, circlePts, fromPlane, partBox, rectPts, toPlane, type Sketch } from "../../core/model"
 import type { Selection } from "../composition/StructureTree"
 import { pieceLocalId } from "./ModelingTree"
 
@@ -13,6 +13,13 @@ export interface FaceToolOpts {
   fitGap: number
   /** Tauler dinàmic: desplaçament des de la cara on es recolza. */
   dynOff: number
+  /** Tauler dinàmic (com el Taulell): «auto» clica la cara on es recolza; «ref» clica les cares que el limiten, una a una. */
+  dynMode: "auto" | "ref"
+  /** L'orientació del tauler: «auto» com la cara clicada; si no, l'eix del gruix (0 de costat, 1 horitzontal, 2 de cara). */
+  dynOrient: "auto" | 0 | 1 | 2
+  /** Cares de referència: les triades fins ara i el primer punt clicat (per on passa el tauler). */
+  refLimits?: DynLimit[]
+  refSeed?: Vec3
   /** Cara dinàmica: la cara triada (la peça lliure, l'eix i el costat: 0 el de baix, 1 el de dalt). */
   facePick?: { part?: string; module?: string; a: number; s: 0 | 1 }
   /** Cara dinàmica (com el Taulell): estirar la peça (o el moble), desplaçar-la, o enganxar-la a una altra cara. */
@@ -85,7 +92,7 @@ export interface FaceToolOpts {
   pitch: number
   margin: number
 }
-export const DEFAULT_FACE_OPTS: FaceToolOpts = { fitOrient: "flat", fitGap: 0, dynOff: 0, sketchL: 600, sketchW: 400, sketchD: 300, dowM: "8x40", dowDist: true, dowD: 8, dowF: 12, dowE: 29, dowMargin: 50, dowPitch: 200, scrD: 4, scrL: 60, scrDist: true, scrHole: 4, scrMargin: 50, scrPitch: 300, cabiM: "12", cabiMargin: 50, cabiPitch: 300, cabiD: 15, cabiDepth: 11, cabiFirst: 3.6, cabiStep: 11.2, cabiAxis: 5, cabiSd: 5, grW: 4, grD: 8, grDir: "L", grOff: 0, rbW: 10, rbD: 10, T: 19, laserMode: "face", faceMode: "pull", mateMode: "contact", faceGap: 0, mat: "", setback: 1, d: 8, depth: 12, cd: 35, cdepth: 13, ld: 5, ldepth: 12, pitch: 32, margin: 37 }
+export const DEFAULT_FACE_OPTS: FaceToolOpts = { fitOrient: "flat", fitGap: 0, dynOff: 0, sketchL: 600, sketchW: 400, sketchD: 300, dowM: "8x40", dowDist: true, dowD: 8, dowF: 12, dowE: 29, dowMargin: 50, dowPitch: 200, scrD: 4, scrL: 60, scrDist: true, scrHole: 4, scrMargin: 50, scrPitch: 300, cabiM: "12", cabiMargin: 50, cabiPitch: 300, cabiD: 15, cabiDepth: 11, cabiFirst: 3.6, cabiStep: 11.2, cabiAxis: 5, cabiSd: 5, grW: 4, grD: 8, grDir: "L", grOff: 0, rbW: 10, rbD: 10, T: 19, dynMode: "auto", dynOrient: "auto", laserMode: "face", faceMode: "pull", mateMode: "contact", faceGap: 0, mat: "", setback: 1, d: 8, depth: 12, cd: 35, cdepth: 13, ld: 5, ldepth: 12, pitch: 32, margin: 37 }
 
 /** Les clavilles del Taulell: diàmetre, llargada i fondàries a la cara i al cantell. */
 export const DOWELS = { "8x40": { d: 8, L: 40, f: 12, e: 29 }, "8x30": { d: 8, L: 30, f: 12, e: 19 }, "5x30": { d: 5, L: 30, f: 10, e: 21 } } as const
@@ -287,14 +294,30 @@ export function runFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition
     return { opts: { ...o, facePick: { module: host.id, a, s: side } }, select: { kind: "module", id: host.id }, message: "" }
   }
 
+  if (tool === "dynpanel" && o.dynMode === "ref") {
+    // Cares de referència: cada clic afegeix (o treu, si ja hi és) la cara clicada com a límit del tauler.
+    const a = [0, 1, 2].reduce((x, k) => (Math.abs(n[k]!) > Math.abs(n[x]!) ? k : x), 0)
+    const L: DynLimit = { panel: p.id, a, s: n[a]! > 0 ? 0 : 1, off: 0 }
+    const cur = o.refLimits ?? []
+    const had = cur.some((x) => x.panel === L.panel && x.a === L.a && x.s === L.s)
+    const refLimits = had ? cur.filter((x) => !(x.panel === L.panel && x.a === L.a && x.s === L.s)) : [...cur.filter((x) => !(x.a === L.a && x.s === L.s)), L]
+    return { opts: { ...o, refLimits, refSeed: o.refSeed ?? (pt.map((v, i) => v + n[i]! * 2) as Vec3) }, message: had ? `Cara treta (${refLimits.length}).` : `${SIDE_NAMES[a]![L.s]}: ${p.label} (${refLimits.length} cares).` }
+  }
   if (tool === "dynpanel") {
-    const t = [0, 1, 2].reduce((x, k) => (Math.abs(n[k]!) > Math.abs(n[x]!) ? k : x), 0)
+    const fa = [0, 1, 2].reduce((x, k) => (Math.abs(n[k]!) > Math.abs(n[x]!) ? k : x), 0)
+    const t = o.dynOrient === "auto" ? fa : o.dynOrient
     const seed = pt.map((v, i) => v + n[i]! * (2 + o.dynOff)) as Vec3
     const limits = autoLimits(wallBoxes(panels), seed, t, (id) => id === p.id)
-    limits.push({ panel: p.id, a: t, s: n[t]! > 0 ? 0 : 1, off: o.dynOff })
+    if (t === fa) limits.push({ panel: p.id, a: t, s: n[t]! > 0 ? 0 : 1, off: o.dynOff })
+    else {
+      // De costat o de cara sobre una cara d'un altre eix: la cara clicada és un límit més i el tauler passa pel punt clicat.
+      const rest = limits.filter((L) => L.a !== fa)
+      limits.length = 0
+      limits.push(...rest, { panel: p.id, a: fa, s: n[fa]! > 0 ? 0 : 1, off: o.dynOff })
+    }
     const T = o.ownT ? o.T : (host?.carcass.thickness ?? o.T)
-    const dyn = { t, limits }
     const boxes = new Map(panels.map((q) => [q.id, panelAabb(q)] as const))
+    const dyn = t === fa ? { t, limits } : withMid({ t, limits }, (id) => boxes.get(id), T, pt[t]!)
     const b = dynBox(dyn, (id) => boxes.get(id), T)
     if (!b) return { message: "El tauler queda sense mida: clica una cara que tingui peces al costat.", error: true }
     const off: Vec3 = (host && moduleOrigins3(comp).get(host.id)) || [0, 0, 0]
@@ -602,6 +625,34 @@ function cabineoTool(o: FaceToolOpts, comp: Composition, panels: Panel[], hit: F
   ])
   if (!next) return { message: "De moment, les unions van a les peces dels mobles.", error: true, ghost }
   return { comp: next, ghost, message: `${us.length} × Cabineo ${o.cabiM}: ${P.label} amb ${Q.label}` }
+}
+
+/** Un tauler dinàmic sense cara en el gruix, centrat a `at` (mm de la composició, en l'eix del gruix). */
+function withMid(dyn: NonNullable<FreePart["dyn"]>, boxOf: (id: string) => { min: Vec3; max: Vec3 } | undefined, T: number, at: number): NonNullable<FreePart["dyn"]> {
+  const b = dynBox({ ...dyn, mid: 0 }, boxOf, T)
+  return b ? { ...dyn, mid: r1(at - (b.min[dyn.t]! + b.max[dyn.t]!) / 2) } : dyn
+}
+
+/** Cares de referència → el tauler (com «Crea el tauler» del Taulell): el gruix va on no hi ha cares, o sobre la de recolzament. */
+export function createRefPanel(o: FaceToolOpts, comp: Composition, build: CompositionBuild | undefined): FaceToolResult {
+  const limits = o.refLimits ?? []
+  const panels = build?.panels ?? []
+  if (limits.length < 2) return { message: "Clica almenys dues cares que limitin el tauler.", error: true }
+  const per = [0, 1, 2].map((a) => limits.filter((L) => L.a === a).length)
+  const t = o.dynOrient !== "auto" ? o.dynOrient : per.indexOf(0) >= 0 ? (per[1] === 0 ? 1 : per.indexOf(0)) : per.indexOf(1) >= 0 ? per.indexOf(1) : 1
+  const boxes = new Map(panels.map((q) => [q.id, panelAabb(q)] as const))
+  const boxOf = (id: string) => boxes.get(id)
+  const first = panels.find((q) => q.id === limits[0]!.panel)
+  const host = first ? moduleOf(comp, first) : undefined
+  const T = o.ownT ? o.T : (host?.carcass.thickness ?? o.T)
+  const own = limits.filter((L) => L.a === t)
+  const dyn = own.length === 1 || own.length === 0 ? (own.length ? { t, limits } : withMid({ t, limits }, boxOf, T, o.refSeed?.[t] ?? 0)) : { t, limits: limits.filter((L) => !(L.a === t && L.s === 1)) }
+  const b = dynBox(dyn, boxOf, T)
+  if (!b) return { message: "Amb aquestes cares el tauler queda sense mida.", error: true }
+  const off: Vec3 = (host && moduleOrigins3(comp).get(host.id)) || [0, 0, 0]
+  const base = uniqueName(comp, "Tauler dinàmic")
+  const part = partWithBox({ id: newId("p"), name: base, orient: ORIENT_OF_AXIS[t]!, w: 0, h: 0, thickness: T, material: o.mat || (host?.carcass.material ?? first?.material ?? ""), x: 0, y: 0, z: 0, ...(host ? { module: host.id } : {}), dyn }, b, off)
+  return { comp: { ...comp, parts: [...(comp.parts ?? []), part] }, opts: { ...o, refLimits: undefined, refSeed: undefined }, select: { kind: "part", id: part.id }, message: `${base}: ${r1(part.w)} × ${r1(part.h)} mm, lligat a ${dyn.limits.length} cares` }
 }
 
 /** Làser eix a eix: el centre del forat clicat (si n'hi ha un a sota del ratolí) o el mig del gruix de la peça. */

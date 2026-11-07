@@ -180,7 +180,13 @@ export function dynBox(dyn: NonNullable<FreePart["dyn"]>, boxOf: (id: string) =>
   } else if (hi[t] !== null) {
     max[t] = hi[t]!
     min[t] = hi[t]! - T
-  } else return null
+  } else {
+    // Cap cara en el gruix: centrat a `mid` des del mig de les peces de referència (les segueix si es mouen).
+    const [mn, mx] = ext(t)
+    const c = (mn + mx) / 2 + (dyn.mid ?? 0)
+    min[t] = c - T / 2
+    max[t] = c + T / 2
+  }
   if ([0, 1, 2].some((a) => max[a]! - min[a]! < 1)) return null
   return { min: min.map(r1) as Vec3, max: max.map(r1) as Vec3 }
 }
