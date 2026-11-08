@@ -1,6 +1,6 @@
 import { Button, Stack, Switch, Text } from "@chakra-ui/react"
 import { useEffect, useMemo, useState, type ReactNode } from "react"
-import { LuSave } from "react-icons/lu"
+import { LuDownload, LuSave } from "react-icons/lu"
 import { FloatingWindow } from "../../components/FloatingWindow"
 import { toaster } from "../../components/ui/toaster"
 import { ambientFileName } from "../../core/file/ambientFile"
@@ -8,7 +8,9 @@ import { mobleFileName } from "../../core/file/mobleFile"
 import type { Project } from "../../db/db"
 import { useSettings } from "../settings/SettingsContext"
 import { ambientBlob, ambientToFile, saveAmbientAsFile } from "./ambientIo"
-import { mobleBlob, projectToMoble, saveProjectAsFile } from "./mobleIo"
+import { mobleBlob, projectToMoble, saveProjectAsFile, shareOrDownload } from "./mobleIo"
+import { readComposition } from "../../db/compositionStore"
+import { toTaulell } from "../../core/export/taulellExport"
 
 type Saved = { filename: string; bytes: number; how: "shared" | "downloaded" }
 /** Mida del fitxer amb (o sense) les fotos, avisos i si n'hi ha cap per incloure (sense, l'interruptor es desactiva). */
@@ -28,6 +30,7 @@ function SaveAsFileDialog({
   photoDefault,
   measure,
   save,
+  extra,
 }: {
   open: boolean
   onClose: () => void
@@ -38,6 +41,8 @@ function SaveAsFileDialog({
   photoDefault: boolean
   measure: ((includePhoto: boolean) => Promise<Measured>) | null
   save: (includePhoto: boolean) => Promise<Saved>
+  /** Un altre format, a l'esquerra del peu (el `.taulell` del moble). */
+  extra?: ReactNode
 }) {
   const [includePhoto, setIncludePhoto] = useState(photoDefault)
   const [measured, setMeasured] = useState<Measured | null>(null)
@@ -86,6 +91,7 @@ function SaveAsFileDialog({
       height={380}
       footer={
         <>
+          {extra}
           <Button variant="outline" onClick={onClose}>
             Cancel·lar
           </Button>
@@ -140,7 +146,41 @@ export function SaveFileDialog({ project, open, onClose }: { project: Project | 
       photoDefault
       measure={measure}
       save={(photo) => (project ? saveProjectAsFile(project, settings, photo) : Promise.reject(new Error("Cap moble")))}
+      extra={project && <TaulellButton project={project} />}
     />
+  )
+}
+
+/**
+ * «Baixa .taulell» (cel, 2026-11-08: «obro una cuina i l'exporto a un taulell»): el moble com a projecte del Taulell 3D, que
+ * s'obre amb «Projectes › Obre fitxer…». Cada peça hi va com a peça solta (`toTaulell`).
+ */
+function TaulellButton({ project }: { project: Project }) {
+  const [busy, setBusy] = useState(false)
+  const run = async () => {
+    setBusy(true)
+    try {
+      const read = readComposition(project)
+      if (read.unreadable) throw new Error("La composició desada no es pot llegir.")
+      const { doc, skipped } = toTaulell(read.composition, project.name)
+      const filename = `${mobleFileName(project.name).replace(/\.moble$/i, "")}.taulell`
+      const how = await shareOrDownload(new Blob([JSON.stringify(doc)], { type: "application/json" }), filename)
+      const left = [skipped.cutouts && `${skipped.cutouts} talls passants`, skipped.pockets && `${skipped.pockets} buidats`, skipped.mitres && `${skipped.mitres} peces a inglet (hi van rectes)`].filter(Boolean)
+      toaster.create({
+        title: how === "shared" ? "Fitxer compartit" : "Fitxer desat",
+        description: `${filename}: ${doc.parts.length} peces. Al Taulell, Projectes › Obre fitxer….${left.length ? ` No hi van: ${left.join(", ")}.` : ""}`,
+        type: "success",
+      })
+    } catch (e) {
+      toaster.create({ title: "No s'ha pogut baixar el .taulell", description: e instanceof Error ? e.message : String(e), type: "error" })
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <Button variant="ghost" mr="auto" onClick={() => void run()} loading={busy}>
+      <LuDownload /> Baixa .taulell
+    </Button>
   )
 }
 
