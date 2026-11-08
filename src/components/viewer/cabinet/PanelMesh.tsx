@@ -1,7 +1,8 @@
 import type { ThreeEvent } from "@react-three/fiber"
 import { Edges } from "@react-three/drei"
 import { memo, useContext, useEffect, useMemo, useRef } from "react"
-import { Matrix4, Vector3, type Group, type Material } from "three"
+import { BoxGeometry, LineBasicMaterial, Matrix4, Vector3, type Group, type Material } from "three"
+import { cleanEdges } from "../cleanEdges"
 import type { HwSolid } from "../../../core/build/hardwareSolids"
 import type { Hole, MaterialPref, Panel } from "../../../core/model"
 import { useKeyed } from "../../../lib/useKeyed"
@@ -131,6 +132,15 @@ export const PanelMesh = memo(function PanelMesh({
   const cut = useMemo(() => (isShaped(vis) ? shapedGeometry(vis) : vis.mitres?.length ? mitreGeometry(vis) : null), [vis])
   const edgeGeo = useMemo(() => (edges ? edgeSourceGeometry(vis) : null), [vis, edges])
   useEffect(() => () => edgeGeo?.dispose(), [edgeGeo])
+  // Filferro sol: les arestes netes de la peça (tallada o no), com el Taulell, no les de cada triangle del tall.
+  const lineGeo = useMemo(() => {
+    if (wire !== "lines" || !edges) return null
+    const box = cut ? null : new BoxGeometry(vpanel.length * S, vpanel.width * S, vpanel.thickness * S)
+    const g = cleanEdges(cut ?? box!, 20)
+    box?.dispose()
+    return g
+  }, [wire, edges, cut, vpanel.length, vpanel.width, vpanel.thickness])
+  useEffect(() => () => lineGeo?.dispose(), [lineGeo])
   const cutMats = useMemo(() => {
     if (!cut) return null
     const m = veil(cutoutMaterials(vpanel, materialMode, materials, dimmed || see !== undefined), see)
@@ -195,7 +205,7 @@ export const PanelMesh = memo(function PanelMesh({
           onPointerOut={onHover ? () => onHover(panel, false) : undefined}
         >
           {!cut && <boxGeometry args={[L, W, T]} />}
-          {edges && <Edges color={wire === "lines" ? LINE_COLOR : wire ? "#2b2418" : dimmed || see !== undefined ? "#a08a6a" : "#6b5a3e"} threshold={15} {...(edgeGeo && wire !== "lines" ? { geometry: edgeGeo } : {})} />}
+          {lineGeo ? <lineSegments geometry={lineGeo} material={LINE_MAT} raycast={noRaycast} /> : edges && <Edges color={wire ? "#2b2418" : dimmed || see !== undefined ? "#a08a6a" : "#6b5a3e"} threshold={15} {...(edgeGeo ? { geometry: edgeGeo } : {})} />}
         </mesh>
         {cap && (
           <mesh position={cut ? [0, 0, 0] : [L / 2, W / 2, T / 2]} geometry={cut ?? undefined} material={SECTION_CAP_MAT} raycast={noRaycast}>
@@ -210,7 +220,7 @@ export const PanelMesh = memo(function PanelMesh({
         ) : (
           <HoleMarks holes={vpanel.holes} thickness={T} />
         ))}
-        {wire === "lines" && <MachiningLines holes={vpanel.holes} grooves={vpanel.grooves} thickness={vpanel.thickness} color={LINE_COLOR} />}
+        {wire === "lines" && !carve && <MachiningLines holes={vpanel.holes} grooves={vpanel.grooves} thickness={vpanel.thickness} color={LINE_COLOR} />}
         {hardware && <PanelHardware panel={vpanel} pins={pins} fixed={fixed} />}
         {(hardware || selectedFitting) && <PanelFittings panel={vpanel} models={hardware} selected={selectedFitting} onSelect={onSelectFitting} />}
         {!carve && vpanel.grooves.map((g, i) => (
@@ -229,6 +239,7 @@ export const PanelMesh = memo(function PanelMesh({
 export const WIRE_OPACITY = 0.12
 /** Les línies del Filferro sol (clares, com al Taulell). */
 export const LINE_COLOR = "#aeb6c2"
+const LINE_MAT = new LineBasicMaterial({ color: LINE_COLOR })
 
 /** Opacitat de la fusta translúcida (`seeThrough`). */
 const SEE_THROUGH_OPACITY = 0.4

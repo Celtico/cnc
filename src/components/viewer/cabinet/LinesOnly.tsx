@@ -1,6 +1,7 @@
 import { useFrame, type ThreeElements } from "@react-three/fiber"
 import { useEffect, useMemo, useRef } from "react"
-import { EdgesGeometry, LineBasicMaterial, LineSegments, type Group, type Material, type Mesh } from "three"
+import { LineBasicMaterial, LineSegments, type Group, type Material, type Mesh } from "three"
+import { cleanEdges } from "../cleanEdges"
 
 /** Una malla que es dibuixa de debò (no les nanses invisibles, les instàncies ni les línies gruixudes de drei). */
 function drawable(o: Mesh): boolean {
@@ -55,7 +56,7 @@ export function LinesOnly({ on, color, children, ...props }: ThreeElements["grou
     }
     walk(g)
     for (const m of todo) {
-      const ls = new LineSegments(new EdgesGeometry(m.geometry, 25), mat)
+      const ls = new LineSegments(cleanEdges(m.geometry, 25), mat)
       ls.userData.lineCopy = true
       ls.raycast = () => {}
       ls.matrixAutoUpdate = false
