@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useSessionList } from "../../components/sessionState"
 import { Workspace } from "../../components/Workspace"
 import { useWorkspace } from "../../components/useWorkspace"
@@ -21,7 +21,7 @@ import { modulePieces, ModelingTree, pieceLocalId, setPieceEdit } from "../model
 import { PieceInspector } from "../modeling/PieceInspector"
 import { CarveContext } from "../../components/viewer/cabinet/SectionClip"
 import { DEFAULT_FACE_OPTS, previewFaceTool, runFaceTool, type FaceToolId, type FaceToolOpts } from "../modeling/faceTools"
-import { ArrowHandlesContext, FaceHoverContext, FaceMissContext, FacePickContext, SketchOverlayContext, type FaceHit, type FaceHover, type FacePick, type SketchLine } from "../../components/viewer/facePick"
+import { ArrowHandlesContext, FaceHoverContext, FaceMissContext, FacePickContext, FloorPickContext, RayCastContext, type RayCast, SketchOverlayContext, type FaceHit, type FaceHover, type FacePick, type SketchLine } from "../../components/viewer/facePick"
 import { fromPlane } from "../../core/model"
 import { EditorViewport } from "./EditorViewport"
 import { framePose, warningTarget } from "./warningTarget"
@@ -147,10 +147,12 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   // Modelatge: l'eina de clicar cares activa (Bloc condicionat, Prestatge, Cantell, Perforació...) i les seves opcions.
   const [faceTool, setFaceTool] = useState<FaceToolId | null>(null)
   const [faceOpts, setFaceOpts] = useState<FaceToolOpts>(DEFAULT_FACE_OPTS)
+  // El raig del làser dins l'escena (`RayCaster`), per mesurar fins a les ranures i els forats de veritat.
+  const castRef = useRef<RayCast | null>(null)
   const facePick: FacePick | null =
     project.modeling && faceTool
       ? (hit) => {
-          const r = runFaceTool(faceTool, faceOpts, comp, build, hit)
+          const r = runFaceTool(faceTool, faceOpts, comp, build, { ...hit, cast: castRef.current ?? undefined })
           if (r.comp) setComp(r.comp)
           if (r.select) select(r.select)
           if (r.opts) setFaceOpts(r.opts)
@@ -182,7 +184,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       })
     }
   }, [project.modeling, faceTool])
-  const preview = useMemo(() => (faceTool && hoverHit ? previewFaceTool(faceTool, faceOpts, comp, build, hoverHit) : null), [faceTool, faceOpts, comp, build, hoverHit])
+  const preview = useMemo(() => (faceTool && hoverHit ? previewFaceTool(faceTool, faceOpts, comp, build, { ...hoverHit, cast: castRef.current ?? undefined }) : null), [faceTool, faceOpts, comp, build, hoverHit])
   // Els croquis al 3D (un pèl per sobre de la cara on són): els desats, el triat i el que s'està dibuixant.
   const sketchLines = useMemo<SketchLine[]>(() => {
     if (!project.modeling) return []
@@ -190,7 +192,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     const saved = (comp.sketches ?? []).map((k): SketchLine => ({ pts: k.pts.map(lift(k.a, k.level, k.dir)), closed: true, tone: k.id === faceOpts.selSketch ? "selected" : "sketch" }))
     const d = faceOpts.draft
     const m: SketchLine[] = faceOpts.measureLine ? [{ pts: faceOpts.measureLine, closed: false, tone: "selected", measure: true, label: faceOpts.measureLabel }] : faceOpts.measureFrom ? [{ pts: [faceOpts.measureFrom], closed: false, tone: "selected" }] : []
-    const pv: SketchLine[] = !preview ? [] : preview.boxes ? preview.boxes.map((box, i) => ({ pts: [], closed: false, tone: "draft" as const, box, label: i ? undefined : preview.label })) : preview.box ? [{ pts: [], closed: false, tone: "draft", box: preview.box }] : preview.pts ? [{ pts: preview.pts, closed: !!preview.closed, tone: "draft", measure: preview.measure, label: preview.label }] : []
+    const pv: SketchLine[] = !preview ? [] : preview.boxes ? preview.boxes.map((box, i) => ({ pts: [], closed: false, tone: "draft" as const, box, label: i ? undefined : preview.label })) : preview.box ? [{ pts: [], closed: false, tone: "draft", box: preview.box, label: preview.label }] : preview.pts ? [{ pts: preview.pts, closed: !!preview.closed, tone: "draft", measure: preview.measure, label: preview.label }] : []
     return [...saved, ...m, ...(d && !preview?.pts ? [{ pts: d.pts.map(lift(d.a, d.level, d.dir)), closed: false, tone: "draft" as const }] : []), ...pv]
   }, [project.modeling, comp.sketches, faceOpts.draft, faceOpts.selSketch, faceOpts.measureLine, faceOpts.measureFrom, faceOpts.measureLabel, preview])
   // Les fletxes d'arrossegar del tauler dinàmic i de la cara dinàmica (com al Taulell).
@@ -240,7 +242,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       {project.modeling && (
         <ModelingRibbon build={build} comp={comp} setComp={setComp} selection={selection} select={select} settings={settings} center={partCenter} newModule={newModule} opts={opts} camera={camera} faceTool={faceTool} setFaceTool={setFaceTool} faceOpts={faceOpts} setFaceOpts={setFaceOpts} />
       )}
-      <FacePickContext.Provider value={facePick}><FaceMissContext.Provider value={faceMiss}>
+      <FacePickContext.Provider value={facePick}><FaceMissContext.Provider value={faceMiss}><FloorPickContext.Provider value={faceTool === "rect" || faceTool === "poly" || faceTool === "circle" || faceTool === "board"}><RayCastContext.Provider value={castRef}>
       <FaceHoverContext.Provider value={faceHover}>
       <SketchOverlayContext.Provider value={sketchLines}>
       <ArrowHandlesContext.Provider value={arrowHandles}>
@@ -284,8 +286,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           <EditorViewport
             opts={opts}
             shownPanels={scene.shownPanels}
-            // A Modelatge, els botons del visor són a la barra d'eines (Inici › Vista i Visualització), com al Taulell.
-            chrome={project.modeling ? null : chrome}
+            // Plegar i tornar a obrir els panells del costat, també a Modelatge (cel, 2026-11-08: si no, no es poden tornar a obrir).
+            chrome={chrome}
             tabs={kind !== "objecte" && !project.modeling}
             photo={
               <PhotoScreen
@@ -355,7 +357,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     </ArrowHandlesContext.Provider>
     </SketchOverlayContext.Provider>
     </FaceHoverContext.Provider>
-    </FaceMissContext.Provider></FacePickContext.Provider>
+    </RayCastContext.Provider></FloorPickContext.Provider></FaceMissContext.Provider></FacePickContext.Provider>
     </HoverLinkProvider>
   )
 }

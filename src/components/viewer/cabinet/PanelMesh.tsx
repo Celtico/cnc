@@ -180,7 +180,7 @@ export const PanelMesh = memo(function PanelMesh({
           material={cut && cutMats ? cutMats : mats}
           geometry={cut ?? undefined}
           // El render arrodoneix les arestes dels taulers (`sceneData`).
-          userData={BEVEL_USERDATA}
+          userData={{ ...BEVEL_USERDATA, panel: panel.id }}
           onClick={onClick ? (e: ThreeEvent<MouseEvent>) => {
             // El clic que acaba un arrossegament (d'una fletxa o de la càmera) no selecciona.
             if (e.delta > 4) return

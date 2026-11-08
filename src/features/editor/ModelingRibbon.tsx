@@ -3,7 +3,7 @@ import { useEffect, useState } from "react"
 import { TopBarSlot } from "../../components/TopBar"
 import { toaster } from "../../components/ui/toaster"
 import { Tooltip } from "../../components/ui/tooltip"
-import { extrudeSketch, insertModuleCopy, mountModule, insertPartCopy, moduleRot, mountOf, newId, partBox, removeModule, reorientPart, type Composition, type FreePart, type Module, type PartOrient, type Settings } from "../../core/model"
+import { extrudeSketch, insertModuleCopy, mountModule, insertPartCopy, moduleRot, mountOf, newId, partBox, removeModule, reorientPart, type Composition, type FreePart, type Module, type Settings } from "../../core/model"
 import { freePartFor } from "../composition/addElements"
 import { ModulePicker, pickInto } from "../composition/ModulePicker"
 import type { Selection } from "../composition/StructureTree"
@@ -69,12 +69,6 @@ export function ModelingRibbon({
   /** Una eina de clicar cares: la deixa activa (un altre clic la treu). */
   const faceToolBtn = (id: FaceToolId, icon: TaulellIconName, label: string): Tool => ({ icon, label, hint: FACE_TOOL_INFO[id], on: faceTool === id, run: () => (setFaceOpts({ ...faceOpts, draft: undefined, cutTarget: undefined, measureFrom: undefined }), setFaceTool(faceTool === id ? null : id)) })
   const [tab, setTab] = useState("Inici")
-  const addPart = (orient: PartOrient, name: string) => {
-    const n = (comp.parts ?? []).filter((p) => p.name.startsWith(name)).length
-    const p = freePartFor(comp, settings, orient, center, n ? `${name} ${n + 1}` : name)
-    setComp({ ...comp, parts: [...(comp.parts ?? []), p] })
-    select({ kind: "part", id: p.id })
-  }
   const addModule = () => {
     const m = newModule(newId("m"), `Moble ${comp.modules.length + 1}`)
     setComp({ ...comp, modules: [...comp.modules, { ...m, gapBefore: 0 }] })
@@ -120,7 +114,7 @@ export function ModelingRibbon({
         }
       : undefined
   const [arrayOpen, setArrayOpen] = useState(false)
-  const tauler: Tool = { icon: "panel", label: "Tauler", hint: "Un tauler solt.", run: () => addPart("front", "Tauler") }
+  const tauler = faceToolBtn("board", "panel", "Tauler")
   // Extrusió: el croquis triat (a l'arbre o just dibuixat) passa a ser una peça lliure amb el gruix de l'eina.
   const sketch = comp.sketches?.find((k) => k.id === faceOpts.selSketch)
   const extrude: Tool = {

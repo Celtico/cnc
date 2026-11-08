@@ -1,12 +1,12 @@
 import type { FaceHit } from "../../components/viewer/facePick"
 import type { CompositionBuild } from "../../core/build/buildComposition"
-import { autoLimits, dynBox, SIDE_NAMES, type DynLimit, FIT_NOUN, fitWalls, ORIENT_OF_AXIS, partWithBox, wallBoxes, moduleOrigins3, newId, panelAabb, refitParts, type Composition, type FreePart, type Hole, type Module, type Panel, type PartOrient, type Vec3, PART_AXES, partSize, circlePts, fromPlane, partBox, rectPts, toPlane, type Sketch } from "../../core/model"
+import { autoLimits, dynBox, SIDE_NAMES, type DynLimit, FIT_NOUN, fitWalls, ORIENT_OF_AXIS, partWithBox, wallBoxes, moduleOrigins3, newId, panelAabb, refitParts, type Composition, type FreePart, type Hole, type Module, type Panel, type PartOrient, type Vec3, PART_AXES, partSize, circlePts, fromPlane, partBox, rectPts, toPlane, type Sketch, extrudeSketch } from "../../core/model"
 import type { Selection } from "../composition/StructureTree"
 import { pieceLocalId } from "./ModelingTree"
 import { add3, cabineoTool, fromLocal, jointTool } from "./faceJoints"
 
 /** Les eines del Taulell que es fan clicant una cara de la peça. */
-export type FaceToolId = "groove" | "rebate" | "cut" | "measure" | "laser" | "dowel" | "screw" | "cabineo" | "rect" | "poly" | "circle" | "face" | "dynpanel" | "fitblock" | "shelf" | "band" | "hole" | "cup" | "line32"
+export type FaceToolId = "groove" | "rebate" | "cut" | "measure" | "laser" | "dowel" | "screw" | "cabineo" | "rect" | "poly" | "circle" | "board" | "face" | "dynpanel" | "fitblock" | "shelf" | "band" | "hole" | "cup" | "line32"
 
 /** Les opcions de les eines (les mateixes del Taulell, amb els seus valors per defecte). */
 export interface FaceToolOpts {
@@ -102,7 +102,7 @@ export const DOWELS = { "8x40": { d: 8, L: 40, f: 12, e: 29 }, "8x30": { d: 8, L
 export type DowelSize = keyof typeof DOWELS
 
 /** El nom de cada eina (el títol de la seva finestra d'opcions). */
-export const FACE_TOOL_LABEL: Record<FaceToolId, string> = { groove: "Ranura", rebate: "Galze", cut: "Retall", measure: "Mesurar", laser: "Làser", dowel: "Clavilles", screw: "Cargols", cabineo: "Cabineo", rect: "Rectangle", poly: "Polilínia", circle: "Cercle", face: "Cara dinàmica", dynpanel: "Tauler dinàmic", fitblock: "Bloc condicionat", shelf: "Prestatge", band: "Cantell", hole: "Perforació", cup: "Cassoleta", line32: "Línia 32" }
+export const FACE_TOOL_LABEL: Record<FaceToolId, string> = { groove: "Ranura", rebate: "Galze", cut: "Retall", measure: "Mesurar", laser: "Làser", dowel: "Clavilles", screw: "Cargols", cabineo: "Cabineo", rect: "Rectangle", board: "Tauler", poly: "Polilínia", circle: "Cercle", face: "Cara dinàmica", dynpanel: "Tauler dinàmic", fitblock: "Bloc condicionat", shelf: "Prestatge", band: "Cantell", hole: "Perforació", cup: "Cassoleta", line32: "Línia 32" }
 
 /** El que diu cada eina mentre és activa (els textos del Taulell). */
 export const FACE_TOOL_INFO: Record<FaceToolId, string> = {
@@ -114,6 +114,7 @@ export const FACE_TOOL_INFO: Record<FaceToolId, string> = {
   dowel: "Clavilles: clica la cara de fora del tauler on darrere hi ha el cantell de l'altra peça.",
   screw: "Cargols: clica la cara per on entra el cargol (p. ex. la cara de fora del lateral). Es centra al cantell de la peça de darrere.",
   cabineo: "Cabineo: clica la cara del tauler que porta el connector, a prop del cantell que toca l'altra peça.",
+  board: "Tauler: clica a terra o sobre una cara per al primer cantó i després l'altre cantó (o escriu Llarg i Ample). Surt un tauler del gruix triat.",
   rect: "Rectangle: clica una cara per al primer cantó i després l'altre cantó (o escriu les mides).",
   poly: "Polilínia: clica els punts sobre una cara. Clica el primer punt o «Tanca» per acabar.",
   circle: "Cercle: clica el centre sobre una cara i després un punt de la vora (o escriu el diàmetre).",
@@ -252,7 +253,10 @@ export function runFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition
   }
   if (tool === "laser") {
     let best = Infinity, to: Panel | undefined
-    for (const q of panels) {
+    // Com el Taulell: el raig de veritat (toca el fons de les ranures i els forats); si no toca res, les capses de les peces.
+    const shot = hit.cast?.(pt, n)
+    if (shot) (best = shot.t), (to = panels.find((q) => q.id === shot.panel))
+    else for (const q of panels) {
       if (q.id === p.id || q.role === "hardware") continue
       const t = rayBox(pt, n, panelAabb(q))
       if (t !== null && t > 0.1 && t < best) (best = t), (to = q)
@@ -265,7 +269,7 @@ export function runFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition
   if (tool === "dowel" || tool === "screw") return jointTool(tool, o, comp, panels, hit)
   if (tool === "cabineo") return cabineoTool(o, comp, panels, hit)
 
-  if (tool === "rect" || tool === "poly" || tool === "circle") {
+  if (tool === "rect" || tool === "poly" || tool === "circle" || tool === "board") {
     const a = [0, 1, 2].reduce((x, k) => (Math.abs(n[k]!) > Math.abs(n[x]!) ? k : x), 0)
     const d = o.draft
     const q = toPlane(d?.a ?? a, pt)
@@ -274,6 +278,7 @@ export function runFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition
       return { opts: { ...o, draft }, message: "" }
     }
     if (tool === "rect") return finishSketch(comp, o, rectPts(d.pts[0]!, q), true)
+    if (tool === "board") return finishBoard(comp, o, rectPts(d.pts[0]!, q))
     if (tool === "circle") return finishSketch(comp, o, circlePts(d.pts[0]!, 2 * Math.hypot(q[0] - d.pts[0]![0], q[1] - d.pts[0]![1])), false)
     const first = d.pts[0]!
     if (d.pts.length >= 3 && Math.hypot(q[0] - first[0], q[1] - first[1]) < 15) return finishSketch(comp, o, d.pts, false)
@@ -313,9 +318,10 @@ export function runFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition
     if (!host) return { message: "Clica una cara d'una peça.", error: true }
     const idx = comp.modules.indexOf(host) + 1
     const own = panels.filter((x) => x.module === idx && !x.id.startsWith("part:") && x.role !== "hardware").map(panelAabb)
-    const edge = side ? Math.max(...own.map((b) => b.max[a]!)) : Math.min(...own.map((b) => b.min[a]!))
-    if (o.faceMode === "pull" && Math.abs(edge - pt[a]!) > 1) return { message: "En un moble, estira una cara de fora (el lateral, el sostre, el darrere…): en canvia la mida.", error: true }
-    return { opts: { ...o, facePick: { module: host.id, a, s: side } }, select: { kind: "module", id: host.id }, message: "" }
+    // Una cara de dins (l'interior d'un lateral, la base per dalt…) estira la cara de fora del mateix costat del moble.
+    const [lo, hi] = [Math.min(...own.map((b) => b.min[a]!)), Math.max(...own.map((b) => b.max[a]!))]
+    const s: 0 | 1 = Math.abs(hi - pt[a]!) < Math.abs(pt[a]! - lo) ? 1 : 0
+    return { opts: { ...o, facePick: { module: host.id, a, s } }, select: { kind: "module", id: host.id }, message: "" }
   }
 
   if (tool === "dynpanel" && o.dynMode === "ref") {
@@ -421,7 +427,6 @@ export function runFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition
 
   const l = local(p, pt, n)
   if (tool === "band") {
-    if (!host) return { message: "El cantell, de moment, a les peces dels mobles.", error: true }
     const ds: [keyof Panel["edges"], number][] = [
       ["left", Math.abs(l.u)],
       ["right", Math.abs(p.length - l.u)],
@@ -429,12 +434,19 @@ export function runFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition
       ["top", Math.abs(p.width - l.v)],
     ]
     const [edge] = ds.reduce((x, y) => (y[1] < x[1] ? y : x))
+    const on = !p.edges[edge]
+    const message = `${p.label}: cantell ${on ? "posat" : "tret"}`
+    // Una peça solta (tauler, bloc, prestatge afegits): el cantell va a la mateixa peça.
+    if (p.id.startsWith("part:")) {
+      const pid = p.id.slice(5)
+      return { comp: { ...comp, parts: (comp.parts ?? []).map((x) => (x.id !== pid ? x : { ...x, edges: { ...x.edges, [edge]: on } })) }, message }
+    }
+    if (!host) return { message: "Aquesta peça no admet cantell.", error: true }
     const id = pieceLocalId(host.id, p.id)
     const cur = host.pieceEdits?.[id] ?? {}
-    const on = !p.edges[edge]
     return {
       comp: { ...comp, modules: comp.modules.map((x) => (x.id !== host.id ? x : { ...x, pieceEdits: { ...x.pieceEdits, [id]: { ...cur, edges: { ...cur.edges, [edge]: on } } } })) },
-      message: `${p.label}: cantell ${on ? "posat" : "tret"}`,
+      message,
     }
   }
 
@@ -489,6 +501,21 @@ export function finishSketch(comp: Composition, o: FaceToolOpts, pts: [number, n
   return { comp: { ...comp, sketches: [...(comp.sketches ?? []), sk] }, opts: { ...o, draft: undefined, selSketch: sk.id }, message: `${name}: fet. L'Extrusió en fa una peça.` }
 }
 
+/** Tauler (com al Taulell): el rectangle dibuixat (a terra o sobre una cara) passa a ser una peça solta del gruix triat. */
+function boardPart(o: FaceToolOpts, comp: Composition, sk: Sketch): FreePart {
+  const n = (comp.parts ?? []).filter((q) => q.name.startsWith("Tauler")).length
+  const material = o.mat || comp.parts?.at(-1)?.material || comp.modules[0]?.carcass.material || ""
+  return extrudeSketch(sk, o.T, { id: newId("p"), name: n ? `Tauler ${n + 1}` : "Tauler", material })
+}
+export function finishBoard(comp: Composition, o: FaceToolOpts, pts: [number, number][]): FaceToolResult {
+  const d = o.draft
+  if (!d) return { message: "Clica a terra o sobre una cara per començar el tauler.", error: true }
+  const us = pts.map((q) => q[0])
+  const vs = pts.map((q) => q[1])
+  if (Math.max(...us) - Math.min(...us) < 1 || Math.max(...vs) - Math.min(...vs) < 1) return { message: "Mida massa petita.", error: true }
+  const p = boardPart(o, comp, { id: "", name: "", a: d.a, level: d.level, dir: d.dir, pts })
+  return { comp: { ...comp, parts: [...(comp.parts ?? []), p] }, opts: { ...o, draft: undefined }, select: { kind: "part", id: p.id }, message: `${p.name}: ${fmtMm(p.w)} × ${fmtMm(p.h)} × ${fmtMm(p.thickness)} mm` }
+}
 
 /** Un tauler dinàmic sense cara en el gruix, centrat a `at` (mm de la composició, en l'eix del gruix). */
 function withMid(dyn: NonNullable<FreePart["dyn"]>, boxOf: (id: string) => { min: Vec3; max: Vec3 } | undefined, T: number, at: number): NonNullable<FreePart["dyn"]> {
@@ -567,6 +594,11 @@ export function previewFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composi
     return { box: { min: b.min.map((v, k) => v + off[k]!) as Vec3, max: b.max.map((v, k) => v + off[k]!) as Vec3 } }
   }
   const d = o.draft
+  if (tool === "board" && d) {
+    const q = toPlane(d.a, hit.point)
+    const b = partBox(boardPart(o, comp, { id: "", name: "", a: d.a, level: d.level, dir: d.dir, pts: rectPts(d.pts[0]!, q) }))
+    return { box: b, label: `${fmtMm(Math.abs(q[0] - d.pts[0]![0]))} × ${fmtMm(Math.abs(q[1] - d.pts[0]![1]))} × ${fmtMm(o.T)} mm` }
+  }
   if ((tool === "rect" || tool === "circle" || tool === "poly") && d) {
     const q = toPlane(d.a, hit.point)
     const lift = (x: [number, number]) => fromPlane(d.a, d.level + d.dir * 0.5, x)

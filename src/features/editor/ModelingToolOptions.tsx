@@ -6,7 +6,7 @@ import { boardChoices, circlePts, partSize, SIDE_NAMES, type Composition, type F
 import type { Selection } from "../composition/StructureTree"
 import type { CompositionBuild } from "../../core/build/buildComposition"
 import { NumRow } from "../../components/NumRow"
-import { createRefPanel, DOWELS, finishSketch, MODULE_DIM, movePart, resizePartFace, type DowelSize, type FaceToolId, type FaceToolOpts } from "../modeling/faceTools"
+import { createRefPanel, DOWELS, finishBoard, finishSketch, MODULE_DIM, movePart, resizePartFace, type DowelSize, type FaceToolId, type FaceToolOpts } from "../modeling/faceTools"
 import { moduleFaceChange } from "../modeling/dragArrows"
 import { MaterialSelect } from "../settings/MaterialSelect"
 
@@ -14,7 +14,7 @@ import { MaterialSelect } from "../settings/MaterialSelect"
 export function ToolOptions({ tool, o, set, comp, setComp, settings, build, selection, select, done }: { tool: FaceToolId; o: FaceToolOpts; set: (o: FaceToolOpts) => void; comp: Composition; setComp: (c: Composition) => void; settings: Settings; build?: CompositionBuild; selection: Selection; select: (s: Selection) => void; done: () => void }) {
   if (tool === "dynpanel") return <DynPanelOptions o={o} set={set} comp={comp} setComp={setComp} settings={settings} build={build} selection={selection} select={select} done={done} />
   if (tool === "face") return <FaceSize o={o} set={set} comp={comp} setComp={setComp} />
-  if (tool === "rect" || tool === "poly" || tool === "circle") return <SketchOptions tool={tool} o={o} set={set} comp={comp} setComp={setComp} />
+  if (tool === "rect" || tool === "poly" || tool === "circle" || tool === "board") return <SketchOptions tool={tool} o={o} set={set} comp={comp} setComp={setComp} settings={settings} select={select} />
   const num = (k: NumKey, label: string, min = 0) => <NumRow key={k} maxW="110px" label={label} value={o[k]} min={min} max={3000} step={0.5} onChange={(v) => set({ ...o, [k]: v })} />
   const check = (k: "dowDist" | "scrDist", label: string) => (
     <Checkbox.Root key={k} size="sm" colorPalette="wood" checked={o[k]} onCheckedChange={(e) => set({ ...o, [k]: !!e.checked })}>
@@ -222,19 +222,26 @@ function FaceSize({ o, set, comp, setComp }: { o: FaceToolOpts; set: (o: FaceToo
 type NumKey = { [K in keyof FaceToolOpts]-?: FaceToolOpts[K] extends number ? K : never }[keyof FaceToolOpts]
 
 /** Rectangle, Polilínia i Cercle: el que s'ha clicat, les mides per escriure i acabar el croquis. */
-function SketchOptions({ tool, o, set, comp, setComp }: { tool: "rect" | "poly" | "circle"; o: FaceToolOpts; set: (o: FaceToolOpts) => void; comp: Composition; setComp: (c: Composition) => void }) {
+function SketchOptions({ tool, o, set, comp, setComp, settings, select }: { tool: "rect" | "poly" | "circle" | "board"; o: FaceToolOpts; set: (o: FaceToolOpts) => void; comp: Composition; setComp: (c: Composition) => void; settings: Settings; select: (s: Selection) => void }) {
   const d = o.draft
   const done = (pts: [number, number][], rect: boolean) => {
-    const r = finishSketch(comp, o, pts, rect)
+    const r = tool === "board" ? finishBoard(comp, o, pts) : finishSketch(comp, o, pts, rect)
     if (r.comp) setComp(r.comp)
+    if (r.select) select(r.select)
     if (r.opts) set(r.opts)
     toaster.create({ title: r.message, type: r.error ? "warning" : "success", duration: 2500 })
   }
   const p0 = d?.pts[0]
   return (
     <Stack gap={2}>
-      <Text fontSize="sm">{!d ? (tool === "circle" ? "Clica el centre sobre una cara." : "Clica el primer punt sobre una cara.") : tool === "poly" ? `${d.pts.length} punts.` : tool === "circle" ? "Centre fixat." : "Primer cantó fixat."}</Text>
-      {tool === "rect" && (
+      <Text fontSize="sm">{!d ? (tool === "circle" ? "Clica el centre a terra o sobre una cara." : "Clica el primer punt a terra o sobre una cara.") : tool === "poly" ? `${d.pts.length} punts.` : tool === "circle" ? "Centre fixat." : "Primer cantó fixat: mou el ratolí i clica l'altre cantó."}</Text>
+      {tool === "board" && (
+        <>
+          <NumRow maxW="110px" label="Gruix" value={o.T} min={1} max={200} step={0.5} onChange={(v) => set({ ...o, T: v })} />
+          <MaterialSelect label="Material" materials={boardChoices(settings.materials)} value={o.mat} emptyLabel="Com el moble" onChange={(v) => set({ ...o, mat: v })} />
+        </>
+      )}
+      {(tool === "rect" || tool === "board") && (
         <>
           <NumRow maxW="110px" label="Llarg" value={o.sketchL} min={1} max={5000} step={1} onChange={(v) => set({ ...o, sketchL: v })} />
           <NumRow maxW="110px" label="Ample" value={o.sketchW} min={1} max={5000} step={1} onChange={(v) => set({ ...o, sketchW: v })} />
@@ -243,7 +250,7 @@ function SketchOptions({ tool, o, set, comp, setComp }: { tool: "rect" | "poly" 
       {tool === "circle" && <NumRow maxW="110px" label="Diàmetre" value={o.sketchD} min={1} max={5000} step={1} onChange={(v) => set({ ...o, sketchD: v })} />}
       {d && p0 && (
         <HStack gap={2} flexWrap="wrap">
-          {tool === "rect" && (
+          {(tool === "rect" || tool === "board") && (
             <Button size="xs" colorPalette="wood" onClick={() => done([p0, [p0[0] + o.sketchL, p0[1]], [p0[0] + o.sketchL, p0[1] + o.sketchW], [p0[0], p0[1] + o.sketchW]], true)}>
               Aplica les mides
             </Button>

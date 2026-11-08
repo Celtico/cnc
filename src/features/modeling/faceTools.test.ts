@@ -140,3 +140,26 @@ describe("tauler dinàmic · cares de referència i orientació", () => {
     expect(a.min[1]).toBeCloseTo(bb.max[1], 0)
   })
 })
+
+describe("tauler a terra i cantell de les peces soltes (com al Taulell)", () => {
+  const comp: Composition = { modules: [{ ...emptyModule("m", "Moble"), gapBefore: 0 }], references: [] }
+  const floor = { panel: { id: "floor", label: "Terra" } as never, normal: [0, 1, 0] as [number, number, number] }
+  it("dos clics a terra fan un tauler del gruix triat, i el cantell s'hi posa i es treu", () => {
+    const o1 = runFaceTool("board", DEFAULT_FACE_OPTS, comp, buildComposition(comp), { ...floor, point: [1500, 0, 100] }).opts!
+    const r = runFaceTool("board", o1, comp, buildComposition(comp), { ...floor, point: [2100, 0, 500] })
+    expect(r.error).toBeFalsy()
+    const build = buildComposition(r.comp!)
+    const p = build.panels.find((x) => x.id.startsWith("part:"))!
+    expect([p.length, p.width, p.thickness].sort((a, b) => a - b)).toEqual([19, 400, 600])
+    const a = panelAabb(p)
+    expect(a.min[1]).toBeCloseTo(0, 3)
+    // Clic a prop d'un cantell de la cara de dalt: aquell cantell es posa; un altre clic el treu.
+    const at = { panel: p, point: [a.min[0] + 2, a.max[1], (a.min[2] + a.max[2]) / 2] as [number, number, number], normal: [0, 1, 0] as [number, number, number] }
+    const on = runFaceTool("band", DEFAULT_FACE_OPTS, r.comp!, build, at)
+    expect(on.error).toBeFalsy()
+    const q = buildComposition(on.comp!).panels.find((x) => x.id === p.id)!
+    expect(Object.values(q.edges).filter(Boolean)).toHaveLength(1)
+    const off = runFaceTool("band", DEFAULT_FACE_OPTS, on.comp!, buildComposition(on.comp!), { ...at, panel: q })
+    expect(Object.values(buildComposition(off.comp!).panels.find((x) => x.id === p.id)!.edges).filter(Boolean)).toHaveLength(0)
+  })
+})

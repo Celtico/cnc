@@ -91,6 +91,8 @@ export const FreePartSchema = z.object({
   grain: z.enum(["u", "v", "none"]).optional(),
   /** Cantell als quatre costats (tauler xapat o lacat que es veu): no es veu l'ànima del tauler. */
   edged: z.boolean().optional(),
+  /** Cantell costat per costat (eina Cantell de Modelatge): mana sobre `edged` en el costat que hi surt. */
+  edges: z.object({ left: z.boolean(), right: z.boolean(), bottom: z.boolean(), top: z.boolean() }).partial().optional(),
 })
 export type FreePart = z.infer<typeof FreePartSchema>
 

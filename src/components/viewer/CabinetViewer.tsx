@@ -28,6 +28,8 @@ import { panelBox } from "../../core/build/geometry"
 import { hoverKey, hoverTarget, useHoverLink } from "../hoverLink"
 import { FaceMissContext, useArrowHandles, useFaceHover, useFacePick, useSketchOverlay } from "./facePick"
 import { DragArrows } from "./cabinet/DragArrows"
+import { SketchFloor } from "./cabinet/SketchFloor"
+import { RayCaster } from "./cabinet/RayCaster"
 import { SketchLines } from "./cabinet/SketchLines"
 import { CarveContext, SectionCapContext, SectionClip } from "./cabinet/SectionClip"
 import type { Panel } from "../../core/model"
@@ -219,7 +221,7 @@ export function CabinetViewer({
       <CarveContext.Provider value={carve}>
       <SectionCapContext.Provider value={sectionCap}>
       <group position={[-size.width * S * 0.5, 0, -size.depth * S * 0.5]}>
-        {sketchLines.length > 0 && <SketchLines lines={sketchLines} />}
+        {sketchLines.length > 0 && <SketchLines lines={sketchLines} />}<SketchFloor width={size.width} depth={size.depth} /><RayCaster width={size.width} depth={size.depth} />
         {arrowHandles && arrowHandles.arrows.length > 0 && <DragArrows h={arrowHandles} />}
         <SectionClip section={section} offset={[size.width / 2, 0, size.depth / 2]} />
         <LinesOnly on={lines} color={LINE_COLOR}>{panels.map((p) => {

@@ -10,7 +10,13 @@ export interface FaceHit {
   panel: Panel
   point: Vec3
   normal: Vec3
+  /** El raig de veritat dins l'escena (làser): fins a la primera cara que toca, ranures i forats buidats inclosos. */
+  cast?: RayCast
 }
+/** Des de `from` (mm del moble) en la direcció `dir`: a quants mm toca una peça, i quina. */
+export type RayCast = (from: Vec3, dir: Vec3) => { t: number; panel: string } | null
+/** On el 3D deixa la seva funció de raig (`RayCaster`), perquè les eines la facin servir. */
+export const RayCastContext = createContext<{ current: RayCast | null } | null>(null)
 export type FacePick = (hit: FaceHit) => void
 /** El ratolí sobre una cara amb una eina activa (la vista prèvia en verd, com al Taulell); null en sortir-ne. */
 export type FaceHover = (hit: FaceHit | null) => void
@@ -20,6 +26,8 @@ export const useFaceHover = () => useContext(FaceHoverContext)
 export const FacePickContext = createContext<FacePick | null>(null)
 export const useFacePick = () => useContext(FacePickContext)
 /** Clic al buit amb una eina de cara: el làser i el mesurar s'esborren (com al Taulell). */
+/** L'eina activa també dibuixa a terra (Rectangle, Polilínia, Cercle). */
+export const FloorPickContext = createContext(false)
 export const FaceMissContext = createContext<(() => void) | null>(null)
 
 /** Una línia dels croquis de Modelatge al 3D (mm de la composició): els desats, el triat i el que s'està dibuixant. */
