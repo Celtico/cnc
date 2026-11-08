@@ -3,7 +3,7 @@ import type { Panel } from "../../core/model"
 import { S } from "./cabinet/constants"
 import { isShaped, mitreGeometry, shapedGeometry } from "./cutoutGeometry"
 import { visualPanel } from "./exportablePanel"
-import { machiningOutlines } from "./machiningOutlines"
+import { clipToGrooves, machiningOutlines } from "./machiningOutlines"
 
 /**
  * Arestes netes, com el `cleanEdges` del Taulell: només on dues cares es troben amb un angle de debò (`deg`). Les juntes
@@ -56,14 +56,11 @@ export function panelLines(p: Panel, cut: BufferGeometry | null): BufferGeometry
   if (cut && base instanceof BoxGeometry) base.translate(L / 2, W / 2, T / 2)
   const out = cleanEdges(base, 25)
   base.dispose()
-  // Els mecanitzats, dibuixats (`machiningOutlines`), a la posició de la malla (amb `cut`, origen a la cantonada).
-  const mm = machiningOutlines(p)
-  if (!mm.length) return out
+  // Tot en mm i coordenades locals (origen a la cantonada): el contorn sense el que s'han endut les ranures i els galzes,
+  // i els mecanitzats dibuixats (`machiningOutlines`). Després, a la posició de la malla (sense `cut`, centrada).
   const shift = cut ? [0, 0, 0] : [L / 2, W / 2, T / 2]
-  const a = out.getAttribute("position").array
-  const all = new Float32Array(a.length + mm.length)
-  all.set(a)
-  mm.forEach((v, i) => (all[a.length + i] = v * S - shift[i % 3]!))
-  out.setAttribute("position", new Float32BufferAttribute(all, 3))
+  const a = Array.from(out.getAttribute("position").array, (v, i) => (v + shift[i % 3]!) / S)
+  const mm = [...clipToGrooves(p, a), ...machiningOutlines(p)]
+  out.setAttribute("position", new Float32BufferAttribute(mm.map((v, i) => v * S - shift[i % 3]!), 3))
   return out
 }
