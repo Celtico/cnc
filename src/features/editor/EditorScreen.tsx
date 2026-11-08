@@ -19,6 +19,7 @@ import { EditorLeftPanel } from "./EditorLeftPanel"
 import { ModelingRibbon } from "./ModelingRibbon"
 import { modulePieces, ModelingTree, pieceLocalId, setPieceEdit } from "../modeling/ModelingTree"
 import { PieceInspector } from "../modeling/PieceInspector"
+import { CarveContext } from "../../components/viewer/cabinet/SectionClip"
 import { DEFAULT_FACE_OPTS, previewFaceTool, runFaceTool, type FaceToolId, type FaceToolOpts } from "../modeling/faceTools"
 import { FaceHoverContext, FacePickContext, SketchOverlayContext, type FaceHit, type FaceHover, type FacePick, type SketchLine } from "../../components/viewer/facePick"
 import { fromPlane } from "../../core/model"
@@ -274,6 +275,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         // Sense pestanya «Assistent» (per decisió de l'usuari, 2026-10-13): l'assistent personal és al menú principal
         // i fa servir aquest document pel `assistantHub`.
         center={(chrome) => (
+          <CarveContext.Provider value={!!project.modeling}>
           <EditorViewport
             opts={opts}
             shownPanels={scene.shownPanels}
@@ -339,6 +341,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
               />
             }
           />
+          </CarveContext.Provider>
         )}
       />
       <FloatingWindow id="editor-props" kind="picker" width={360} height={600} open={!!propsAt} at={propsAt ?? undefined} onClose={() => setPropsAt(null)} title="Propietats" initialFocus={false}>

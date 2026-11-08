@@ -4,7 +4,7 @@ import { GuideRoom, PresentationRoom } from "./PresentationRoom"
 import { ModuleLegs } from "./Hardware"
 import { SceneAccess, StudioEnvironment, TextureRefresh } from "./SceneHelpers"
 import { Grid } from "@react-three/drei"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useContext, useEffect, useMemo, useRef, useState } from "react"
 import { ContactShadow } from "./ContactShadow"
 import { BoxFrame } from "./BoxFrame"
 import { NeutralToneMapping, type Vector3 } from "three"
@@ -27,7 +27,7 @@ import { panelBox } from "../../core/build/geometry"
 import { hoverKey, hoverTarget, useHoverLink } from "../hoverLink"
 import { useFaceHover, useFacePick, useSketchOverlay } from "./facePick"
 import { SketchLines } from "./cabinet/SketchLines"
-import { SectionCapContext, SectionClip } from "./cabinet/SectionClip"
+import { CarveContext, SectionCapContext, SectionClip } from "./cabinet/SectionClip"
 import type { Panel } from "../../core/model"
 
 /** Anar a un avís: el contorn de les seves peces i la transparència de la resta. */
@@ -117,7 +117,9 @@ export function CabinetViewer({
   // transparents amb el perfil i els forats a la vista. «Enquadrar» torna al 3/4 en perspectiva.
   const wire = viewDir !== null || wireAll
   const holesShown = showHoles || wire
-  const holesDrawn = holesShown || hardware
+  // Modelatge (`CarveContext`, fora del Canvas): els forats buidats, i la peça es refà quan canvien.
+  const carve = useContext(CarveContext)
+  const holesDrawn = holesShown || hardware || carve
   const { groupOf, panelKeys, pinsOf, fixedOf } = usePanelVisuals(panels, holesDrawn, hardware)
   // Mòdul (o moble sencer) que s'està arrossegant amb la nansa: desplaçament en viu.
   // Element sota el ratolí (aquí o a la seva fila de l'arbre, `useHoverLink`): contorn suau, perquè es vegi què se
@@ -212,6 +214,7 @@ export function CabinetViewer({
       />
       <directionalLight position={[-3, 2, -2]} intensity={0.35} />
 
+      <CarveContext.Provider value={carve}>
       <SectionCapContext.Provider value={sectionCap}>
       <group position={[-size.width * S * 0.5, 0, -size.depth * S * 0.5]}>
         {sketchLines.length > 0 && <SketchLines lines={sketchLines} />}
@@ -365,6 +368,7 @@ export function CabinetViewer({
         )}
       </group>
       </SectionCapContext.Provider>
+      </CarveContext.Provider>
 
       <group visible={q.guides}>
         <Grid position={[0, -0.001, 0]} args={[10, 10]} cellSize={0.1} sectionSize={0.5} cellColor={gridCell} sectionColor={gridSection} fadeDistance={6} infiniteGrid />

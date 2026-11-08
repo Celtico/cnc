@@ -128,7 +128,7 @@ export function cutoutMaterials(p: Panel, mode: "material" | "role", materials: 
   const opts = { transparent: dimmed, opacity: dimmed ? 0.45 : 1 }
   if (mode === "role") {
     const m = new MeshStandardMaterial({ color: ROLE_COLOR[p.role], roughness: 0.85, metalness: 0, ...opts })
-    return [m, m, m]
+    return [m, m, m, new MeshStandardMaterial({ color: HOLE_WALL_COLOR, roughness: 1, metalness: 0, ...opts })]
   }
   // UV en metres: 1000 mm per unitat de textura.
   const finish = resolveFinish(materials, p.material)
@@ -138,8 +138,13 @@ export function cutoutMaterials(p: Panel, mode: "material" | "role", materials: 
   const mat = materials.find((m) => m.name === p.material)
   const solid = p.role === "hardware" || (!!mat && (materialCategory(mat) === "sim" || mat.cnc === false || !!mat.solid))
   const raw = solid ? makeMaterial(finish, 1000, 1000, false, opts, textureOffset(`${p.id}#r`)) : new MeshStandardMaterial({ color: RAW_EDGE_COLOR, roughness: 0.95, metalness: 0, ...opts })
-  return [face, edge, raw]
+  // Les parets dels forats i les ranures buidats (`carvedPanel`, Modelatge): fosques, com dins d'un forat.
+  const hole = new MeshStandardMaterial({ color: HOLE_WALL_COLOR, roughness: 1, metalness: 0, ...opts })
+  return [face, edge, raw, hole]
 }
+
+/** El color de dins d'un forat o d'una ranura buidats al 3D. */
+const HOLE_WALL_COLOR = "#8f887d"
 
 /**
  * Geometria i materials reals d'una peça (els mateixos del visor, amb textures i veta) per

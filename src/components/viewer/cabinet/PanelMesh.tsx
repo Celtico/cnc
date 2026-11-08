@@ -5,13 +5,13 @@ import { Matrix4, Vector3, type Group, type Material } from "three"
 import type { HwSolid } from "../../../core/build/hardwareSolids"
 import type { Hole, MaterialPref, Panel } from "../../../core/model"
 import { useKeyed } from "../../../lib/useKeyed"
-import { edgeSourceGeometry, isShaped, mitreGeometry, shapedGeometry } from "../cutoutGeometry"
+import { carvedPanel, edgeSourceGeometry, isShaped, mitreGeometry, shapedGeometry } from "../cutoutGeometry"
 import { cutoutMaterials, panelMaterials, panelVisualKey, visualPanel } from "../exportablePanel"
 import { PanelFittings, PanelHardware } from "../Hardware"
 import { disposeMaterial } from "../textures"
 import { EXPLODE_MM, S } from "./constants"
 import { panelBox } from "../../../core/build/geometry"
-import { SECTION_CAP_MAT, SectionCapContext, noRaycast } from "./SectionClip"
+import { CarveContext, SECTION_CAP_MAT, SectionCapContext, noRaycast } from "./SectionClip"
 import { HoleMarks, PROPOSED_MAT } from "./HoleMarks"
 import { useExplode } from "./anim"
 
@@ -121,7 +121,9 @@ export const PanelMesh = memo(function PanelMesh({
   // Peces a inglet (sense talls): secció en trapezi, perquè la cantonada es vegi a 45°.
   // Els forats dels tiradors no es buiden al 3D (els tapa el tirador): així una peça a inglet
   // amb tirador continua sent un prisma a 45°.
-  const vis = useMemo(() => visualPanel(vpanel), [vpanel])
+  // Modelatge: els forats i les ranures, buidats de debò (no les marques per sobre).
+  const carve = useContext(CarveContext)
+  const vis = useMemo(() => (carve ? carvedPanel(visualPanel(vpanel)) : visualPanel(vpanel)), [vpanel, carve])
   const cut = useMemo(() => (isShaped(vis) ? shapedGeometry(vis) : vis.mitres?.length ? mitreGeometry(vis) : null), [vis])
   const edgeGeo = useMemo(() => (edges ? edgeSourceGeometry(vis) : null), [vis, edges])
   useEffect(() => () => edgeGeo?.dispose(), [edgeGeo])
@@ -196,7 +198,7 @@ export const PanelMesh = memo(function PanelMesh({
             {!cut && <boxGeometry args={[L, W, T]} />}
           </mesh>
         )}
-        {showHoles && vpanel.holes.length > 0 && (proposedTags?.length ? (
+        {showHoles && !carve && vpanel.holes.length > 0 && (proposedTags?.length ? (
           <>
             <HoleMarks holes={vpanel.holes.filter((h) => !h.tag || !proposedTags.includes(h.tag))} thickness={T} />
             <HoleMarks holes={vpanel.holes.filter((h) => !!h.tag && proposedTags.includes(h.tag))} thickness={T} material={PROPOSED_MAT} />
@@ -206,7 +208,7 @@ export const PanelMesh = memo(function PanelMesh({
         ))}
         {hardware && <PanelHardware panel={vpanel} pins={pins} fixed={fixed} />}
         {(hardware || selectedFitting) && <PanelFittings panel={vpanel} models={hardware} selected={selectedFitting} onSelect={onSelectFitting} />}
-        {vpanel.grooves.map((g, i) => (
+        {!carve && vpanel.grooves.map((g, i) => (
           <mesh key={`g${i}`} position={[(g.x + g.w / 2) * S, (g.y + g.h / 2) * S, g.face === "A" ? T - (g.depth * S) / 2 + 0.0002 : (g.depth * S) / 2 - 0.0002]}>
             <boxGeometry args={[g.w * S, g.h * S, g.depth * S]} />
             <meshStandardMaterial color="#8a7150" roughness={1} />

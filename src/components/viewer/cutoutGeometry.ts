@@ -1,5 +1,6 @@
-import { BufferGeometry, ExtrudeGeometry, Float32BufferAttribute, Matrix4, MeshBasicMaterial, Path, Shape, Vector3, type Material } from "three"
+import { Box3, BufferGeometry, ExtrudeGeometry, Float32BufferAttribute, Matrix4, MeshBasicMaterial, Path, Shape, Vector3, type Material } from "three"
 import { Brush, Evaluator, SUBTRACTION } from "three-bvh-csg"
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js"
 import { ccw, flatten, pocketKey, pocketSolids, type Panel } from "../../core/model"
 
 const S = 0.001
@@ -201,7 +202,7 @@ export function shapedGeometry(p: Panel): BufferGeometry {
   // Els booleans 3D són lents (un relleu gran, ~1 s): la mateixa peça (cada cop que es reconstrueix el moble en surt un
   // objecte nou) es treu de la memòria. Es torna una còpia: qui la rep la pot alliberar.
   // Només el que canvia la forma (no la col·locació, el nom ni els forats): la mateixa peça en un altre lloc la reaprofita.
-  const key = JSON.stringify([p.length, p.width, p.thickness, p.outline, p.rawSides, p.cutouts, p.edges, p.mitres, p.solidCuts, p.pockets?.map(pocketKey) ?? null])
+  const key = JSON.stringify([p.length, p.width, p.thickness, p.outline, p.rawSides, p.cutouts, p.edges, p.mitres, p.solidCuts, MACHINED.get(p) ?? 0, p.pockets?.map(pocketKey) ?? null])
   const hit = CSG_CACHE.get(key)
   if (hit) {
     CSG_CACHE.delete(key)
@@ -255,10 +256,11 @@ function splitEdgeGroups(g0: BufferGeometry, p: Panel): BufferGeometry {
     return true
   }
   // Triangles per material: 0 (cares), 1 (amb cantell), 2 (sense).
-  const tris: number[][] = [[], [], []]
+  // I 3: les parets dels mecanitzats (`carvedPanel`).
+  const tris: number[][] = [[], [], [], []]
   for (const gr of groups) {
     const mi = gr.materialIndex ?? 0
-    for (let i = gr.start; i < gr.start + gr.count; i += 3) tris[mi === 0 ? 0 : banded(i, i + 1, i + 2) ? 1 : 2]!.push(i)
+    for (let i = gr.start; i < gr.start + gr.count; i += 3) tris[mi === 0 ? 0 : mi === 3 ? 3 : banded(i, i + 1, i + 2) ? 1 : 2]!.push(i)
   }
   const out = new BufferGeometry()
   for (const name of Object.keys(g.attributes)) {
@@ -313,13 +315,16 @@ function solidCutGeometry(p: Panel): BufferGeometry {
   const base = cutoutGeometry(p)
   const face = new MeshBasicMaterial()
   const edge = new MeshBasicMaterial()
+  const wall = new MeshBasicMaterial()
   const ev = new Evaluator()
   ev.useGroups = true
   ev.attributes = ["position", "uv", "normal"]
   let a = new Brush(base, [face, edge])
   a.updateMatrixWorld()
   // Els buidats (`pockets`): el prisma de la paret recta i, si el fons no és pla, el sòlid del mapa d'alçades.
-  const cutters: BufferGeometry[] = (p.solidCuts ?? []).map(prismGeometry)
+  const all = p.solidCuts ?? []
+  const machined = MACHINED.get(p) ?? 0
+  const cutters: BufferGeometry[] = all.slice(0, all.length - machined).map(prismGeometry)
   for (const pk of p.pockets ?? []) {
     const sol = pocketSolids(pk, p.thickness)
     if (sol.wall) cutters.push(prismGeometry(sol.wall))
@@ -335,8 +340,11 @@ function solidCutGeometry(p: Panel): BufferGeometry {
       cutters.push(flat)
     }
   }
-  for (const cg of cutters) {
-    const b = new Brush(cg, edge)
+  // Els mecanitzats (forats, ranures), amb les parets fosques (`wall`, el grup 3): es veuen com un forat, no com un cantell.
+  const holes = all.slice(all.length - machined).map(prismGeometry)
+  // Els talls que no es toquen es resten d'un cop (un forat de clavilla rere l'altre seria lent): lots de prismes separats.
+  for (const [cg, m] of [...batchCutters(cutters).map((g) => [g, edge] as const), ...batchCutters(holes).map((g) => [g, wall] as const)]) {
+    const b = new Brush(cg, m)
     b.updateMatrixWorld()
     const next = ev.evaluate(a, b, SUBTRACTION)
     b.geometry.dispose()
@@ -346,8 +354,89 @@ function solidCutGeometry(p: Panel): BufferGeometry {
   base.dispose()
   const out = a.geometry
   const mats = (Array.isArray(a.material) ? a.material : [a.material]) as Material[]
-  for (const gr of out.groups) gr.materialIndex = mats[gr.materialIndex ?? 0] === face ? 0 : 1
+  for (const gr of out.groups) gr.materialIndex = mats[gr.materialIndex ?? 0] === face ? 0 : mats[gr.materialIndex ?? 0] === wall ? 3 : 1
   face.dispose()
   edge.dispose()
+  wall.dispose()
+  return out
+}
+
+/**
+ * Els talls agrupats en lots on cap no toca un altre (per restar-los d'un cop): els forats encavalcats del Cabineo van en
+ * lots diferents, perquè el booleà d'un sòlid amb trossos que es creuen no és net.
+ */
+function batchCutters(cutters: BufferGeometry[]): BufferGeometry[] {
+  if (cutters.length < 2) return cutters
+  const lots: { geos: BufferGeometry[]; boxes: Box3[] }[] = []
+  for (const g of cutters) {
+    if (!g.getAttribute("normal") || !g.getAttribute("uv") || g.index) {
+      lots.push({ geos: [g], boxes: [] })
+      continue
+    }
+    g.computeBoundingBox()
+    const bx = g.boundingBox!.clone().expandByScalar(0.0002)
+    const lot = lots.find((l) => l.boxes.length && !l.boxes.some((o) => o.intersectsBox(bx)))
+    if (lot) {
+      lot.geos.push(g)
+      lot.boxes.push(bx)
+    } else lots.push({ geos: [g], boxes: [bx] })
+  }
+  return lots.map((l) => {
+    if (l.geos.length === 1) return l.geos[0]!
+    for (const g of l.geos) g.clearGroups()
+    const m = mergeGeometries(l.geos, false)
+    for (const g of l.geos) g.dispose()
+    return m ?? l.geos[0]!
+  })
+}
+
+/** Segments d'un forat rodó al 3D (prou per veure'l rodó, pocs per no alentir el booleà). */
+const ROUND = (d: number) => (d >= 12 ? 24 : 16)
+
+/**
+ * Els mecanitzats de la peça (forats de cara i de cantell, ranures) com a talls 3D, per veure'ls buidats de debò
+ * (Modelatge, cel 2026-11-08: «no es veu retallat de veritat»). En mm i coordenades locals, com `Panel.solidCuts`.
+ */
+export function machiningCuts(p: Panel): NonNullable<Panel["solidCuts"]> {
+  const T = p.thickness
+  const out: NonNullable<Panel["solidCuts"]> = []
+  const ring = (d: number, at: (c: number, s: number) => [number, number, number]) => {
+    const n = ROUND(d)
+    return Array.from({ length: n }, (_, k) => at((d / 2) * Math.cos((2 * Math.PI * k) / n), (d / 2) * Math.sin((2 * Math.PI * k) / n)))
+  }
+  for (const h of p.holes) {
+    const depth = Math.min(h.depth, h.face === "edge" ? 4000 : T + 1)
+    if (!(depth > 1.05) || !(h.diameter > 0.5)) continue
+    if (h.face === "A" || h.face === "B") {
+      const z = h.face === "A" ? T : 0
+      out.push({ points: ring(h.diameter, (c, s) => [h.x + c, h.y + s, z]), dir: [0, 0, (h.face === "A" ? -1 : 1) * (depth - 1)] })
+    } else if (h.edge) {
+      const e = h.edge
+      const dir: [number, number, number] = e === "left" ? [1, 0, 0] : e === "right" ? [-1, 0, 0] : e === "bottom" ? [0, 1, 0] : [0, -1, 0]
+      const along = e === "left" || e === "right"
+      out.push({
+        points: ring(h.diameter, (c, s) => (along ? [h.x, h.y + c, T / 2 + s] : [h.x + c, h.y, T / 2 + s])),
+        dir: dir.map((v) => v * (depth - 1)) as [number, number, number],
+      })
+    }
+  }
+  for (const g of p.grooves) {
+    if (!(g.depth > 1.05)) continue
+    const z = g.face === "A" ? T : 0
+    out.push({ points: [[g.x, g.y, z], [g.x + g.w, g.y, z], [g.x + g.w, g.y + g.h, z], [g.x, g.y + g.h, z]], dir: [0, 0, (g.face === "A" ? -1 : 1) * (Math.min(g.depth, T + 1) - 1)] })
+  }
+  return out
+}
+
+/** Quants dels últims `solidCuts` d'una peça de `carvedPanel` són mecanitzats (les seves parets, fosques). */
+const MACHINED = new WeakMap<Panel, number>()
+
+/** La peça amb els mecanitzats com a talls 3D (`machiningCuts`); la mateixa si no en té o és a inglet. */
+export function carvedPanel(p: Panel): Panel {
+  if (p.mitres?.length) return p
+  const cuts = machiningCuts(p)
+  if (!cuts.length) return p
+  const out = { ...p, solidCuts: [...(p.solidCuts ?? []), ...cuts] }
+  MACHINED.set(out, cuts.length)
   return out
 }
