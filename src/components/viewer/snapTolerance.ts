@@ -10,6 +10,11 @@ const SNAP_MIN_MM = 25
  * punt `at` (unitats de l'escena, metres) amb la càmera d'ara; `S`, mm → unitats.
  */
 export function snapToleranceMm(camera: Camera, heightPx: number, at: Vector3, S: number): number {
+  return Math.max(SNAP_MIN_MM, SNAP_PX * mmPerPx(camera, heightPx, at, S))
+}
+
+/** Quants mm del model fa un píxel de la pantalla al punt `at` (unitats de l'escena) amb la càmera d'ara. */
+export function mmPerPx(camera: Camera, heightPx: number, at: Vector3, S: number): number {
   let unitsPerPx: number
   if ((camera as OrthographicCamera).isOrthographicCamera) {
     const o = camera as OrthographicCamera
@@ -19,5 +24,5 @@ export function snapToleranceMm(camera: Camera, heightPx: number, at: Vector3, S
     const dist = p.position.distanceTo(at)
     unitsPerPx = (2 * dist * Math.tan(((p.fov ?? 50) * Math.PI) / 360)) / Math.max(1, heightPx)
   }
-  return Math.max(SNAP_MIN_MM, (SNAP_PX * unitsPerPx) / S)
+  return unitsPerPx / S
 }

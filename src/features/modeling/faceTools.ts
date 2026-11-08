@@ -163,6 +163,16 @@ function uniqueName(comp: Composition, base: string): string {
   return `${base} ${k}`
 }
 
+/** On comença el làser: el punt clicat o, a menys de `tol` mm d'una aresta de la cara (o de dues, un vèrtex), a sobre. */
+function laserStart(p: Panel, pt: Vec3, n: Vec3, tol: number): { pt: Vec3; snap?: "aresta" | "vèrtex" } {
+  const l = local(p, pt, n)
+  if (l.face === "edge" || tol <= 0 || p.outline) return { pt }
+  const near = (x: number, len: number) => (x < tol ? 0 : len - x < tol ? len : null)
+  const [u, v] = [near(l.u, p.length), near(l.v, p.width)]
+  if (u === null && v === null) return { pt }
+  return { pt: fromLocal(p, u ?? l.u, v ?? l.v, l.face === "A" ? p.thickness : 0), snap: u !== null && v !== null ? "vèrtex" : "aresta" }
+}
+
 /** Una mida en mm a la catalana (149,5). */
 const fmtMm = (v: number) => String(r1(v)).replace(".", ",")
 
@@ -252,19 +262,21 @@ export function runFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition
     return { opts: { ...o, measureFrom: undefined, measureLine: [o.measureFrom, q.at], measureLabel: undefined }, message: `Eix a eix: ${fmt(Math.hypot(...d))} mm (X ${fmt(d[0])} · Y ${fmt(d[1])} · Z ${fmt(d[2])})` }
   }
   if (tool === "laser") {
+    // Com el Taulell: l'inici s'imanta al vèrtex o a l'aresta de la cara si el ratolí hi és a prop (10 píxels).
+    const { pt: a, snap } = laserStart(p, pt, n, 10 * (hit.probe?.mmPerPx(pt) ?? 0))
     let best = Infinity, to: Panel | undefined
-    // Com el Taulell: el raig de veritat (toca el fons de les ranures i els forats); si no toca res, les capses de les peces.
-    const shot = hit.cast?.(pt, n)
+    // El raig de veritat (toca el fons de les ranures i els forats); si no toca res, les capses de les peces.
+    const shot = hit.probe?.cast(a, n)
     if (shot) (best = shot.t), (to = panels.find((q) => q.id === shot.panel))
     else for (const q of panels) {
       if (q.id === p.id || q.role === "hardware") continue
-      const t = rayBox(pt, n, panelAabb(q))
+      const t = rayBox(a, n, panelAabb(q))
       if (t !== null && t > 0.1 && t < best) (best = t), (to = q)
     }
     if (!isFinite(best)) return { message: "Davant d'aquesta cara no hi ha cap peça.", error: true }
     // Com el Taulell: la mida i de quina peça a quina.
-    const what = `${p.label} → ${to?.label ?? "la peça del davant"}`
-    return { opts: { ...o, measureLine: [pt, add3(pt, n, best)], measureLabel: what }, message: `${fmtMm(best)} mm · ${what}` }
+    const what = `${p.label}${snap ? ` (${snap})` : ""} → ${to?.label ?? "la peça del davant"}`
+    return { opts: { ...o, measureLine: [a, add3(a, n, best)], measureLabel: what }, message: `${fmtMm(best)} mm · ${what}` }
   }
   if (tool === "dowel" || tool === "screw") return jointTool(tool, o, comp, panels, hit)
   if (tool === "cabineo") return cabineoTool(o, comp, panels, hit)

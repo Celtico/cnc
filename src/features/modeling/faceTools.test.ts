@@ -163,3 +163,24 @@ describe("tauler a terra i cantell de les peces soltes (com al Taulell)", () => 
     expect(Object.values(buildComposition(off.comp!).panels.find((x) => x.id === p.id)!.edges).filter(Boolean)).toHaveLength(0)
   })
 })
+
+describe("làser (com al Taulell)", () => {
+  const m = { ...emptyModule("m", "Moble"), gapBefore: 0 }
+  const comp: Composition = { modules: [m], references: [] }
+  const build = buildComposition(comp)
+  const base = build.panels.find((p) => p.role === "bottom")!
+  const b = panelAabb(base)
+  const probe = { cast: () => null, mmPerPx: () => 1 }
+  it("a prop d'una aresta de la cara, l'inici s'hi imanta i l'etiqueta ho diu", () => {
+    const pt: [number, number, number] = [(b.min[0] + b.max[0]) / 2, b.max[1], b.max[2] - 4]
+    const r = runFaceTool("laser", DEFAULT_FACE_OPTS, comp, build, { panel: base, point: pt, normal: [0, 1, 0], probe })
+    expect(r.opts?.measureLabel).toContain("(aresta)")
+    expect(r.opts!.measureLine![0][2]).toBeCloseTo(b.max[2], 3)
+  })
+  it("al mig de la cara, no s'imanta", () => {
+    const pt: [number, number, number] = [(b.min[0] + b.max[0]) / 2, b.max[1], (b.min[2] + b.max[2]) / 2]
+    const r = runFaceTool("laser", DEFAULT_FACE_OPTS, comp, build, { panel: base, point: pt, normal: [0, 1, 0], probe })
+    expect(r.opts?.measureLabel).not.toContain("(")
+    expect(r.opts!.measureLine![0]).toEqual(pt)
+  })
+})

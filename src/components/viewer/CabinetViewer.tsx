@@ -30,6 +30,7 @@ import { FaceMissContext, useArrowHandles, useFaceHover, useFacePick, useSketchO
 import { DragArrows } from "./cabinet/DragArrows"
 import { SketchFloor } from "./cabinet/SketchFloor"
 import { RayCaster } from "./cabinet/RayCaster"
+import { FaceDrag } from "./cabinet/FaceDrag"
 import { SketchLines } from "./cabinet/SketchLines"
 import { CarveContext, SectionCapContext, SectionClip } from "./cabinet/SectionClip"
 import type { Panel } from "../../core/model"
@@ -221,7 +222,7 @@ export function CabinetViewer({
       <CarveContext.Provider value={carve}>
       <SectionCapContext.Provider value={sectionCap}>
       <group position={[-size.width * S * 0.5, 0, -size.depth * S * 0.5]}>
-        {sketchLines.length > 0 && <SketchLines lines={sketchLines} />}<SketchFloor width={size.width} depth={size.depth} /><RayCaster width={size.width} depth={size.depth} />
+        {sketchLines.length > 0 && <SketchLines lines={sketchLines} />}<SketchFloor width={size.width} depth={size.depth} /><RayCaster width={size.width} depth={size.depth} /><FaceDrag panels={panels} width={size.width} depth={size.depth} />
         {arrowHandles && arrowHandles.arrows.length > 0 && <DragArrows h={arrowHandles} />}
         <SectionClip section={section} offset={[size.width / 2, 0, size.depth / 2]} />
         <LinesOnly on={lines} color={LINE_COLOR}>{panels.map((p) => {

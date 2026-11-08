@@ -21,7 +21,7 @@ import { modulePieces, ModelingTree, pieceLocalId, setPieceEdit } from "../model
 import { PieceInspector } from "../modeling/PieceInspector"
 import { CarveContext } from "../../components/viewer/cabinet/SectionClip"
 import { DEFAULT_FACE_OPTS, previewFaceTool, runFaceTool, type FaceToolId, type FaceToolOpts } from "../modeling/faceTools"
-import { ArrowHandlesContext, FaceHoverContext, FaceMissContext, FacePickContext, FloorPickContext, RayCastContext, type RayCast, SketchOverlayContext, type FaceHit, type FaceHover, type FacePick, type SketchLine } from "../../components/viewer/facePick"
+import { ArrowHandlesContext, FaceHoverContext, FaceDragContext, FaceMissContext, FacePickContext, FloorPickContext, RayCastContext, type SceneProbe, SketchOverlayContext, type FaceHit, type FaceHover, type FacePick, type SketchLine } from "../../components/viewer/facePick"
 import { fromPlane } from "../../core/model"
 import { EditorViewport } from "./EditorViewport"
 import { framePose, warningTarget } from "./warningTarget"
@@ -148,11 +148,11 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   const [faceTool, setFaceTool] = useState<FaceToolId | null>(null)
   const [faceOpts, setFaceOpts] = useState<FaceToolOpts>(DEFAULT_FACE_OPTS)
   // El raig del làser dins l'escena (`RayCaster`), per mesurar fins a les ranures i els forats de veritat.
-  const castRef = useRef<RayCast | null>(null)
+  const castRef = useRef<SceneProbe | null>(null)
   const facePick: FacePick | null =
     project.modeling && faceTool
       ? (hit) => {
-          const r = runFaceTool(faceTool, faceOpts, comp, build, { ...hit, cast: castRef.current ?? undefined })
+          const r = runFaceTool(faceTool, faceOpts, comp, build, { ...hit, probe: castRef.current ?? undefined })
           if (r.comp) setComp(r.comp)
           if (r.select) select(r.select)
           if (r.opts) setFaceOpts(r.opts)
@@ -184,7 +184,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       })
     }
   }, [project.modeling, faceTool])
-  const preview = useMemo(() => (faceTool && hoverHit ? previewFaceTool(faceTool, faceOpts, comp, build, { ...hoverHit, cast: castRef.current ?? undefined }) : null), [faceTool, faceOpts, comp, build, hoverHit])
+  const preview = useMemo(() => (faceTool && hoverHit ? previewFaceTool(faceTool, faceOpts, comp, build, { ...hoverHit, probe: castRef.current ?? undefined }) : null), [faceTool, faceOpts, comp, build, hoverHit])
   // Els croquis al 3D (un pèl per sobre de la cara on són): els desats, el triat i el que s'està dibuixant.
   const sketchLines = useMemo<SketchLine[]>(() => {
     if (!project.modeling) return []
@@ -242,7 +242,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       {project.modeling && (
         <ModelingRibbon build={build} comp={comp} setComp={setComp} selection={selection} select={select} settings={settings} center={partCenter} newModule={newModule} opts={opts} camera={camera} faceTool={faceTool} setFaceTool={setFaceTool} faceOpts={faceOpts} setFaceOpts={setFaceOpts} />
       )}
-      <FacePickContext.Provider value={facePick}><FaceMissContext.Provider value={faceMiss}><FloorPickContext.Provider value={faceTool === "rect" || faceTool === "poly" || faceTool === "circle" || faceTool === "board"}><RayCastContext.Provider value={castRef}>
+      <FacePickContext.Provider value={facePick}><FaceMissContext.Provider value={faceMiss}><FloorPickContext.Provider value={faceTool === "rect" || faceTool === "poly" || faceTool === "circle" || faceTool === "board"}><RayCastContext.Provider value={castRef}><FaceDragContext.Provider value={faceTool === "face" && faceOpts.faceMode !== "mate"}>
       <FaceHoverContext.Provider value={faceHover}>
       <SketchOverlayContext.Provider value={sketchLines}>
       <ArrowHandlesContext.Provider value={arrowHandles}>
@@ -357,7 +357,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     </ArrowHandlesContext.Provider>
     </SketchOverlayContext.Provider>
     </FaceHoverContext.Provider>
-    </RayCastContext.Provider></FloorPickContext.Provider></FaceMissContext.Provider></FacePickContext.Provider>
+    </FaceDragContext.Provider></RayCastContext.Provider></FloorPickContext.Provider></FaceMissContext.Provider></FacePickContext.Provider>
     </HoverLinkProvider>
   )
 }

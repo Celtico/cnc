@@ -3,6 +3,7 @@ import { useThree } from "@react-three/fiber"
 import { Raycaster, Vector3, type Object3D } from "three"
 import { RayCastContext } from "../facePick"
 import { S } from "./constants"
+import { mmPerPx } from "../snapTolerance"
 
 const shown = (o: Object3D | null): boolean => !o || (o.visible && shown(o.parent))
 
@@ -12,21 +13,30 @@ const shown = (o: Object3D | null): boolean => !o || (o.visible && shown(o.paren
  */
 export function RayCaster({ width, depth }: { width: number; depth: number }) {
   const ref = useContext(RayCastContext)
-  const scene = useThree((s) => s.scene)
+  const getThree = useThree((s) => s.get)
   useEffect(() => {
     if (!ref) return
-    ref.current = (from, dir) => {
-      const o = new Vector3((from[0] - width / 2) * S, from[1] * S, (from[2] - depth / 2) * S)
-      const rc = new Raycaster(o, new Vector3(...dir).normalize(), 0.1 * S, 100)
+    const world = (p: readonly number[]) => new Vector3((p[0]! - width / 2) * S, p[1]! * S, (p[2]! - depth / 2) * S)
+    const cast = (from: readonly number[], dir: readonly number[]) => {
+      const { scene } = getThree()
+      const o = world(from)
+      const rc = new Raycaster(o, new Vector3(dir[0], dir[1], dir[2]).normalize(), 0.1 * S, 100)
       // Només les peces (les línies, les etiquetes i el terra no compten, i les Line2 no es deixen travessar sense càmera).
       const pieces: Object3D[] = []
       scene.traverse((o) => void (typeof o.userData.panel === "string" && shown(o) && pieces.push(o)))
       const hit = rc.intersectObjects(pieces, false)[0]
       return hit ? { t: hit.distance / S, panel: hit.object.userData.panel as string } : null
     }
+    ref.current = {
+      cast,
+      mmPerPx: (at) => {
+        const { camera, size } = getThree()
+        return mmPerPx(camera, size.height, world(at), S)
+      },
+    }
     return () => {
       ref.current = null
     }
-  }, [ref, scene, width, depth])
+  }, [ref, getThree, width, depth])
   return null
 }
