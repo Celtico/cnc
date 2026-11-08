@@ -4,7 +4,7 @@ import type { CompositionBuild } from "../../core/build/buildComposition"
 import type { Composition } from "../../core/model"
 import type { SetComp } from "../editor/useEditorDoc"
 import { dragArrow, dragArrows } from "./dragArrows"
-import type { FaceToolId, FaceToolOpts } from "./faceTools"
+import type { FaceToolId, FaceToolOpts } from "./faceToolOptions"
 
 /**
  * Les fletxes d'arrossegar de l'eina activa (`dragArrows`) per al visor: en viu mentre s'arrossega (des de la composició

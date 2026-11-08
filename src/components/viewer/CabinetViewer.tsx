@@ -32,7 +32,8 @@ import { SketchFloor } from "./cabinet/SketchFloor"
 import { RayCaster } from "./cabinet/RayCaster"
 import { FaceDrag } from "./cabinet/FaceDrag"
 import { SketchLines } from "./cabinet/SketchLines"
-import { CarveContext, SectionCapContext, SectionClip } from "./cabinet/SectionClip"
+import { SectionClip } from "./cabinet/SectionClip"
+import { CarveContext, SectionCapContext } from "./cabinet/sectionCap"
 import type { Panel } from "../../core/model"
 
 /** Anar a un avís: el contorn de les seves peces i la transparència de la resta. */
@@ -114,7 +115,7 @@ export function CabinetViewer({
     return { ...(leftWall ? { left: at(x0) } : {}), ...(rightWall ? { right: at(x1) } : {}) }
   }, [leftWall, rightWall, panels, size.width])
   // «Pinta la cara tallada»: el pla, perquè només les peces que travessa pintin el tall.
-  const sectionCap = useMemo(() => (section?.paint ? { axis: section.axis, pos: section.pos } : null), [section?.paint, section?.axis, section?.pos])
+  const sectionCap = useMemo(() => (section?.paint ? { axis: section.axis, pos: section.pos } : null), [section])
   const selected = modules?.find((m) => m.id === selectedModuleId)
   const selectedIndex = selected?.index
   // Vistes Davant · Darrere · Esquerra · Dreta · Dalt (per decisió de l'usuari, 2026-10-14: «sense perspectiva i amb

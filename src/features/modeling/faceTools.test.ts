@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest"
 import { buildComposition } from "../../core/build/buildComposition"
 import { emptyModule, panelAabb, type Composition } from "../../core/model"
-import { createRefPanel, DEFAULT_FACE_OPTS, runFaceTool, type FaceToolOpts } from "./faceTools"
+import { createRefPanel, runFaceTool } from "./faceTools"
+import { DEFAULT_FACE_OPTS, type FaceToolOpts } from "./faceToolOptions"
 
 describe("tauler dinàmic (FreePart.dyn)", () => {
   const m = { ...emptyModule("m", "Moble"), gapBefore: 0 }

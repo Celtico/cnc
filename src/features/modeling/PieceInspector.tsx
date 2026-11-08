@@ -3,7 +3,7 @@ import { useState, type ReactNode } from "react"
 import { NumRow } from "../../components/NumRow"
 import { boardChoices, isEmptyEdit, type MaterialPref, type Panel, type PieceEdit } from "../../core/model"
 import { MaterialSelect } from "../settings/MaterialSelect"
-import { machiningRows, withoutRow } from "./ModelingTree"
+import { machiningRows, withoutRow } from "./modelingPieces"
 import { TaulellIcon } from "./TaulellIcon"
 
 const mm = (v: number) => String(Math.round(v * 10) / 10).replace(".", ",")

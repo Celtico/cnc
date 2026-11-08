@@ -1,14 +1,13 @@
 import { useContext, useEffect, useRef, useState } from "react"
 import { useThree } from "@react-three/fiber"
 import { Html } from "@react-three/drei"
-import { Plane, Raycaster, Vector2, Vector3, type Object3D } from "three"
+import { Plane, Raycaster, Vector2, Vector3 } from "three"
 import type { Panel, Vec3 } from "../../../core/model"
 import { FaceDragContext, useArrowHandles, useFacePick, type ArrowHandles, type FaceHit } from "../facePick"
 import { useOrbitControls } from "../orbitControls"
 import { snapToleranceMm } from "../snapTolerance"
 import { S } from "./constants"
-
-const shown = (o: Object3D | null): boolean => !o || (o.visible && shown(o.parent))
+import { pieceMeshes, toMm, toScene } from "./sceneSpace"
 
 /**
  * Cara dinàmica com al Taulell: s'arrossega la cara mateixa. En prémer una cara i moure el ratolí, la tria (com un clic)
@@ -33,7 +32,7 @@ export function FaceDrag({ panels, width, depth }: { panels: Panel[]; width: num
     if (!on || !has) return
     const { gl } = getThree()
     const el = gl.domElement
-    const mm = (w: Vector3): Vec3 => [w.x / S + width / 2, w.y / S, w.z / S + depth / 2]
+    const mm = (w: Vector3): Vec3 => toMm(w, width, depth)
     const ndc = (e: PointerEvent) => {
       const r = el.getBoundingClientRect()
       return new Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1)
@@ -46,15 +45,13 @@ export function FaceDrag({ panels, width, depth }: { panels: Panel[]; width: num
       // Damunt d'una fletxa: l'arrossega la fletxa mateixa.
       const r = el.getBoundingClientRect()
       const nearArrow = (handles.current?.arrows ?? []).some((a) => {
-        const s = new Vector3((a.at[0] - width / 2) * S, a.at[1] * S, (a.at[2] - depth / 2) * S).project(camera)
+        const s = toScene(a.at, width, depth).project(camera)
         return Math.hypot(((s.x + 1) / 2) * size.width - (e.clientX - r.left), ((1 - s.y) / 2) * size.height - (e.clientY - r.top)) < 30
       })
       if (nearArrow) return
       const rc = new Raycaster()
       rc.setFromCamera(ndc(e), camera)
-      const pieces: Object3D[] = []
-      scene.traverse((o) => void (typeof o.userData.panel === "string" && shown(o) && pieces.push(o)))
-      const h = rc.intersectObjects(pieces, false)[0]
+      const h = rc.intersectObjects(pieceMeshes(scene), false)[0]
       const panel = h && byId.current.get(h.object.userData.panel as string)
       if (!h || !panel || !h.face) return
       const n = h.face.normal.clone().transformDirection(h.object.matrixWorld)

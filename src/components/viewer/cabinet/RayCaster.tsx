@@ -1,11 +1,10 @@
 import { useContext, useEffect } from "react"
 import { useThree } from "@react-three/fiber"
-import { Raycaster, Vector3, type Object3D } from "three"
+import { Raycaster, Vector3 } from "three"
 import { RayCastContext } from "../facePick"
 import { S } from "./constants"
 import { mmPerPx } from "../snapTolerance"
-
-const shown = (o: Object3D | null): boolean => !o || (o.visible && shown(o.parent))
+import { pieceMeshes, toScene } from "./sceneSpace"
 
 /**
  * El raig del làser contra les peces tal com es veuen (com el del Taulell): toca el fons d'una ranura, l'interior d'un
@@ -16,15 +15,13 @@ export function RayCaster({ width, depth }: { width: number; depth: number }) {
   const getThree = useThree((s) => s.get)
   useEffect(() => {
     if (!ref) return
-    const world = (p: readonly number[]) => new Vector3((p[0]! - width / 2) * S, p[1]! * S, (p[2]! - depth / 2) * S)
+    const world = (p: readonly number[]) => toScene(p, width, depth)
     const cast = (from: readonly number[], dir: readonly number[]) => {
       const { scene } = getThree()
       const o = world(from)
       const rc = new Raycaster(o, new Vector3(dir[0], dir[1], dir[2]).normalize(), 0.1 * S, 100)
       // Només les peces (les línies, les etiquetes i el terra no compten, i les Line2 no es deixen travessar sense càmera).
-      const pieces: Object3D[] = []
-      scene.traverse((o) => void (typeof o.userData.panel === "string" && shown(o) && pieces.push(o)))
-      const hit = rc.intersectObjects(pieces, false)[0]
+      const hit = rc.intersectObjects(pieceMeshes(scene), false)[0]
       return hit ? { t: hit.distance / S, panel: hit.object.userData.panel as string } : null
     }
     ref.current = {

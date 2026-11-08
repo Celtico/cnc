@@ -21,7 +21,6 @@ export const PieceEditSchema = z.object({
 })
 export type PieceEdit = z.infer<typeof PieceEditSchema>
 export const PieceEditsSchema = z.record(z.string(), PieceEditSchema)
-export type PieceEdits = z.infer<typeof PieceEditsSchema>
 
 /** Els forats o les ranures iguals que fa el mòdul van junts (una línia a l'arbre, es treuen junts). */
 export function holeKey(h: Hole): string {

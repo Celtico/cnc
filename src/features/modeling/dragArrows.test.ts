@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest"
 import { buildComposition } from "../../core/build/buildComposition"
 import { emptyModule, panelAabb, type Composition } from "../../core/model"
 import { dragArrow, dragArrows } from "./dragArrows"
-import { DEFAULT_FACE_OPTS, runFaceTool } from "./faceTools"
+import { runFaceTool } from "./faceTools"
+import { DEFAULT_FACE_OPTS } from "./faceToolOptions"
 
 describe("fletxes d'arrossegar (cel, 2026-11-08)", () => {
   const m = { ...emptyModule("m", "Moble"), gapBefore: 0 }

@@ -161,7 +161,7 @@ export function dowelJoint(butt: Panel, through: Panel, points: Vec3[], spec: Do
 }
 
 /** Les mides del Cabineo (les del ferratge, `dowelSpec`): buidats Ø, fondària, 1r forat i pas des del cantell, eix i Ø del cargol. */
-export interface CabineoSpec {
+interface CabineoSpec {
   pocketD: number
   pocketDepth: number
   first: number
@@ -277,7 +277,7 @@ export function snap(target: number, candidates: readonly number[]): number {
 }
 
 /** La unió de la caixa triada (`dowelSpec`): espigues, Cabineo o cargols. */
-export type UnionSpec = DowelSpec & { endOffset: number; tag?: string; cabineo?: CabineoSpec & { margin: number; pitch: number }; screw?: { d: number; margin: number; pitch: number } }
+type UnionSpec = DowelSpec & { endOffset: number; tag?: string; cabineo?: CabineoSpec & { margin: number; pitch: number }; screw?: { d: number; margin: number; pitch: number } }
 
 /**
  * Una unió de `butt` (hi topa) amb `through` (continua) al llarg de [lo, hi] (`at` dona el punt al mig del gruix de

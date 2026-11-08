@@ -48,7 +48,7 @@ export function fitWalls(panels: Panel[]): Box[] {
 const r1 = (v: number) => Math.round(v * 10) / 10
 
 /** El bloc que omple el buit des de `seed`, o null si allà no hi ha cap buit tancat. */
-export function fitBlock(boxes: Box[], seed: Vec3, orient: PartOrient, T: number, gap: number): Box | null {
+function fitBlock(boxes: Box[], seed: Vec3, orient: PartOrient, T: number, gap: number): Box | null {
   const ax = FIT_AX[orient]
   const EPS = 0.5
   const plane = [ax.u, ax.v]

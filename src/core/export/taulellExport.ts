@@ -9,7 +9,7 @@ import { flatten, type Composition, type Hole, type Panel, type Vec3 } from "../
  */
 
 /** Una peça del Taulell (`newPart`): perfil al pla x–z local, gruix en y local, `pos` i `quat` ([x, y, z, w]). */
-export interface TaulellPartOut {
+interface TaulellPartOut {
   id: number
   name: string
   prof: { type: "rect"; L: number; W: number } | { type: "poly"; pts: [number, number][] }
@@ -27,7 +27,7 @@ type TaulellFeat =
   | { type: "hole"; name: string; p: Vec3; n: Vec3; d: number; depth: number }
   | { type: "groove"; name: string; box: [number, number, number, number, number, number] }
 
-export interface TaulellExport {
+interface TaulellExport {
   doc: { name: string; parts: TaulellPartOut[]; cabs: []; sketches: []; hw: []; next: number }
   skipped: { cutouts: number; pockets: number; mitres: number }
 }
@@ -69,7 +69,7 @@ const MAT_WORDS: [RegExp, string][] = [
   [/faig|beech/i, "faig"],
   [/lacat|salvia/i, "lacat"],
 ]
-export function taulellMatKey(name: string): string {
+function taulellMatKey(name: string): string {
   return MAT_WORDS.find(([re]) => re.test(name))?.[1] ?? "mel"
 }
 
@@ -87,7 +87,7 @@ function holeName(h: Hole): string {
  * Una peça del cnc → una del Taulell. Eixos: la x local del Taulell és el llarg (`xAxis`), la y el gruix (`zAxis`) i la z
  * l'ample: `−yAxis` si la peça és dextrogira (la z del Taulell surt de l'altre cantell, `pos` hi va), `+yAxis` si no.
  */
-export function taulellPart(p: Panel, id: number, grp: string): TaulellPartOut {
+function taulellPart(p: Panel, id: number, grp: string): TaulellPartOut {
   const { origin, xAxis, yAxis, zAxis } = p.placement
   const right = dot(cross(xAxis, yAxis), zAxis) > 0
   const Zt: Vec3 = right ? (yAxis.map((v) => -v) as Vec3) : yAxis

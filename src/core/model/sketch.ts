@@ -23,7 +23,7 @@ export type Sketch = z.infer<typeof SketchSchema>
 const ORIENT_OF_AXIS: PartOrient[] = ["side", "flat", "front"]
 
 /** Els eixos (u, v) del pla d'un croquis, els de la peça que en surt. */
-export function sketchAxes(a: number): { u: number; v: number } {
+function sketchAxes(a: number): { u: number; v: number } {
   const ax = PART_AXES[ORIENT_OF_AXIS[a]!]
   return { u: ax.u, v: ax.v }
 }

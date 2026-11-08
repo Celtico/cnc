@@ -1,6 +1,7 @@
 import type { CompositionBuild } from "../../core/build/buildComposition"
 import { dynBox, panelAabb, SIDE_NAMES, type Composition, type DynLimit, type FreePart, type Panel, type Vec3 } from "../../core/model"
-import { MODULE_DIM, movePart, resizePartFace, type FaceToolId, type FaceToolOpts } from "./faceTools"
+import { MODULE_DIM, movePart, resizePartFace } from "./faceTools"
+import type { FaceToolId, FaceToolOpts } from "./faceToolOptions"
 
 /**
  * Les fletxes d'arrossegar de Modelatge (com les del Taulell, cel 2026-11-08): al **Tauler dinàmic** n'hi ha una a cada
@@ -8,7 +9,7 @@ import { MODULE_DIM, movePart, resizePartFace, type FaceToolId, type FaceToolOpt
  * a la **Cara dinàmica**, una a cada cara de la peça triada (o a la cara clicada del moble), per estirar-la o desplaçar-la.
  * En arrossegar, la cara s'imanta a les cares de les altres peces.
  */
-export interface DragArrow {
+interface DragArrow {
   id: string
   /** On és (mm, coordenades del moble): el mig de la cara. */
   at: Vec3
@@ -116,7 +117,7 @@ function snapFace(panels: Panel[], skip: (p: Panel) => boolean, a: number, X: nu
 }
 
 /** El que fa una fletxa arrossegada `d` mm (cap a on apunta): la composició nova i el que es diu al costat del ratolí. */
-export interface ArrowResult {
+interface ArrowResult {
   comp: Composition
   label: string
 }

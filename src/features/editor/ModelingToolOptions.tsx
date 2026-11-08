@@ -6,7 +6,8 @@ import { boardChoices, circlePts, partSize, SIDE_NAMES, type Composition, type F
 import type { Selection } from "../composition/StructureTree"
 import type { CompositionBuild } from "../../core/build/buildComposition"
 import { NumRow } from "../../components/NumRow"
-import { createRefPanel, DOWELS, finishBoard, finishSketch, MODULE_DIM, movePart, resizePartFace, type DowelSize, type FaceToolId, type FaceToolOpts } from "../modeling/faceTools"
+import { createRefPanel, finishBoard, finishSketch, MODULE_DIM, movePart, resizePartFace } from "../modeling/faceTools"
+import { DOWELS, type DowelSize, type FaceToolId, type FaceToolOpts } from "../modeling/faceToolOptions"
 import { moduleFaceChange } from "../modeling/dragArrows"
 import { MaterialSelect } from "../settings/MaterialSelect"
 
@@ -274,7 +275,7 @@ function SketchOptions({ tool, o, set, comp, setComp, settings, select }: { tool
   )
 }
 
-export type Section = { axis: 0 | 1 | 2; pos: number; flip: boolean; paint?: boolean }
+type Section = { axis: 0 | 1 | 2; pos: number; flip: boolean; paint?: boolean }
 /** La finestra de la Secció (com la del Taulell): el pla (X, Z o Y), on és (lliscant i posició exacta), girar-la, pintar la cara tallada i mirar-la de cara. */
 export function SectionOptions({ s, center, set, look }: { s: Section; center: { x: number; y: number; z: number }; set: (s: Section) => void; look: (s: Section) => void }) {
   const mid = [center.x, center.y, center.z]

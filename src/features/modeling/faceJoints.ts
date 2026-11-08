@@ -1,23 +1,10 @@
 import { panelAabb, type Composition, type Hole, type Panel, type Vec3 } from "../../core/model"
-import { addHoles, local, type FaceToolOpts, type FaceToolResult } from "./faceTools"
+import type { FaceToolOpts, FaceToolResult } from "./faceToolOptions"
+import { add3, addHoles, dot, fromLocal, local, r1, sub, toLocal } from "./pieceSpace"
 import type { FaceHit } from "../../components/viewer/facePick"
 
 /** Les eines d'unió del Modelatge (com les del Taulell): clavilles, cargols i Cabineo, amb la vista prèvia de les barres. */
 
-const r1 = (v: number) => Math.round(v * 10) / 10
-const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-const sub = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
-
-export const add3 = (a: Vec3, b: Vec3, k = 1): Vec3 => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k]
-/** Un punt (mm de la composició) en coordenades de la peça: llarg, ample i gruix. */
-function toLocal(p: Panel, w: Vec3): [number, number, number] {
-  const d = sub(w, p.placement.origin)
-  return [dot(d, p.placement.xAxis), dot(d, p.placement.yAxis), dot(d, p.placement.zAxis)]
-}
-export function fromLocal(p: Panel, u: number, v: number, t: number): Vec3 {
-  const { origin: o, xAxis: x, yAxis: y, zAxis: z } = p.placement
-  return [0, 1, 2].map((k) => o[k]! + x[k]! * u + y[k]! * v + z[k]! * t) as Vec3
-}
 /** La peça (que no és `skip`) on cau el punt, si n'hi ha. */
 function panelAt(panels: Panel[], w: Vec3, skip: string): Panel | undefined {
   return panels.find((q) => {
@@ -173,7 +160,7 @@ export function cabineoTool(o: FaceToolOpts, comp: Composition, panels: Panel[],
 
 
 /** La caixa d'una barra de diàmetre `d` al llarg de `n` (de `a` a `b` mm des de `c`), per a la vista prèvia. */
-export function rod(c: Vec3, n: Vec3, a: number, b: number, d: number): { min: Vec3; max: Vec3 } {
+function rod(c: Vec3, n: Vec3, a: number, b: number, d: number): { min: Vec3; max: Vec3 } {
   const p = add3(c, n, a)
   const q = add3(c, n, b)
   const min = [0, 1, 2].map((k) => Math.min(p[k]!, q[k]!) - (Math.abs(n[k]!) > 0.5 ? 0 : d / 2)) as Vec3
