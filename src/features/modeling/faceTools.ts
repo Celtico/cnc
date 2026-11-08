@@ -160,6 +160,21 @@ function uniqueName(comp: Composition, base: string): string {
   return `${base} ${k}`
 }
 
+/** Una mida en mm a la catalana (149,5). */
+const fmtMm = (v: number) => String(r1(v)).replace(".", ",")
+
+/** La caixa (al món) d'un tros de la peça en coordenades locals (mm: x llarg, y ample, z gruix): la vista prèvia. */
+function localBox(p: Panel, x0: number, y0: number, z0: number, x1: number, y1: number, z1: number): { min: Vec3; max: Vec3 } {
+  const { origin, xAxis, yAxis, zAxis } = p.placement
+  const at = (x: number, y: number, z: number) => [0, 1, 2].map((k) => origin[k]! + xAxis[k]! * x + yAxis[k]! * y + zAxis[k]! * z)
+  const a = at(x0, y0, z0), b = at(x1, y1, z1)
+  return { min: [0, 1, 2].map((k) => Math.min(a[k]!, b[k]!)) as Vec3, max: [0, 1, 2].map((k) => Math.max(a[k]!, b[k]!)) as Vec3 }
+}
+
+/** El tros que es buidarà, de la cara (`A` a dalt, z = gruix) cap endins, sortint 0,5 mm perquè es vegi. */
+const cutBox = (p: Panel, face: "A" | "B", x0: number, y0: number, x1: number, y1: number, depth: number) =>
+  face === "A" ? localBox(p, x0, y0, p.thickness - depth, x1, y1, p.thickness + 0.5) : localBox(p, x0, y0, -0.5, x1, y1, depth)
+
 /** Afegeix forats a mà a la peça d'un mòdul (`Module.pieceEdits`). */
 export function addHoles(comp: Composition, p: Panel, holes: Hole[]): Composition | null {
   const m = moduleOf(comp, p)
@@ -211,10 +226,14 @@ export function runFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition
       ][i]!
     }
     const depth = Math.min(tool === "groove" ? o.grD : o.rbD, p.thickness - 1)
+    const ghost = [cutBox(p, l.face, g.x, g.y, g.x + g.w, g.y + g.h, depth)]
     const id = pieceLocalId(m.id, p.id)
     const cur = m.pieceEdits?.[id] ?? {}
     const next = { ...comp, modules: comp.modules.map((x) => (x.id !== m.id ? x : { ...x, pieceEdits: { ...x.pieceEdits, [id]: { ...cur, grooves: [...(cur.grooves ?? []), { ...g, depth, face: l.face as "A" | "B" }] } } })) }
-    return { comp: next, message: `${p.label}: ${tool === "groove" ? `ranura ${o.grW}×${depth}` : `galze ${o.rbW}×${depth}`}` }
+    // A quants mm del cantell més a prop (com l'etiqueta del Taulell abans de clicar).
+    const along = g.w >= p.length - 0.01
+    const dist = r1(along ? Math.min(g.y, p.width - g.y - g.h) : Math.min(g.x, p.length - g.x - g.w))
+    return { comp: next, ghost, message: `${p.label} · cara ${l.face} · ${tool === "groove" ? `ranura ${o.grW}×${depth} a ${fmtMm(dist)} mm del cantell` : `galze ${o.rbW}×${depth}`}` }
   }
   if (tool === "measure") {
     if (!o.measureFrom) return { opts: { ...o, measureFrom: pt, measureLine: undefined }, message: "" }
@@ -425,9 +444,10 @@ export function runFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition
         : Array.from({ length: Math.max(0, Math.floor((p.length - 2 * o.margin) / o.pitch) + 1) }, (_, k) => ({ x: r1(o.margin + k * o.pitch), y: r1(l.v), diameter: o.ld, depth: Math.min(o.ldepth, p.thickness - 1), face }))
   if (!holes.length) return { message: "La peça és massa curta per a la filera.", error: true }
   const next = addHoles(comp, p, holes)
-  if (!next) return { message: "De moment, els mecanitzats a mà van a les peces dels mobles.", error: true }
+  const ghost = holes.map((h) => cutBox(p, face, h.x - h.diameter / 2, h.y - h.diameter / 2, h.x + h.diameter / 2, h.y + h.diameter / 2, h.depth))
+  if (!next) return { message: "De moment, els mecanitzats a mà van a les peces dels mobles.", error: true, ghost }
   const what = tool === "hole" ? `Perforació Ø${o.d}×${o.depth}` : tool === "cup" ? `Cassoleta Ø${o.cd}×${o.cdepth}` : `Línia de ${holes.length} forats Ø${o.ld}`
-  return { comp: next, message: `${p.label}: ${what}` }
+  return { comp: next, ghost, message: `${p.label} · cara ${face} · ${what}${holes.length === 1 ? ` a ${fmtMm(holes[0]!.x)} × ${fmtMm(holes[0]!.y)} mm` : ""}` }
 }
 
 /** La peça amb la mida `size` en l'eix `a`, movent la cara `s` (l'altra es queda). Deixa de ser lligada (bloc o tauler dinàmic). */
@@ -523,10 +543,11 @@ function rayBox(o: Vec3, d: Vec3, b: { min: Vec3; max: Vec3 }): number | null {
 }
 
 /** La vista prèvia d'una eina amb el ratolí a sobre d'una cara (en verd, com al Taulell): la peça que sortiria o el croquis a mig fer. */
-export function previewFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition, build: CompositionBuild | undefined, hit: FaceHit): { box?: { min: Vec3; max: Vec3 }; boxes?: { min: Vec3; max: Vec3 }[]; pts?: Vec3[]; closed?: boolean } | null {
-  if (tool === "dowel" || tool === "screw" || tool === "cabineo") {
+export function previewFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition, build: CompositionBuild | undefined, hit: FaceHit): { box?: { min: Vec3; max: Vec3 }; boxes?: { min: Vec3; max: Vec3 }[]; pts?: Vec3[]; closed?: boolean; label?: string } | null {
+  // Unions i mecanitzats: abans de clicar, el que es faria i on, amb les mides (com el Taulell).
+  if (tool === "dowel" || tool === "screw" || tool === "cabineo" || tool === "groove" || tool === "rebate" || tool === "hole" || tool === "cup" || tool === "line32") {
     const r = runFaceTool(tool, o, comp, build, hit)
-    return r.ghost?.length ? { boxes: r.ghost } : null
+    return r.ghost?.length ? { boxes: r.ghost, label: r.message } : null
   }
   if (tool === "laser" || tool === "measure") {
     const r = runFaceTool(tool, { ...o, measureFrom: tool === "measure" ? o.measureFrom : o.laserMode === "axis" ? o.measureFrom : undefined }, comp, build, hit)

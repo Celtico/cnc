@@ -27,6 +27,8 @@ export interface SketchLine {
   tone: "sketch" | "selected" | "draft"
   /** Una caixa translúcida (la peça que sortiria si es clica). */
   box?: { min: Vec3; max: Vec3 }
+  /** L'etiqueta de la vista prèvia (què es farà i a quina mida), al costat de la caixa. */
+  label?: string
 }
 export const SketchOverlayContext = createContext<SketchLine[]>([])
 export const useSketchOverlay = () => useContext(SketchOverlayContext)
