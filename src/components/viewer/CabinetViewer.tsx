@@ -239,8 +239,8 @@ export function CabinetViewer({
                 exploded={exploded}
                 showHoles={holesShown}
                 // Un avís: les seves peces sòlides i la resta translúcida (es veu on és).
-                seeThrough={wire ? WIRE_OPACITY : alertPanels?.size && !alertPanels.has(p.id) ? ALERT_VEIL : seeThroughAll}
-                wire={wire}
+                seeThrough={wire ? (wireAll && viewDir === null ? 0 : WIRE_OPACITY) : alertPanels?.size && !alertPanels.has(p.id) ? ALERT_VEIL : seeThroughAll}
+                wire={wireAll && viewDir === null ? "lines" : wire}
                 // Mòdul triat: sòlid amb el contorn taronja. Translúcid només amb un compartiment triat (per veure'l a dins).
                 dimmed={q.guides && !!highlightZone && highlightZone.veil !== false && selectedIndex !== undefined && p.module === selectedIndex}
                 edges={q.guides || wire || edgesAll}

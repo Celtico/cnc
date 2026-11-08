@@ -37,8 +37,11 @@ interface PanelMeshProps {
    * protagonista. Els forats es continuen veient.
    */
   seeThrough?: boolean | number
-  /** Vista en línies (les vistes ortogràfiques): el perfil més fosc, perquè es llegeixi sobre les peces gairebé transparents. */
-  wire?: boolean
+  /**
+   * Vista en línies (les vistes ortogràfiques): el perfil més fosc, perquè es llegeixi sobre les peces gairebé transparents.
+   * `lines` (el Filferro sol de Modelatge, com el Taulell): sense cares, només les línies, clares.
+   */
+  wire?: boolean | "lines"
   /**
    * Forats amb aquestes etiquetes d'un altre color: els proposats d'un ferratge importat sense confirmar (Preferències ›
    * Ferratges, el muntatge), que el moble encara no fa.
@@ -191,7 +194,7 @@ export const PanelMesh = memo(function PanelMesh({
           onPointerOut={onHover ? () => onHover(panel, false) : undefined}
         >
           {!cut && <boxGeometry args={[L, W, T]} />}
-          {edges && <Edges color={wire ? "#2b2418" : dimmed || see !== undefined ? "#a08a6a" : "#6b5a3e"} threshold={15} {...(edgeGeo ? { geometry: edgeGeo } : {})} />}
+          {edges && <Edges color={wire === "lines" ? "#aeb6c2" : wire ? "#2b2418" : dimmed || see !== undefined ? "#a08a6a" : "#6b5a3e"} threshold={15} {...(edgeGeo ? { geometry: edgeGeo } : {})} />}
         </mesh>
         {cap && (
           <mesh position={cut ? [0, 0, 0] : [L / 2, W / 2, T / 2]} geometry={cut ?? undefined} material={SECTION_CAP_MAT} raycast={noRaycast}>
