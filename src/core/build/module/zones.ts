@@ -225,6 +225,8 @@ export class Builder extends AppliancesBuilder {
     const above = this.findAbove(rect)
     for (const [h, y, dir] of [[below, v.yB, 1], [above, v.yT, -1]] as const) {
       if (!h) continue
+      // Cabineo o cargols: el connector a la cara de la dreta del divisor.
+      if (this.joinOther(v.panel, h.panel, Math.max(v.zRear, h.zRear), Math.min(v.zFront, h.zFront), (z): Vec3 => [xMid, y, z], [1, 0, 0], v.endGap ? [0, dir * v.endGap, 0] : undefined)) continue
       const zs = this.sharedDowelZs(Math.max(v.zRear, h.zRear), Math.min(v.zFront, h.zFront))
       // Folgança de les peces de dins: el cantell del divisor s'atura abans de la cara (el forat de cara no es mou).
       dowelJoint(v.panel, h.panel, zs.map((z): Vec3 => [xMid, y, z]), this.hw.dowel, this.hw.dowel.tag, v.endGap ? [0, dir * v.endGap, 0] : undefined)
@@ -238,6 +240,8 @@ export class Builder extends AppliancesBuilder {
     const right = this.findRight(rect)
     for (const [v, x, dir] of [[left, h.xL, 1], [right, h.xR, -1]] as const) {
       if (!v) continue
+      // Cabineo o cargols: el connector a la cara de sota del prestatge fix (no es veu).
+      if (this.joinOther(h.panel, v.panel, Math.max(v.zRear, h.zRear), Math.min(v.zFront, h.zFront), (z): Vec3 => [x, yMid, z], [0, -1, 0], h.endGap ? [dir * h.endGap, 0, 0] : undefined)) continue
       const zs = this.sharedDowelZs(Math.max(v.zRear, h.zRear), Math.min(v.zFront, h.zFront))
       dowelJoint(h.panel, v.panel, zs.map((z): Vec3 => [x, yMid, z]), this.hw.dowel, this.hw.dowel.tag, h.endGap ? [dir * h.endGap, 0, 0] : undefined)
     }

@@ -8,7 +8,7 @@ import { TaulellIcon, type TaulellIconName } from "./TaulellIcon"
 import { LuEye, LuEyeOff } from "react-icons/lu"
 
 /** El nom d'un forat al taller, pel que fa (com els anomena el Taulell). */
-const HOLE_NAMES: Record<string, string> = { hinge: "Cassoleta", plate: "Placa de frontissa", system32: "Línia de forats", dowel: "Clavilla", leg: "Pota" }
+const HOLE_NAMES: Record<string, string> = { hinge: "Cassoleta", plate: "Placa de frontissa", system32: "Línia de forats", dowel: "Clavilla", cabineo: "Cabineo", screw: "Cargol", leg: "Pota" }
 const mm = (v: number) => String(Math.round(v * 10) / 10).replace(".", ",")
 
 /** Una línia de mecanitzats: els del mòdul iguals van junts (`drop`, es treuen junts); els fets a mà, un a un (`hand`). */
@@ -32,7 +32,7 @@ export function machiningRows(p: Panel): MachiningRow[] {
   let hg = 0
   for (const h of p.holes) {
     const name = (h.tag && HOLE_NAMES[h.tag]) || "Perforació"
-    const icon: TaulellIconName = h.tag === "hinge" ? "cup" : h.tag === "system32" ? "line32" : h.tag === "dowel" ? "dowel" : "hole"
+    const icon: TaulellIconName = h.tag === "hinge" ? "cup" : h.tag === "system32" ? "line32" : h.tag === "dowel" ? "dowel" : h.tag === "cabineo" ? "cabineo" : h.tag === "screw" ? "screw" : "hole"
     const label = `${name} Ø${mm(h.diameter)}×${mm(h.depth)}`
     if (h.tag === HAND_TAG) add(`hand:h:${hh}`, `${label} · a mà`, icon, { hand: { kind: "holes", i: hh++ } })
     else add(holeKey(h), label, icon, { drop: holeKey(h) })

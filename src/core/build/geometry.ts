@@ -160,6 +160,78 @@ export function dowelJoint(butt: Panel, through: Panel, points: Vec3[], spec: Do
   return n
 }
 
+/** Unió de la caixa (`Carcass.union`): espigues (per defecte), Cabineo de Lamello o cargols. */
+export type UnionKind = "dowel" | "cabineo" | "screw"
+
+/** El Cabineo 12 de Lamello (els valors del Taulell): tres buidats Ø15 encavalcats i el cargol Ø5 a l'altra peça. */
+export const CABINEO = { pocketD: 15, pocketDepth: 11, first: 3.6, step: 11.2, count: 3, axis: 5, screwD: 5, screwDepth: 12, margin: 50, pitch: 300 }
+/** Cargols (els del Taulell): forat passant Ø4 a la peça que continua, a 50 mm dels caps i com a molt cada 300. */
+export const SCREW = { d: 4, margin: 50, pitch: 300 }
+
+/**
+ * Punts repartits en [lo, hi] com al Taulell (`spread`): un a `margin` de cada cap i més al mig si la separació passa de
+ * `pitch`. Si el tram és curt, un al mig (si hi cap el forat).
+ */
+export function spreadAlong(lo: number, hi: number, margin: number, pitch: number, diameter = 15): number[] {
+  const span = hi - lo
+  if (span < 2 * margin) return span >= diameter + 4 ? [r((lo + hi) / 2)] : []
+  const a = lo + margin, b = hi - margin
+  const n = Math.max(1, Math.ceil((b - a) / pitch))
+  return Array.from({ length: n + 1 }, (_, k) => r(a + ((b - a) * k) / n))
+}
+
+/**
+ * Unió amb Cabineo: la peça que hi topa (`butt`, la base, la tapa o un prestatge fix) rep a la cara que mira cap a
+ * `pocketDir` els tres buidats Ø15 encavalcats, a tocar del cantell que toca l'altra; la que continua (`through`, el
+ * lateral) rep el forat del cargol Ø5, a 5 mm d'aquella cara. Mai mig connector. Retorna quants se n'han fet.
+ */
+export function cabineoJoint(butt: Panel, through: Panel, points: Vec3[], pocketDir: Vec3, buttShift?: Vec3): number {
+  const z = butt.placement.zAxis
+  const s = z[0] * pocketDir[0] + z[1] * pocketDir[1] + z[2] * pocketDir[2] >= 0 ? 1 : -1
+  const face: HoleFace = s > 0 ? "A" : "B"
+  const T = butt.thickness
+  const rad = CABINEO.pocketD / 2
+  let n = 0
+  for (const w of points) {
+    const we: Vec3 = buttShift ? [w[0] + buttShift[0], w[1] + buttShift[1], w[2] + buttShift[2]] : w
+    const l = toLocal(butt, we)
+    const edge = edgeAt(butt, l)
+    if (!edge) continue
+    const [ix, iy] = edge === "left" ? [1, 0] : edge === "right" ? [-1, 0] : edge === "bottom" ? [0, 1] : [0, -1]
+    const pockets: Hole[] = []
+    for (let k = 0; k < CABINEO.count; k++) {
+      const c = CABINEO.first + k * CABINEO.step
+      const x = r(l[0] + ix * c), y = r(l[1] + iy * c)
+      // Ha de cabre a la peça de través del cantell (no al costat d'un altre cantell).
+      if (ix === 0 ? x < rad || x > butt.length - rad : y < rad || y > butt.width - rad) break
+      pockets.push({ x, y, diameter: CABINEO.pocketD, depth: Math.min(CABINEO.pocketDepth, T - 4), face, tag: "cabineo" })
+    }
+    if (pockets.length < CABINEO.count) continue
+    const off = s * (T / 2 - CABINEO.axis)
+    const ws: Vec3 = [w[0] + z[0] * off, w[1] + z[1] * off, w[2] + z[2] * off]
+    const screw = faceHoleAt(through, ws, { diameter: CABINEO.screwD, depth: CABINEO.screwDepth, tag: "cabineo" }, CABINEO.screwD / 2)
+    if (!screw) continue
+    for (const h of pockets) addHole(butt, h)
+    addHole(through, screw)
+    n++
+  }
+  return n
+}
+
+/** Unió amb cargols: a la peça que continua, un forat passant Ø4 a cada punt (el cargol entra pel cantell de l'altra). */
+export function screwJoint(butt: Panel, through: Panel, points: Vec3[], buttShift?: Vec3): number {
+  let n = 0
+  for (const w of points) {
+    const we: Vec3 = buttShift ? [w[0] + buttShift[0], w[1] + buttShift[1], w[2] + buttShift[2]] : w
+    if (!edgeHoleAt(butt, we, { diameter: SCREW.d, depth: 1 }, SCREW.d / 2)) continue
+    const f = faceHoleAt(through, w, { diameter: SCREW.d, depth: through.thickness, tag: "screw" }, SCREW.d / 2)
+    if (!f) continue
+    addHole(through, f)
+    n++
+  }
+  return n
+}
+
 /**
  * Espigues al llarg d'un tram [lo, hi]: dues a `offset` dels extrems si hi caben (tram ≥ 2·offset + Ø), una al mig si
  * el tram és més curt però hi cap el forat amb 2 mm de matèria a cada costat, i cap si no.

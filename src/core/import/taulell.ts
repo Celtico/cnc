@@ -288,11 +288,17 @@ export function fromTaulell(doc: TaulellDoc, mat: (key: string | undefined) => s
   const warnings: string[] = []
   const warn = (w: string) => warnings.push(w)
   let end = x0
+  // La unió que el Taulell hi ha posat a mà (Cabineo o cargols) passa a ser la unió de la caixa del mòdul (`Carcass.union`).
+  const unionOf = (c: TaulellCab): "cabineo" | "screw" | undefined => {
+    const kinds = new Set((doc.hw ?? []).filter((h) => h.ref?.cab === c.id).map((h) => h.kind))
+    return kinds.has("cabineo") ? "cabineo" : kinds.has("screw") ? "screw" : undefined
+  }
   const modules = cabs.map((c) => {
     const x = c.pos?.[0] ?? 0
     const m = moduleOfCab(c, mat, Math.max(0, r1(x - end)), warn)
     end = Math.max(end, x) + c.W
-    return m
+    const union = unionOf(c)
+    return union ? { ...m, carcass: { ...m.carcass, union } } : m
   })
   const loose = (doc.parts ?? []).filter((p) => p.cab === undefined && !p.hidden)
   const parts: FreePart[] = []
@@ -312,6 +318,8 @@ export function fromTaulell(doc: TaulellDoc, mat: (key: string | undefined) => s
   const hw = new Map<string, number>()
   for (const h of doc.hw ?? []) hw.set(h.kind, (hw.get(h.kind) ?? 0) + 1)
   const HW_NAME: Record<string, string> = { cabineo: "Cabineo", dowel: "espigues", screw: "cargols" }
+  // Els que han passat a la unió d'algun mòdul ja no es diuen.
+  for (const k of ["cabineo", "screw"] as const) if (modules.some((m) => m.carcass.union === k)) hw.delete(k)
   if (hw.size) warn(`Unions del Taulell: ${[...hw].map(([k, n]) => `${n} × ${HW_NAME[k] ?? k}`).join(", ")}. El cnc hi posa les unions de la caixa del mòdul (Preferències › Ferratges).`)
   return {
     composition: { kind: "moble", modules, references: [], parts },

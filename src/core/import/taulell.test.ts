@@ -90,3 +90,32 @@ describe("el «Buc bàsic» del Taulell", () => {
     expect(r.warnings.join(" ")).toContain("2 × Cabineo, 1 × cargols")
   })
 })
+
+describe("la unió amb Cabineo del Taulell (cel, 2026-11-08)", () => {
+  const buc = { id: 7, name: "Buc", D: 560, H: 860, W: 1000, back: "over", cm: "mel", dm: "mel", doors: false, drawers: 0, plinth: true, pl: 100, shelves: 0, t: 19, tb: 8, topT: "full", pos: [0, 0, 0] as [number, number, number] }
+  const r = fromTaulell({ cabs: [buc], parts: [], sketches: [], hw: [{ kind: "cabineo", ref: { cab: 7, name: "Base" } }] }, () => "Melamina blanca")
+  const m = r.composition.modules[0]!
+
+  it("el mòdul fa la caixa amb Cabineo i ja no ho diu com a pendent", () => {
+    expect(m.carcass.union).toBe("cabineo")
+    expect(r.warnings.join(" ")).not.toContain("Cabineo")
+  })
+
+  it("la base i la tapa porten els tres buidats Ø15 a la cara que no es veu, i els laterals el forat del cargol", () => {
+    const ps = buildComposition(r.composition).panels
+    // Amb sòcol, la base és el prestatge fix de sobre la zona del sòcol.
+    const bottom = ps.find((p) => p.role === "fixedShelf")!
+    const top = ps.find((p) => p.role === "top")!
+    const sides = ps.filter((p) => p.role === "side")
+    const pockets = (p: typeof bottom) => p.holes.filter((h) => h.tag === "cabineo" && h.diameter === 15)
+    // Fondària 560: a 50 dels caps i un al mig (la separació passa de 300) → 3 per costat, 2 costats, 3 buidats cadascun.
+    expect(pockets(bottom)).toHaveLength(18)
+    expect(pockets(top)).toHaveLength(18)
+    expect(bottom.holes.some((h) => h.tag === "dowel")).toBe(false)
+    // Totes dues, a la cara de sota (la de la base dona al sòcol; la de la tapa, a dins).
+    const up = (p: typeof bottom, face: "A" | "B") => (face === "A" ? 1 : -1) * p.placement.zAxis[1]!
+    expect(pockets(bottom).every((h) => up(bottom, h.face as "A" | "B") < 0)).toBe(true)
+    expect(pockets(top).every((h) => up(top, h.face as "A" | "B") < 0)).toBe(true)
+    for (const s of sides) expect(s.holes.filter((h) => h.tag === "cabineo" && h.diameter === 5)).toHaveLength(6)
+  })
+})

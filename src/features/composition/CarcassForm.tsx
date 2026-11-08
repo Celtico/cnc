@@ -5,6 +5,8 @@ import { FoldItem } from "../../components/Fold"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { IconChoice } from "../../components/IconChoice"
 import { useState } from "react"
+import type { IconType } from "react-icons"
+import { TaulellIcon } from "../modeling/TaulellIcon"
 import { ProfileEditor } from "./ProfileEditor"
 import { PRESETS, matchPreset } from "./profilePresets"
 import { LuCircle, LuPencilRuler, LuRectangleHorizontal, LuSquircle } from "react-icons/lu"
@@ -175,7 +177,23 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
 
             {/* L'espiga de les unions de la caixa: una opció dels laterals, no de tot el mòdul (per decisió de l'usuari,
                 2026-10-20: «unió és una opció dels laterals, no del conjunt»). Només si la caixa en fa (`moduleRows().dowel`). */}
-            {rows.dowel && <DowelRow module={module} onChange={onChange} />}
+            {/* Unió de la caixa (cel, 2026-11-08, la del Taulell): espigues, Cabineo o cargols. */}
+            {rows.dowel && (
+              <FormRow optionId="module.carcass.union" label="Unió">
+                <IconChoice
+                  hideLabel
+                  label="Unió"
+                  value={c.union ?? "dowel"}
+                  options={[
+                    { value: "dowel", label: "Espigues", icon: DowelIcon, hint: "Espigues (les de Preferències › Ferratges)" },
+                    { value: "cabineo", label: "Cabineo", icon: CabineoIcon, hint: "Cabineo de Lamello: tres buidats Ø15 a la base, la tapa, els fixos i les divisions, i el cargol a l'altra peça" },
+                    { value: "screw", label: "Cargols", icon: ScrewIcon, hint: "Cargols: forat passant Ø4 al lateral (o a la peça que continua)" },
+                  ]}
+                  onChange={(v) => set({ union: v === "dowel" ? undefined : v })}
+                />
+              </FormRow>
+            )}
+            {rows.dowel && (c.union ?? "dowel") === "dowel" && <DowelRow module={module} onChange={onChange} />}
             {/* La retirada dels prestatges de tot el mòdul (els compartiments la poden canviar a Front › Prestatges). L'estil i
                 les folgances dels fronts són al Front de cada compartiment (`ModuleFrontsFold`, per decisió de l'usuari,
                 2026-10-20). */}
@@ -550,3 +568,6 @@ function thicknessOptions(list: number[], current: number): { id: string; label:
   return (list.includes(current) ? list : [current, ...list]).map((t) => ({ id: String(t), label: `${t} mm` }))
 }
 
+const DowelIcon: IconType = () => <TaulellIcon name="dowel" />
+const CabineoIcon: IconType = () => <TaulellIcon name="cabineo" />
+const ScrewIcon: IconType = () => <TaulellIcon name="screw" />

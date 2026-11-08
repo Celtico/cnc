@@ -270,6 +270,8 @@ export class CarcassBuilder extends HollowWallsBuilder {
       if (!(atL && near(xFace, interior.x0)) && !(atR && near(xFace, interior.x1))) continue
       if (yMid < v.yB || yMid > v.yT) continue
       // Sobre la fondària real de la peça (la tapa amb ranura d'aire és més curta).
+      // Cabineo o cargols (`Carcass.union`): el connector a la cara de dins (la de dalt de la base, la de sota de la tapa).
+      if (this.joinOther(panel, v.panel, zRear, Math.min(d.D, zRear + width), (z): Vec3 => [xFace, yMid, z], [0, isBottom ? 1 : -1, 0])) continue
       const zs = threeAlong(zRear, Math.min(d.D, zRear + width), this.hw.dowel.endOffset)
       dowelJoint(panel, v.panel, zs.map((z): Vec3 => [xFace, yMid, z]), this.hw.dowel, this.hw.dowel.tag)
     }

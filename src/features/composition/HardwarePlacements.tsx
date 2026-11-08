@@ -37,6 +37,8 @@ const RULE_ICONS: Record<RuleHardwareCount["id"], IconType> = {
   push: HARDWARE_ICONS.push,
   magnet: HARDWARE_ICONS.push,
   dowel: HARDWARE_ICONS.connector,
+  cabineo: HARDWARE_ICONS.connector,
+  screw: HARDWARE_ICONS.connector,
   rail: HARDWARE_ICONS.wall,
   led: HARDWARE_ICONS.profile,
   glassFrame: HARDWARE_ICONS.profile,
