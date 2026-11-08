@@ -1,7 +1,7 @@
 import { Box, HStack, Heading, IconButton, Stack, Text } from "@chakra-ui/react"
 import { LuPanelLeftClose, LuPanelLeftOpen } from "react-icons/lu"
 import { Tooltip } from "../components/ui/tooltip"
-import { ASSISTANT_ENTRY, GLOBAL_NAV, SETTINGS_ENTRY, type Section } from "./nav"
+import { ASSISTANT_ENTRY, GLOBAL_NAV, HELP_ENTRY, SETTINGS_ENTRY, type Section } from "./nav"
 import { NavItem } from "./NavItem"
 import { RenderStatusNavItem } from "./RenderStatusNav"
 
@@ -81,6 +81,7 @@ export function SideNav({
       <Stack gap={1} mt="auto" pt={2} borderTopWidth="1px" align={collapsed ? "center" : "stretch"}>
         <RenderStatusNavItem collapsed={collapsed} />
         <NavItem icon={SETTINGS_ENTRY.icon} label={SETTINGS_ENTRY.label} collapsed={collapsed} active={settingsActive} disabled={false} onClick={onSettings} />
+        <NavItem icon={HELP_ENTRY.icon} label={HELP_ENTRY.label} collapsed={collapsed} active={section === "help"} disabled={false} onClick={() => onSection("help")} />
       </Stack>
     </Stack>
   )

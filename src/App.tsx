@@ -44,7 +44,7 @@ export function App() {
   const clearProjectsRequest = useCallback(() => setProjectsRequest(null), [])
 
   // Barra superior «Mobles › nom» a les pàgines del moble (no a Preferències).
-  const showTopBar = inProject && screen !== "settings" && screen !== "projects"
+  const showTopBar = inProject && screen !== "settings" && screen !== "help" && screen !== "projects"
   // Preferències obertes des d'un moble (mòbil): «‹ nom del moble» només a la llista d'apartats; dins
   // d'un apartat ja hi ha el seu «‹ Preferències» (un sol «Tornar» a la vista).
   const [settingsPane] = useSessionString("mobles:settings-section")

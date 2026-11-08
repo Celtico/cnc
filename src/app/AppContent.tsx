@@ -11,6 +11,7 @@ const CutListScreen = lazy(() => import("../features/cutlist/CutListScreen").the
 const NestingScreen = lazy(() => import("../features/nesting/NestingScreen").then((m) => ({ default: m.NestingScreen })))
 const ExportScreen = lazy(() => import("../features/export/ExportScreen").then((m) => ({ default: m.ExportScreen })))
 const PhotoScreen = lazy(() => import("../features/photo/PhotoScreen").then((m) => ({ default: m.PhotoScreen })))
+const HelpScreen = lazy(() => import("../features/help/HelpScreen").then((m) => ({ default: m.HelpScreen })))
 const SettingsScreen = lazy(() => import("../features/settings/SettingsScreen").then((m) => ({ default: m.SettingsScreen })))
 const AmbientEditor = lazy(() => import("../features/ambients/AmbientEditor").then((m) => ({ default: m.AmbientEditor })))
 
@@ -42,6 +43,8 @@ export function AppContent({
     <AmbientEditor ambientId={ambientId} onOpenProject={onOpenProject} />
   ) : screen === "modeling" ? (
     <ProjectsScreen key="modelatge" page="modelatge" onOpen={onOpenProject} />
+  ) : screen === "help" ? (
+    <HelpScreen />
   ) : screen === "settings" ? (
     <SettingsScreen previewComposition={previewComposition} />
   ) : screen === "projects" || screen === "ambient" || projectId === null ? (

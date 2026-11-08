@@ -1,10 +1,10 @@
 import type { IconType } from "react-icons"
-import { LuBox, LuDownload, LuDraftingCompass, LuHouse, LuLayoutGrid, LuList, LuMessageSquare, LuSettings, LuShapes, LuSofa } from "react-icons/lu"
+import { LuBox, LuCircleHelp, LuDownload, LuDraftingCompass, LuHouse, LuLayoutGrid, LuList, LuMessageSquare, LuSettings, LuShapes, LuSofa } from "react-icons/lu"
 
-export type Screen = "projects" | "objects" | "editor" | "photo" | "cutlist" | "nesting" | "export" | "settings" | "ambients" | "ambient" | "modeling"
+export type Screen = "projects" | "objects" | "editor" | "photo" | "cutlist" | "nesting" | "export" | "settings" | "ambients" | "ambient" | "modeling" | "help"
 
 /** Apartat del menú global. */
-export type Section = "ambients" | "objects" | "modeling" | "projects" | "settings"
+export type Section = "ambients" | "objects" | "modeling" | "projects" | "settings" | "help"
 
 type NavEntry = { id: Screen; label: string; icon: IconType }
 
@@ -21,6 +21,8 @@ const AMBIENTS_ENTRY: NavEntry = { id: "ambients", label: "Ambients", icon: LuHo
 /** Modelatge (cel, 2026-11-07): el Taulell 3D dins del cnc, per dissenyar mòduls a mà i portar-los a Mobles. */
 export const MODELING_ENTRY: NavEntry = { id: "modeling", label: "Modelatge", icon: LuShapes }
 export const SETTINGS_ENTRY: NavEntry = { id: "settings", label: "Preferències", icon: LuSettings }
+/** Ajuda (cel, 2026-11-08): sota Preferències; de moment, les dreceres de teclat. */
+export const HELP_ENTRY: NavEntry = { id: "help", label: "Ajuda", icon: LuCircleHelp }
 /** Apartats del menú global (barra lateral); Preferències va a baix de tot. */
 export const GLOBAL_NAV: NavEntry[] = [PROJECTS_ENTRY, AMBIENTS_ENTRY, OBJECTS_ENTRY, MODELING_ENTRY]
 
