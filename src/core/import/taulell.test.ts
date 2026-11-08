@@ -112,10 +112,10 @@ describe("la unió amb Cabineo del Taulell (cel, 2026-11-08)", () => {
     expect(pockets(bottom)).toHaveLength(18)
     expect(pockets(top)).toHaveLength(18)
     expect(bottom.holes.some((h) => h.tag === "dowel")).toBe(false)
-    // Totes dues, a la cara de sota (la de la base dona al sòcol; la de la tapa, a dins).
+    // A la cara que no es veu, com al Taulell: la base per sota (dona al sòcol), la tapa per sobre (hi va el taulell).
     const up = (p: typeof bottom, face: "A" | "B") => (face === "A" ? 1 : -1) * p.placement.zAxis[1]!
     expect(pockets(bottom).every((h) => up(bottom, h.face as "A" | "B") < 0)).toBe(true)
-    expect(pockets(top).every((h) => up(top, h.face as "A" | "B") < 0)).toBe(true)
+    expect(pockets(top).every((h) => up(top, h.face as "A" | "B") > 0)).toBe(true)
     for (const s of sides) expect(s.holes.filter((h) => h.tag === "cabineo" && h.diameter === 5)).toHaveLength(6)
   })
 })
