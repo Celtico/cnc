@@ -3,6 +3,7 @@ import type { Panel } from "../../core/model"
 import { S } from "./cabinet/constants"
 import { isShaped, mitreGeometry, shapedGeometry } from "./cutoutGeometry"
 import { visualPanel } from "./exportablePanel"
+import { machiningOutlines } from "./machiningOutlines"
 
 /**
  * Arestes netes, com el `cleanEdges` del Taulell: només on dues cares es troben amb un angle de debò (`deg`). Les juntes
@@ -44,8 +45,8 @@ export function cleanEdges(geo: BufferGeometry, deg = 20): BufferGeometry {
 }
 
 /**
- * Les línies d'una peça al Filferro sol: el contorn sencer de la peça sense buidar i, si en té, les vores dels forats i
- * les ranures buidats (`cut`). El tall parteix les arestes llargues amb vèrtexs en T i `cleanEdges` sol en perdria la
+ * Les línies d'una peça al Filferro sol: el contorn sencer de la peça sense buidar i els mecanitzats dibuixats
+ * (`machiningOutlines`). El tall parteix les arestes llargues amb vèrtexs en T i `cleanEdges` sol en perdria la
  * meitat (cel, 2026-11-08: «se deja la mitad del canto»). Mateixa posició que la malla: amb `cut`, origen a la cantonada.
  */
 export function panelLines(p: Panel, cut: BufferGeometry | null): BufferGeometry {
@@ -55,13 +56,14 @@ export function panelLines(p: Panel, cut: BufferGeometry | null): BufferGeometry
   if (cut && base instanceof BoxGeometry) base.translate(L / 2, W / 2, T / 2)
   const out = cleanEdges(base, 25)
   base.dispose()
-  if (!cut) return out
-  const holes = cleanEdges(cut, 25)
-  const a = out.getAttribute("position").array, b = holes.getAttribute("position").array
-  const all = new Float32Array(a.length + b.length)
+  // Els mecanitzats, dibuixats (`machiningOutlines`), a la posició de la malla (amb `cut`, origen a la cantonada).
+  const mm = machiningOutlines(p)
+  if (!mm.length) return out
+  const shift = cut ? [0, 0, 0] : [L / 2, W / 2, T / 2]
+  const a = out.getAttribute("position").array
+  const all = new Float32Array(a.length + mm.length)
   all.set(a)
-  all.set(b, a.length)
-  holes.dispose()
+  mm.forEach((v, i) => (all[a.length + i] = v * S - shift[i % 3]!))
   out.setAttribute("position", new Float32BufferAttribute(all, 3))
   return out
 }
