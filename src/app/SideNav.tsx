@@ -1,4 +1,4 @@
-import { Box, HStack, Heading, IconButton, Stack, Text } from "@chakra-ui/react"
+import { HStack, Heading, IconButton, Stack, Text } from "@chakra-ui/react"
 import { LuPanelLeftClose, LuPanelLeftOpen } from "react-icons/lu"
 import { Tooltip } from "../components/ui/tooltip"
 import { ASSISTANT_ENTRY, GLOBAL_NAV, HELP_ENTRY, SETTINGS_ENTRY, type Section } from "./nav"
@@ -73,9 +73,9 @@ export function SideNav({
           <NavItem key={n.id} icon={n.icon} label={n.label} collapsed={collapsed} active={section === n.id} disabled={false} onClick={() => onSection(n.id)} />
         ))}
         {/* L'assistent personal, sota els apartats: obre el calaix amb el xat (no és una pàgina). */}
-        <Box pt={2} mt={1} borderTopWidth="1px">
+        <Stack pt={2} mt={1} borderTopWidth="1px">
           <NavItem icon={ASSISTANT_ENTRY.icon} label={ASSISTANT_ENTRY.label} collapsed={collapsed} active={assistantOpen} disabled={false} onClick={onAssistant} />
-        </Box>
+        </Stack>
       </Stack>
       {/* Preferències, a baix de tot (com a les apps d'escriptori); a sobre, el Render que calcula (o s'ha aturat) si n'hi ha. */}
       <Stack gap={1} mt="auto" pt={2} borderTopWidth="1px" align={collapsed ? "center" : "stretch"}>
