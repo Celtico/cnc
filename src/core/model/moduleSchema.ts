@@ -198,6 +198,8 @@ export const CarcassSchema = z.object({
   grooveClearance: mm.min(0).max(2).optional(),
   backClearance: mm.min(0).max(4),
   shelfSetback: mm.min(0).max(100),
+  /** Trencajunt (el del Taulell): la base, el sostre, els prestatges fixos i les divisions, aquests mm enrere del davant dels laterals. Sense: a ras. */
+  breakJoint: mm.min(0).max(20).optional(),
   shelfClearance: mm.min(0).max(5),
   /**
    * Folgança de les peces de dins (Preferències › Folgances per defecte › «Peces de dins»): amb l'arrel dividida, **tots**

@@ -94,6 +94,7 @@ export const CARCASS = group("module.carcass", "Caixa", { icon: "carcass", code:
     note: "Per decisió de l'usuari, 2026-10-20: «unió és una opció dels laterals, no del conjunt» (abans, secció Mòdul › Unió).",
   }),
     field("module.carcass.shelfSetback", "Retirada dels prestatges", { code: UI.carcass, control: "number", showIf: "Algun compartiment amb tira LED, o prestatges (sense calaixos) que no van a ras o que un front encastat bloqueja", defaultText: FROM_PREFS_GAPS }),
+    field("module.carcass.breakJoint", "Trencajunt", { code: UI.carcass, control: "number", defaultText: "0 (a ras)", note: "El del Taulell 3D (cel, 2026-11-08): la base, el sostre, els prestatges fixos i les divisions, aquests mm enrere del davant dels laterals." }),
   ]),
   section("module.carcass.rightGroup", "Dreta", { icon: "subsection", code: UI.carcass, note: "Per decisió de l'usuari, 2026-10-21 («separa els laterals: Esquerra, Dreta»): un acordió per lateral. El Gruix, les Cantonades, l'Espiga i la Retirada dels prestatges surten també aquí (són dels dos laterals; al registre, a Esquerra)." }, [
   field("module.carcass.sideRight", "Lateral", {

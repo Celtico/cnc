@@ -5,6 +5,8 @@ import { Builder } from "./module/zones"
 export type { BuildWarning, FixPlaceKey, KitOrder, ModuleBuild, Wiring } from "./module/types"
 export { drawerBottomMaterial, frontMaterialOf, shapeOutline } from "./module/helpers"
 
+import { applyBreakJoint } from "./breakJoint"
+
 /** Construeix totes les peces d'un mòdul en coordenades del mòdul (base a Y = 0). */
 export function buildModule(input: Module, opts: { rearLimits?: RearLimit[]; /** Sense el recorregut dels cables dels llums (el muntatge de Preferències ensenya només el ferratge). */ wiring?: boolean; /** Trams de x (del mòdul) on hi ha una columna que travessa la base: ni l'alimentador ni potes al costat. */ keepOut?: [number, number][]; /** El sòcol per defecte dels electrodomèstics de terra: l'alçada de les potes del moble (`Composition.support`). */ appliancePlinth?: number; /** Taula: els cantells, com lliure al terra (`applyEdgeRules`). */ freestanding?: boolean } = {}): ModuleBuild {
   // Res amagat compta: només el que es veu a l'inspector (els camps de les opcions apagades no hi entren).
@@ -21,6 +23,9 @@ export function buildModule(input: Module, opts: { rearLimits?: RearLimit[]; /**
   b.buildUnderLight()
   if (opts.wiring !== false) b.buildWiring()
   b.applyEdgeRules(opts.freestanding)
+  // Trencajunt (Taulell): la base, el sostre, els fixos i les divisions, uns mm enrere del davant dels laterals (els cantells
+  // ja triats amb la peça a ras, perquè el del davant continuï sent el de davant).
+  if (input.carcass.breakJoint) b.panels.splice(0, b.panels.length, ...applyBreakJoint(b.panels, input.carcass.breakJoint, input.carcass.depth))
   const panels = b.panels.map((p) => normalizePanel(p.cutouts && p.cutouts.length === 0 ? { ...p, cutouts: undefined } : p))
   return { panels, extras: b.extras, hardwareKits: b.hardwareKits, lightKits: b.lightKits, fittingOrders: b.fittingOrders, ventInlets: b.ventInlets, linear: b.linear, ...(b.wiring ? { wiring: b.wiring } : {}), warnings: b.warnings, layout, openRatios: b.openRatios, drawerHeights: b.drawerHeights, backKinds: b.backKinds }
 }

@@ -250,6 +250,7 @@ export function moduleOfCab(c: TaulellCab, mat: (key: string | undefined) => str
     backThickness: tb,
     backMaterial,
     top: topOf(c),
+    ...(c.tj ? { breakJoint: Math.max(0, Math.min(20, c.tj)) } : {}),
     ...(c.back === "inside" ? { backInsetSetback: bset } : {}),
     ...(c.back === "groove" ? { backSetback: bset, grooveDepth: Math.max(3, Math.min(15, Math.min(c.bdep ?? 8, c.t - 3))) } : {}),
     ...(c.back === "rebate" ? { backSetback: 0, grooveDepth: Math.max(3, Math.min(15, Math.min(c.bdep ?? 8, c.t - 3))) } : {}),
@@ -268,7 +269,6 @@ export function moduleOfCab(c: TaulellCab, mat: (key: string | undefined) => str
   // El que el cnc encara no fa, perquè no es perdi sense saber-ho.
   if (c.back === "rebate") warn(`«${name}»: el fons en galze passa en ranura (el cnc encara no fa galze).`)
   if (c.railV && c.railV !== "none") warn(`«${name}»: els travessers drets (de cantell) passen plans.`)
-  if (c.tj) warn(`«${name}»: el trencajunt de ${c.tj} mm (base, tapa i divisions enrere del davant) encara no es passa.`)
   if (c.dsys === "dtc") warn(`«${name}»: els calaixos DTC passen amb la guia de calaix del mòdul.`)
   if (c.sink && c.sink !== "none") warn(`«${name}»: el forat de l'aigüera encara no es passa.`)
   if (c.rot && !rot.rot) warn(`«${name}»: el gir de ${c.rot}° no es passa (només 90, 180 i 270).`)

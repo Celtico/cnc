@@ -183,6 +183,8 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
               <NumRow optionId="module.carcass.shelfSetback" label="Retirada dels prestatges" value={c.shelfSetback} min={0} max={100} step={1} onChange={(shelfSetback) => set({ shelfSetback })} help={`Del davant de la caixa al cantell dels prestatges de tot el mòdul (amb fronts encastats, almenys un gruix). ${prefHint(c.shelfSetback, gaps.shelfSetback)}`} />
               <PrefReset optionId="module.carcass.shelfSetback" value={c.shelfSetback} pref={gaps.shelfSetback} onReset={() => set({ shelfSetback: gaps.shelfSetback })} />
             </>}
+            {/* Trencajunt (el del Taulell): la base, el sostre, els fixos i les divisions, uns mm enrere del davant dels laterals. */}
+            <NumRow optionId="module.carcass.breakJoint" label="Trencajunt" value={c.breakJoint ?? 0} min={0} max={20} step={0.5} onChange={(v) => set({ breakJoint: v || undefined })} help="La base, el sostre, els prestatges fixos i les divisions, aquests mm enrere del davant dels laterals (0: a ras)." />
           </Stack>
           </FoldItem>
         ))}
