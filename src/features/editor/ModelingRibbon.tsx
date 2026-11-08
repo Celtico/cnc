@@ -179,6 +179,7 @@ export function ModelingRibbon({
             { icon: "dwire", label: "Filferro", hint: "Els cantells i els forats de les peces: sol, o per sobre d'Ombrejat, Plana o Transparent.", on: !!v.wire, run: () => opts.setViewer(v.wire ? { wire: false, noFaces: false } : { wire: true }) },
             { icon: "dxray", label: "Transparent", hint: "Les peces translúcides, per veure'n l'interior. Amb el Filferro, els cantells per sobre.", on: faces && v.opacity < 1, run: surface(faces && v.opacity < 1, () => opts.setViewer({ opacity: faces && v.opacity < 1 ? 1 : 0.35, noFaces: false })) },
             plana,
+            { icon: "band", label: "Cantells", hint: "Ressalta en blau els cantells folrats (amb Ombrejat o Transparent).", on: !!v.bands, run: () => opts.setViewer({ bands: !v.bands }) },
             interior,
             seccio,
           ],

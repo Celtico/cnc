@@ -1,6 +1,7 @@
 import type { RenderQuality } from "../renderQuality"
 import type { SceneGetter } from "../render/RenderDialog"
 import type { ViewName } from "../viewNames"
+import type { MaterialMode } from "../exportablePanel"
 import type { CameraPose, FreePart, MaterialPref, ModelObject, Panel, RefObject } from "../../../core/model"
 
 /** Mòdul de la composició, per ressaltar-lo, seleccionar-lo i afegir-ne al costat. */
@@ -59,7 +60,7 @@ export interface CabinetViewerProps {
   /** Si hi és, només s'obren aquests grups (ids de `movingGroups`). */
   openOnly?: Set<string> | null
   /** Pintar per material (amb veta) o per tipus de peça. */
-  materialMode?: "material" | "role"
+  materialMode?: MaterialMode
   /** Materials de les preferències, per resoldre els acabats. */
   materials?: MaterialPref[]
   /** Qualitat del render (resolució i ombres). */

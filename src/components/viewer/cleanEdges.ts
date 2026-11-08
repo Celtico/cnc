@@ -1,4 +1,8 @@
-import { BufferGeometry, Float32BufferAttribute, Vector3 } from "three"
+import { BoxGeometry, BufferGeometry, Float32BufferAttribute, Vector3 } from "three"
+import type { Panel } from "../../core/model"
+import { S } from "./cabinet/constants"
+import { isShaped, mitreGeometry, shapedGeometry } from "./cutoutGeometry"
+import { visualPanel } from "./exportablePanel"
 
 /**
  * Arestes netes, com el `cleanEdges` del Taulell: només on dues cares es troben amb un angle de debò (`deg`). Les juntes
@@ -37,4 +41,27 @@ export function cleanEdges(geo: BufferGeometry, deg = 20): BufferGeometry {
   const g = new BufferGeometry()
   g.setAttribute("position", new Float32BufferAttribute(out, 3))
   return g
+}
+
+/**
+ * Les línies d'una peça al Filferro sol: el contorn sencer de la peça sense buidar i, si en té, les vores dels forats i
+ * les ranures buidats (`cut`). El tall parteix les arestes llargues amb vèrtexs en T i `cleanEdges` sol en perdria la
+ * meitat (cel, 2026-11-08: «se deja la mitad del canto»). Mateixa posició que la malla: amb `cut`, origen a la cantonada.
+ */
+export function panelLines(p: Panel, cut: BufferGeometry | null): BufferGeometry {
+  const plain = visualPanel(p)
+  const [L, W, T] = [p.length * S, p.width * S, p.thickness * S]
+  const base = isShaped(plain) ? shapedGeometry(plain) : plain.mitres?.length ? mitreGeometry(plain) : new BoxGeometry(L, W, T)
+  if (cut && base instanceof BoxGeometry) base.translate(L / 2, W / 2, T / 2)
+  const out = cleanEdges(base, 20)
+  base.dispose()
+  if (!cut) return out
+  const holes = cleanEdges(cut, 20)
+  const a = out.getAttribute("position").array, b = holes.getAttribute("position").array
+  const all = new Float32Array(a.length + b.length)
+  all.set(a)
+  all.set(b, a.length)
+  holes.dispose()
+  out.setAttribute("position", new Float32BufferAttribute(all, 3))
+  return out
 }

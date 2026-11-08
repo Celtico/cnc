@@ -12,6 +12,8 @@ export interface ViewerState {
   wire?: boolean
   /** Només el filferro (sense Ombrejat, Plana ni Transparent): sense cares. */
   noFaces?: boolean
+  /** Cantells (el blau del Taulell): els cantells folrats ressaltats sobre el material (no a Plana). */
+  bands?: boolean
   /** Interior (el del Taulell): sense portes ni frontals, per veure el que hi ha dins. */
   hideFronts?: boolean
   /** Secció (la del Taulell): un pla d'escaire talla el moble i es veu una meitat (eix, posició en mm, quina meitat). */

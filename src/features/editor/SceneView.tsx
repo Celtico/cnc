@@ -90,7 +90,7 @@ export function SceneView({
       section={viewer.section}
       opening={viewer.opening}
       openOnly={openOnly}
-      materialMode={viewerState.materialMode}
+      materialMode={viewerState.bands && viewerState.materialMode === "material" ? "bands" : viewerState.materialMode}
       materials={materials}
       quality={quality}
       onDeselect={() => select({ kind: "moble" })}

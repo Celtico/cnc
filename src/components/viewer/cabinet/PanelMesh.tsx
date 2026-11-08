@@ -1,13 +1,13 @@
 import type { ThreeEvent } from "@react-three/fiber"
 import { Edges } from "@react-three/drei"
 import { memo, useContext, useEffect, useMemo, useRef } from "react"
-import { BoxGeometry, LineBasicMaterial, Matrix4, Vector3, type Group, type Material } from "three"
-import { cleanEdges } from "../cleanEdges"
+import { LineBasicMaterial, Matrix4, Vector3, type Group, type Material } from "three"
+import { panelLines } from "../cleanEdges"
 import type { HwSolid } from "../../../core/build/hardwareSolids"
 import type { Hole, MaterialPref, Panel } from "../../../core/model"
 import { useKeyed } from "../../../lib/useKeyed"
 import { carvedPanel, edgeSourceGeometry, isShaped, mitreGeometry, shapedGeometry } from "../cutoutGeometry"
-import { cutoutMaterials, panelMaterials, panelVisualKey, visualPanel } from "../exportablePanel"
+import { cutoutMaterials, panelMaterials, type MaterialMode, panelVisualKey, visualPanel } from "../exportablePanel"
 import { PanelFittings, PanelHardware } from "../Hardware"
 import { disposeMaterial } from "../textures"
 import { EXPLODE_MM, S } from "./constants"
@@ -55,7 +55,7 @@ interface PanelMeshProps {
   edges?: boolean
   /** Peça del mòdul seleccionat: translúcida, per veure'n l'interior. */
   dimmed?: boolean
-  materialMode: "material" | "role"
+  materialMode: MaterialMode
   materials: MaterialPref[]
   /** Clic a la peça, amb el punt tocat (coordenades del món, m). Estable: la peça va com a dada. */
   onClick?: (panel: Panel, point: Vector3, normal?: Vector3) => void
@@ -133,13 +133,7 @@ export const PanelMesh = memo(function PanelMesh({
   const edgeGeo = useMemo(() => (edges ? edgeSourceGeometry(vis) : null), [vis, edges])
   useEffect(() => () => edgeGeo?.dispose(), [edgeGeo])
   // Filferro sol: les arestes netes de la peça (tallada o no), com el Taulell, no les de cada triangle del tall.
-  const lineGeo = useMemo(() => {
-    if (wire !== "lines" || !edges) return null
-    const box = cut ? null : new BoxGeometry(vpanel.length * S, vpanel.width * S, vpanel.thickness * S)
-    const g = cleanEdges(cut ?? box!, 20)
-    box?.dispose()
-    return g
-  }, [wire, edges, cut, vpanel.length, vpanel.width, vpanel.thickness])
+  const lineGeo = useMemo(() => (wire === "lines" && edges ? panelLines(vpanel, cut) : null), [wire, edges, cut, vpanel])
   useEffect(() => () => lineGeo?.dispose(), [lineGeo])
   const cutMats = useMemo(() => {
     if (!cut) return null

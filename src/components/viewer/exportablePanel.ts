@@ -80,11 +80,21 @@ function baseMaterial(finish: FinishSpec, uMm: number, vMm: number, rotate: bool
 }
 
 /**
+ * Com es pinten les peces: amb el seu material, d'un color per rol (Plana) o amb el material i els cantells folrats
+ * ressaltats en blau (Visualització › Cantells, com el Taulell; cel, 2026-11-08).
+ */
+export type MaterialMode = "material" | "role" | "bands"
+
+/** El cantell folrat ressaltat (el blau dels cantells del Taulell). */
+const bandMaterial = (opts: { transparent: boolean; opacity: number }) => new MeshStandardMaterial({ color: BAND_COLOR, roughness: 0.6, metalness: 0, ...opts })
+const BAND_COLOR = "#7fd0e2"
+
+/**
  * Els 6 materials d'una peça (ordre de BoxGeometry: +x, −x, +y, −y, +z, −z; z = gruix).
  * Cares grans amb l'acabat del material i la veta en la direcció de la peça; cantells
  * folrats amb el material del cantell; cantells sense folrar, tauler vist.
  */
-export function panelMaterials(p: Panel, mode: "material" | "role", materials: MaterialPref[], dimmed: boolean): MeshStandardMaterial[] {
+export function panelMaterials(p: Panel, mode: MaterialMode, materials: MaterialPref[], dimmed: boolean): MeshStandardMaterial[] {
   const opts = { transparent: dimmed, opacity: dimmed ? 0.45 : 1 }
   if (mode === "role") {
     const m = new MeshStandardMaterial({ color: ROLE_COLOR[p.role], roughness: 0.85, metalness: 0, ...opts })
@@ -108,9 +118,9 @@ export function panelMaterials(p: Panel, mode: "material" | "role", materials: M
   const solid = p.role === "hardware" || (!!mat && (materialCategory(mat) === "sim" || mat.cnc === false || !!mat.solid))
   const raw = (face: string) => (solid ? makeMaterial(finish, L, T, false, opts, off(face)) : new MeshStandardMaterial({ color: RAW_EDGE_COLOR, roughness: 0.95, metalness: 0, ...opts }))
   // +x / −x: cara T × W (u = gruix, v = amplada): la veta ha d'anar en v.
-  const edgeX = (banded: boolean, face: string) => (banded ? makeMaterial(edgeFinish, T, W, true, opts, off(face)) : raw(face))
+  const edgeX = (banded: boolean, face: string) => (banded ? mode === "bands" ? bandMaterial(opts) : makeMaterial(edgeFinish, T, W, true, opts, off(face)) : raw(face))
   // +y / −y: cara L × T (u = llargada): la veta va en u.
-  const edgeY = (banded: boolean, face: string) => (banded ? makeMaterial(edgeFinish, L, T, false, opts, off(face)) : raw(face))
+  const edgeY = (banded: boolean, face: string) => (banded ? mode === "bands" ? bandMaterial(opts) : makeMaterial(edgeFinish, L, T, false, opts, off(face)) : raw(face))
   const out = [edgeX(p.edges.right, "#r"), edgeX(p.edges.left, "#l"), edgeY(p.edges.top, "#t"), edgeY(p.edges.bottom, "#b"), big(""), big("#B")]
   // Electrodomèstic (v46): la foto a la cara vista (+z, la de davant, L × W; +y, la de dalt d'una placa, L × T), sencera i
   // centrada sobre el color del cos (el material de l'aparell: `photoFaceTexture`).
@@ -124,7 +134,7 @@ export function panelMaterials(p: Panel, mode: "material" | "role", materials: M
 }
 
 /** Materials per a la geometria extruïda (`shapedGeometry`): [0] cares (A/B), [1] cantells amb cantell, [2] sense (talls i parets dels forats). UV en metres. */
-export function cutoutMaterials(p: Panel, mode: "material" | "role", materials: MaterialPref[], dimmed: boolean): MeshStandardMaterial[] {
+export function cutoutMaterials(p: Panel, mode: MaterialMode, materials: MaterialPref[], dimmed: boolean): MeshStandardMaterial[] {
   const opts = { transparent: dimmed, opacity: dimmed ? 0.45 : 1 }
   if (mode === "role") {
     const m = new MeshStandardMaterial({ color: ROLE_COLOR[p.role], roughness: 0.85, metalness: 0, ...opts })
@@ -133,7 +143,7 @@ export function cutoutMaterials(p: Panel, mode: "material" | "role", materials: 
   // UV en metres: 1000 mm per unitat de textura.
   const finish = resolveFinish(materials, p.material)
   const face = makeMaterial(finish, 1000, 1000, p.grain === "y", opts, textureOffset(p.id))
-  const edge = makeMaterial(resolveEdgeFinish(materials, p.material), 1000, 1000, false, opts, textureOffset(`${p.id}#e`))
+  const edge = mode === "bands" ? bandMaterial(opts) : makeMaterial(resolveEdgeFinish(materials, p.material), 1000, 1000, false, opts, textureOffset(`${p.id}#e`))
   // Sense cantell: el tauler vist (com `panelMaterials`) o, als massissos, el mateix material.
   const mat = materials.find((m) => m.name === p.material)
   const solid = p.role === "hardware" || (!!mat && (materialCategory(mat) === "sim" || mat.cnc === false || !!mat.solid))
