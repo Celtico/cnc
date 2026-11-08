@@ -25,7 +25,8 @@ import { CableMarks, HoverCursor, ZoneHighlight } from "./cabinet/Highlights"
 import { CameraRig } from "./cabinet/CameraRig"
 import { panelBox } from "../../core/build/geometry"
 import { hoverKey, hoverTarget, useHoverLink } from "../hoverLink"
-import { useFaceHover, useFacePick, useSketchOverlay } from "./facePick"
+import { useArrowHandles, useFaceHover, useFacePick, useSketchOverlay } from "./facePick"
+import { DragArrows } from "./cabinet/DragArrows"
 import { SketchLines } from "./cabinet/SketchLines"
 import { CarveContext, SectionCapContext, SectionClip } from "./cabinet/SectionClip"
 import type { Panel } from "../../core/model"
@@ -133,7 +134,7 @@ export function CabinetViewer({
   const { onFittingSelect, onPanelHover, onPanelClick } = usePanelHandlers({ onSelectModule, onSelectPart, onSelectHardware, modules, size, hoverAt }, link)
   // Una eina de clicar cares activa (Modelatge, `facePick.ts`): el clic va a l'eina, amb el punt en mm i la normal.
   const facePick = useFacePick()
-  const sketchLines = useSketchOverlay()
+  const [sketchLines, arrowHandles] = [useSketchOverlay(), useArrowHandles()]
   const faceHover = useFaceHover()
   const onFaceHover = useMemo(
     () =>
@@ -218,6 +219,7 @@ export function CabinetViewer({
       <SectionCapContext.Provider value={sectionCap}>
       <group position={[-size.width * S * 0.5, 0, -size.depth * S * 0.5]}>
         {sketchLines.length > 0 && <SketchLines lines={sketchLines} />}
+        {arrowHandles && arrowHandles.arrows.length > 0 && <DragArrows h={arrowHandles} />}
         <SectionClip section={section} offset={[size.width / 2, 0, size.depth / 2]} />
         {panels.map((p) => {
           const g = groupOf.get(p.id)

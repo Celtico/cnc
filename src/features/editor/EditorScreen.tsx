@@ -21,7 +21,7 @@ import { modulePieces, ModelingTree, pieceLocalId, setPieceEdit } from "../model
 import { PieceInspector } from "../modeling/PieceInspector"
 import { CarveContext } from "../../components/viewer/cabinet/SectionClip"
 import { DEFAULT_FACE_OPTS, previewFaceTool, runFaceTool, type FaceToolId, type FaceToolOpts } from "../modeling/faceTools"
-import { FaceHoverContext, FacePickContext, SketchOverlayContext, type FaceHit, type FaceHover, type FacePick, type SketchLine } from "../../components/viewer/facePick"
+import { ArrowHandlesContext, FaceHoverContext, FacePickContext, SketchOverlayContext, type FaceHit, type FaceHover, type FacePick, type SketchLine } from "../../components/viewer/facePick"
 import { fromPlane } from "../../core/model"
 import { EditorViewport } from "./EditorViewport"
 import { framePose, warningTarget } from "./warningTarget"
@@ -34,6 +34,7 @@ import { ViewerToolbar } from "./ViewerToolbar"
 import { useEditorAssistant } from "./useEditorAssistant"
 import { useEditorCamera } from "./useEditorCamera"
 import { useEditorDoc } from "./useEditorDoc"
+import { useDragArrows } from "../modeling/useDragArrows"
 import { useEditorKeys } from "./useEditorKeys"
 import { isSelectionLocked, useEditorSelection } from "./useEditorSelection"
 import { useSceneData } from "./useSceneData"
@@ -191,6 +192,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     const pv: SketchLine[] = !preview ? [] : preview.boxes ? preview.boxes.map((box) => ({ pts: [], closed: false, tone: "draft" as const, box })) : preview.box ? [{ pts: [], closed: false, tone: "draft", box: preview.box }] : preview.pts ? [{ pts: preview.pts, closed: !!preview.closed, tone: "draft" }] : []
     return [...saved, ...m, ...(d && !preview?.pts ? [{ pts: d.pts.map(lift(d.a, d.level, d.dir)), closed: false, tone: "draft" as const }] : []), ...pv]
   }, [project.modeling, comp.sketches, faceOpts.draft, faceOpts.selSketch, faceOpts.measureLine, faceOpts.measureFrom, preview])
+  // Les fletxes d'arrossegar del tauler dinàmic i de la cara dinàmica (com al Taulell).
+  const arrowHandles = useDragArrows(project.modeling ? faceTool : null, faceOpts, comp, build, selection.kind === "part" ? selection.id : null, setComp, commitHistory)
   const pieceSel = project.modeling && piece && selection.kind === "module" && module?.id === selection.id ? modulePieces(build?.panels ?? [], moduleIndex).find((x) => x.panel.id === piece) : undefined
   // Una selecció nova, un inspector nou: les finestres de tria (material, ferratge) que s'hi havien obert es tanquen
   // (no són modals: si no, la tria aniria a parar al que s'ha seleccionat després). `popup`: el de la finestra del botó
@@ -239,6 +242,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       <FacePickContext.Provider value={facePick}>
       <FaceHoverContext.Provider value={faceHover}>
       <SketchOverlayContext.Provider value={sketchLines}>
+      <ArrowHandlesContext.Provider value={arrowHandles}>
       <Workspace
         ws={ws}
         left={
@@ -347,6 +351,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       <FloatingWindow id="editor-props" kind="picker" width={360} height={600} open={!!propsAt} at={propsAt ?? undefined} onClose={() => setPropsAt(null)} title="Propietats" initialFocus={false}>
         {inspector(true)}
       </FloatingWindow>
+    </ArrowHandlesContext.Provider>
     </SketchOverlayContext.Provider>
     </FaceHoverContext.Provider>
     </FacePickContext.Provider>

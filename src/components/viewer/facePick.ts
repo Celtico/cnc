@@ -30,3 +30,22 @@ export interface SketchLine {
 }
 export const SketchOverlayContext = createContext<SketchLine[]>([])
 export const useSketchOverlay = () => useContext(SketchOverlayContext)
+
+/** Una fletxa d'arrossegar de Modelatge (tauler dinàmic, cara dinàmica): on és i cap on apunta (mm de la composició). */
+export interface ViewerArrow {
+  id: string
+  at: Vec3
+  dir: Vec3
+  color: string
+}
+/**
+ * Les fletxes i què passa en arrossegar-les: `onDrag` amb els mm cap a on apunta la fletxa i l'imant en mm (els píxels de
+ * la pantalla), i retorna el text del costat del ratolí; `onDrop` en deixar-la (null si no s'ha mogut).
+ */
+export interface ArrowHandles {
+  arrows: ViewerArrow[]
+  onDrag: (id: string, mm: number, tolMm: number, free: boolean) => string | null
+  onDrop: (id: string | null) => void
+}
+export const ArrowHandlesContext = createContext<ArrowHandles | null>(null)
+export const useArrowHandles = () => useContext(ArrowHandlesContext)

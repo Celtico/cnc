@@ -7,6 +7,7 @@ import type { Selection } from "../composition/StructureTree"
 import type { CompositionBuild } from "../../core/build/buildComposition"
 import { NumRow } from "../../components/NumRow"
 import { createRefPanel, DOWELS, finishSketch, MODULE_DIM, movePart, resizePartFace, type DowelSize, type FaceToolId, type FaceToolOpts } from "../modeling/faceTools"
+import { moduleFaceChange } from "../modeling/dragArrows"
 import { MaterialSelect } from "../settings/MaterialSelect"
 
 
@@ -193,9 +194,8 @@ function FaceSize({ o, set, comp, setComp }: { o: FaceToolOpts; set: (o: FaceToo
       const next = mode === "pull" ? resizePartFace(p, f.a, f.s, Math.max(1, partSize(p)[f.a]! + d)) : movePart(p, f.a, sign * d)
       setComp({ ...comp, parts: (comp.parts ?? []).map((q) => (q.id === p.id ? next : q)) })
     } else if (m && dim) {
-      // Estirar la cara esquerra: el moble creix cap a l'esquerra (la dreta es queda on és, si hi ha espai al davant).
-      if (mode === "pull") setComp({ ...comp, modules: comp.modules.map((q) => (q.id === m.id ? { ...q, carcass: { ...q.carcass, [dim[0]]: Math.max(100, q.carcass[dim[0]] + d) }, ...(f.a === 0 && !f.s ? { gapBefore: Math.max(0, (q.gapBefore ?? 0) - d) } : {}) } : q)) })
-      else if (f.a === 0) setComp({ ...comp, modules: comp.modules.map((q) => (q.id === m.id ? { ...q, gapBefore: Math.max(0, (q.gapBefore ?? 0) + sign * d) } : q)) })
+      const next = moduleFaceChange(comp, m.id, f.a, f.s, mode === "pull" ? "pull" : "move", d)
+      if (next) setComp(next)
       else toaster.create({ title: "Un moble es mou de costat amb la cara dinàmica; amunt, avall i endavant, amb Desplaçar.", duration: 3000 })
     }
     setDelta(0)

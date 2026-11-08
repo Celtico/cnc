@@ -17,6 +17,7 @@ import { snapToleranceMm } from "../snapTolerance"
 import { snapWithGuides, type Guide } from "../guideSnap"
 import { SmartGuides } from "../SmartGuides"
 import { useOrbitControls } from "../orbitControls"
+import { useArrowHandles } from "../facePick"
 
 export interface SnapTargets {
   x: number[]
@@ -99,7 +100,9 @@ export function RefGhost({
   const cursor = useViewerCursor()
   // Obstacle en blau; objecte que talla en verd; seleccionat en taronja; amb problema (o que talla i no toca res) en vermell.
   const tint = hit ? "#dc2626" : selected ? SELECT_COLOR : g.effect === "cut" ? "#16a34a" : "#3b82f6"
-  const draggable = selected && !!onMove
+  // Amb les fletxes del tauler dinàmic o de la cara dinàmica, el gizmo de moure no hi és (les taparia).
+  const arrowsOn = !!useArrowHandles()?.arrows.length
+  const draggable = selected && !!onMove && !arrowsOn
   const cyl = g.shape === "cylinder"
   const profileGeo = useMemo(() => (g.shape === "profile" && g.profile && g.profile.length >= 3 ? profileGeometry(g) : g.shape === "mesh" && g.mesh ? meshGeometry(g, g.mesh, 2) : g.shape === "image" && g.image ? imageGeometry(g, g.image) : null), [g])
   // Amb material: sòlid, amb ombres, i surt a la Presentació i al render (els fantasmes no hi surten).
