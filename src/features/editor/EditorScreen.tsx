@@ -279,7 +279,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         // Sense pestanya «Assistent» (per decisió de l'usuari, 2026-10-13): l'assistent personal és al menú principal
         // i fa servir aquest document pel `assistantHub`.
         center={(chrome) => (
-          <CarveContext.Provider value={!!project.modeling}>
+          <CarveContext.Provider value>
           <EditorViewport
             opts={opts}
             shownPanels={scene.shownPanels}

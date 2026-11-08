@@ -1,6 +1,7 @@
 import { Box3, BufferGeometry, ExtrudeGeometry, Float32BufferAttribute, Matrix4, MeshBasicMaterial, Path, Shape, Vector3, type Material } from "three"
 import { Brush, Evaluator, SUBTRACTION } from "three-bvh-csg"
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js"
+import { subdivideFaces } from "./subdivideFaces"
 import { ccw, flatten, pocketKey, pocketSolids, type Panel } from "../../core/model"
 
 const S = 0.001
@@ -312,7 +313,8 @@ function prismGeometry(sc: NonNullable<Panel["solidCuts"]>[number]): BufferGeome
  * cantells i parets dels talls, com `cutoutGeometry`.
  */
 function solidCutGeometry(p: Panel): BufferGeometry {
-  const base = cutoutGeometry(p)
+  // Amb mecanitzats (molts forats), les cares partides en triangles de 100 mm: el booleà va ~4 vegades més ràpid.
+  const base = MACHINED.get(p) ? subdivideFaces(cutoutGeometry(p), 0, 100 * S) : cutoutGeometry(p)
   const face = new MeshBasicMaterial()
   const edge = new MeshBasicMaterial()
   const wall = new MeshBasicMaterial()
@@ -391,8 +393,8 @@ function batchCutters(cutters: BufferGeometry[]): BufferGeometry[] {
 }
 
 /** Segments d'un forat rodó al 3D (prou per veure'l rodó, pocs per no alentir el booleà). */
-// Prou costats perquè dos de seguits facin menys de 20° (les arestes del Filferro, `cleanEdges`, no hi dibuixen les parets).
-const ROUND = (d: number) => (d >= 12 ? 28 : 24)
+// Prou costats perquè dos de seguits facin menys de 25° (les arestes del Filferro, `cleanEdges`, no hi dibuixen les parets).
+const ROUND = (d: number) => (d >= 12 ? 28 : 16)
 
 /**
  * Els mecanitzats de la peça (forats de cara i de cantell, ranures) com a talls 3D, per veure'ls buidats de debò

@@ -128,6 +128,8 @@ export const PanelMesh = memo(function PanelMesh({
   // Modelatge: els forats i les ranures, buidats de debò (no les marques per sobre).
   // El Filferro sol buida sempre els forats (com el Taulell): es veuen com a forats, no com a marques.
   const carve = useContext(CarveContext) || wire === "lines"
+  // Buidats, els forats ja es veuen a la peça; si no, com a marques.
+  const marks = carve ? [] : vpanel.holes
   const vis = useMemo(() => (carve ? carvedPanel(visualPanel(vpanel)) : visualPanel(vpanel)), [vpanel, carve])
   const cut = useMemo(() => (isShaped(vis) ? shapedGeometry(vis) : vis.mitres?.length ? mitreGeometry(vis) : null), [vis])
   const edgeGeo = useMemo(() => (edges ? edgeSourceGeometry(vis) : null), [vis, edges])
@@ -206,13 +208,13 @@ export const PanelMesh = memo(function PanelMesh({
             {!cut && <boxGeometry args={[L, W, T]} />}
           </mesh>
         )}
-        {showHoles && !carve && vpanel.holes.length > 0 && (proposedTags?.length ? (
+        {showHoles && marks.length > 0 && (proposedTags?.length ? (
           <>
-            <HoleMarks holes={vpanel.holes.filter((h) => !h.tag || !proposedTags.includes(h.tag))} thickness={T} />
-            <HoleMarks holes={vpanel.holes.filter((h) => !!h.tag && proposedTags.includes(h.tag))} thickness={T} material={PROPOSED_MAT} />
+            <HoleMarks holes={marks.filter((h) => !h.tag || !proposedTags.includes(h.tag))} thickness={T} />
+            <HoleMarks holes={marks.filter((h) => !!h.tag && proposedTags.includes(h.tag))} thickness={T} material={PROPOSED_MAT} />
           </>
         ) : (
-          <HoleMarks holes={vpanel.holes} thickness={T} />
+          <HoleMarks holes={marks} thickness={T} />
         ))}
         {hardware && <PanelHardware panel={vpanel} pins={pins} fixed={fixed} />}
         {(hardware || selectedFitting) && <PanelFittings panel={vpanel} models={hardware} selected={selectedFitting} onSelect={onSelectFitting} />}

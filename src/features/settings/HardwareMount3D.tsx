@@ -6,6 +6,7 @@ import { mountCamera, type HardwareMount } from "../../core/build/hardwareMount"
 import { fixedSolids, shelfPins } from "../../core/build/hardwareSolids"
 import type { MaterialPref, Panel } from "../../core/model"
 import { MovingPanel, PanelMesh } from "../../components/viewer/CabinetViewer"
+import { CarveContext } from "../../components/viewer/cabinet/SectionClip"
 import { LOW_MEMORY } from "../../components/viewer/deviceLimits"
 import { PanelFittings } from "../../components/viewer/Hardware"
 import { releaseModelGpu } from "../../components/viewer/models3d"
@@ -48,7 +49,9 @@ export default function HardwareMount3D({ mount, materials, open, frameKey }: { 
       <hemisphereLight args={["#ffffff", "#8a7a60", 0.3]} />
       <directionalLight position={[1.5, 3, 2]} intensity={1.6} />
       <directionalLight position={[-2, 1.5, -2]} intensity={0.8} />
-      <MountScene mount={mount} materials={materials} open={open} frameKey={frameKey} />
+      <CarveContext.Provider value>
+        <MountScene mount={mount} materials={materials} open={open} frameKey={frameKey} />
+      </CarveContext.Provider>
       <OrbitControls makeDefault enableDamping dampingFactor={0.12} target={[0, 0, 0]} minDistance={0.02} maxDistance={Math.max(2, span * 4)} />
     </Canvas>
   )

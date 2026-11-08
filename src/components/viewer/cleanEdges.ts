@@ -53,10 +53,10 @@ export function panelLines(p: Panel, cut: BufferGeometry | null): BufferGeometry
   const [L, W, T] = [p.length * S, p.width * S, p.thickness * S]
   const base = isShaped(plain) ? shapedGeometry(plain) : plain.mitres?.length ? mitreGeometry(plain) : new BoxGeometry(L, W, T)
   if (cut && base instanceof BoxGeometry) base.translate(L / 2, W / 2, T / 2)
-  const out = cleanEdges(base, 20)
+  const out = cleanEdges(base, 25)
   base.dispose()
   if (!cut) return out
-  const holes = cleanEdges(cut, 20)
+  const holes = cleanEdges(cut, 25)
   const a = out.getAttribute("position").array, b = holes.getAttribute("position").array
   const all = new Float32Array(a.length + b.length)
   all.set(a)

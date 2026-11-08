@@ -119,7 +119,7 @@ export function CabinetViewer({
   // transparents amb el perfil i els forats a la vista. «Enquadrar» torna al 3/4 en perspectiva.
   const wire = viewDir !== null || wireAll, lines = wireAll && viewDir === null
   const holesShown = showHoles || wire || edgesAll
-  // Modelatge (`CarveContext`, fora del Canvas): els forats buidats, i la peça es refà quan canvien.
+  // Editor i Ferratges (`CarveContext`, fora del Canvas): els forats grans buidats, i la peça es refà quan canvien.
   const carve = useContext(CarveContext)
   const holesDrawn = holesShown || hardware || carve
   const { groupOf, panelKeys, pinsOf, fixedOf } = usePanelVisuals(panels, holesDrawn, hardware)
