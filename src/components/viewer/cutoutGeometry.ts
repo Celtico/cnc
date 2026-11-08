@@ -391,7 +391,8 @@ function batchCutters(cutters: BufferGeometry[]): BufferGeometry[] {
 }
 
 /** Segments d'un forat rodó al 3D (prou per veure'l rodó, pocs per no alentir el booleà). */
-const ROUND = (d: number) => (d >= 12 ? 24 : 16)
+// Prou costats perquè dos de seguits facin menys de 20° (les arestes del Filferro, `cleanEdges`, no hi dibuixen les parets).
+const ROUND = (d: number) => (d >= 12 ? 28 : 24)
 
 /**
  * Els mecanitzats de la peça (forats de cara i de cantell, ranures) com a talls 3D, per veure'ls buidats de debò

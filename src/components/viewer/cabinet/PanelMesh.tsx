@@ -14,7 +14,6 @@ import { EXPLODE_MM, S } from "./constants"
 import { panelBox } from "../../../core/build/geometry"
 import { CarveContext, SECTION_CAP_MAT, SectionCapContext, noRaycast } from "./SectionClip"
 import { HoleMarks, PROPOSED_MAT } from "./HoleMarks"
-import { MachiningLines } from "./MachiningLines"
 import { useExplode } from "./anim"
 
 const BEVEL_USERDATA = { bevel: true }
@@ -127,7 +126,8 @@ export const PanelMesh = memo(function PanelMesh({
   // Els forats dels tiradors no es buiden al 3D (els tapa el tirador): així una peça a inglet
   // amb tirador continua sent un prisma a 45°.
   // Modelatge: els forats i les ranures, buidats de debò (no les marques per sobre).
-  const carve = useContext(CarveContext)
+  // El Filferro sol buida sempre els forats (com el Taulell): es veuen com a forats, no com a marques.
+  const carve = useContext(CarveContext) || wire === "lines"
   const vis = useMemo(() => (carve ? carvedPanel(visualPanel(vpanel)) : visualPanel(vpanel)), [vpanel, carve])
   const cut = useMemo(() => (isShaped(vis) ? shapedGeometry(vis) : vis.mitres?.length ? mitreGeometry(vis) : null), [vis])
   const edgeGeo = useMemo(() => (edges ? edgeSourceGeometry(vis) : null), [vis, edges])
@@ -179,8 +179,8 @@ export const PanelMesh = memo(function PanelMesh({
       <group matrix={matrix} matrixAutoUpdate={false}>
         <mesh
           position={cut ? [0, 0, 0] : [L / 2, W / 2, T / 2]}
-          castShadow
-          receiveShadow
+          castShadow={wire !== "lines"}
+          receiveShadow={wire !== "lines"}
           material={cut && cutMats ? cutMats : mats}
           geometry={cut ?? undefined}
           // El render arrodoneix les arestes dels taulers (`sceneData`).
@@ -212,7 +212,7 @@ export const PanelMesh = memo(function PanelMesh({
             {!cut && <boxGeometry args={[L, W, T]} />}
           </mesh>
         )}
-        {showHoles && !carve && wire !== "lines" && vpanel.holes.length > 0 && (proposedTags?.length ? (
+        {showHoles && !carve && vpanel.holes.length > 0 && (proposedTags?.length ? (
           <>
             <HoleMarks holes={vpanel.holes.filter((h) => !h.tag || !proposedTags.includes(h.tag))} thickness={T} />
             <HoleMarks holes={vpanel.holes.filter((h) => !!h.tag && proposedTags.includes(h.tag))} thickness={T} material={PROPOSED_MAT} />
@@ -220,7 +220,6 @@ export const PanelMesh = memo(function PanelMesh({
         ) : (
           <HoleMarks holes={vpanel.holes} thickness={T} />
         ))}
-        {wire === "lines" && !carve && <MachiningLines holes={vpanel.holes} grooves={vpanel.grooves} thickness={vpanel.thickness} color={LINE_COLOR} />}
         {hardware && <PanelHardware panel={vpanel} pins={pins} fixed={fixed} />}
         {(hardware || selectedFitting) && <PanelFittings panel={vpanel} models={hardware} selected={selectedFitting} onSelect={onSelectFitting} />}
         {!carve && vpanel.grooves.map((g, i) => (
