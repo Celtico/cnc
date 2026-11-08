@@ -35,6 +35,17 @@ describe("pota AXILO 78 (placa rectangular per cargolar)", () => {
     expect(b.warnings.filter((w) => w.code === "hardware")).toEqual([])
   })
 
+  it("com al Taulell: passat 1 m entre potes en surt una fila més al mig, i cada metre més una altra", () => {
+    const legsOf = (width: number) => {
+      const m = onLegs()
+      const b = buildModule({ ...m, carcass: { ...m.carcass, width } })
+      return b.panels.find((p) => p.role === "bottom")!.fittings?.filter((f) => f.kind === "leg").length
+    }
+    expect(legsOf(1000)).toBe(4)
+    expect(legsOf(1600)).toBe(6)
+    expect(legsOf(2552)).toBe(8)
+  })
+
   it("una distància per a cada costat: esquerra, dreta, darrere i davant", () => {
     const m = onLegs()
     const it2 = structuredClone(axilo)

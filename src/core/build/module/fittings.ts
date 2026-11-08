@@ -20,6 +20,8 @@ import { fmtNum } from "../../../lib/format"
 /** Ferratges col·locats: tiradors, frontisses (cassoletes i plaques) i potes. */
 /** Fins on es mou cap a dins una placa de pota que no hi cap just a la seva distància dels cantells (`buildLegs`). */
 const LEG_NUDGE = 40
+/** Més separació que això entre dues potes (centre a centre) i n'hi surt una altra al mig (com el Taulell, que en posa una passat 1 m). */
+const LEG_MAX_SPAN = 1000
 
 export class FittingsBuilder extends LightsBuilder {
   /**
@@ -280,6 +282,15 @@ export class FittingsBuilder extends LightsBuilder {
       [left, d.D - front],
       [d.W - right, d.D - front],
     ]
+    // Com al Taulell (cel, 2026-11-08: «quan fas un cert ample, pum, surten potes»): més d'1 m entre les potes de les
+    // puntes i n'hi surt una fila més al mig (davant i darrere), repartides; cada metre més, una altra.
+    const span = d.W - right - left
+    const extra = Math.max(0, Math.ceil(span / LEG_MAX_SPAN) - 1)
+    const middle = new Set<number>()
+    for (let k = 1; k <= extra; k++) {
+      const x = r(left + (span * k) / (extra + 1))
+      for (const z of [back, d.D - front]) middle.add(nominal.push([x, z]) - 1)
+    }
     const T = bottom.thickness
     const margin = 3
     let deep = false
@@ -312,7 +323,8 @@ export class FittingsBuilder extends LightsBuilder {
     const legs: [number, number][] = []
     const holes: Hole[] = []
     let moved = 0
-    for (const [lx, lz] of nominal) {
+    let skipped = 0
+    for (const [i, [lx, lz]] of nominal.entries()) {
       if (bottom.outline && faceAt(bottom, toLocal(bottom, [lx, d.baseY, lz])) === null) continue
       const ix = lx < d.W / 2 ? 1 : -1, iz = lz < d.D / 2 ? 1 : -1
       let found: { at: [number, number]; holes: Hole[] } | null = null
@@ -326,6 +338,11 @@ export class FittingsBuilder extends LightsBuilder {
               break
             }
           }
+      // Una pota del mig que no hi cap (una divisió o un altre forat just allà) es deixa, i es diu; les de les puntes, totes o cap.
+      if (!found && middle.has(i)) {
+        skipped++
+        continue
+      }
       if (!found) {
         this.hardwareWarning(`«${item.name}»: la placa d'alguna pota no hi cap sencera a la base (a ${fmtNum(inset, 1)} mm dels cantells, amb ${margin} mm de marge i sense trepitjar altres forats, ni movent-la ${LEG_NUDGE} mm cap a dins). No es fa cap forat de les potes: canvia «Als cantells» de la pota.`)
         return
@@ -335,6 +352,7 @@ export class FittingsBuilder extends LightsBuilder {
       holes.push(...found.holes)
     }
     if (!legs.length) return
+    if (skipped) this.hardwareWarning(`«${item.name}»: ${skipped === 1 ? "una pota del mig no hi cap" : `${skipped} potes del mig no hi caben`} (un altre forat o una peça just allà) i no es fa${skipped === 1 ? "" : "n"}.`)
     if (moved) this.hardwareWarning(`«${item.name}»: alguna placa no hi cabia just a la seva distància dels cantells (el fons o un altre forat hi tocava) i s'ha mogut ${fmtNum(moved, 1)} mm cap a dins.`)
     bottom.holes.push(...holes)
     this.order(item, legs.length, item.tags?.some((t) => t.startsWith("Tub")) ? "el tub amb el peu es demana a part per l'alçada (notes del ferratge)" : undefined)
