@@ -26,7 +26,7 @@ import { CableMarks, HoverCursor, ZoneHighlight } from "./cabinet/Highlights"
 import { CameraRig } from "./cabinet/CameraRig"
 import { panelBox } from "../../core/build/geometry"
 import { hoverKey, hoverTarget, useHoverLink } from "../hoverLink"
-import { useArrowHandles, useFaceHover, useFacePick, useSketchOverlay } from "./facePick"
+import { FaceMissContext, useArrowHandles, useFaceHover, useFacePick, useSketchOverlay } from "./facePick"
 import { DragArrows } from "./cabinet/DragArrows"
 import { SketchLines } from "./cabinet/SketchLines"
 import { CarveContext, SectionCapContext, SectionClip } from "./cabinet/SectionClip"
@@ -120,7 +120,7 @@ export function CabinetViewer({
   const wire = viewDir !== null || wireAll, lines = wireAll && viewDir === null
   const holesShown = showHoles || wire || edgesAll
   // Editor i Ferratges (`CarveContext`, fora del Canvas): els forats grans buidats, i la peça es refà quan canvien.
-  const carve = useContext(CarveContext)
+  const carve = useContext(CarveContext), faceMiss = useContext(FaceMissContext)
   const holesDrawn = holesShown || hardware || carve
   const { groupOf, panelKeys, pinsOf, fixedOf } = usePanelVisuals(panels, holesDrawn, hardware)
   // Mòdul (o moble sencer) que s'està arrossegant amb la nansa: desplaçament en viu.
@@ -189,7 +189,7 @@ export function CabinetViewer({
       onContextMenu={onContextClick ? (e) => e.preventDefault() : undefined}
       onPointerMissed={(e) => {
         const d = downAt.current
-        if (onDeselect && d && Math.hypot(e.clientX - d[0], e.clientY - d[1]) < 5) onDeselect()
+        if (d && Math.hypot(e.clientX - d[0], e.clientY - d[1]) < 5) { faceMiss?.(); onDeselect?.() }
       }}
     >
       {/* Mà sobre les peces d'un mòdul que es pot triar. */}

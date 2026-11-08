@@ -19,6 +19,8 @@ export const useFaceHover = () => useContext(FaceHoverContext)
 
 export const FacePickContext = createContext<FacePick | null>(null)
 export const useFacePick = () => useContext(FacePickContext)
+/** Clic al buit amb una eina de cara: el làser i el mesurar s'esborren (com al Taulell). */
+export const FaceMissContext = createContext<(() => void) | null>(null)
 
 /** Una línia dels croquis de Modelatge al 3D (mm de la composició): els desats, el triat i el que s'està dibuixant. */
 export interface SketchLine {
@@ -29,6 +31,8 @@ export interface SketchLine {
   box?: { min: Vec3; max: Vec3 }
   /** L'etiqueta de la vista prèvia (què es farà i a quina mida), al costat de la caixa. */
   label?: string
+  /** Una mida (làser, mesurar): un punt a cada cap i la distància al mig, com al Taulell. */
+  measure?: boolean
 }
 export const SketchOverlayContext = createContext<SketchLine[]>([])
 export const useSketchOverlay = () => useContext(SketchOverlayContext)

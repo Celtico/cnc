@@ -21,7 +21,7 @@ import { modulePieces, ModelingTree, pieceLocalId, setPieceEdit } from "../model
 import { PieceInspector } from "../modeling/PieceInspector"
 import { CarveContext } from "../../components/viewer/cabinet/SectionClip"
 import { DEFAULT_FACE_OPTS, previewFaceTool, runFaceTool, type FaceToolId, type FaceToolOpts } from "../modeling/faceTools"
-import { ArrowHandlesContext, FaceHoverContext, FacePickContext, SketchOverlayContext, type FaceHit, type FaceHover, type FacePick, type SketchLine } from "../../components/viewer/facePick"
+import { ArrowHandlesContext, FaceHoverContext, FaceMissContext, FacePickContext, SketchOverlayContext, type FaceHit, type FaceHover, type FacePick, type SketchLine } from "../../components/viewer/facePick"
 import { fromPlane } from "../../core/model"
 import { EditorViewport } from "./EditorViewport"
 import { framePose, warningTarget } from "./warningTarget"
@@ -166,6 +166,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             select({ kind: "module", id: m.id })
           }
         : null
+  const faceMiss = faceOpts.measureLine || faceOpts.measureFrom ? () => setFaceOpts((o) => ({ ...o, measureLine: undefined, measureFrom: undefined })) : null
   // La vista prèvia (en verd) de l'eina amb el ratolí a sobre d'una cara; es torna a calcular com a molt un cop per fotograma.
   const [hoverHit, setHoverHit] = useState<FaceHit | null>(null)
   const faceHover: FaceHover | null = useMemo(() => {
@@ -188,10 +189,10 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     const lift = (a: number, level: number, dir: number) => (q: [number, number]) => fromPlane(a, level + dir * 0.5, q)
     const saved = (comp.sketches ?? []).map((k): SketchLine => ({ pts: k.pts.map(lift(k.a, k.level, k.dir)), closed: true, tone: k.id === faceOpts.selSketch ? "selected" : "sketch" }))
     const d = faceOpts.draft
-    const m: SketchLine[] = faceOpts.measureLine ? [{ pts: faceOpts.measureLine, closed: false, tone: "selected" }] : faceOpts.measureFrom ? [{ pts: [faceOpts.measureFrom], closed: false, tone: "selected" }] : []
-    const pv: SketchLine[] = !preview ? [] : preview.boxes ? preview.boxes.map((box, i) => ({ pts: [], closed: false, tone: "draft" as const, box, label: i ? undefined : preview.label })) : preview.box ? [{ pts: [], closed: false, tone: "draft", box: preview.box }] : preview.pts ? [{ pts: preview.pts, closed: !!preview.closed, tone: "draft" }] : []
+    const m: SketchLine[] = faceOpts.measureLine ? [{ pts: faceOpts.measureLine, closed: false, tone: "selected", measure: true, label: faceOpts.measureLabel }] : faceOpts.measureFrom ? [{ pts: [faceOpts.measureFrom], closed: false, tone: "selected" }] : []
+    const pv: SketchLine[] = !preview ? [] : preview.boxes ? preview.boxes.map((box, i) => ({ pts: [], closed: false, tone: "draft" as const, box, label: i ? undefined : preview.label })) : preview.box ? [{ pts: [], closed: false, tone: "draft", box: preview.box }] : preview.pts ? [{ pts: preview.pts, closed: !!preview.closed, tone: "draft", measure: preview.measure, label: preview.label }] : []
     return [...saved, ...m, ...(d && !preview?.pts ? [{ pts: d.pts.map(lift(d.a, d.level, d.dir)), closed: false, tone: "draft" as const }] : []), ...pv]
-  }, [project.modeling, comp.sketches, faceOpts.draft, faceOpts.selSketch, faceOpts.measureLine, faceOpts.measureFrom, preview])
+  }, [project.modeling, comp.sketches, faceOpts.draft, faceOpts.selSketch, faceOpts.measureLine, faceOpts.measureFrom, faceOpts.measureLabel, preview])
   // Les fletxes d'arrossegar del tauler dinàmic i de la cara dinàmica (com al Taulell).
   const arrowHandles = useDragArrows(project.modeling ? faceTool : null, faceOpts, comp, build, selection.kind === "part" ? selection.id : null, setComp, commitHistory)
   const pieceSel = project.modeling && piece && selection.kind === "module" && module?.id === selection.id ? modulePieces(build?.panels ?? [], moduleIndex).find((x) => x.panel.id === piece) : undefined
@@ -239,7 +240,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       {project.modeling && (
         <ModelingRibbon build={build} comp={comp} setComp={setComp} selection={selection} select={select} settings={settings} center={partCenter} newModule={newModule} opts={opts} camera={camera} faceTool={faceTool} setFaceTool={setFaceTool} faceOpts={faceOpts} setFaceOpts={setFaceOpts} />
       )}
-      <FacePickContext.Provider value={facePick}>
+      <FacePickContext.Provider value={facePick}><FaceMissContext.Provider value={faceMiss}>
       <FaceHoverContext.Provider value={faceHover}>
       <SketchOverlayContext.Provider value={sketchLines}>
       <ArrowHandlesContext.Provider value={arrowHandles}>
@@ -354,7 +355,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     </ArrowHandlesContext.Provider>
     </SketchOverlayContext.Provider>
     </FaceHoverContext.Provider>
-    </FacePickContext.Provider>
+    </FaceMissContext.Provider></FacePickContext.Provider>
     </HoverLinkProvider>
   )
 }

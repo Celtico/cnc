@@ -78,6 +78,8 @@ export interface FaceToolOpts {
   /** Retall: la peça que s'ha de retallar (la primera clicada). */
   cutTarget?: string
   measureLine?: [Vec3, Vec3]
+  /** Làser: què es va mesurar (l'etiqueta que queda al costat de la mida). */
+  measureLabel?: string
   T: number
   /** Tauler dinàmic: el gruix és el que s'ha escrit (si no, el del moble on va). */
   ownT?: boolean
@@ -239,24 +241,26 @@ export function runFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition
     if (!o.measureFrom) return { opts: { ...o, measureFrom: pt, measureLine: undefined }, message: "" }
     const d = sub(pt, o.measureFrom)
     const fmt = (v: number) => String(r1(Math.abs(v))).replace(".", ",")
-    return { opts: { ...o, measureFrom: undefined, measureLine: [o.measureFrom, pt] }, message: `Distància: ${fmt(Math.hypot(...d))} mm (X ${fmt(d[0])} · Y ${fmt(d[1])} · Z ${fmt(d[2])})` }
+    return { opts: { ...o, measureFrom: undefined, measureLine: [o.measureFrom, pt], measureLabel: undefined }, message: `Distància: ${fmt(Math.hypot(...d))} mm (X ${fmt(d[0])} · Y ${fmt(d[1])} · Z ${fmt(d[2])})` }
   }
   if (tool === "laser" && o.laserMode === "axis") {
     const q = axisPoint(p, pt, n)
     if (!o.measureFrom) return { opts: { ...o, measureFrom: q.at, measureLine: undefined }, message: `Primer eix: ${q.what}. Clica el segon.` }
     const d = sub(q.at, o.measureFrom)
     const fmt = (v: number) => String(r1(Math.abs(v))).replace(".", ",")
-    return { opts: { ...o, measureFrom: undefined, measureLine: [o.measureFrom, q.at] }, message: `Eix a eix: ${fmt(Math.hypot(...d))} mm (X ${fmt(d[0])} · Y ${fmt(d[1])} · Z ${fmt(d[2])})` }
+    return { opts: { ...o, measureFrom: undefined, measureLine: [o.measureFrom, q.at], measureLabel: undefined }, message: `Eix a eix: ${fmt(Math.hypot(...d))} mm (X ${fmt(d[0])} · Y ${fmt(d[1])} · Z ${fmt(d[2])})` }
   }
   if (tool === "laser") {
-    let best = Infinity
+    let best = Infinity, to: Panel | undefined
     for (const q of panels) {
       if (q.id === p.id || q.role === "hardware") continue
       const t = rayBox(pt, n, panelAabb(q))
-      if (t !== null && t > 0.1 && t < best) best = t
+      if (t !== null && t > 0.1 && t < best) (best = t), (to = q)
     }
     if (!isFinite(best)) return { message: "Davant d'aquesta cara no hi ha cap peça.", error: true }
-    return { opts: { ...o, measureLine: [pt, add3(pt, n, best)] }, message: `Làser: ${String(r1(best)).replace(".", ",")} mm fins a la peça del davant` }
+    // Com el Taulell: la mida i de quina peça a quina.
+    const what = `${p.label} → ${to?.label ?? "la peça del davant"}`
+    return { opts: { ...o, measureLine: [pt, add3(pt, n, best)], measureLabel: what }, message: `${fmtMm(best)} mm · ${what}` }
   }
   if (tool === "dowel" || tool === "screw") return jointTool(tool, o, comp, panels, hit)
   if (tool === "cabineo") return cabineoTool(o, comp, panels, hit)
@@ -543,7 +547,7 @@ function rayBox(o: Vec3, d: Vec3, b: { min: Vec3; max: Vec3 }): number | null {
 }
 
 /** La vista prèvia d'una eina amb el ratolí a sobre d'una cara (en verd, com al Taulell): la peça que sortiria o el croquis a mig fer. */
-export function previewFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition, build: CompositionBuild | undefined, hit: FaceHit): { box?: { min: Vec3; max: Vec3 }; boxes?: { min: Vec3; max: Vec3 }[]; pts?: Vec3[]; closed?: boolean; label?: string } | null {
+export function previewFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composition, build: CompositionBuild | undefined, hit: FaceHit): { box?: { min: Vec3; max: Vec3 }; boxes?: { min: Vec3; max: Vec3 }[]; pts?: Vec3[]; closed?: boolean; label?: string; measure?: boolean } | null {
   // Unions i mecanitzats: abans de clicar, el que es faria i on, amb les mides (com el Taulell).
   if (tool === "dowel" || tool === "screw" || tool === "cabineo" || tool === "groove" || tool === "rebate" || tool === "hole" || tool === "cup" || tool === "line32") {
     const r = runFaceTool(tool, o, comp, build, hit)
@@ -552,7 +556,7 @@ export function previewFaceTool(tool: FaceToolId, o: FaceToolOpts, comp: Composi
   if (tool === "laser" || tool === "measure") {
     const r = runFaceTool(tool, { ...o, measureFrom: tool === "measure" ? o.measureFrom : o.laserMode === "axis" ? o.measureFrom : undefined }, comp, build, hit)
     const line = r.opts?.measureLine
-    return line && (tool === "laser" ? o.laserMode === "face" || !!o.measureFrom : !!o.measureFrom) ? { pts: line, closed: false } : null
+    return line && (tool === "laser" ? o.laserMode === "face" || !!o.measureFrom : !!o.measureFrom) ? { pts: line, closed: false, measure: true, label: r.opts?.measureLabel } : null
   }
   if (tool === "dynpanel" || tool === "fitblock" || tool === "shelf") {
     const r = runFaceTool(tool, o, comp, build, hit)
