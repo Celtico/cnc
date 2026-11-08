@@ -13,6 +13,7 @@ import { EXPLODE_MM, S } from "./constants"
 import { panelBox } from "../../../core/build/geometry"
 import { CarveContext, SECTION_CAP_MAT, SectionCapContext, noRaycast } from "./SectionClip"
 import { HoleMarks, PROPOSED_MAT } from "./HoleMarks"
+import { MachiningLines } from "./MachiningLines"
 import { useExplode } from "./anim"
 
 const BEVEL_USERDATA = { bevel: true }
@@ -194,14 +195,14 @@ export const PanelMesh = memo(function PanelMesh({
           onPointerOut={onHover ? () => onHover(panel, false) : undefined}
         >
           {!cut && <boxGeometry args={[L, W, T]} />}
-          {edges && <Edges color={wire === "lines" ? "#aeb6c2" : wire ? "#2b2418" : dimmed || see !== undefined ? "#a08a6a" : "#6b5a3e"} threshold={15} {...(edgeGeo ? { geometry: edgeGeo } : {})} />}
+          {edges && <Edges color={wire === "lines" ? LINE_COLOR : wire ? "#2b2418" : dimmed || see !== undefined ? "#a08a6a" : "#6b5a3e"} threshold={15} {...(edgeGeo && wire !== "lines" ? { geometry: edgeGeo } : {})} />}
         </mesh>
         {cap && (
           <mesh position={cut ? [0, 0, 0] : [L / 2, W / 2, T / 2]} geometry={cut ?? undefined} material={SECTION_CAP_MAT} raycast={noRaycast}>
             {!cut && <boxGeometry args={[L, W, T]} />}
           </mesh>
         )}
-        {showHoles && !carve && vpanel.holes.length > 0 && (proposedTags?.length ? (
+        {showHoles && !carve && wire !== "lines" && vpanel.holes.length > 0 && (proposedTags?.length ? (
           <>
             <HoleMarks holes={vpanel.holes.filter((h) => !h.tag || !proposedTags.includes(h.tag))} thickness={T} />
             <HoleMarks holes={vpanel.holes.filter((h) => !!h.tag && proposedTags.includes(h.tag))} thickness={T} material={PROPOSED_MAT} />
@@ -209,6 +210,7 @@ export const PanelMesh = memo(function PanelMesh({
         ) : (
           <HoleMarks holes={vpanel.holes} thickness={T} />
         ))}
+        {wire === "lines" && <MachiningLines holes={vpanel.holes} grooves={vpanel.grooves} thickness={vpanel.thickness} color={LINE_COLOR} />}
         {hardware && <PanelHardware panel={vpanel} pins={pins} fixed={fixed} />}
         {(hardware || selectedFitting) && <PanelFittings panel={vpanel} models={hardware} selected={selectedFitting} onSelect={onSelectFitting} />}
         {!carve && vpanel.grooves.map((g, i) => (
@@ -225,6 +227,8 @@ export const PanelMesh = memo(function PanelMesh({
 
 /** Opacitat de les peces a la vista en línies (vistes ortogràfiques). */
 export const WIRE_OPACITY = 0.12
+/** Les línies del Filferro sol (clares, com al Taulell). */
+export const LINE_COLOR = "#aeb6c2"
 
 /** Opacitat de la fusta translúcida (`seeThrough`). */
 const SEE_THROUGH_OPACITY = 0.4

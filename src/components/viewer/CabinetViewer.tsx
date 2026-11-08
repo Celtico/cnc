@@ -17,7 +17,8 @@ import { usePanelVisuals } from "./cabinet/usePanelVisuals"
 import { usePanelHandlers } from "./cabinet/usePanelHandlers"
 import { useObjectBoxes } from "./cabinet/useObjectBoxes"
 import { ExplodeWith, MovingPanel } from "./cabinet/motion"
-import { PanelMesh, WIRE_OPACITY } from "./cabinet/PanelMesh"
+import { LINE_COLOR, PanelMesh, WIRE_OPACITY } from "./cabinet/PanelMesh"
+import { LinesOnly } from "./cabinet/LinesOnly"
 import { RefGhost } from "./cabinet/RefGhost"
 import { ModelMesh } from "./cabinet/ModelMesh"
 import { MoveHandle } from "./cabinet/MoveHandle"
@@ -116,7 +117,7 @@ export function CabinetViewer({
   // Vistes Davant · Darrere · Esquerra · Dreta · Dalt (per decisió de l'usuari, 2026-10-14: «sense perspectiva i amb
   // fils, per poder moure la peça seleccionada»): càmera ortogràfica (`CameraRig`) i el moble en línies, les peces gairebé
   // transparents amb el perfil i els forats a la vista. «Enquadrar» torna al 3/4 en perspectiva.
-  const wire = viewDir !== null || wireAll
+  const wire = viewDir !== null || wireAll, lines = wireAll && viewDir === null
   const holesShown = showHoles || wire || edgesAll
   // Modelatge (`CarveContext`, fora del Canvas): els forats buidats, i la peça es refà quan canvien.
   const carve = useContext(CarveContext)
@@ -221,7 +222,7 @@ export function CabinetViewer({
         {sketchLines.length > 0 && <SketchLines lines={sketchLines} />}
         {arrowHandles && arrowHandles.arrows.length > 0 && <DragArrows h={arrowHandles} />}
         <SectionClip section={section} offset={[size.width / 2, 0, size.depth / 2]} />
-        {panels.map((p) => {
+        <LinesOnly on={lines} color={LINE_COLOR}>{panels.map((p) => {
           const g = groupOf.get(p.id)
           const active = !!g && (!openOnly || openOnly.has(g.id))
           const t = active ? opening : 0
@@ -239,8 +240,8 @@ export function CabinetViewer({
                 exploded={exploded}
                 showHoles={holesShown}
                 // Un avís: les seves peces sòlides i la resta translúcida (es veu on és).
-                seeThrough={wire ? (wireAll && viewDir === null ? 0 : WIRE_OPACITY) : alertPanels?.size && !alertPanels.has(p.id) ? ALERT_VEIL : seeThroughAll}
-                wire={wireAll && viewDir === null ? "lines" : wire}
+                seeThrough={wire ? (lines ? 0 : WIRE_OPACITY) : alertPanels?.size && !alertPanels.has(p.id) ? ALERT_VEIL : seeThroughAll}
+                wire={lines ? "lines" : wire}
                 // Mòdul triat: sòlid amb el contorn taronja. Translúcid només amb un compartiment triat (per veure'l a dins).
                 dimmed={q.guides && !!highlightZone && highlightZone.veil !== false && selectedIndex !== undefined && p.module === selectedIndex}
                 edges={q.guides || wire || edgesAll}
@@ -257,7 +258,7 @@ export function CabinetViewer({
             </MovingPanel>
             </group>
           )
-        })}
+        })}</LinesOnly>
         {/* Els que tallen es veuen sempre (per decisió de l'usuari, 2026-10-14): en verd si tallen alguna peça, en vermell si
             no en tallen cap (mal col·locats). */}
         {ghosts?.map((g) => (
@@ -329,11 +330,11 @@ export function CabinetViewer({
           />
         )}
         {/* Les potes de l'app van amb la base (que a l'explosió baixa). */}
-        {hardware && modules?.map((m) => m.legs && !m.legs.fitted && !(moduleDrag && (moduleDrag.all || moduleDrag.index === m.index)) && (
+        <LinesOnly on={lines} color={LINE_COLOR}>{hardware && modules?.map((m) => m.legs && !m.legs.fitted && !(moduleDrag && (moduleDrag.all || moduleDrag.index === m.index)) && (
           <ExplodeWith key={`legs-${m.id}`} exploded={exploded} dir={DOWN}>
             <ModuleLegs x={m.x} z={m.z ?? 0} width={m.width} depth={m.legs.depth} height={m.legs.height} inset={m.legs.inset} points={m.legs.points} />
           </ExplodeWith>
-        ))}
+        ))}</LinesOnly>
         {highlightZone && <ZoneHighlight box={highlightZone} />}
         {/* Les peces d'un avís, amb un contorn vermell que es veu sempre. */}
         {alertPanels?.size ? panels.filter((p) => alertPanels.has(p.id)).slice(0, 40).map((p) => {
