@@ -1,8 +1,8 @@
 import { Box, Button, Checkbox, CloseButton, Dialog, Field, HStack, Input, NativeSelect, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useMemo, useState, type ReactNode } from "react"
 import { NumRow } from "../../components/NumRow"
-import { moduleOfCab, taulellMaterial, type TaulellCab } from "../../core/import/taulell"
-import { boardChoices, newId, type Module, type Settings } from "../../core/model"
+import { cabModule, DEF, FACTORY, load, loadModels, save, saveModels, type Cab, type Model } from "./nouMobleModels"
+import { boardChoices, type Module, type Settings } from "../../core/model"
 import { MaterialSelect } from "../settings/MaterialSelect"
 import { toaster } from "../../components/ui/toaster"
 
@@ -11,78 +11,6 @@ import { toaster } from "../../components/ui/toaster"
  * nostres components. El moble es fa amb la mateixa fórmula que obre els `.taulell` (`moduleOfCab`), així surt un mòdul
  * normal del cnc. Recorda les últimes opcions: el següent moble nou surt igual que l'últim.
  */
-
-const KEY = "cnc-nou-moble-v1"
-/** Els valors de fàbrica (els de `CABDEF` del Taulell, «Buc bàsic»). */
-const DEF: Required<Pick<TaulellCab, "W" | "H" | "D" | "pl" | "tj" | "t" | "tb" | "cols" | "shelves" | "ss" | "drawers" | "drawerH" | "dhs" | "dsys" | "doors" | "plinth" | "plinthJoin" | "feet" | "topT" | "railW" | "railV" | "back" | "bset" | "bdep" | "bmat" | "s32">> & { cm: string; dm: string } = {
-  W: 1000,
-  H: 860,
-  D: 560,
-  pl: 100,
-  tj: 1,
-  t: 19,
-  tb: 19,
-  cols: 1,
-  shelves: 0,
-  ss: 1,
-  drawers: 0,
-  drawerH: 181,
-  dhs: "",
-  dsys: "fusta",
-  doors: false,
-  plinth: false,
-  plinthJoin: true,
-  feet: "axilo",
-  topT: "front",
-  railW: 200,
-  railV: "none",
-  back: "inside",
-  bset: 49,
-  bdep: 8,
-  bmat: "auto",
-  s32: true,
-  cm: "",
-  dm: "",
-}
-type Cab = typeof DEF
-
-function load(): Cab {
-  try {
-    const raw = JSON.parse(localStorage.getItem(KEY) ?? "null") as Partial<Cab> | null
-    return { ...DEF, ...(raw ?? {}) }
-  } catch {
-    return DEF
-  }
-}
-function save(c: Cab) {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(c))
-  } catch {
-    /* sense desar: el formulari funciona igual */
-  }
-}
-
-/** Els models del Nou moble (com els del Taulell): nom, família, subfamília i les opcions. */
-type Model = { n: string; fam?: string; sub?: string; p: Cab }
-const MODELS_KEY = "cnc-nou-moble-models-v1"
-/** Els models de fàbrica: el «Buc bàsic» del Taulell. */
-const FACTORY: Model[] = [{ n: "Buc bàsic", p: DEF }]
-function loadModels(): { list: Model[]; cur: number } {
-  try {
-    const raw = JSON.parse(localStorage.getItem(MODELS_KEY) ?? "null") as { list: Model[]; cur: number } | null
-    if (raw?.list?.length) return { list: raw.list.map((m) => ({ ...m, p: { ...DEF, ...m.p } })), cur: Math.min(raw.cur ?? 0, raw.list.length - 1) }
-  } catch {
-    /* res desat */
-  }
-  return { list: FACTORY, cur: 0 }
-}
-function saveModels(v: { list: Model[]; cur: number }) {
-  try {
-    localStorage.setItem(MODELS_KEY, JSON.stringify(v))
-  } catch {
-    /* sense desar */
-  }
-}
 
 /** Les potes AXILO 78 del Taulell (`axiloFor`): l'alçada nominal, el que regula i la referència, per al sòcol triat. */
 const AXILO: [number, number, number, string][] = [
@@ -111,16 +39,14 @@ export function NouMobleDialog({ open, onClose, onCreate, settings, count }: { o
   const fams = [...new Set(models.list.map((m) => m.fam ?? "").filter(Boolean))].sort((a, b) => a.localeCompare(b, "ca"))
   const shown = models.list.map((m, i) => [m, i] as const).filter(([m]) => !fam || (fam === "__" ? !m.fam : m.fam === fam))
   const pick = (i: number) => (setModels({ ...models, cur: i }), setC(models.list[i]!.p), setAsk(null))
-  const names = useMemo(() => settings.materials.map((m) => m.name), [settings.materials])
   const boards = useMemo(() => boardChoices(settings.materials), [settings.materials])
   const cm = c.cm || settings.defaults.material
   const dm = c.dm || cm
-  const mat = (k: string | undefined) => (k && names.includes(k) ? k : taulellMaterial(k, names, settings.defaults.material))
   const create = () => {
     save(c)
     const warnings: string[] = []
-    const m = moduleOfCab({ ...c, id: newId("t"), name: `Moble ${count + 1}`, cm, dm }, mat, 0, (w) => warnings.push(w))
-    onCreate({ ...m, gapBefore: 0 }, warnings)
+    const m = cabModule(c, settings, `Moble ${count + 1}`, (w) => warnings.push(w))
+    onCreate(m, warnings)
   }
   const num = (k: keyof Cab, label: string, min: number, max: number, suffix = "mm") => <NumRow key={k} label={label} suffix={suffix} value={c[k] as number} min={min} max={max} step={1} onChange={(v) => set({ [k]: v } as Partial<Cab>)} />
   const sel = (k: keyof Cab, label: string, items: [string, string][], full = false) => (
@@ -335,6 +261,11 @@ export function NouMobleDialog({ open, onClose, onCreate, settings, count }: { o
                     ], true)}
                     {(c.back === "groove" || c.back === "inside") && num("bset", "Retirada del fons", 0, 150)}
                     {(c.back === "groove" || c.back === "rebate") && num("bdep", c.back === "rebate" ? "Ample galze" : "Fondària ranura", 3, 16)}
+                    {sel("union", "Unió de la caixa", [
+                      ["cabineo", "Cabineo"],
+                      ["screw", "Cargols"],
+                      ["dowel", "Clavilles"],
+                    ], true)}
                     <MaterialSelect label="Material cos" materials={boards} value={cm} onChange={(v) => set({ cm: v })} />
                     {sel("bmat", "Material fons", [
                       ["auto", "Igual que el cos (si fa 8 mm o més)"],

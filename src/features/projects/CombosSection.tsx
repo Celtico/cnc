@@ -22,6 +22,7 @@ export function CombosSection({
   onCreate,
   title = "Models constructius",
   icon = LuBlocks,
+  keepMaterials = false,
   description = "Totes les combinacions de dues regles del model sobre el mateix moble, per veure què fa cada opció i treure'n idees. Tria'n un per obrir-lo com a moble nou.",
 }: {
   value: string
@@ -34,6 +35,8 @@ export function CombosSection({
   title?: string
   icon?: IconType
   description?: string
+  /** Amb els materials de cada plantilla (els models del Nou moble), no els de Preferències. */
+  keepMaterials?: boolean
 }) {
   const cols = useGalleryCols()
   // Amb el tauler i el fons de Preferències (`withDefaultMaterials`): l'id de la miniatura els porta, perquè canviï amb ells.
@@ -46,10 +49,10 @@ export function CombosSection({
         .filter((c) => c.items.length > 0)
         .map((c) => ({
           ...c,
-          items: c.items.map((t): Template => ({ ...t, id: `${t.id}@${key}`, make: () => withDefaultMaterials(settings, t.make()) })),
+          items: c.items.map((t): Template => ({ ...t, id: `${t.id}@${key}`, make: keepMaterials ? t.make : () => withDefaultMaterials(settings, t.make()) })),
           ...(c.kickers ? { kickers: Object.fromEntries(Object.entries(c.kickers).map(([k, v]) => [`${k}@${key}`, v])) } : {}),
         })),
-    [categories, settings, key],
+    [categories, settings, key, keepMaterials],
   )
   return (
     <FoldItem id={value} icon={icon} title={title} count={shown.reduce((n, c) => n + c.items.length, 0)}>

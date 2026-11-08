@@ -1,6 +1,6 @@
 import { SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useDeferredValue, useEffect, useState, type ReactNode } from "react"
-import { LuBlocks, LuFlaskConical, LuFolders, LuHistory, LuRows3, LuShapes } from "react-icons/lu"
+import { LuBlocks, LuFlaskConical, LuFolders, LuHistory, LuLayoutGrid, LuRows3, LuShapes } from "react-icons/lu"
 import { SearchBar } from "../../components/SearchBar"
 import { FURNITURE_COLLECTIONS, JOINED_COMBOS, SLICED_GALLERY, MODEL_COMBOS, SHAPE_COMBOS, STORE_CATALOG, type ComboCategory, withInnerClearance, withZonePlinths, type Composition, type Template } from "../../core/model"
 import { useSettings } from "../settings/SettingsContext"
@@ -24,7 +24,10 @@ export function NewMobleGallery({
   add,
   extra,
   catalog = true,
+  models,
 }: {
+  /** Els models del Nou moble (Modelatge, com el Catàleg del Taulell): una categoria per família. */
+  models?: ComboCategory[]
   /** Amb el catàleg de mobles (Catàleg, Llistons, Col·leccions…); sense (Modelatge), només l'Historial i els Projectes. */
   catalog?: boolean
   onCreate: (composition: Composition, name: string) => void
@@ -75,6 +78,9 @@ export function NewMobleGallery({
   const shapesCount = shapes.reduce((n, c) => n + c.items.length, 0)
   const joined = filterCats(JOINED_COMBOS)
   const joinedCount = joined.reduce((n, c) => n + c.items.length, 0)
+  const own = filterCats(models ?? [])
+  const ownCount = own.reduce((n, c) => n + c.items.length, 0)
+  const [openOwn, setOpenOwn] = useSessionList(`${storageKey}-models`)
   const tests = filterCats(samples)
   const testsCount = tests.reduce((n, c) => n + c.items.length, 0)
   const [openCats, setOpenCats] = useSessionList(`${storageKey}-store`)
@@ -86,7 +92,7 @@ export function NewMobleGallery({
   const [openTests, setOpenTests] = useSessionList(`${storageKey}-tests`)
   const hist = history(matches, !!q)
   // Amb cerca, s'obren les seccions que tenen resultats.
-  const found = [...(hist.projects?.count ? ["projects"] : []), ...(hist.count ? ["history"] : []), ...(!catalog ? [] : [...(storeCount ? ["store"] : []), ...(slicedCount ? ["sliced"] : []), ...(collectionsCount ? ["collections"] : []), ...(combosCount ? ["combos"] : []), ...(shapesCount ? ["shapes"] : []), ...(joinedCount ? ["joined"] : []), ...(testsCount ? ["tests"] : [])])]
+  const found = [...(hist.projects?.count ? ["projects"] : []), ...(hist.count ? ["history"] : []), ...(ownCount ? ["models"] : []), ...(!catalog ? [] : [...(storeCount ? ["store"] : []), ...(slicedCount ? ["sliced"] : []), ...(collectionsCount ? ["collections"] : []), ...(combosCount ? ["combos"] : []), ...(shapesCount ? ["shapes"] : []), ...(joinedCount ? ["joined"] : []), ...(testsCount ? ["tests"] : [])])]
   // Una plantilla instanciada a partir d'ara pren la folgança de les peces de dins de Preferències (com un mòdul nou).
   const { settings } = useSettings()
   const pick = (t: Template) => onCreate(withZonePlinths(withInnerClearance({ ...t.make(), kind: t.kind }, settings.gaps.innerClearance, settings.gaps.grooveClearance)), t.name)
@@ -113,6 +119,20 @@ export function NewMobleGallery({
           </FoldItem>
         )}
 
+        {models && (
+          <CombosSection
+            value="models"
+            title="Catàleg"
+            icon={LuLayoutGrid}
+            description="Els models del Nou moble (Inici › Nou moble › Desa com a model nou), per famílies, com al Taulell. Tria'n un per començar un model nou amb aquest moble."
+            categories={own}
+            searching={!!q}
+            open={openOwn}
+            onOpenChange={setOpenOwn}
+            onCreate={(t) => onCreate(t.make(), t.name)}
+            keepMaterials
+          />
+        )}
         {catalog && (<>
         <CatalogSection
           value="store"

@@ -1,5 +1,5 @@
 import { Menu, Text, VStack } from "@chakra-ui/react"
-import { useEffect, useRef, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { SaveFileDialog } from "../file/SaveFileDialog"
 import { OpenFileButton } from "../file/OpenFileButton"
 import { showAmbient } from "../file/openAnyFile"
@@ -19,6 +19,8 @@ import { toaster } from "../../components/ui/toaster"
 import { PageHeader } from "../../components/PageHeader"
 import { ConfirmDialog } from "../../components/ConfirmDialog"
 import { projectSearchText } from "./searchText"
+import { useSettings } from "../settings/SettingsContext"
+import { modelCategories } from "../modeling/nouMobleModels"
 
 /** Els tipus que es trien a «Nou moble». */
 const NEW_MOBLE_TYPES = [
@@ -65,6 +67,9 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone, page: pa
   const [toSave, setToSave] = useState<Project | null>(null)
   const [toMove, setToMove] = useState<Project | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
+  // Modelatge: els models del Nou moble també al Catàleg (cel, 2026-11-08, com al Taulell).
+  const { settings } = useSettings()
+  const models = useMemo(() => (pageKey === "modelatge" ? modelCategories(settings) : undefined), [pageKey, settings])
 
   // Botó del menú de l'esquerra: obre el selector de fitxers.
   const handled = useRef<number | null>(null)
@@ -118,6 +123,7 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone, page: pa
         onCreate={(c, n) => void handleCreate(c, n)}
         storageKey={`mobles:gallery-${page.storage}`}
         catalog={page.catalog}
+        models={models}
         // El botó principal al costat del cercador (com a Ambients i Objectes) i «Obrir fitxer» a la mateixa fila.
         // «Nou moble» demana el tipus (per decisió de l'usuari, 2026-10-20: «triar si és de cuina o és un moble normal»): el
         // normal té el suport a cada mòdul; la cuina, un per a tots (Moble › Cuina). Es crea en blanc.
