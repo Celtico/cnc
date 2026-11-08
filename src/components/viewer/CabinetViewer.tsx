@@ -51,7 +51,7 @@ export function CabinetViewer({
   onSelectModule,
   ghosts,
   viewDir = null,
-  wireAll = false,
+  wireAll = false, edgesAll = false,
   section = null,
   opening = 0,
   openOnly = null,
@@ -117,7 +117,7 @@ export function CabinetViewer({
   // fils, per poder moure la peça seleccionada»): càmera ortogràfica (`CameraRig`) i el moble en línies, les peces gairebé
   // transparents amb el perfil i els forats a la vista. «Enquadrar» torna al 3/4 en perspectiva.
   const wire = viewDir !== null || wireAll
-  const holesShown = showHoles || wire
+  const holesShown = showHoles || wire || edgesAll
   // Modelatge (`CarveContext`, fora del Canvas): els forats buidats, i la peça es refà quan canvien.
   const carve = useContext(CarveContext)
   const holesDrawn = holesShown || hardware || carve
@@ -243,7 +243,7 @@ export function CabinetViewer({
                 wire={wire}
                 // Mòdul triat: sòlid amb el contorn taronja. Translúcid només amb un compartiment triat (per veure'l a dins).
                 dimmed={q.guides && !!highlightZone && highlightZone.veil !== false && selectedIndex !== undefined && p.module === selectedIndex}
-                edges={q.guides || wire}
+                edges={q.guides || wire || edgesAll}
                 materialMode={materialMode}
                 materials={materials}
                 hardware={hardware}

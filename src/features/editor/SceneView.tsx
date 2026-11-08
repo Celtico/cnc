@@ -85,7 +85,8 @@ export function SceneView({
       hoverAt={hoverKeyAt}
       ghosts={ghosts}
       viewDir={viewDir}
-      wireAll={viewer.wire}
+      wireAll={viewer.wire && viewer.noFaces}
+      edgesAll={viewer.wire && !viewer.noFaces}
       section={viewer.section}
       opening={viewer.opening}
       openOnly={openOnly}

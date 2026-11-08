@@ -8,6 +8,8 @@ describe("Nou moble: la unió de la caixa (cel, 2026-11-08)", () => {
   it("surt amb Cabineo, com al Taulell", () => {
     expect(cabModule(DEF, DEFAULT_SETTINGS, "Buc").hardware?.dowel?.engine).toBe("cabineo")
     expect(holes("cabineo").some((h) => h.tag === "cabineo")).toBe(true)
+    // A tots els llocs la mateixa unió (també el fons): cap espiga.
+    expect(holes("cabineo").filter((h) => h.tag === "dowel")).toEqual([])
   })
   it("també amb cargols o clavilles", () => {
     expect(holes("screw").some((h) => h.tag === "screw")).toBe(true)

@@ -1,5 +1,5 @@
 import { NO_EDGES, type Cutout, type Panel, type Pt, type Vec3, type ZoneBack, UI_PATHS, ccw, frontOptionsUse, polygonArea, zoneBackRegions } from "../../model"
-import { X, Y, Z, dowelJoint, neg, placement, r, threeAlong, toLocal } from "../geometry"
+import { X, Y, Z, dowelJoint, neg, placement, r, threeAlong, toLocal, unionJoint } from "../geometry"
 import { MIN_OPEN_RATIO, grilleCutouts, type Rect } from "../grille"
 import { HollowWallsBuilder } from "./hollowWalls"
 import { edges, near, shapeOutline } from "./helpers"
@@ -271,7 +271,8 @@ export class CarcassBuilder extends HollowWallsBuilder {
       if (yMid < v.yB || yMid > v.yT) continue
       // Sobre la fondària real de la peça (la tapa amb ranura d'aire és més curta).
       // Cabineo o cargols (`Carcass.union`): el connector a la cara de dins (la de dalt de la base, la de sota de la tapa).
-      if (this.joinOther(panel, v.panel, zRear, Math.min(d.D, zRear + width), (z): Vec3 => [xFace, yMid, z], [0, isBottom ? 1 : -1, 0])) continue
+      // Els travessers (tapa amb travessers), per sobre com al Taulell: hi va el taulell de cuina i no es veu.
+      if (this.joinOther(panel, v.panel, zRear, Math.min(d.D, zRear + width), (z): Vec3 => [xFace, yMid, z], [0, isBottom || this.m.carcass.top.kind === "rails" ? 1 : -1, 0])) continue
       const zs = threeAlong(zRear, Math.min(d.D, zRear + width), this.hw.dowel.endOffset)
       dowelJoint(panel, v.panel, zs.map((z): Vec3 => [xFace, yMid, z]), this.hw.dowel, this.hw.dowel.tag)
     }
@@ -366,18 +367,19 @@ export class CarcassBuilder extends HollowWallsBuilder {
     const rad = dw.diameter / 2
     // Només els punts que cauen dins de la peça que continua (la tapa amb ranura d'aire no arriba al fons).
     // Cada espiga, a la peça del fons on cau (el fons d'una zona sense fons s'ha tallat, `addBack`).
-    const join = (through: Panel, pts: Vec3[]) => {
-      const inThrough = pts.filter((w) => {
+    // La mateixa unió que la resta de la caixa (espigues, Cabineo o cargols); el Cabineo, a la cara de davant del fons.
+    const join = (through: Panel, lo: number, hi: number, at: (t: number) => Vec3) => {
+      const inThrough = (w: Vec3) => {
         const l = toLocal(through, w)
         return l[0] >= rad && l[0] <= through.length - rad && l[1] >= rad && l[1] <= through.width - rad
-      })
-      for (const piece of pieces) dowelJoint(piece, through, inThrough.filter((w) => pieceHas(piece, w, rad)), dw, dw.tag)
+      }
+      for (const piece of pieces) unionJoint(piece, through, lo, hi, at, [0, 0, 1], dw, (w) => inThrough(w) && pieceHas(piece, w, rad))
     }
     for (const v of this.verticals) {
       if (!v.outer) continue
       const xFace = near(v.xR, interior.x0) ? v.xR : near(v.xL, interior.x1) ? v.xL : null
       if (xFace === null) continue
-      join(v.panel, threeAlong(interior.y0, interior.y1, dw.endOffset).map((y): Vec3 => [xFace, y, zMid]))
+      join(v.panel, interior.y0, interior.y1, (y): Vec3 => [xFace, y, zMid])
     }
     for (const h of this.horizontals) {
       if (!h.outer) continue
@@ -385,7 +387,7 @@ export class CarcassBuilder extends HollowWallsBuilder {
       if (d.tableTop && h.panel.id === "top") continue
       const yFace = d.hasBase && near(h.yTop, interior.y0) ? h.yTop : d.hasTop && near(h.yBottom, interior.y1) ? h.yBottom : null
       if (yFace === null) continue
-      join(h.panel, threeAlong(interior.x0, interior.x1, dw.endOffset).map((x): Vec3 => [x, yFace, zMid]))
+      join(h.panel, interior.x0, interior.x1, (x): Vec3 => [x, yFace, zMid])
     }
   }
 
@@ -586,14 +588,14 @@ export class CarcassBuilder extends HollowWallsBuilder {
         const xFace = near(v.xR, rect.x0) ? v.xR : near(v.xL, rect.x1) ? v.xL : null
         if (xFace === null) continue
         const ys = span(Math.max(rect.y0, v.yB + (v.endGap ?? 0)), Math.min(rect.y1, v.yT - (v.endGap ?? 0)))
-        joined += dowelJoint(back, v.panel, ys.map((y): Vec3 => [xFace, y, zMid]), dw, dw.tag)
+        if (ys.length) joined += unionJoint(back, v.panel, ys[0]! - dw.endOffset, ys[ys.length - 1]! + dw.endOffset, (y): Vec3 => [xFace, y, zMid], [0, 0, 1], dw)
       }
       for (const h of this.horizontals) {
         if (zMid < h.zRear + rad || zMid > h.zFront - rad) continue
         const yFace = near(h.yTop, rect.y0) ? h.yTop : near(h.yBottom, rect.y1) ? h.yBottom : null
         if (yFace === null) continue
         const xs = span(Math.max(rect.x0, h.xL + (h.endGap ?? 0)), Math.min(rect.x1, h.xR - (h.endGap ?? 0)))
-        joined += dowelJoint(back, h.panel, xs.map((x): Vec3 => [x, yFace, zMid]), dw, dw.tag)
+        if (xs.length) joined += unionJoint(back, h.panel, xs[0]! - dw.endOffset, xs[xs.length - 1]! + dw.endOffset, (x): Vec3 => [x, yFace, zMid], [0, 0, 1], dw)
       }
       if (!joined) this.warnings.push({ code: "back-inset", message: "Fons de la zona encastat sense cap peça al voltant on unir-lo amb espigues: fixa'l amb cargols o llistons.", zoneId: b.zoneId, panelId: back.id })
     }

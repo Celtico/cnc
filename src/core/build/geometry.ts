@@ -275,3 +275,22 @@ export function snap(target: number, candidates: readonly number[]): number {
   for (const c of candidates) if (Math.abs(c - target) < Math.abs(best - target)) best = c
   return best
 }
+
+/** La unió de la caixa triada (`dowelSpec`): espigues, Cabineo o cargols. */
+export type UnionSpec = DowelSpec & { endOffset: number; tag?: string; cabineo?: CabineoSpec & { margin: number; pitch: number }; screw?: { d: number; margin: number; pitch: number } }
+
+/**
+ * Una unió de `butt` (hi topa) amb `through` (continua) al llarg de [lo, hi] (`at` dona el punt al mig del gruix de
+ * `butt`), amb la unió de la caixa que toca: espigues (tres, a `endOffset` dels extrems), Cabineo o cargols (cada
+ * `pitch`). Una sola unió a tot arreu (cel, 2026-11-08: «a tots els llocs la mateixa unió»). `keep` treu els punts que no
+ * cauen a les peces. Retorna quantes n'ha fet.
+ */
+export function unionJoint(butt: Panel, through: Panel, lo: number, hi: number, at: (t: number) => Vec3, pocketDir: Vec3, u: UnionSpec, keep: (w: Vec3) => boolean = () => true, buttShift?: Vec3): number {
+  const c = u.cabineo, s = u.screw
+  const ts = c ? spreadAlong(lo, hi, c.margin, c.pitch, c.pocketD) : s ? spreadAlong(lo, hi, s.margin, s.pitch, s.d) : threeAlong(lo, hi, u.endOffset)
+  const pts = ts.map(at).filter(keep)
+  if (!pts.length) return 0
+  if (c) return cabineoJoint(butt, through, pts, pocketDir, c, buttShift)
+  if (s) return screwJoint(butt, through, pts, s.d, buttShift)
+  return dowelJoint(butt, through, pts, u, u.tag, buttShift)
+}

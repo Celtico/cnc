@@ -50,6 +50,8 @@ export interface CabinetViewerProps {
   viewDir?: ViewName | null
   /** Totes les peces en filferro (com les vistes d'escaire). */
   wireAll?: boolean
+  /** Filferro a sobre de les cares (Modelatge: Filferro amb Ombrejat, Plana o Transparent): els cantells i els forats de totes les peces. */
+  edgesAll?: boolean
   /** Un pla de secció (mm de la composició): es veu la meitat de sota del pla (`flip`: la de sobre). */
   section?: { axis: 0 | 1 | 2; pos: number; flip: boolean; paint?: boolean } | null
   /** Obertura de portes i calaixos, 0..1. */

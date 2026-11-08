@@ -146,7 +146,13 @@ export function ModelingRibbon({
   const nouMoble: Tool = { icon: "cabinet", label: "Nou moble", hint: "Un moble nou amb les opcions del Taulell (mides, calaixos, potes, sostre, fons…). Recorda les de l'últim.", on: wizard, run: () => setWizard(true) }
   const [picking, setPicking] = useState(false)
   const plantilles: Tool = { icon: "tpl", label: "Plantilles", hint: "Afegeix un moble de la galeria (o un en blanc).", on: picking, run: () => setPicking(true) }
-  const plana: Tool = { icon: "flat", label: "Plana", hint: "Cada tipus de peça d'un color.", on: opts.roleColors, run: () => opts.setRoleColors(!opts.roleColors) }
+  // Visualització (cel, 2026-11-08): el Filferro es pot sumar a Ombrejat, Plana o Transparent (els cantells per sobre de
+  // les cares); tornar a clicar la cara activa amb el Filferro encès deixa només el filferro.
+  const v = opts.viewer
+  const faces = !v.noFaces
+  const surface = (on: boolean, apply: () => void) => () => (on && faces && v.wire ? opts.setViewer({ noFaces: true }) : (apply(), v.noFaces && opts.setViewer({ noFaces: false })))
+  const planaOn = faces && opts.roleColors
+  const plana: Tool = { icon: "flat", label: "Plana", hint: "Cada tipus de peça d'un color.", on: planaOn, run: surface(planaOn, () => opts.setRoleColors(faces ? !opts.roleColors : true)) }
   const interior: Tool = { icon: "interior", label: "Interior", hint: "Amaga les portes i els frontals per veure l'interior.", on: !!opts.viewer.hideFronts, run: () => opts.setViewer({ hideFronts: !opts.viewer.hideFronts }) }
   const seccio: Tool = { icon: "section", label: "Secció", hint: "Talla el model amb un pla i en mostra una meitat.", on: !!opts.viewer.section, run: () => opts.setViewer({ section: opts.viewer.section ? null : { axis: 0, pos: Math.round(center.x), flip: false, paint: true } }) }
   const TABS: [string, Group[]][] = [
@@ -169,9 +175,9 @@ export function ModelingRibbon({
         [
           "Visualització",
           [
-            { icon: "dsh", label: "Ombrejat", hint: "Les peces opaques, amb el seu material.", on: opts.viewer.opacity === 1 && !opts.roleColors && !opts.viewer.wire, run: () => (opts.setRoleColors(false), opts.setViewer({ opacity: 1, wire: false })) },
-            { icon: "dwire", label: "Filferro", hint: "Només els cantells de les peces.", on: !!opts.viewer.wire, run: () => opts.setViewer({ wire: !opts.viewer.wire }) },
-            { icon: "dxray", label: "Transparent", hint: "Les peces translúcides, per veure'n l'interior.", on: opts.viewer.opacity < 1, run: () => opts.setViewer({ opacity: opts.viewer.opacity < 1 ? 1 : 0.35, wire: false }) },
+            { icon: "dsh", label: "Ombrejat", hint: "Les peces opaques, amb el seu material. Amb el Filferro, els cantells per sobre.", on: faces && v.opacity === 1 && !opts.roleColors, run: surface(faces && v.opacity === 1 && !opts.roleColors, () => (opts.setRoleColors(false), opts.setViewer({ opacity: 1, noFaces: false }))) },
+            { icon: "dwire", label: "Filferro", hint: "Els cantells i els forats de les peces: sol, o per sobre d'Ombrejat, Plana o Transparent.", on: !!v.wire, run: () => opts.setViewer(v.wire ? { wire: false, noFaces: false } : { wire: true }) },
+            { icon: "dxray", label: "Transparent", hint: "Les peces translúcides, per veure'n l'interior. Amb el Filferro, els cantells per sobre.", on: faces && v.opacity < 1, run: surface(faces && v.opacity < 1, () => opts.setViewer({ opacity: faces && v.opacity < 1 ? 1 : 0.35, noFaces: false })) },
             plana,
             interior,
             seccio,

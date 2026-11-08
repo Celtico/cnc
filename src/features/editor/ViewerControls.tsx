@@ -10,6 +10,8 @@ export interface ViewerState {
   materialMode: "material" | "role"
   /** Filferro (el del Taulell): només els cantells de les peces. */
   wire?: boolean
+  /** Només el filferro (sense Ombrejat, Plana ni Transparent): sense cares. */
+  noFaces?: boolean
   /** Interior (el del Taulell): sense portes ni frontals, per veure el que hi ha dins. */
   hideFronts?: boolean
   /** Secció (la del Taulell): un pla d'escaire talla el moble i es veu una meitat (eix, posició en mm, quina meitat). */
