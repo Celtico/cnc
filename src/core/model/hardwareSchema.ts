@@ -101,7 +101,7 @@ const CATEGORY_IDS = HARDWARE_CATEGORIES.map((c) => c.id) as [HardwareCategory, 
  * (electrodomèstic, v46): sense lloc, es tria a Mòdul › Electrodomèstic (sense dividir) o al compartiment d'un mòdul dividit
  * («Electrodomèstic», `Zone.appliance`).
  */
-export const HARDWARE_ENGINES = ["cup", "system32", "dowel", "slide", "flapArm", "magnet", "barHandle", "plate", "leg", "model", "drawerKit", "rail", "ledProfile", "glassFrame", "hanger", "wallRail", "plinthProfile", "appliance"] as const
+export const HARDWARE_ENGINES = ["cup", "system32", "dowel", "slide", "flapArm", "magnet", "barHandle", "plate", "leg", "model", "drawerKit", "rail", "ledProfile", "glassFrame", "hanger", "wallRail", "plinthProfile", "appliance", "cabineo", "screw"] as const
 export type HardwareEngine = (typeof HARDWARE_ENGINES)[number]
 
 /** Mecanitzat en coordenades de la peça, relatiu al punt d'ancoratge (u al llarg, v a través). */
@@ -318,7 +318,7 @@ export const isDamagedImport = (item: HardwareItem): boolean => !!item.imported?
 export const HARDWARE_SLOTS = [
   { slot: "hinge", engine: "cup", category: "hinge", label: "Frontissa", uses: "portes i reixetes amb frontisses" },
   { slot: "system32", engine: "system32", category: "shelf-support", label: "Filera System 32", uses: "laterals (prestatges regulables i frontisses)" },
-  { slot: "dowel", engine: "dowel", category: "connector", label: "Espiga", uses: "unions de la caixa, divisors, prestatges fixos i fons encastat" },
+  { slot: "dowel", engine: "dowel", category: "connector", label: "Unió", uses: "unions de la caixa, divisors, prestatges fixos i fons encastat (espiga, Cabineo o cargols)" },
   { slot: "slide", engine: "slide", category: "slide", label: "Guia de calaix", uses: "calaixos" },
   { slot: "flap", engine: "flapArm", category: "lift", label: "Braç d'abatible", uses: "abatibles" },
   { slot: "magnet", engine: "magnet", category: "push", label: "Imant", uses: "reixetes desmuntables i trapes" },
@@ -331,13 +331,15 @@ export const HARDWARE_SLOTS = [
 ] as const
 export type HardwareSlot = (typeof HARDWARE_SLOTS)[number]["slot"]
 export const slotOf = (s: HardwareSlot) => HARDWARE_SLOTS.find((x) => x.slot === s)!
-export const slotForEngine = (e: HardwareEngine) => HARDWARE_SLOTS.find((x) => x.engine === e)!
+/** El lloc d'un motor (el Cabineo i els cargols van al de la unió, `dowel`). */
+export const slotForEngine = (e: HardwareEngine) => HARDWARE_SLOTS.find((x) => x.engine === (e === "cabineo" || e === "screw" ? "dowel" : e))!
 
 /**
  * Si un item pot anar en un lloc: el motor del lloc o, a «Guia de calaix», també un joc de calaix de doble paret
  * (`drawerKit`): llavors els calaixos del mòdul sense guia pròpia es fan amb el joc.
  */
-export const slotAccepts = (slot: HardwareSlot, item: Pick<HardwareItem, "engine">): boolean => item.engine === slotOf(slot).engine || (slot === "slide" && item.engine === "drawerKit")
+export const slotAccepts = (slot: HardwareSlot, item: Pick<HardwareItem, "engine">): boolean =>
+  item.engine === slotOf(slot).engine || (slot === "slide" && item.engine === "drawerKit") || (slot === "dowel" && (item.engine === "cabineo" || item.engine === "screw"))
 
 /**
  * La còpia d'un lloc del mòdul es llegeix **sencera o res** (`repairAtomically`, com el ferratge d'un front): reparada camp

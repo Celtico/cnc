@@ -1,5 +1,5 @@
 import { FormRow } from "../../components/FormRow"
-import { INHERITED_LABEL, hardwareSummary, isFrameHardware, slotOf, type HardwareEngine, type HardwareItem, type HardwareSlot } from "../../core/model"
+import { INHERITED_LABEL, hardwareSummary, isFrameHardware, slotAccepts, slotOf, type HardwareEngine, type HardwareItem, type HardwareSlot } from "../../core/model"
 import { HardwareSelect, type HardwareNoneOption } from "../settings/HardwareSelect"
 import { useSettings } from "../settings/SettingsContext"
 
@@ -26,7 +26,7 @@ export function HardwarePick({ slot, engine, current, inherited, onPick, label, 
   return (
     <FormRow label={name} help={summary || undefined} optionId={optionId}>
       {/* A «Guia» també els jocs paramètrics de calaix de doble paret (es trien en lloc de la guia). */}
-      <HardwareSelect label={name} items={settings.hardwareLibrary.filter((x) => (x.engine === eng || (slot === "slide" && x.engine === "drawerKit")) && fits(x) && (!only || only(x)))} current={current} inherited={inherited} emptyLabel={emptyLabel} none={none} onPick={onPick} />
+      <HardwareSelect label={name} items={settings.hardwareLibrary.filter((x) => (slot ? slotAccepts(slot, x) : x.engine === eng) && fits(x) && (!only || only(x)))} current={current} inherited={inherited} emptyLabel={emptyLabel} none={none} onPick={onPick} />
     </FormRow>
   )
 }

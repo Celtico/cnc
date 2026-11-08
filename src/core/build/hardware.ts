@@ -1,4 +1,5 @@
 import {
+  DEFAULT_CABINET,
   DEFAULT_MODULE_HARDWARE,
   HARDWARE_SLOTS,
   damagedImportMessage,
@@ -156,12 +157,26 @@ export function system32Spec(item: HardwareItem) {
   return { edgeOffset: param(item, "edgeOffset"), pitch: pitch >= 8 ? pitch : 32, diameter: param(item, "diameter"), depth: param(item, "depth"), hole: drillSpec(item, "side") }
 }
 
+/**
+ * La unió de la caixa (lloc `dowel`): l'espiga o, des de la v54, el Cabineo o els cargols (`union`, amb les seves mides a
+ * `cabineo` i `screw`). Amb Cabineo o cargols, el que s'uneix sempre amb espigues (el fons encastat, els calaixos) fa servir
+ * l'espiga de l'app (`DEFAULT_CABINET.dowel`).
+ */
 export function dowelSpec(item: HardwareItem) {
+  if (item.engine === "cabineo") {
+    const keys = ["pocketD", "pocketDepth", "first", "step", "axis", "screwD", "screwDepth", "margin", "pitch"] as const
+    const cabineo = Object.fromEntries(keys.map((k) => [k, param(item, k)])) as Record<(typeof keys)[number], number>
+    return { ...APP_DOWEL, union: "cabineo" as const, cabineo, screw: undefined }
+  }
+  if (item.engine === "screw") return { ...APP_DOWEL, union: "screw" as const, cabineo: undefined, screw: { d: param(item, "d"), margin: param(item, "margin"), pitch: param(item, "pitch") } }
   expectEngine(item, "dowel")
   const butt = drillSpec(item, "butt")
   const through = drillSpec(item, "through")
-  return { diameter: through.diameter, faceDepth: through.depth, edgeDepth: butt.depth, endOffset: param(item, "endOffset"), tag: through.tag ?? "dowel" }
+  return { diameter: through.diameter, faceDepth: through.depth, edgeDepth: butt.depth, endOffset: param(item, "endOffset"), tag: through.tag ?? "dowel", union: "dowel" as const, cabineo: undefined, screw: undefined }
 }
+
+/** L'espiga de l'app, per al que s'uneix sempre amb espigues quan la unió de la caixa és un altre ferratge. */
+const APP_DOWEL = { diameter: DEFAULT_CABINET.dowel.diameter, faceDepth: DEFAULT_CABINET.dowel.faceDepth, edgeDepth: DEFAULT_CABINET.dowel.edgeDepth, endOffset: DEFAULT_CABINET.dowel.endOffset, tag: "dowel" }
 
 export function slideSpec(item: HardwareItem) {
   expectEngine(item, "slide")

@@ -72,8 +72,9 @@ const mm = z.number().finite()
  * v52: «Roure massís» (`SOLID_WOOD_MATERIALS`, massís: no es canteja), additiu.
  * v53: preus del pressupost (`prices`: €/m² per material i gruix, €/m de cantell, perfilat i ranura, €/forat, €/ferratge,
  * merma, marge i IVA), additiu.
+ * v54: les unions del Taulell, Cabineo 12 i cargols (`V54_ITEMS`), additiu.
  */
-export const SETTINGS_VERSION = 53
+export const SETTINGS_VERSION = 54
 
 
 // --- Objectes de referència (foto i editor) ------------------------------------------

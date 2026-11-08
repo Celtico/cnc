@@ -97,7 +97,7 @@ describe("la unió amb Cabineo del Taulell (cel, 2026-11-08)", () => {
   const m = r.composition.modules[0]!
 
   it("el mòdul fa la caixa amb Cabineo i ja no ho diu com a pendent", () => {
-    expect(m.carcass.union).toBe("cabineo")
+    expect(m.hardware?.dowel?.engine).toBe("cabineo")
     expect(r.warnings.join(" ")).not.toContain("Cabineo")
   })
 

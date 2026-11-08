@@ -1,5 +1,5 @@
 import { NO_EDGES, furnitureHinges, type HardwareItem, type Hole, type Panel, type PanelRole } from "../model"
-import { r, system32Ys, threeAlong } from "./geometry"
+import { r, spreadAlong, system32Ys, threeAlong } from "./geometry"
 import { planKit } from "./drawerKit"
 import { planLights } from "./lightKit"
 import { applyHardware, resolveOps, cupSpec, dowelSpec, flapSpec, glassFrameSpec, handleSpec, hangerSpec, ledSpec, legSpec, magnetSpec, plateSpec, plinthProfileSpec, railSpec, slideSpec, system32Spec, wallRailSpec, HardwareError } from "./hardware"
@@ -91,6 +91,25 @@ function previewPanels(item: HardwareItem): Panel[] {
         through.holes.push(hole(x, 9.5, { diameter: s.diameter, depth: s.faceDepth, tag: s.tag }))
       }
       return [butt, through]
+    }
+    case "cabineo": {
+      // Base de 560 de fons que topa amb un lateral: els tres buidats a la cara, a tocar del cantell, i el cargol al lateral.
+      const c = dowelSpec(item).cabineo!
+      const xs = spreadAlong(0, 560, c.margin, c.pitch, c.pocketD)
+      const butt = sample("butt", "Peça que porta el connector (cara)", "bottom", 560, 300)
+      const through = sample("through", "Peça que continua (cargol)", "side", 560, 200)
+      for (const x of xs) {
+        for (let k = 0; k < 3; k++) butt.holes.push(hole(x, c.first + k * c.step, { diameter: c.pocketD, depth: c.pocketDepth, tag: "cabineo" }))
+        through.holes.push(hole(x, c.axis, { diameter: c.screwD, depth: c.screwDepth, tag: "cabineo" }))
+      }
+      return [butt, through]
+    }
+    case "screw": {
+      // El lateral amb els forats passants a l'alçada de la base (el cargol entra pel cantell de la base).
+      const s = dowelSpec(item).screw!
+      const through = sample("through", "Peça que continua (forat passant)", "side", 560, 200)
+      for (const x of spreadAlong(0, 560, s.margin, s.pitch, s.d)) through.holes.push(hole(x, 9.5, { diameter: s.d, depth: through.thickness, tag: "screw" }))
+      return [through]
     }
     case "slide": {
       // Lateral del moble (x = fondària des del darrere; el front a la dreta) i lateral de la caixa de la guia més llarga.

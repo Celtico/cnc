@@ -67,6 +67,11 @@ export function recipe(item: HardwareItem): Recipe | null {
     case "dowel":
       // Només el lateral: la base i la tapa taparien els forats de les espigues (queden dins la unió).
       return { size: small, keep: isLeftSide, drop: (p) => p.role === "bottom" || p.role === "top", near: 260 }
+    case "cabineo":
+      // La base (els buidats a la cara de sota) i el lateral (el forat del cargol).
+      return { size: small, keep: (p) => isLeftSide(p) || p.role === "fixedShelf" || p.role === "bottom", near: 260 }
+    case "screw":
+      return { size: small, keep: isLeftSide, drop: (p) => p.role === "bottom" || p.role === "top", near: 260 }
     case "slide":
       // El lateral (els forats de la guia) i el front: la caixa del calaix taparia els forats del lateral.
       return { size: { width: 450, height: 300, depth: 450 }, front: { kind: "drawers", n: 1, heights: ["auto"] }, keep: (p) => isLeftSide(p) || p.role === "drawerFront", drop: (p) => p.role === "drawerSide" || p.role === "drawerBack" || p.role === "drawerBottom" }

@@ -237,6 +237,38 @@ export const ACCESSORY_ITEMS: HardwareItem[] = [
   },
 ]
 
+/**
+ * v54: les unions del Taulell (cel, 2026-11-08: «només tinc una unió»), a «Unions» i triables al lloc de la unió de la caixa
+ * (Caixa › Laterals › Unió). Cabineo 12 de Lamello: tres buidats Ø15 encavalcats a la cara de la peça que hi topa, a tocar
+ * del cantell, i el cargol Ø5 a l'altra. Cargols: forat passant Ø4 a la peça que continua. Repartits a `margin` dels caps,
+ * com a molt cada `pitch`. Els fons encastats i els calaixos continuen amb l'espiga de l'app.
+ */
+export const V54_ITEMS: HardwareItem[] = [
+  {
+    id: "cabineo-12",
+    name: "Cabineo 12 (Lamello)",
+    category: "connector",
+    engine: "cabineo",
+    params: { pocketD: 15, pocketDepth: 11, first: 3.6, step: 11.2, axis: 5, screwD: 5, screwDepth: 12, margin: 50, pitch: 300 },
+    targets: [
+      { key: "butt", label: "Peça que porta el connector (cara)", ops: [{ kind: "drill", face: "A", u: 0, v: "first", d: "pocketD", depth: "pocketDepth", tag: "cabineo" }, { kind: "drill", face: "A", u: 0, v: "first+step", d: "pocketD", depth: "pocketDepth", tag: "cabineo" }, { kind: "drill", face: "A", u: 0, v: "first+2*step", d: "pocketD", depth: "pocketDepth", tag: "cabineo" }] },
+      { key: "through", label: "Peça que continua (cargol)", ops: [{ kind: "drill", face: "A", u: 0, v: "axis", d: "screwD", depth: "screwDepth", tag: "cabineo" }] },
+    ],
+    version: 1,
+    builtin: true,
+  },
+  {
+    id: "screw-4",
+    name: "Cargols Ø4",
+    category: "connector",
+    engine: "screw",
+    params: { d: 4, margin: 50, pitch: 300 },
+    targets: [{ key: "through", label: "Peça que continua (forat passant)", ops: [{ kind: "through", u: 0, v: 0, d: "d", tag: "screw" }] }],
+    version: 1,
+    builtin: true,
+  },
+]
+
 /** v31: els jocs de llum Häfele Loox (additiu: s'afegeixen si no hi són). */
 export const V31_ITEMS: HardwareItem[] = HAFELE_LOOX_ITEMS
 
@@ -261,7 +293,7 @@ export const V39_ITEMS: HardwareItem[] = HAFELE_LEGS.filter((x) => x.id !== "leg
 export const V35_ITEMS: HardwareItem[] = [...HAFELE_CATALOGUE_ITEMS, ...HAFELE_LOOX_PROFILES]
 
 // En l'ordre en què les migracions els afegeixen (v23 jocs, v27 push, v28 catàleg, v31 llums, v34 potes, v35 catàleg Häfele i, al final, els accessoris que falten).
-export const DEFAULT_HARDWARE_LIBRARY: HardwareItem[] = [...libraryFromLegacy(DEFAULT_LEGACY_HARDWARE), ...DEFAULT_HARDWARE_KITS, ...DTC_CATALOGUE_ITEMS, ...V31_ITEMS, ...V34_ITEMS, ...V35_ITEMS, ...V39_ITEMS, ...V41_ITEMS, ...V42_ITEMS, ...V43_ITEMS, ...V44_ITEMS, ...V45_ITEMS, ...V46_ITEMS, ...ACCESSORY_ITEMS]
+export const DEFAULT_HARDWARE_LIBRARY: HardwareItem[] = [...libraryFromLegacy(DEFAULT_LEGACY_HARDWARE), ...DEFAULT_HARDWARE_KITS, ...DTC_CATALOGUE_ITEMS, ...V31_ITEMS, ...V34_ITEMS, ...V35_ITEMS, ...V39_ITEMS, ...V41_ITEMS, ...V42_ITEMS, ...V43_ITEMS, ...V44_ITEMS, ...V45_ITEMS, ...V46_ITEMS, ...V54_ITEMS, ...ACCESSORY_ITEMS]
 
 /** Un item és un electrodomèstic amb les dades del catàleg (motor `appliance`). */
 export const isAppliance = (item: HardwareItem): item is HardwareItem & { appliance: Appliance } => item.engine === "appliance" && !!item.appliance

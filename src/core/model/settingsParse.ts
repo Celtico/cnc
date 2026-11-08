@@ -1,6 +1,6 @@
 import { z } from "zod"
 import { migrateImportedNames } from "./makers/hettichNames"
-import { DEFAULT_HARDWARE_DEFAULTS, DEFAULT_HARDWARE_KITS, DEFAULT_HARDWARE_LIBRARY, DEFAULT_LEGACY_HARDWARE, HardwareDefaultsSchema, HardwareItemSchema, LegacyHardwareSchema, V27_ITEMS, V28_ITEMS, V31_ITEMS, V34_ITEMS, V35_ITEMS, V39_ITEMS, V41_ITEMS, V42_ITEMS, V43_ITEMS, V44_ITEMS, V45_ITEMS, V46_ITEMS, fixHardwareDefaults, kitPilotFromLibrary, libraryFromLegacy, setKitPilot, type HardwareItem } from "./hardware"
+import { DEFAULT_HARDWARE_DEFAULTS, DEFAULT_HARDWARE_KITS, DEFAULT_HARDWARE_LIBRARY, DEFAULT_LEGACY_HARDWARE, HardwareDefaultsSchema, HardwareItemSchema, LegacyHardwareSchema, V27_ITEMS, V28_ITEMS, V31_ITEMS, V34_ITEMS, V35_ITEMS, V39_ITEMS, V41_ITEMS, V42_ITEMS, V43_ITEMS, V44_ITEMS, V45_ITEMS, V46_ITEMS, V54_ITEMS, fixHardwareDefaults, kitPilotFromLibrary, libraryFromLegacy, setKitPilot, type HardwareItem } from "./hardware"
 import { KitPilotSchema } from "./hardwareKit"
 import { PHOTO_MATERIALS } from "./textureSets"
 import { deepEqual, MATERIAL_MERGES, rescalePhotoTiles, resolveMaterialAlias, restorePhotoThicknesses, upgradeToPhoto } from "./photoUpgrade"
@@ -260,7 +260,7 @@ function migrateHardwareLibrary(hardwareRaw: HardwareItem[], version: number): {
   // v39: la pota AXILO 78 de mobles, si no hi és (per id); v41: la frontissa Metallamat A; v45: penjador, regleta i
   // sòcols d'alumini; v46: els electrodomèstics.
   const v39add = version < 39 ? V39_ITEMS : []
-  const v41add = [...(version < 41 ? V41_ITEMS : []), ...(version < 42 ? V42_ITEMS : []), ...(version < 43 ? V43_ITEMS : []), ...(version < 44 ? V44_ITEMS : []), ...(version < 45 ? V45_ITEMS : []), ...(version < 46 ? V46_ITEMS : [])]
+  const v41add = [...(version < 41 ? V41_ITEMS : []), ...(version < 42 ? V42_ITEMS : []), ...(version < 43 ? V43_ITEMS : []), ...(version < 44 ? V44_ITEMS : []), ...(version < 45 ? V45_ITEMS : []), ...(version < 46 ? V46_ITEMS : []), ...(version < 54 ? V54_ITEMS : [])]
   const withV39 = [...withV36, ...[...v39add, ...v41add].filter((k) => !withV36.some((x) => x.id === k.id)).map((k) => structuredClone(k))]
   if (withV39.length !== withV36.length) migrated = true
   // La pota AXILO 78 (v34) d'una versió anterior de l'item passa a la d'ara (com la munta el taller, la placa per

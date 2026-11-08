@@ -200,12 +200,6 @@ export const CarcassSchema = z.object({
   shelfSetback: mm.min(0).max(100),
   /** Trencajunt (el del Taulell): la base, el sostre, els prestatges fixos i les divisions, aquests mm enrere del davant dels laterals. Sense: a ras. */
   breakJoint: mm.min(0).max(20).optional(),
-  /**
-   * Unió de la caixa (cel, 2026-11-08, la del Taulell): espigues (per defecte, la de Preferències › Ferratges), Cabineo de
-   * Lamello (tres buidats Ø15 a la base, la tapa, els prestatges fixos i les divisions, i el cargol a l'altra peça) o
-   * cargols (forat passant a la peça que continua). Els fons encastats i els calaixos, sempre amb espigues.
-   */
-  union: z.enum(["dowel", "cabineo", "screw"]).optional(),
   shelfClearance: mm.min(0).max(5),
   /**
    * Folgança de les peces de dins (Preferències › Folgances per defecte › «Peces de dins»): amb l'arrel dividida, **tots**

@@ -18,7 +18,7 @@ import {
   hasInnerPieces,
 } from "../../model"
 import type { KitOrderLine } from "../drawerKit"
-import { CABINEO, SCREW, X, Y, Z, cabineoJoint, neg, panelBox, placement, r, screwJoint, spreadAlong } from "../geometry"
+import { X, Y, Z, cabineoJoint, neg, panelBox, placement, r, screwJoint, spreadAlong } from "../geometry"
 import { resolveKit, slotSpec, type ResolvedKit, type SlotSpec } from "../hardware"
 import type { LightOrder } from "../lightOrders"
 import type { LinearPiece } from "../linearOrders"
@@ -258,15 +258,16 @@ export class BuilderBase {
 
   /** Una peça de només veure (rol `hardware`, sense nesting): una caixa de `min` (mòdul, mm) a `min + size`. */
   /**
-   * La unió de la caixa quan no és d'espigues (`Carcass.union`, cel 2026-11-08: «ens falta la unió del Cabineo»): Cabineo o
+   * La unió de la caixa quan no és d'espigues (el ferratge del lloc de la unió, `dowelSpec`; cel 2026-11-08: «ens falta la
+   * unió del Cabineo»): Cabineo o
    * cargols repartits en [lo, hi] (`at` dona el punt de contacte, al mig del gruix de `butt`). Retorna false amb espigues
    * (les fa qui crida, com sempre).
    */
   protected joinOther(butt: Panel, through: Panel, lo: number, hi: number, at: (t: number) => Vec3, pocketDir: Vec3, shift?: Vec3): boolean {
-    const kind = this.m.carcass.union ?? "dowel"
-    if (kind === "dowel") return false
-    if (kind === "cabineo") cabineoJoint(butt, through, spreadAlong(lo, hi, CABINEO.margin, CABINEO.pitch, CABINEO.pocketD).map(at), pocketDir, shift)
-    else screwJoint(butt, through, spreadAlong(lo, hi, SCREW.margin, SCREW.pitch, SCREW.d).map(at), shift)
+    const { cabineo: c, screw: s } = this.hw.dowel
+    if (c) cabineoJoint(butt, through, spreadAlong(lo, hi, c.margin, c.pitch, c.pocketD).map(at), pocketDir, c, shift)
+    else if (s) screwJoint(butt, through, spreadAlong(lo, hi, s.margin, s.pitch, s.d).map(at), s.d, shift)
+    else return false
     return true
   }
 

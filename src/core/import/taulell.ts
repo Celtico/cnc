@@ -1,5 +1,5 @@
 import { addBottomPlinth } from "../model/plinthZones"
-import { defaultModule, newId, type Composition, type FreePart, type Module, type PartOrient, type Zone } from "../model"
+import { V54_ITEMS, defaultModule, newId, type Composition, type FreePart, type Module, type PartOrient, type Zone } from "../model"
 import { PART_AXES } from "../model/freePart"
 import { HAFELE_LEGS } from "../model/hafele/hafeleLegs"
 
@@ -288,7 +288,8 @@ export function fromTaulell(doc: TaulellDoc, mat: (key: string | undefined) => s
   const warnings: string[] = []
   const warn = (w: string) => warnings.push(w)
   let end = x0
-  // La unió que el Taulell hi ha posat a mà (Cabineo o cargols) passa a ser la unió de la caixa del mòdul (`Carcass.union`).
+  // La unió que el Taulell hi ha posat a mà (Cabineo o cargols) passa a ser la unió de la caixa del mòdul (el ferratge del
+  // lloc `dowel`, de Preferències › Ferratges › Unions).
   const unionOf = (c: TaulellCab): "cabineo" | "screw" | undefined => {
     const kinds = new Set((doc.hw ?? []).filter((h) => h.ref?.cab === c.id).map((h) => h.kind))
     return kinds.has("cabineo") ? "cabineo" : kinds.has("screw") ? "screw" : undefined
@@ -298,7 +299,8 @@ export function fromTaulell(doc: TaulellDoc, mat: (key: string | undefined) => s
     const m = moduleOfCab(c, mat, Math.max(0, r1(x - end)), warn)
     end = Math.max(end, x) + c.W
     const union = unionOf(c)
-    return union ? { ...m, carcass: { ...m.carcass, union } } : m
+    const item = union && V54_ITEMS.find((x) => x.engine === union)
+    return item ? { ...m, hardware: { ...m.hardware, dowel: structuredClone(item) } } : m
   })
   const loose = (doc.parts ?? []).filter((p) => p.cab === undefined && !p.hidden)
   const parts: FreePart[] = []
@@ -319,7 +321,7 @@ export function fromTaulell(doc: TaulellDoc, mat: (key: string | undefined) => s
   for (const h of doc.hw ?? []) hw.set(h.kind, (hw.get(h.kind) ?? 0) + 1)
   const HW_NAME: Record<string, string> = { cabineo: "Cabineo", dowel: "espigues", screw: "cargols" }
   // Els que han passat a la unió d'algun mòdul ja no es diuen.
-  for (const k of ["cabineo", "screw"] as const) if (modules.some((m) => m.carcass.union === k)) hw.delete(k)
+  for (const k of ["cabineo", "screw"] as const) if (modules.some((m) => m.hardware?.dowel?.engine === k)) hw.delete(k)
   if (hw.size) warn(`Unions del Taulell: ${[...hw].map(([k, n]) => `${n} × ${HW_NAME[k] ?? k}`).join(", ")}. El cnc hi posa les unions de la caixa del mòdul (Preferències › Ferratges).`)
   return {
     composition: { kind: "moble", modules, references: [], parts },

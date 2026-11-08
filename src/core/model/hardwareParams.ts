@@ -59,6 +59,22 @@ const HARDWARE_PARAMS: Record<HardwareEngine, HardwareParamSpec[]> = {
     P("edgeDepth", "Al cantell", 5, 40, 0.5, "Fondària del forat al cantell de la peça que hi topa."),
     P("endOffset", "Als extrems", 20, 200, 1, "Primera i última espiga, des dels extrems de la unió."),
   ],
+  cabineo: [
+    P("pocketD", "Buidat (Ø)", 8, 30, 0.5, "Dels tres forats encavalcats de la peça que porta el connector."),
+    P("pocketDepth", "Fondària", 5, 20, 0.5),
+    P("first", "1r forat", 0, 30, 0.1, "Del cantell que toca l'altra peça al centre del primer forat."),
+    P("step", "Pas", 2, 30, 0.1, "Entre els centres dels tres forats."),
+    P("axis", "Eix del cargol", 2, 15, 0.5, "De la cara on va el connector a l'eix del cargol, a l'altra peça."),
+    P("screwD", "Cargol (Ø)", 2, 10, 0.5),
+    P("screwDepth", "Fondària del cargol", 5, 40, 0.5),
+    P("margin", "Als extrems", 20, 300, 1, "Primer i últim connector, des dels extrems de la unió."),
+    P("pitch", "Pas màxim", 50, 1000, 10, "Si la separació passa d'aquí, se'n posen més al mig."),
+  ],
+  screw: [
+    P("d", "Forat (Ø)", 2, 10, 0.5, "Forat passant a la peça que continua."),
+    P("margin", "Als extrems", 20, 300, 1, "Primer i últim cargol, des dels extrems de la unió."),
+    P("pitch", "Pas màxim", 50, 1000, 10, "Si la separació passa d'aquí, se'n posen més al mig."),
+  ],
   slide: [
     P("sideClearance", "Folgança lateral", 0, 30, 0.5, "Per costat, entre la caixa i el lateral del moble."),
     P("boxThickness", "Gruix de la caixa", 8, 25, 1),
