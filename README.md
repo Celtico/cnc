@@ -2,7 +2,7 @@
 
 <p align="center"><a href="https://cnc.serverscel.com/"><img src="docs/renders/mobles-cnc-portada.jpg" width="100%" alt="Mobles CNC: renders fets amb l'app"></a></p>
 
-<p align="center"><b>👉 Prova l'app: <a href="https://cnc.serverscel.com/">cnc.serverscel.com</a></b> · funciona al navegador, sense registre ni instal·lació</p>
+<p align="center"><b>👉 Prova l'app: <a href="https://cnc.serverscel.com/">cnc.serverscel.com</a></b> · funciona al navegador, sense registre ni instal·lació · codi: <a href="https://github.com/Celtico/cnc">github.com/Celtico/cnc</a></p>
 
 **Dissenya un moble a la pantalla i surt del taller amb les peces tallades.** Fa mesos que treballo en una cosa que
 necessitava al taller i no trobava: una app per dissenyar mobles a mida i enviar-los directament a la CNC. Treu tot el que
@@ -50,7 +50,7 @@ El nucli funciona i està cobert per proves, però hi ha feina per a perfils mol
   comproven soles, així que és fàcil entrar-hi sense trencar res. Comença per [`CLAUDE.md`](CLAUDE.md).
 - **Disseny i traducció**: l'app és en català; traduir-la (castellà, anglès…) i polir la interfície.
 
-Obre una *issue* o una *pull request*, o escriu-me directament. Qualsevol ajuda, per petita que sigui, compta.
+Obre una [*issue*](https://github.com/Celtico/cnc/issues) o una [*pull request*](https://github.com/Celtico/cnc/pulls) a GitHub, o escriu-me directament. Qualsevol ajuda, per petita que sigui, compta.
 
 <details>
 <summary><b>In English</b></summary>
@@ -60,7 +60,7 @@ needs: cut list, nesting, SCM Maestro programs (.xcs), STEP + CSV and DXF, plus 
 renders. Try it at https://cnc.serverscel.com/. Every image on this page comes from the app, and it is the same model that
 goes to the CNC: real, buildable measurements are what make the renders look real. It is a non-commercial, one-person project and I'm looking for
 people to help: woodworkers with a CNC to test it, developers (TypeScript/React/three.js), post-processors for other
-machines and translators. The UI and docs are in Catalan for now. Issues and pull requests are welcome.
+machines and translators. The UI and docs are in Catalan for now. Issues and pull requests are welcome at https://github.com/Celtico/cnc.
 </details>
 
 ## Més renders
