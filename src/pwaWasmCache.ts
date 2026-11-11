@@ -5,7 +5,7 @@
  */
 export const WASM_RUNTIME_CACHING = [
   {
-    urlPattern: ({ url }: { url: URL }) => url.pathname.startsWith("/assets/") && url.pathname.endsWith(".wasm"),
+    urlPattern: ({ url }: { url: URL }) => url.pathname.includes("/assets/") && url.pathname.endsWith(".wasm"),
     handler: "CacheFirst" as const,
     options: { cacheName: "mobles-wasm", expiration: { maxEntries: 8 }, cacheableResponse: { statuses: [200] } },
   },

@@ -2,7 +2,7 @@
 
 <p align="center"><a href="https://cnc.serverscel.com/"><img src="docs/renders/mobles-cnc-portada.jpg" width="100%" alt="Mobles CNC: renders fets amb l'app"></a></p>
 
-<p align="center"><b>👉 Prova l'app: <a href="https://cnc.serverscel.com/">cnc.serverscel.com</a></b> · funciona al navegador, sense registre ni instal·lació · codi: <a href="https://github.com/Celtico/cnc">github.com/Celtico/cnc</a></p>
+<p align="center"><b>👉 Prova l'app: <a href="https://cnc.serverscel.com/">cnc.serverscel.com</a></b> (o a <a href="https://celtico.github.io/cnc/">celtico.github.io/cnc</a>, publicada des d'aquest repositori) · funciona al navegador, sense registre ni instal·lació · codi: <a href="https://github.com/Celtico/cnc">github.com/Celtico/cnc</a></p>
 
 **Dissenya un moble a la pantalla i surt del taller amb les peces tallades.** Fa mesos que treballo en una cosa que
 necessitava al taller i no trobava: una app per dissenyar mobles a mida i enviar-los directament a la CNC. Treu tot el que

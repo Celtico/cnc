@@ -17,8 +17,12 @@ function gitVersion(): { version: string; commit: string } {
 }
 const { version, commit } = gitVersion()
 
+/** Arrel de l'app: «/» al servidor propi; a GitHub Pages l'app penja de «/cnc/» (`BASE_PATH`, al workflow de Pages). */
+const base = process.env.BASE_PATH ?? "/"
+
 // https://vite.dev/config/
 export default defineConfig({
+  base,
   define: {
     __APP_VERSION__: JSON.stringify(version),
     __APP_COMMIT__: JSON.stringify(commit),
@@ -29,7 +33,7 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg", "apple-touch-icon.png"],
       manifest: {
-        id: "/",
+        id: base,
         name: "Mobles",
         short_name: "Mobles",
         description: "Configurador paramètric de mobles de cos per tallar a la CNC",
@@ -40,9 +44,9 @@ export default defineConfig({
         background_color: "#1a202c",
         display: "standalone",
         orientation: "any",
-        start_url: "/",
+        start_url: base,
         // Chrome d'escriptori: obrir els .moble i els .ambient amb l'app en fer-hi doble clic.
-        file_handlers: [{ action: "/", accept: { "application/json": [".moble", ".ambient"] } }],
+        file_handlers: [{ action: base, accept: { "application/json": [".moble", ".ambient"] } }],
         // Un .moble o .ambient obert amb doble clic va a la finestra de l'app que ja hi ha (launchQueue), no n'obre una altra.
         launch_handler: { client_mode: "focus-existing" },
         icons: [
@@ -63,42 +67,43 @@ export default defineConfig({
         globIgnores: ["splash/**", "assets/draco_*", "assets/basis_*"],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         // Textures de foto (~14 MB) i pesos d'OIDN: no es precachegen; es desen el primer cop que es fan servir.
+        // `includes` i no `startsWith`: sota una arrel que no és «/» (GitHub Pages) el camí comença per `/cnc/`.
         runtimeCaching: [
           // WASM de Draco i Basis (`src/pwaWasmCache.ts`).
           ...WASM_RUNTIME_CACHING,
           {
             // Plantes i altres models del catàleg (`models/*.glb`).
-            urlPattern: ({ url }) => url.pathname.startsWith("/models/"),
+            urlPattern: ({ url }) => url.pathname.includes("/models/"),
             handler: "CacheFirst",
             options: { cacheName: "mobles-models", expiration: { maxEntries: 60 }, cacheableResponse: { statuses: [200] } },
           },
           {
             // Cels del render (`hdr/*.hdr`, ~2 MB cadascun).
-            urlPattern: ({ url }) => url.pathname.startsWith("/hdr/"),
+            urlPattern: ({ url }) => url.pathname.includes("/hdr/"),
             handler: "CacheFirst",
             options: { cacheName: "mobles-hdr", expiration: { maxEntries: 8 }, cacheableResponse: { statuses: [200] } },
           },
           {
-            urlPattern: ({ url }) => url.pathname.startsWith("/textures/"),
+            urlPattern: ({ url }) => url.pathname.includes("/textures/"),
             handler: "CacheFirst",
             options: { cacheName: "mobles-textures", expiration: { maxEntries: 260, maxAgeSeconds: 365 * 24 * 3600 }, cacheableResponse: { statuses: [200] } },
           },
           {
             // Fotos dels electrodomèstics (`appliances/*.webp`, ~0,4 MB en total): la miniatura i la cara vista al 3D. «-v2»:
             // sense el fons blanc (2026-10-15; amb CacheFirst, les d'abans es quedarien a la memòria).
-            urlPattern: ({ url }) => url.pathname.startsWith("/appliances/"),
+            urlPattern: ({ url }) => url.pathname.includes("/appliances/"),
             handler: "CacheFirst",
             options: { cacheName: "mobles-appliances-v2", expiration: { maxEntries: 60 }, cacheableResponse: { statuses: [200] } },
           },
           {
             // Vistes per les finestres del render (`backdrop/*.jpg`, ~0,5 MB cadascuna).
-            urlPattern: ({ url }) => url.pathname.startsWith("/backdrop/"),
+            urlPattern: ({ url }) => url.pathname.includes("/backdrop/"),
             handler: "CacheFirst",
             options: { cacheName: "mobles-backdrop-sw", expiration: { maxEntries: 8 }, cacheableResponse: { statuses: [200] } },
           },
           {
             // Pesos d'OIDN (1,8 MB): `oidn.ts` els valida (i esborra els dolents de la seva memòria cau).
-            urlPattern: ({ url }) => url.pathname.startsWith("/oidn/"),
+            urlPattern: ({ url }) => url.pathname.includes("/oidn/"),
             handler: "CacheFirst",
             options: { cacheName: "mobles-oidn-sw", expiration: { maxEntries: 4 }, cacheableResponse: { statuses: [200] } },
           },
