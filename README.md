@@ -1,12 +1,19 @@
 # Mobles CNC
 
-**Dissenya un moble a la pantalla i surt del taller amb les peces tallades.** Una app web gratuïta i sense servidor per fer
-mobles de cos a mida i treure'n tot el que necessita una CNC: llista de peces, nesting, programes de màquina, STEP i DXF.
-I, abans de tallar res, veure'l en 3D, sobre una foto del lloc o en un render fotorealista com aquests.
+<p align="center"><a href="https://cnc.serverscel.com/"><img src="docs/renders/mobles-cnc-portada.jpg" width="100%" alt="Mobles CNC: renders fets amb l'app"></a></p>
 
-<p align="center"><a href="docs/renders/ok4-4.jpg"><img src="docs/renders/ok4-4.jpg" width="100%" alt="Cuina de roure amb illa, render fet amb l'app"></a></p>
+<p align="center"><b>👉 Prova l'app: <a href="https://cnc.serverscel.com/">cnc.serverscel.com</a></b> · funciona al navegador, sense registre ni instal·lació</p>
 
-<p align="center"><i>Tots els renders d'aquesta pàgina surten de l'app, del mateix model que genera les peces per a la CNC.</i></p>
+**Dissenya un moble a la pantalla i surt del taller amb les peces tallades.** Fa mesos que treballo en una cosa que
+necessitava al taller i no trobava: una app per dissenyar mobles a mida i enviar-los directament a la CNC. Treu tot el que
+necessita el taller (llista de peces, nesting, programes de màquina, STEP i DXF) i, abans de tallar res, deixa veure el
+moble en 3D, sobre una foto del lloc o en un render fotorealista.
+
+El que veus en aquesta pàgina no són maquetes: són renders fets amb la mateixa app, del mateix model que genera les peces.
+
+> **Busco gent que s'hi vulgui sumar.** No és un producte comercial ni hi ha cap empresa al darrere: és un projecte obert,
+> fet per substituir TopSolid en un taller petit. Ja fa molt, però una sola persona no arriba a tot. Si ets fuster, tens
+> una CNC, programes en React/three.js o simplement t'agrada la idea, [mira com pots ajudar](#vols-ajudar).
 
 ### Per què els renders semblen tan reals
 
@@ -15,10 +22,6 @@ folgances, els cantells i els ferratges reals, els mateixos que van a la CNC. Qu
 motor de render, el resultat és el 3D més realista que es pot aconseguir: el client veu el que tindrà a casa, i el taller
 talla exactament el que el client ha vist. Disseny, render i fabricació surten d'un sol model; no hi ha cap pas en què
 algú hagi de tornar a dibuixar res.
-
-> **Busco gent que s'hi vulgui sumar.** No és un producte comercial ni hi ha cap empresa al darrere: és un projecte fet a
-> mà per substituir TopSolid en un taller petit. Ja fa molt, però una sola persona no arriba a tot. Si ets fuster, tens una CNC,
-> programes en React/three.js o simplement t'agrada la idea, [mira com pots ajudar](#vols-ajudar).
 
 ## Què pots fer amb l'app
 
@@ -54,7 +57,7 @@ Obre una *issue* o una *pull request*, o escriu-me directament. Qualsevol ajuda,
 
 Mobles CNC is a free, serverless web app (PWA) to design custom cabinets and furniture and get everything a CNC workshop
 needs: cut list, nesting, SCM Maestro programs (.xcs), STEP + CSV and DXF, plus 3D view, photo placement and photorealistic
-renders. Every image on this page comes from the app, and it is the same model that
+renders. Try it at https://cnc.serverscel.com/. Every image on this page comes from the app, and it is the same model that
 goes to the CNC: real, buildable measurements are what make the renders look real. It is a non-commercial, one-person project and I'm looking for
 people to help: woodworkers with a CNC to test it, developers (TypeScript/React/three.js), post-processors for other
 machines and translators. The UI and docs are in Catalan for now. Issues and pull requests are welcome.
