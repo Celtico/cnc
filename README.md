@@ -53,9 +53,6 @@ machines and translators. The UI and docs are in Catalan for now. Issues and pul
 
 ## Més renders
 
-<details>
-<summary>Tots els renders (61)</summary>
-
 **Ambient nou**
 
 <p><a href="docs/renders/ambient-nou-2-render-1-copia.jpg"><img src="docs/renders/ambient-nou-2-render-1-copia.jpg" width="32%" alt="Ambient nou"></a> <a href="docs/renders/ambient-nou-2-render-1.jpg"><img src="docs/renders/ambient-nou-2-render-1.jpg" width="32%" alt="Ambient nou"></a> <a href="docs/renders/ambient-nou-2-render-2.jpg"><img src="docs/renders/ambient-nou-2-render-2.jpg" width="32%" alt="Ambient nou"></a> <a href="docs/renders/ambient-nou-2-render-3.jpg"><img src="docs/renders/ambient-nou-2-render-3.jpg" width="32%" alt="Ambient nou"></a> <a href="docs/renders/ambient-nou-2-render-4.jpg"><img src="docs/renders/ambient-nou-2-render-4.jpg" width="32%" alt="Ambient nou"></a> <a href="docs/renders/ambient-nou-2-render-5.jpg"><img src="docs/renders/ambient-nou-2-render-5.jpg" width="32%" alt="Ambient nou"></a> <a href="docs/renders/ambient-nou-2-render-6.jpg"><img src="docs/renders/ambient-nou-2-render-6.jpg" width="32%" alt="Ambient nou"></a> <a href="docs/renders/ambient-nou-2-render-8.jpg"><img src="docs/renders/ambient-nou-2-render-8.jpg" width="32%" alt="Ambient nou"></a> <a href="docs/renders/ambient-nou-2-render-9.jpg"><img src="docs/renders/ambient-nou-2-render-9.jpg" width="32%" alt="Ambient nou"></a> <a href="docs/renders/ambient-nou-2-render-copia.jpg"><img src="docs/renders/ambient-nou-2-render-copia.jpg" width="32%" alt="Ambient nou"></a> <a href="docs/renders/ambient-nou-2-render.jpg"><img src="docs/renders/ambient-nou-2-render.jpg" width="32%" alt="Ambient nou"></a> <a href="docs/renders/ambient-nou-render-1.jpg"><img src="docs/renders/ambient-nou-render-1.jpg" width="32%" alt="Ambient nou"></a></p>
@@ -168,7 +165,6 @@ machines and translators. The UI and docs are in Catalan for now. Issues and pul
 
 <p><a href="docs/renders/vitrina-galeria-render3.jpg"><img src="docs/renders/vitrina-galeria-render3.jpg" width="32%" alt="Vitrina «Galeria»"></a></p>
 
-</details>
 
 ## Estat
 El nucli (model paramètric → peces → mecanitzats → fitxers del taller) està acabat i cobert per proves
